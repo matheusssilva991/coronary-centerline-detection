@@ -23,7 +23,7 @@ O objetivo principal é automatizar a extração das linhas centrais das princip
 
 ## 🏗️ Estrutura do Projeto
 
-```
+```file
 coronary-centerline-detection/
 ├── pyproject.toml              # Configuração e dependências do projeto
 ├── README.md                   # Este arquivo
