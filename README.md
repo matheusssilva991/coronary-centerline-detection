@@ -59,78 +59,194 @@ O pipeline de processamento segue as seguintes etapas:
 
 #### 1.1 Downsampling
 
-- Redução da imagem por fator 2 usando interpolação linear
+- Redução da imagem por fator 2 usando **interpolação cúbica** (order=3)
+- Fatores de redução: `(2, 2, 1)` - reduz x e y, mantém z
 - Objetivo: reduzir custo computacional mantendo qualidade
 
-#### 1.2 Cálculo de Valores Hounsfield
+#### 1.2 Threshold Dinâmico Adaptativo
 
-Conversão dos valores de intensidade para Unidades Hounsfield (HU):
+Aplicação de **threshold baseado em percentis** para remover artefatos:
 
-$$IU(x, y, z) = m \cdot I(x, y, z) + b$$
+- **Limite inferior**: `-300 HU` (remove ar e tecidos de baixa densidade)
+- **Limite superior**: **percentil 99.7** da imagem (adaptativo, remove calcificações, stents e ossos)
 
-#### 1.3 Remoção de Artefatos
+**Vantagem**: O threshold superior adaptativo se ajusta automaticamente à distribuição de intensidades de cada imagem, sendo mais robusto que valores fixos.
 
-- Aplicação de threshold para remover calcificações, stents e ossos
-- Limiar adaptado: **600 HU** (ajustado do valor original de 675 HU)
+Máscara aplicada:
+$$M(x, y, z) = \begin{cases} 1, & \text{se } -300 \leq I(x,y,z) \leq P_{99.7} \\ 0, & \text{caso contrário} \end{cases}$$
 
-#### 1.4 Extração do Maior Componente Conectado
+onde $P_{99.7}$ é o percentil 99.7 da imagem.
 
-- Remoção de pulmões e vasos pulmonares
-- Isolamento da região de interesse (coração e vasos principais)
+#### 1.3 Extração do Maior Componente Conectado (LCC)
 
-### 2. Mapa de Vesselness
+- Aplicação **slice-by-slice** (2D) para cada fatia axial
+- Remove regiões isoladas, pulmões e vasos pulmonares
+- Mantém apenas a maior estrutura conectada (coração e grandes vasos)
+- Isolamento da região de interesse (ROI)
 
-Aplicação do **Filtro de Frangi modificado** para realce de estruturas tubulares:
+### 2. Cálculo do Mapa de Vesselness (Filtro de Frangi)
 
-- Análise dos autovalores da matriz Hessiana
-- Valores próximos a 1: alta probabilidade de vaso
-- Valores próximos a 0: baixa probabilidade
+Aplicação do **Filtro de Frangi modificado** para realce de estruturas tubulares vasculares.
 
-Parâmetros utilizados:
+**Funcionamento**:
 
-- `alpha = 0.5`: distinção entre estrutura tubular e plana
-- `beta = 1.0`: distinção entre tubo e estrutura esférica
-- `gamma = 30`: sensibilidade ao contraste
+- Análise dos autovalores da **matriz Hessiana** para cada voxel
+- Detecção de estruturas tubulares em múltiplas escalas
+- Valores próximos a **1**: alta probabilidade de vaso
+- Valores próximos a **0**: baixa probabilidade
+
+**Parâmetros utilizados (1ª passada - detecção de aorta)**:
+
+```python
+sigmas = np.arange(2.5, 3.5, 1)  # Escalas para detecção
+alpha = 0.5    # Distinção entre estrutura tubular (vaso) e plana
+beta = 1.0     # Distinção entre tubo (comprido) e blob (esférico)
+gamma = 30     # Sensibilidade ao contraste (estrutura vs ruído)
+```
+
+**Parâmetros utilizados (2ª passada - segmentação de artérias)**:
+
+```python
+sigmas = np.arange(1.5, 2.5, 0.5)  # Escalas menores para artérias finas
+alpha = 0.5
+beta = 0.5
+gamma = 55     # Maior sensibilidade para capturar artérias menores
+```
+
+**Melhorias implementadas**:
+
+- Normalização robusta usando percentis (ignora outliers extremos)
+- Medida de *grayness* (Gf) baseada no desvio da intensidade média
+- Medida de gradiente (Gd) para reforçar bordas vasculares
 
 ### 3. Localização da Aorta Ascendente
 
-Utilização da **Transformada de Hough para círculos**:
+Utilização da **Transformada de Hough para detecção de círculos** em fatias axiais:
 
-- Detecção em fatias axiais
-- Raio esperado: 36-62 mm
-- Critérios de parada baseados em variação de posição e raio
+**Processo**:
 
-**Abordagem implementada**: Busca restrita ao primeiro quadrante da imagem para maior precisão.
+1. **Detecção de bordas**: Aplicação do filtro Canny (sigma=3) em cada fatia
+2. **Transformada de Hough**: Busca por círculos nas bordas detectadas
+3. **Raios testados**: 36-62 mm (convertidos para pixels após downsampling)
+4. **Seleção de círculos**: Baseada em proximidade espacial entre fatias consecutivas
 
-### 4. Segmentação da Aorta
+**Critérios de parada**:
 
-**Active Contour Segmentation (Level Set)**:
+- Variação de raio > 9 mm entre fatias consecutivas
+- Variação de distância entre centros > 18 mm
+- Ausência de círculos por mais de 5 fatias consecutivas
 
-- Inicialização baseada nos círculos detectados
-- Refinamento iterativo dos contornos
-- Pós-processamento morfológico para remoção de vazamentos
+**Estratégias implementadas**:
+
+- **Abordagem C** (mais eficaz): Busca restrita ao **primeiro quadrante** da imagem
+- Seleção do círculo mais próximo do detectado na fatia anterior
+- Múltiplos picos analisados (10-15 círculos candidatos por fatia)
+
+**Saída**: Lista de círculos detectados com coordenadas `(center_x, center_y, radius, slice_index)`
+
+### 4. Segmentação da Aorta (Level Set)
+
+**Morphological Geodesic Active Contour (MGAC)**:
+
+1. **Inicialização**: Círculos detectados desenhados como discos preenchidos
+   - Raio reduzido por fator 0.15 (85% do raio original)
+   - Cada círculo vira uma "semente" na respectiva fatia
+
+2. **Cálculo do *edge indicator***:
+   - Transformação usando gradiente Gaussiano inverso
+   - Guia o contorno para bordas da aorta
+
+3. **Evolução iterativa** (31 iterações):
+   - `balloon = 0.8`: força de expansão do contorno
+   - `smoothing = 2`: suavização da curva
+   - Contorno evolui adaptando-se às bordas reais
+
+4. **Pós-processamento morfológico**:
+   - Remoção de vazamentos usando operação de **abertura** (radius=2)
+   - Extração do maior componente conectado
+   - Máscara binária final da aorta
+
+**Resultado**: Segmentação 3D precisa da aorta ascendente
 
 ### 5. Detecção de Óstios Coronarianos
 
-Identificação dos pontos de origem das artérias coronárias:
+Identificação automática dos pontos de origem das artérias coronárias (esquerda e direita):
 
-- Busca por voxels de alta vesselness na circunferência da aorta
-- Separação entre óstio esquerdo e direito
-- Validação baseada em distância e posição anatômica
+**Estratégia**:
 
-### 6. Segmentação das Artérias (Region Growing)
+1. **Extração da superfície da aorta**:
+   - Erosão da máscara da aorta (radius=4)
+   - Subtração para obter apenas a casca/superfície
 
-**Crescimento de região 3D** a partir dos óstios:
+2. **Região de busca**:
+   - **80% inferior** da aorta em z (onde óstios anatomicamente se localizam)
+   - Restrição espacial reduz falsos positivos
 
-- Guiado pela medida de vesselness
-- Critérios adaptativos de inclusão
-- Limitação de volume para evitar vazamento
+3. **Seleção de candidatos**:
+   - Top 2000 voxels com **maior vesselness** na superfície
+   - Filtrados por diferença máxima em z (52 voxels)
 
-### 7. Pós-processamento
+4. **Separação esquerdo/direito**:
+   - **Critério anatômico**: óstio esquerdo mais à esquerda (menor x)
+   - Distância mínima entre óstios: 70% do raio médio da aorta
+   - Separação lateral mínima: 50% do raio médio
 
-- Fechamento morfológico (raio = 3)
-- Dilatação (raio = 2)
-- Extração de componentes conectados
+5. **Validação**:
+   - Distância do centro da aorta
+   - Posição relativa entre os dois óstios
+   - Coordenadas anatômicas compatíveis
+
+**Saída**: Coordenadas `(y, x, z)` dos óstios esquerdo e direito
+
+### 6. Segmentação das Artérias (Region Growing 3D)
+
+**Crescimento de região adaptativo** a partir dos óstios detectados:
+
+**Algoritmo**:
+
+1. **Inicialização**:
+   - Sementes: coordenadas dos óstios esquerdo e direito
+   - Vesselness map da 2ª passada (escalas menores para artérias finas)
+
+2. **Critérios de crescimento**:
+   - `threshold = (max - min) / 5`: diferença máxima de vesselness
+   - `min_vesselness = max * 0.078`: piso mínimo de qualidade vascular
+   - `max_volume = 100000`: limite para evitar vazamento
+
+3. **Estratégia adaptativa**:
+   - Primeiros 2000 voxels: critério rígido
+   - Após 2000 voxels: relaxamento do threshold (fator 0.97)
+   - Janela de comparação ajustável
+
+4. **Validação de vizinhos** (26-conectividade):
+   - Avalia todos os vizinhos 3D de cada voxel adicionado
+   - Adiciona se vesselness dentro dos critérios
+   - Atualiza média da região iterativamente
+
+5. **Execução separada**:
+   - Artéria esquerda (LCA) e direita (RCA) segmentadas independentemente
+   - Máscaras combinadas ao final
+
+**Resultado**: Segmentação 3D das principais artérias coronárias
+
+### 7. Pós-processamento Morfológico
+
+Refinamento final das máscaras arteriais:
+
+1. **Fechamento morfológico** (ball, radius=3):
+   - Preenche pequenos buracos
+   - Conecta pequenas descontinuidades
+
+2. **Dilatação** (ball, radius=2):
+   - Recupera bordas que possam ter sido perdidas
+   - Suaviza contornos
+
+3. **Máscara binária final**: Artérias coronárias segmentadas
+
+**Avaliação**:
+
+- **Dice Score**: comparação com segmentação manual (ground truth)
+- **Contagem de voxels**: volume total das artérias segmentadas
 
 ## 🚀 Instalação
 
@@ -143,10 +259,10 @@ Identificação dos pontos de origem das artérias coronárias:
 
 ```bash
 # Clone o repositório
-git clone <repository-url>
+git clone https://github.com/matheusssilva991/coronary-centerline-detection.git
 cd coronary-centerline-detection
 
-# Instale as dependências usando uv
+# Instale as dependências usando uv (recomendado)
 uv sync
 
 # Ou usando pip
@@ -234,37 +350,70 @@ Os resultados são salvos em:
 
 ### Parâmetros Principais
 
-Edite `segmentation_pipeline.py` para ajustar:
+Edite [segmentation_pipeline.py](src/segmentation_pipeline.py) para ajustar:
 
 ```python
-# Caminhos
-base_path = "/path/to/ImageCAS"
-base_save_path = "/path/to/Processed_ImageCAS"
+# ==================== Caminhos ====================
+base_path = "/media/matheus/HD/DatasetsCCTA/ImageCAS"
+base_save_path = "/media/matheus/HD/DatasetsCCTA/Processed_ImageCAS"
 
-# Cache
-LOAD_CACHE = False  # True para usar resultados salvos
+# ==================== Cache ====================
+LOAD_CACHE = False  # True para usar resultados salvos (desenvolvimento)
 
-# Downsampling
-downscale_factors = (2, 2, 1)  # (x, y, z)
+# ==================== Pré-processamento ====================
+downscale_factors = (2, 2, 1)  # (x, y, z) - reduz xy por 2, mantém z
+min_threshold = -300           # HU mínimo
+max_threshold_percentile = 99.7 # Percentil para threshold superior
+lcc_per_slice = True           # Aplicar LCC por fatia (2D) ou 3D
 
-# Vesselness (primeira passada - detecção de aorta)
-sigmas=np.arange(2.5, 3.5, 1)
-alpha=0.5
-beta=1
-gamma=30
+# ==================== Vesselness - Pass 1 (Aorta) ====================
+sigmas = np.arange(2.5, 3.5, 1)  # Escalas para estruturas grandes
+alpha = 0.5   # Tubular vs Plano
+beta = 1.0    # Tubo vs Blob
+gamma = 30    # Sensibilidade ao contraste
 
-# Vesselness (segunda passada - segmentação de artérias)
-sigmas=np.arange(1.5, 2.5, 0.5)
-gamma=55
+# ==================== Vesselness - Pass 2 (Artérias) ====================
+sigmas = np.arange(1.5, 2.5, 0.5)  # Escalas menores
+alpha = 0.5
+beta = 0.5
+gamma = 55    # Maior sensibilidade
 
-# Hough Transform
-radii_start = 36 mm  # raio mínimo da aorta
-radii_end = 62 mm    # raio máximo da aorta
+# ==================== Transformada de Hough ====================
+radii_start = 36  # mm - raio mínimo da aorta
+radii_end = 62    # mm - raio máximo da aorta
+tol_radius_mm = 9.0              # Tolerância de variação de raio
+tol_distance_mm = 18.0           # Tolerância de distância entre centros
+max_slice_miss_threshold = 5     # Máx. fatias sem detecção
+total_num_peaks_initial = 10     # Círculos na primeira fatia
+total_num_peaks = 15             # Círculos nas demais fatias
+canny_sigma = 3                  # Sigma do filtro Canny
 
-# Region Growing
-threshold = (max - min) / 5
-max_volume = 100000
-min_vesselness = max * 0.078
+# ==================== Level Set (Segmentação Aorta) ====================
+radius_reduction_factor = 0.15   # Redução do raio inicial (85%)
+num_iter = 31                    # Iterações do algoritmo
+balloon = 0.8                    # Força de expansão
+smoothing = 2                    # Suavização do contorno
+
+# ==================== Detecção de Óstios ====================
+top_n = 2000                     # Top candidatos com maior vesselness
+max_z_diff = 52                  # Diferença máxima em z entre óstios
+lower_fraction = 0.80            # Região inferior da aorta (80%)
+min_center_distance_factor = 0.70  # Distância mínima entre óstios
+min_lateral_factor = 0.50        # Separação lateral mínima
+erosion_radius = 4               # Erosão para extrair superfície
+
+# ==================== Region Growing (Artérias) ====================
+threshold = (vesselness_max - vesselness_min) / 5  # Threshold adaptativo
+max_volume = 100000              # Voxels máximos (limite de vazamento)
+min_vesselness = vesselness_max * 0.078  # Piso mínimo
+relaxed_floor_factor = 0.97      # Fator de relaxamento
+switch_at_voxels = 2000          # Quando relaxar critério
+comparison_window = 1            # Janela de comparação
+smooth_relaxation = True         # Relaxamento suave
+
+# ==================== Pós-processamento ====================
+closing_radius = 3               # Raio do fechamento morfológico
+dilation_radius = 2              # Raio da dilatação
 ```
 
 ## 📈 Estado Atual do Projeto
@@ -290,10 +439,12 @@ min_vesselness = max * 0.078
 
 ## 🔍 Limitações Conhecidas
 
-1. **Posição da aorta**: Algoritmo atual assume aorta no primeiro quadrante
-2. **Calcificações severas**: Podem interferir na detecção de círculos
-3. **Anatomias atípicas**: Variações anatômicas podem reduzir precisão
-4. **Parâmetros fixos**: Alguns parâmetros podem precisar ajuste por dataset
+1. **Posição da aorta**: Abordagem atual (C) assume aorta no **primeiro quadrante** da imagem para melhor precisão
+2. **Calcificações severas**: Threshold adaptativo ajuda, mas calcificações muito densas ainda podem interferir na detecção
+3. **Anatomias atípicas**: Variações anatômicas significativas (aorta bicúspide, origem anômala de coronárias) podem reduzir precisão
+4. **Parâmetros semi-fixos**: Alguns parâmetros otimizados para ImageCAS podem precisar ajuste para outros datasets
+5. **Artérias distais**: Vasos muito finos ou de terceira ordem podem não ser capturados completamente
+6. **Stents e metal**: Apesar do threshold adaptativo, artefatos metálicos podem afetar vesselness localmente
 
 ## 📚 Referências
 
