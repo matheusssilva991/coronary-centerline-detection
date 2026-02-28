@@ -1,0 +1,25 @@
+IMG_ID,dice_artery,artery_voxels,both_correct,both_tolerable,left_intersects,right_intersects,left_dist_mm,right_dist_mm,ostia_left,ostia_right,error,status,downscale_method,opencv_interpolation,downscale_factors,max_threshold_percentile
+446,,,False,False,False,False,11.15490406797051,0.5,"(107, 152, 189)","(110, 126, 205)",,nenhum correto,opencv,linear,"(2, 2, 1)",99.7
+80,0.6528201219512195,17968.0,False,True,False,False,0.5,0.63671875,"(84, 161, 156)","(119, 131, 183)",,ambos toleráveis,opencv,linear,"(2, 2, 1)",99.7
+13,0.5707924124480038,25323.0,False,True,False,False,2.0859375,1.1031404921008474,"(114, 173, 173)","(130, 145, 202)",,ambos toleráveis,opencv,linear,"(2, 2, 1)",99.7
+636,,,False,False,False,False,80.61264449674623,69.57170401910587,"(29, 161, 266)","(40, 135, 261)",,nenhum correto,opencv,linear,"(2, 2, 1)",99.7
+693,0.6630391899000526,34255.0,False,True,False,False,0.8095744354916121,0.8095744354916121,"(95, 166, 148)","(118, 126, 176)",,ambos toleráveis,opencv,linear,"(2, 2, 1)",99.7
+170,0.6517702862951041,58887.0,False,True,False,False,0.66796875,1.0688145311292905,"(95, 136, 162)","(95, 90, 195)",,ambos toleráveis,opencv,linear,"(2, 2, 1)",99.7
+116,0.4414015785697202,19363.0,False,True,False,False,0.71875,1.811961126790528,"(101, 170, 146)","(121, 137, 183)",,ambos toleráveis,opencv,linear,"(2, 2, 1)",99.7
+89,0.7141536755191324,26242.0,False,True,True,False,0.0,1.0,"(94, 171, 161)","(106, 130, 195)",,ambos toleráveis,opencv,linear,"(2, 2, 1)",99.7
+546,0.7500543614619052,33252.0,False,True,False,False,3.2184181412661794,1.967649121771016,"(101, 159, 170)","(117, 126, 207)",,ambos toleráveis,opencv,linear,"(2, 2, 1)",99.7
+156,0.6224756572040266,21138.0,True,True,True,True,0.0,0.0,"(100, 148, 157)","(109, 95, 178)",,ambos corretos,opencv,linear,"(2, 2, 1)",99.7
+476,0.49047650872151305,11457.0,False,True,False,False,1.3671875,1.2113217636280884,"(99, 155, 186)","(117, 120, 216)",,ambos toleráveis,opencv,linear,"(2, 2, 1)",99.7
+783,0.5997278040188936,35207.0,False,True,True,False,0.0,1.1751256997258845,"(98, 142, 146)","(118, 101, 187)",,ambos toleráveis,opencv,linear,"(2, 2, 1)",99.7
+923,0.7633471280561182,34551.0,False,True,True,False,0.0,1.0,"(97, 188, 186)","(118, 148, 217)",,ambos toleráveis,opencv,linear,"(2, 2, 1)",99.7
+629,,,False,False,False,False,1.2734375,60.02265044876418,"(107, 147, 192)","(59, 47, 162)",,nenhum correto,opencv,linear,"(2, 2, 1)",99.7
+857,0.6811431554221584,40729.0,False,True,False,True,0.69921875,0.0,"(85, 152, 143)","(103, 111, 182)",,ambos toleráveis,opencv,linear,"(2, 2, 1)",99.7
+699,0.5029916816656127,67712.0,False,True,False,False,2.44235294145318,0.9820315607596962,"(102, 137, 140)","(121, 105, 149)",,ambos toleráveis,opencv,linear,"(2, 2, 1)",99.7
+562,,,False,False,False,False,0.85546875,18.019387294840115,"(85, 177, 185)","(80, 159, 163)",,nenhum correto,opencv,linear,"(2, 2, 1)",99.7
+718,0.5766235584411039,28411.0,False,True,False,True,0.69921875,0.0,"(84, 154, 164)","(114, 117, 202)",,ambos toleráveis,opencv,linear,"(2, 2, 1)",99.7
+582,0.7238004524348137,21836.0,False,True,False,True,2.546875,0.0,"(102, 183, 200)","(121, 154, 225)",,ambos toleráveis,opencv,linear,"(2, 2, 1)",99.7
+122,0.5420197465599005,14155.0,False,True,False,False,1.833933414161519,5.912360688517981,"(75, 161, 173)","(75, 134, 211)",,ambos toleráveis,opencv,linear,"(2, 2, 1)",99.7
+486,0.5515641325056849,41568.0,True,True,True,True,0.0,0.0,"(101, 169, 183)","(133, 148, 217)",,ambos corretos,opencv,linear,"(2, 2, 1)",99.7
+947,0.36324521280719435,13057.0,False,True,True,False,0.0,1.0,"(82, 146, 141)","(91, 108, 182)",,ambos toleráveis,opencv,linear,"(2, 2, 1)",99.7
+162,,,False,False,True,False,0.0,7.519380071532244,"(106, 161, 173)","(108, 119, 189)",,um correto,opencv,linear,"(2, 2, 1)",99.7
+53,0.7004094010614101,32194.0,False,True,True,False,0.0,1.1855002178833889,"(110, 142, 170)","(124, 111, 200)",,ambos toleráveis,opencv,linear,"(2, 2, 1)",99.7

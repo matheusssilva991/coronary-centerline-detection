@@ -49,7 +49,7 @@ from .frangi import (
 # Pré-processamento
 from .preprocessing import (
     normalize_image,
-    downscale_image,
+    downscale_image_ndi,
     threshold_image,
     threshold_image_with_offset,
     largest_connected_component,

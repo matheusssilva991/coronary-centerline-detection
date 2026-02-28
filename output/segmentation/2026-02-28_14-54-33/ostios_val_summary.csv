@@ -1,0 +1,25 @@
+IMG_ID,dice_artery,artery_voxels,both_correct,both_tolerable,left_intersects,right_intersects,left_dist_mm,right_dist_mm,ostia_left,ostia_right,error,status,downscale_method,opencv_interpolation,downscale_factors,max_threshold_percentile
+446,,,False,False,False,False,11.15490406797051,0.5,"(107, 152, 189)","(110, 126, 205)",,nenhum correto,opencv,cubic,"(2, 2, 1)",99.7
+80,0.6523942440584266,18133.0,False,True,False,False,0.5,0.63671875,"(84, 161, 156)","(119, 131, 183)",,ambos toleráveis,opencv,cubic,"(2, 2, 1)",99.7
+13,0.5704859440511375,25582.0,False,True,False,False,2.0859375,1.1031404921008474,"(114, 173, 173)","(130, 145, 202)",,ambos toleráveis,opencv,cubic,"(2, 2, 1)",99.7
+636,,,False,False,False,False,80.61264449674623,69.57170401910587,"(29, 161, 266)","(40, 135, 261)",,nenhum correto,opencv,cubic,"(2, 2, 1)",99.7
+693,0.6623194548596394,34765.0,False,True,False,False,0.8095744354916121,0.8095744354916121,"(95, 166, 148)","(118, 126, 176)",,ambos toleráveis,opencv,cubic,"(2, 2, 1)",99.7
+170,0.6562007815359991,58288.0,False,True,True,False,0.0,1.0688145311292905,"(92, 139, 164)","(95, 90, 195)",,ambos toleráveis,opencv,cubic,"(2, 2, 1)",99.7
+116,0.40973338278320354,17725.0,False,True,False,False,0.71875,1.811961126790528,"(101, 170, 146)","(121, 137, 183)",,ambos toleráveis,opencv,cubic,"(2, 2, 1)",99.7
+89,0.7180090461026712,26858.0,False,True,True,False,0.0,0.8281342128025279,"(94, 171, 161)","(106, 129, 195)",,ambos toleráveis,opencv,cubic,"(2, 2, 1)",99.7
+546,0.7462746009093625,33729.0,False,True,False,False,3.0179819966380266,1.967649121771016,"(100, 159, 170)","(117, 126, 207)",,ambos toleráveis,opencv,cubic,"(2, 2, 1)",99.7
+156,0.6533943581086961,30024.0,True,True,True,True,0.0,0.0,"(100, 148, 157)","(109, 95, 178)",,ambos corretos,opencv,cubic,"(2, 2, 1)",99.7
+476,0.4907857095336305,11593.0,False,True,False,False,1.3671875,1.2113217636280884,"(99, 155, 186)","(117, 120, 216)",,ambos toleráveis,opencv,cubic,"(2, 2, 1)",99.7
+783,0.5844539907857054,37000.0,False,True,True,False,0.0,1.1751256997258845,"(98, 142, 146)","(118, 101, 187)",,ambos toleráveis,opencv,cubic,"(2, 2, 1)",99.7
+923,0.76269378570698,34848.0,False,True,True,False,0.0,1.0,"(97, 188, 186)","(118, 148, 217)",,ambos toleráveis,opencv,cubic,"(2, 2, 1)",99.7
+629,0.6489132699118116,30299.0,False,True,False,False,1.2734375,1.739843048383334,"(107, 147, 192)","(126, 114, 216)",,ambos toleráveis,opencv,cubic,"(2, 2, 1)",99.7
+857,0.68047314229326,41116.0,False,True,False,True,0.8595969173697416,0.0,"(85, 152, 144)","(103, 111, 182)",,ambos toleráveis,opencv,cubic,"(2, 2, 1)",99.7
+699,0.488084032980686,71171.0,False,True,False,False,2.390625,0.9820315607596962,"(102, 137, 141)","(121, 105, 149)",,ambos toleráveis,opencv,cubic,"(2, 2, 1)",99.7
+562,,,False,False,False,False,2.7052297170971684,18.019387294840115,"(86, 175, 187)","(80, 159, 163)",,nenhum correto,opencv,cubic,"(2, 2, 1)",99.7
+718,0.5766142376896414,28679.0,False,True,False,True,0.69921875,0.0,"(84, 154, 164)","(115, 118, 203)",,ambos toleráveis,opencv,cubic,"(2, 2, 1)",99.7
+582,0.7117521763289498,23033.0,False,True,False,True,2.546875,0.0,"(102, 183, 200)","(121, 154, 225)",,ambos toleráveis,opencv,cubic,"(2, 2, 1)",99.7
+122,0.5482155245509905,14485.0,False,True,False,False,1.833933414161519,5.912360688517981,"(75, 161, 173)","(75, 134, 211)",,ambos toleráveis,opencv,cubic,"(2, 2, 1)",99.7
+486,0.548708177730356,42089.0,True,True,True,True,0.0,0.0,"(101, 169, 183)","(133, 148, 217)",,ambos corretos,opencv,cubic,"(2, 2, 1)",99.7
+947,0.3636960763479706,13224.0,False,True,True,False,0.0,1.0,"(82, 146, 141)","(91, 108, 182)",,ambos toleráveis,opencv,cubic,"(2, 2, 1)",99.7
+162,,3214,False,False,True,False,0.0,7.519380071532244,"(106, 161, 173)","(108, 119, 189)",,um correto,opencv,cubic,"(2, 2, 1)",99.7
+53,0.7077771285600851,32991.0,False,True,True,False,0.0,1.1855002178833889,"(110, 142, 170)","(124, 111, 200)",,ambos toleráveis,opencv,cubic,"(2, 2, 1)",99.7

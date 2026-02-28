@@ -8,6 +8,7 @@ conectados para isolar estruturas anatômicas de interesse.
 
 import numpy as np
 import scipy.ndimage as ndi
+import cv2
 
 
 # =============================================================================
@@ -69,7 +70,7 @@ def normalize_image(img):
     return (img - min_val) / (max_val - min_val)
 
 
-def downscale_image(image, factors, order=3):
+def downscale_image_ndi(image, factors, order=3):
     """
     Reduz a resolução espacial da imagem pelos fatores especificados.
 
@@ -104,6 +105,92 @@ def downscale_image(image, factors, order=3):
     zoom_factors = tuple(1.0 / f for f in factors)
     down_img = ndi.zoom(image, zoom=zoom_factors, order=order)
     return down_img
+
+
+def downscale_image_opencv(image, factors, interpolation=cv2.INTER_LINEAR):
+    """
+    Reduz a resolução espacial da imagem pelos fatores especificados usando OpenCV.
+
+    Usa interpolação do OpenCV (linear por padrão) para redimensionar a imagem.
+    Para volumes 3D, aplica o redimensionamento slice por slice no plano XY.
+
+    Args:
+        image (np.ndarray): Imagem de entrada (2D ou 3D)
+        factors (tuple): Fatores de downscale para cada dimensão.
+            Valores > 1 reduzem a resolução, valores < 1 aumentam.
+            Para 3D: (factor_x, factor_y, factor_z)
+            Para 2D: (factor_x, factor_y)
+        interpolation (int): Método de interpolação do OpenCV.
+            cv2.INTER_LINEAR (padrão) - interpolação bilinear
+            cv2.INTER_NEAREST - vizinho mais próximo
+            cv2.INTER_CUBIC - interpolação bicúbica
+            cv2.INTER_AREA - reamostragem usando área de pixel
+
+    Returns:
+        np.ndarray: Imagem redimensionada com shape reduzido pelos fatores
+
+    Example:
+        >>> volume = np.random.rand(512, 512, 100)
+        >>> downscaled = downscale_image_opencv(volume, factors=(2, 2, 1))
+        >>> print(f"Shape original: {volume.shape}")
+        >>> print(f"Shape reduzido: {downscaled.shape}")
+        Shape original: (512, 512, 100)
+        Shape reduzido: (256, 256, 100)
+
+    Note:
+        - cv2.INTER_AREA é recomendado para downscaling (redução de resolução)
+        - cv2.INTER_CUBIC é recomendado para upscaling (aumento de resolução)
+        - cv2.INTER_LINEAR oferece bom equilíbrio entre qualidade e velocidade
+        - Para volumes 3D, processa cada slice independentemente no eixo Z
+    """
+    if image.ndim == 2:
+        # Imagem 2D
+        new_shape = (
+            int(image.shape[1] / factors[1]),  # width
+            int(image.shape[0] / factors[0]),  # height
+        )
+        return cv2.resize(image, new_shape, interpolation=interpolation)
+
+    elif image.ndim == 3:
+        # Volume 3D - processa slice por slice
+        factor_x, factor_y, factor_z = factors
+        new_shape_xy = (
+            int(image.shape[1] / factor_y),  # width
+            int(image.shape[0] / factor_x),  # height
+        )
+        new_shape_z = int(image.shape[2] / factor_z)
+
+        # Redimensiona no plano XY
+        volume_resized_xy = np.zeros(
+            (new_shape_xy[1], new_shape_xy[0], image.shape[2]), dtype=image.dtype
+        )
+
+        for z in range(image.shape[2]):
+            volume_resized_xy[:, :, z] = cv2.resize(
+                image[:, :, z], new_shape_xy, interpolation=interpolation
+            )
+
+        # Se factor_z != 1, redimensiona também no eixo Z
+        if factor_z != 1:
+            volume_final = np.zeros(
+                (new_shape_xy[1], new_shape_xy[0], new_shape_z), dtype=image.dtype
+            )
+
+            for y in range(new_shape_xy[1]):
+                slice_xz = volume_resized_xy[y, :, :]
+                resized_xz = cv2.resize(
+                    slice_xz,
+                    (new_shape_z, new_shape_xy[0]),
+                    interpolation=interpolation,
+                )
+                volume_final[y, :, :] = resized_xz
+
+            return volume_final
+        else:
+            return volume_resized_xy
+
+    else:
+        raise ValueError(f"Imagem deve ser 2D ou 3D, recebido shape: {image.shape}")
 
 
 def threshold_image(image, min_val=-300, max_val=675):
@@ -258,6 +345,8 @@ def run_core_preprocessing_pipeline(
     max_threshold_percentile=99.5,
     lcc_per_slice=True,
     order=3,
+    use_opencv=False,
+    opencv_interpolation=None,
 ):
     """
     Executa pipeline completo de pré-processamento em volume CCTA.
@@ -281,7 +370,12 @@ def run_core_preprocessing_pipeline(
             Default: 99.5 (remove 0.5% dos voxels mais brilhantes)
         lcc_per_slice (bool): Se True, aplica LCC em cada slice 2D separadamente.
             Se False, aplica LCC no volume 3D completo. Default: True
-        order (int): Ordem de interpolação para downscaling (0-5). Default: 3
+        order (int): Ordem de interpolação para downscaling com scipy (0-5).
+            Default: 3. Ignorado se use_opencv=True
+        use_opencv (bool): Se True, usa OpenCV para downscaling (cv2.resize).
+            Se False, usa scipy (ndi.zoom). Default: False
+        opencv_interpolation (int): Método de interpolação do OpenCV (ex: cv2.INTER_AREA).
+            Ignorado se use_opencv=False. Se None, usa cv2.INTER_AREA. Default: None
 
     Returns:
         tuple: (down_image, thresh_image, lcc_image, thresh_vals) contendo:
@@ -295,7 +389,8 @@ def run_core_preprocessing_pipeline(
         >>> down, thresh, lcc, vals = run_core_preprocessing_pipeline(
         ...     ccta,
         ...     downscale_factors=(2, 2, 1),
-        ...     lcc_per_slice=True
+        ...     lcc_per_slice=True,
+        ...     use_opencv=True
         ... )
         >>> print(f"Shape reduzido: {down.shape}")  # (256, 256, 300)
         >>> print(f"Thresholds: {vals}")  # (-300, 620) aproximadamente
@@ -306,9 +401,17 @@ def run_core_preprocessing_pipeline(
         - max_threshold é adaptativo (percentil) para lidar com variações de contraste
         - Offset é removido no final para preservar valores Hounsfield originais
         - thresh_vals pode ser usado para reproduzir o threshold em outras imagens
+        - OpenCV (use_opencv=True) pode ser mais rápido para downscaling 2D
     """
     # 1. Downscaling para reduzir custo computacional
-    down_image = downscale_image(image, downscale_factors, order=order)
+    if use_opencv:
+        if opencv_interpolation is None:
+            opencv_interpolation = cv2.INTER_AREA
+        down_image = downscale_image_opencv(
+            image, downscale_factors, interpolation=opencv_interpolation
+        )
+    else:
+        down_image = downscale_image_ndi(image, downscale_factors, order=order)
 
     # 2. Calcular threshold superior adaptativo por percentil
     thresh_vals = (

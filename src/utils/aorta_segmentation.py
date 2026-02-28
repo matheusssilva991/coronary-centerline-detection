@@ -12,7 +12,7 @@ from skimage.segmentation import (
     inverse_gaussian_gradient,
     morphological_geodesic_active_contour,
 )
-from skimage.morphology import binary_opening, ball
+from skimage.morphology import opening, ball
 
 
 # =============================================================================
@@ -291,12 +291,12 @@ def remove_leaks_morphology(mask_3d, radius=3):
         - O custo computacional cresce com o raio (O(r³))
 
     See Also:
-        skimage.morphology.binary_opening: Documentação da operação morfológica
+        skimage.morphology.opening: Documentação da operação morfológica
         skimage.morphology.ball: Elemento estruturante esférico 3D
     """
     kernel = ball(radius)
 
     # Aplicar abertura morfológica (erosão → dilatação)
-    mask_cleaned = binary_opening(mask_3d, footprint=kernel)
+    mask_cleaned = opening(mask_3d, footprint=kernel)
 
     return mask_cleaned
