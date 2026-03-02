@@ -46,7 +46,8 @@ from utils import (
 # ============================================================================
 
 # Caminhos padrão
-BASE_PATH = "/media/matheus/HD/DatasetsCCTA/ImageCAS"
+#BASE_PATH = "/media/matheus/HD/DatasetsCCTA/ImageCAS"
+BASE_PATH = "/data04/home/mpmaia/ImageCAS/database/1-1000"
 BASE_SAVE_PATH = "/media/matheus/HD/DatasetsCCTA/Processed_ImageCAS"
 OUTPUT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "output"))
 
@@ -54,7 +55,7 @@ OUTPUT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "outp
 CONFIG = {
     # Cache
     "LOAD_CACHE": False,
-    "SAVE_CACHE": True,
+    "SAVE_CACHE": False,
     # Downscaling
     "DOWNSCALE_METHOD": "scipy",  # "scipy" ou "opencv"
     "OPENCV_INTERPOLATION": "area",  # "nearest", "linear", "cubic", "area", "lanczos4"
@@ -159,6 +160,7 @@ def get_data_splits(base_path, test_size=0.7, val_size=0.1, random_state=42):
     train_ids, val_ids = train_test_split(
         train_val_ids, test_size=val_size, random_state=random_state
     )
+    val_ids = [1, 2, 3, 4]
 
     return train_ids, val_ids, test_ids, all_ids
 
@@ -452,7 +454,6 @@ def process_image(IMG_ID, config=CONFIG):
 
         # Detecção de círculos (aorta)
         saved_dir_circles = f"{BASE_SAVE_PATH}/detected_circles"
-        os.makedirs(saved_dir_circles, exist_ok=True)
         json_path = os.path.join(saved_dir_circles, f"{IMG_ID}_detected_circles.json")
 
         if os.path.exists(json_path) and config["LOAD_CACHE"]:
@@ -480,12 +481,12 @@ def process_image(IMG_ID, config=CONFIG):
                 canny_sigma=circle_config["canny_sigma"],
             )
             if config["SAVE_CACHE"]:
+                os.makedirs(saved_dir_circles, exist_ok=True)
                 with open(json_path, "w") as f:
                     json.dump(detected_circles, f, indent=4)
 
         # Segmentação da aorta com Level Set
         saved_dir_aorta = f"{BASE_SAVE_PATH}/segmented_aorta"
-        os.makedirs(saved_dir_aorta, exist_ok=True)
         mask_path = os.path.join(saved_dir_aorta, f"{IMG_ID}_mask_aorta.npy")
 
         if os.path.exists(mask_path) and config["LOAD_CACHE"]:
@@ -504,6 +505,7 @@ def process_image(IMG_ID, config=CONFIG):
             aorta_mask = keep_largest_component(aorta_mask)
             aorta_mask = aorta_mask.astype(np.uint8)
             if config["SAVE_CACHE"]:
+                os.makedirs(saved_dir_aorta, exist_ok=True)
                 save_npy_array(aorta_mask, mask_path)
 
         # Encontrar óstios

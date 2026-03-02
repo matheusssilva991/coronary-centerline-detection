@@ -1,0 +1,5 @@
+IMG_ID,dice_artery,artery_voxels,both_correct,both_tolerable,left_intersects,right_intersects,left_dist_mm,right_dist_mm,ostia_left,ostia_right,error,status,downscale_method,opencv_interpolation,downscale_factors,max_threshold_percentile
+1,0.6980070563554878,25476,False,True,True,False,0.0,1.4617623841028764,"(100, 183, 130)","(112, 144, 166)",,ambos toleráveis,scipy,N/A,"(2, 2, 1)",99.7
+2,0.7092402037210269,25011,False,True,False,False,2.6759950872584297,1.6735717149725762,"(87, 155, 222)","(104, 120, 255)",,ambos toleráveis,scipy,N/A,"(2, 2, 1)",99.7
+3,0.7485837316190506,37003,False,True,False,True,0.5,0.0,"(102, 166, 152)","(130, 144, 197)",,ambos toleráveis,scipy,N/A,"(2, 2, 1)",99.7
+4,0.7179383798676209,46227,True,True,True,True,0.0,0.0,"(89, 168, 156)","(113, 120, 193)",,ambos corretos,scipy,N/A,"(2, 2, 1)",99.7

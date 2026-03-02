@@ -50,6 +50,7 @@ from .frangi import (
 from .preprocessing import (
     normalize_image,
     downscale_image_ndi,
+    downscale_image_opencv,
     threshold_image,
     threshold_image_with_offset,
     largest_connected_component,
@@ -101,7 +102,8 @@ __all__ = [
     "load_vesselness_cache",
     # Preprocessing
     "normalize_image",
-    "downscale_image",
+    "downscale_image_ndi",
+    "downscale_image_opencv"
     "threshold_image",
     "threshold_image_with_offset",
     "largest_connected_component",
