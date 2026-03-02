@@ -1,41 +1,47 @@
 {
   "execution_info": {
-    "timestamp": "2026-02-28T16:48:21.402253",
+    "timestamp": "2026-03-02T15:10:42.760466",
     "split_name": "val",
-    "num_images": 24,
+    "num_images": 30,
     "image_ids": [
-      446,
-      80,
+      28,
+      380,
+      854,
+      937,
+      315,
+      428,
+      752,
       13,
-      636,
-      693,
-      170,
-      116,
-      89,
-      546,
-      156,
-      476,
-      783,
-      923,
-      629,
-      857,
-      699,
-      562,
-      718,
-      582,
-      122,
-      486,
-      947,
-      162,
-      53
+      538,
+      965,
+      447,
+      836,
+      603,
+      676,
+      44,
+      129,
+      518,
+      793,
+      550,
+      631,
+      330,
+      90,
+      608,
+      887,
+      175,
+      760,
+      696,
+      194,
+      305,
+      344
     ],
-    "execution_time_seconds": 4055.382607460022,
-    "python_version": "3.13.11",
-    "platform": "Linux-6.14.0-37-generic-x86_64-with-glibc2.39"
+    "execution_time_seconds": 6358.6464376449585,
+    "python_version": "3.14.3",
+    "platform": "Linux-5.15.0-170-generic-x86_64-with-glibc2.35"
   },
   "preprocessing_config": {
-    "downscale_method": "opencv",
-    "opencv_interpolation": "area",
+    "downscale_method": "scipy",
+    "opencv_interpolation": null,
     "downscale_factors": [
       2,
       2,
@@ -95,27 +101,27 @@
   },
   "cache_config": {
     "load_cache": false,
-    "save_cache": true
+    "save_cache": false
   },
   "evaluation_config": {
     "tolerable_distance_mm": 7.0
   },
   "results_summary": {
-    "total_processed": 24,
-    "both_correct": 2,
-    "both_correct_percent": 8.333333333333332,
-    "both_tolerable": 19,
-    "both_tolerable_percent": 79.16666666666666,
-    "left_correct": 8,
-    "right_correct": 5,
+    "total_processed": 30,
+    "both_correct": 1,
+    "both_correct_percent": 3.3333333333333335,
+    "both_tolerable": 25,
+    "both_tolerable_percent": 83.33333333333334,
+    "left_correct": 7,
+    "right_correct": 7,
     "errors": 0,
-    "dice_artery_mean": 0.6085187402654509,
-    "dice_artery_std": 0.1086565785970042,
-    "dice_artery_median": 0.6224756572040266
+    "dice_artery_mean": 0.6360327640812208,
+    "dice_artery_std": 0.11350672966963764,
+    "dice_artery_median": 0.67130498653391
   },
   "paths": {
-    "base_path": "/media/matheus/HD/DatasetsCCTA/ImageCAS",
+    "base_path": "/data04/home/mpmaia/ImageCAS/database/1-1000",
     "base_save_path": "/media/matheus/HD/DatasetsCCTA/Processed_ImageCAS",
-    "output_dir": "/home/matheus/workspace/coronary-centerline-detection/output"
+    "output_dir": "/data04/home/projetos/dac_seg_dlag/mssilva.ppgmc/matheus_codes/coronary-centerline-detection/output"
   }
 }

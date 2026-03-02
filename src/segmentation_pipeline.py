@@ -160,7 +160,6 @@ def get_data_splits(base_path, test_size=0.7, val_size=0.1, random_state=42):
     train_ids, val_ids = train_test_split(
         train_val_ids, test_size=val_size, random_state=random_state
     )
-    val_ids = [1, 2, 3, 4]
 
     return train_ids, val_ids, test_ids, all_ids
 

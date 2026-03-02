@@ -1,6 +1,6 @@
 {
   "execution_info": {
-    "timestamp": "2026-03-02T11:57:39.298120",
+    "timestamp": "2026-03-02T18:47:17.229888",
     "split_name": "val",
     "num_images": 30,
     "image_ids": [
@@ -35,13 +35,13 @@
       305,
       344
     ],
-    "execution_time_seconds": 6306.085824251175,
+    "execution_time_seconds": 6103.064519405365,
     "python_version": "3.14.3",
     "platform": "Linux-5.15.0-170-generic-x86_64-with-glibc2.35"
   },
   "preprocessing_config": {
-    "downscale_method": "scipy",
-    "opencv_interpolation": null,
+    "downscale_method": "opencv",
+    "opencv_interpolation": "linear",
     "downscale_factors": [
       2,
       2,
@@ -108,16 +108,16 @@
   },
   "results_summary": {
     "total_processed": 30,
-    "both_correct": 1,
-    "both_correct_percent": 3.3333333333333335,
-    "both_tolerable": 25,
-    "both_tolerable_percent": 83.33333333333334,
-    "left_correct": 7,
-    "right_correct": 7,
+    "both_correct": 0,
+    "both_correct_percent": 0.0,
+    "both_tolerable": 26,
+    "both_tolerable_percent": 86.66666666666667,
+    "left_correct": 9,
+    "right_correct": 4,
     "errors": 0,
-    "dice_artery_mean": 0.6360327640812208,
-    "dice_artery_std": 0.11350672966963764,
-    "dice_artery_median": 0.67130498653391
+    "dice_artery_mean": 0.6208048180392617,
+    "dice_artery_std": 0.11392887219005768,
+    "dice_artery_median": 0.6652713552357175
   },
   "paths": {
     "base_path": "/data04/home/mpmaia/ImageCAS/database/1-1000",
