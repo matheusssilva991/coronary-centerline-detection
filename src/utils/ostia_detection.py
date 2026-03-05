@@ -97,7 +97,7 @@ def _get_top_candidates(surface_mask, vesselness_map, top_n=50):
 
 
 def _validate_ostium_pair(
-    ostium_1, ostium_2, min_center_dist, max_z_diff, min_lateral_sep
+    ostium_1, ostium_2, min_center_dist, max_z_diff_mm, min_lateral_sep, spacing_dz
 ):
     """
     Valida se dois pontos satisfazem os critérios anatômicos para serem óstios.
@@ -106,23 +106,25 @@ def _validate_ostium_pair(
         ostium_1 (np.ndarray): Coordenadas (y, x, z) do primeiro óstio
         ostium_2 (np.ndarray): Coordenadas (y, x, z) do segundo óstio
         min_center_dist (float): Distância mínima entre centros em voxels
-        max_z_diff (int): Diferença máxima em z
+        max_z_diff_mm (float): Diferença máxima em z em milímetros
         min_lateral_sep (float): Separação lateral mínima em x
+        spacing_dz (float): Espaçamento físico em z (mm/voxel)
 
     Returns:
         bool: True se o par é válido
     """
     dist = np.linalg.norm(ostium_1 - ostium_2)
-    z_diff = abs(ostium_1[2] - ostium_2[2])
+    z_diff_voxels = abs(ostium_1[2] - ostium_2[2])
+    z_diff_mm = z_diff_voxels * spacing_dz
     x_diff = abs(ostium_1[1] - ostium_2[1])
 
     return (
-        dist >= min_center_dist and z_diff <= max_z_diff and x_diff >= min_lateral_sep
+        dist >= min_center_dist and z_diff_mm <= max_z_diff_mm and x_diff >= min_lateral_sep
     )
 
 
 def _find_second_ostium(
-    first_ostium, candidates, min_center_dist, max_z_diff, min_lateral_sep
+    first_ostium, candidates, min_center_dist, max_z_diff_mm, min_lateral_sep, spacing_dz
 ):
     """
     Busca o segundo óstio com base em restrições anatômicas.
@@ -131,15 +133,16 @@ def _find_second_ostium(
         first_ostium (np.ndarray): Coordenadas do primeiro óstio
         candidates (np.ndarray): Array de candidatos (N, 3)
         min_center_dist (float): Distância mínima entre centros
-        max_z_diff (int): Diferença máxima em z
+        max_z_diff_mm (float): Diferença máxima em z em milímetros
         min_lateral_sep (float): Separação lateral mínima
+        spacing_dz (float): Espaçamento físico em z (mm/voxel)
 
     Returns:
         np.ndarray or None: Coordenadas do segundo óstio ou None se não encontrado
     """
     for candidate in candidates[1:]:
         if _validate_ostium_pair(
-            first_ostium, candidate, min_center_dist, max_z_diff, min_lateral_sep
+            first_ostium, candidate, min_center_dist, max_z_diff_mm, min_lateral_sep, spacing_dz
         ):
             return candidate
     return None
@@ -354,8 +357,9 @@ def check_ostium_intersection(
 def find_ostia(
     aorta_mask,
     vesselness_map,
+    spacing,
     top_n=50,
-    max_z_diff=50,
+    max_z_diff_mm=40.0,
     lower_fraction=0.3,
     min_center_distance_factor=0.8,
     min_lateral_factor=0.5,
@@ -383,11 +387,14 @@ def find_ostia(
         aorta_mask (np.ndarray): Máscara binária 3D da aorta (y, x, z)
         vesselness_map (np.ndarray): Mapa 3D de vesselness (y, x, z). Valores
             mais altos indicam maior probabilidade de ser vaso sanguíneo
+        spacing (tuple): Espaçamento físico (dy, dx, dz) em mm/voxel.
+            Usado para converter critérios de mm para voxels
         top_n (int): Número de candidatos com maior vesselness a analisar.
             Default: 50
-        max_z_diff (int): Diferença máxima em z (fatias) permitida entre os
-            dois óstios. Garante que estão aproximadamente no mesmo nível
-            vertical. Default: 50
+        max_z_diff_mm (float): Diferença máxima em z permitida entre os
+            dois óstios em milímetros. Garante que estão aproximadamente
+            no mesmo nível vertical. Critério fisiológico: 40mm típico.
+            Default: 40.0
         lower_fraction (float): Fração inferior da aorta para buscar óstios.
             0.3 significa buscar apenas nos 30% inferiores. Default: 0.3
         min_center_distance_factor (float): Fator multiplicativo do diâmetro
@@ -413,9 +420,11 @@ def find_ostia(
     Example:
         >>> aorta = segment_aorta(volume)
         >>> vesselness = compute_frangi_filter(volume)
+        >>> spacing = (0.5, 0.5, 0.625)  # mm/voxel
         >>> left, right = find_ostia(
-        ...     aorta, vesselness,
+        ...     aorta, vesselness, spacing,
         ...     top_n=100,
+        ...     max_z_diff_mm=40.0,
         ...     lower_fraction=0.25,
         ...     min_center_distance_factor=0.7
         ... )
@@ -460,13 +469,13 @@ def find_ostia(
 
     # Etapa 6: Buscar segundo óstio com restrições anatômicas
     ostium_2 = _find_second_ostium(
-        ostium_1, top_candidates, min_center_dist, max_z_diff, min_lateral_sep
+        ostium_1, top_candidates, min_center_dist, max_z_diff_mm, min_lateral_sep, spacing[2]
     )
 
     if ostium_2 is None:
         raise ValueError(
             f"Segundo óstio não encontrado! Tentou {top_n} candidatos. "
-            f"Restrições: dist>={min_center_dist:.1f}, z_diff<={max_z_diff}, "
+            f"Restrições: dist>={min_center_dist:.1f}, z_diff<={max_z_diff_mm}mm, "
             f"x_sep>={min_lateral_sep:.1f}. "
             f"Tente aumentar 'top_n' ou relaxar os fatores."
         )

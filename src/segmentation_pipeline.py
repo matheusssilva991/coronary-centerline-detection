@@ -99,10 +99,10 @@ CONFIG = {
     # Detecção de Óstios
     "OSTIA_DETECTION": {
         "top_n": 2000,
-        "max_z_diff": 52,
+        "max_z_diff_mm": 40.0,
         "lower_fraction": 0.80,
-        "min_center_distance_factor": 0.70,
-        "min_lateral_factor": 0.50,
+        "min_center_distance_factor": 0.85,
+        "min_lateral_factor": 0.4,
         "erosion_radius": 4,
     },
     # Pós-processamento (Closing e Dilation)
@@ -512,8 +512,9 @@ def process_image(IMG_ID, config=CONFIG):
         ostia_left, ostia_right = find_ostia(
             aorta_mask,
             vesselness_ostios,
+            spacing=(dx, dy, dz),
             top_n=ostia_config["top_n"],
-            max_z_diff=ostia_config["max_z_diff"],
+            max_z_diff_mm=ostia_config["max_z_diff_mm"],
             lower_fraction=ostia_config["lower_fraction"],
             min_center_distance_factor=ostia_config["min_center_distance_factor"],
             min_lateral_factor=ostia_config["min_lateral_factor"],
