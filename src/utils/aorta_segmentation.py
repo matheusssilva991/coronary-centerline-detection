@@ -12,7 +12,10 @@ from skimage.segmentation import (
     inverse_gaussian_gradient,
     morphological_geodesic_active_contour,
 )
-from skimage.morphology import opening, ball
+from skimage.morphology import ball
+
+# Importa operação morfológica com suporte GPU
+from .binary_operations import binary_opening
 
 
 # =============================================================================
@@ -296,7 +299,7 @@ def remove_leaks_morphology(mask_3d, radius=3):
     """
     kernel = ball(radius)
 
-    # Aplicar abertura morfológica (erosão → dilatação)
-    mask_cleaned = opening(mask_3d, footprint=kernel)
+    # Aplicar abertura morfológica (erosão → dilatação) com suporte GPU
+    mask_cleaned = binary_opening(mask_3d, structure=kernel)
 
     return mask_cleaned

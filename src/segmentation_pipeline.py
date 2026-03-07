@@ -13,7 +13,6 @@ from datetime import datetime
 # Terceiros - Processamento Numérico
 import numpy as np
 import pandas as pd
-from scipy.ndimage import binary_closing, binary_dilation
 from skimage.morphology import ball
 
 # Terceiros - Machine Learning
@@ -38,12 +37,26 @@ from utils import (
     region_growing_segmentation,
     dice_score,
     downscale_image_ndi,
+    downscale_image,
+    binary_closing,
+    binary_dilation,
+    use_gpu,
 )
 
 
 # ============================================================================
 # CONFIGURAÇÕES GLOBAIS
 # ============================================================================
+
+# Informações sobre aceleração GPU
+GPU_ENABLED = use_gpu()
+if GPU_ENABLED:
+    print("✓ GPU detectada! Operações aceleradas por GPU ativadas.")
+    print("  - Binary morphology operations (closing, dilation)")
+    print("  - Connected components labeling")
+    print("  - Image downscaling")
+else:
+    print("⚠ GPU não disponível. Acelerações CPU usadas.")
 
 # Caminhos padrão
 #BASE_PATH = "/media/matheus/HD/DatasetsCCTA/ImageCAS"
@@ -53,11 +66,13 @@ OUTPUT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "outp
 
 # Parâmetros de processamento padrão
 CONFIG = {
+    # GPU acceleration
+    "USE_GPU": GPU_ENABLED,
     # Cache
     "LOAD_CACHE": False,
     "SAVE_CACHE": False,
-    # Downscaling
-    "DOWNSCALE_METHOD": "scipy",  # "scipy" ou "opencv"
+    # Downscaling (com GPU quando possível)
+    "DOWNSCALE_METHOD": "scipy",  # "scipy" ou "opencv" (GPU automática se disponível)
     "OPENCV_INTERPOLATION": "area",  # "nearest", "linear", "cubic", "area", "lanczos4"
     "DOWNSCALE_FACTORS": (2, 2, 1),
     "MAX_THRESHOLD_PERCENTILE": 99.7,
@@ -82,7 +97,7 @@ CONFIG = {
         "radii_start_mm": 36,
         "radii_end_mm": 62,
         "tol_radius_mm": 9.0,
-        "tol_distance_mm": 18.0,
+        "tol_distance_mm": 20.0,
         "max_slice_miss_threshold": 5,
         "neighbor_distance_threshold": 5,
         "total_num_peaks_initial": 10,
@@ -92,7 +107,7 @@ CONFIG = {
     # Level Set Segmentation
     "LEVEL_SET": {
         "radius_reduction_factor": 0.15,
-        "num_iter": 31,
+        "num_iter": 35,
         "balloon": 0.8,
         "smoothing": 2,
     },
@@ -268,6 +283,9 @@ def save_metadata(split_name, output_dir, config, ids, results, execution_time=N
     # Calcular estatísticas
     df = make_result_dataframe(results)
 
+    both_correct_series = df["both_correct"].fillna(False)
+    both_tolerable_series = df["both_tolerable"].fillna(False)
+
     metadata = {
         "execution_info": {
             "timestamp": datetime.now().isoformat(),
@@ -317,10 +335,19 @@ def save_metadata(split_name, output_dir, config, ids, results, execution_time=N
         },
         "results_summary": {
             "total_processed": len(df),
-            "both_correct": int(df["both_correct"].sum()),
-            "both_correct_percent": float(df["both_correct"].mean() * 100),
-            "both_tolerable": int(df["both_tolerable"].sum()),
-            "both_tolerable_percent": float(df["both_tolerable"].mean() * 100),
+            "both_correct": int(both_correct_series.sum()),
+            "both_correct_percent": float(both_correct_series.mean() * 100),
+            # both_tolerable é exclusivo: tolerável, mas não correto estrito
+            "both_tolerable": int(both_tolerable_series.sum()),
+            "both_tolerable_percent": float(both_tolerable_series.mean() * 100),
+            # Mantido por compatibilidade com análises antigas
+            "both_tolerable_only": int(both_tolerable_series.sum()),
+            "both_tolerable_only_percent": float(both_tolerable_series.mean() * 100),
+            # Sucesso total sem dupla contagem
+            "total_success": int((both_correct_series | both_tolerable_series).sum()),
+            "total_success_percent": float(
+                (both_correct_series | both_tolerable_series).mean() * 100
+            ),
             "left_correct": int(df["left_intersects"].sum()),
             "right_correct": int(df["right_intersects"].sum()),
             "errors": int(df["error"].notna().sum()),
@@ -501,7 +528,7 @@ def process_image(IMG_ID, config=CONFIG):
                 smoothing=ls_config["smoothing"],
             )
             aorta_mask = remove_leaks_morphology(mask_refined, radius=2)
-            aorta_mask = keep_largest_component(aorta_mask)
+            aorta_mask = keep_largest_component(aorta_mask)  # GPU-accelerated
             aorta_mask = aorta_mask.astype(np.uint8)
             if config["SAVE_CACHE"]:
                 os.makedirs(saved_dir_aorta, exist_ok=True)
@@ -540,11 +567,13 @@ def process_image(IMG_ID, config=CONFIG):
         result["right_dist_mm"] = right_info["physical_dist"]
 
         # Critérios de avaliação
-        result["both_correct"] = left_info["intersects"] and right_info["intersects"]
         tolerable = config["TOLERABLE_DISTANCE_MM"]
-        result["both_tolerable"] = (
+        result["both_correct"] = left_info["intersects"] and right_info["intersects"]
+        both_tolerable_inclusive = (
             left_info["intersects"] or left_info["physical_dist"] <= tolerable
         ) and (right_info["intersects"] or right_info["physical_dist"] <= tolerable)
+        # Torna ambas as métricas mutuamente exclusivas no CSV
+        result["both_tolerable"] = both_tolerable_inclusive and (not result["both_correct"])
 
         # Segmentação das artérias (apenas se óstios corretos/toleráveis)
         if result["both_correct"] or result["both_tolerable"]:
@@ -597,14 +626,14 @@ def process_image(IMG_ID, config=CONFIG):
 
             artery_mask = (left_mask + right_mask).astype(np.uint8)
 
-            # Pós-processamento
+            # Pós-processamento (com aceleração GPU)
             post_config = config["POSTPROCESSING"]
             closed_mask = binary_closing(
                 artery_mask > 0, structure=ball(post_config["closing_radius"])
-            ).astype(np.uint8)
+            )
             dilated_mask = binary_dilation(
                 closed_mask, structure=ball(post_config["dilation_radius"])
-            ).astype(np.uint8)
+            )
             artery_mask = dilated_mask
 
             result["artery_voxels"] = int(np.sum(artery_mask))
@@ -826,12 +855,18 @@ Arquivos de saída:
         # Estatísticas do conjunto
         df = make_result_dataframe(summary["details"])
         if not df.empty:
+            both_correct_series = df["both_correct"].fillna(False)
+            both_tolerable_series = df["both_tolerable"].fillna(False)
+
             print(f"\n📊 Estatísticas do conjunto {split_name}:")
             print(
-                f"   - Ambos corretos:   {df['both_correct'].sum():3d} ({df['both_correct'].mean() * 100:5.1f}%)"
+                f"   - Ambos corretos (estrito): {both_correct_series.sum():3d} ({both_correct_series.mean() * 100:5.1f}%)"
             )
             print(
-                f"   - Ambos toleráveis: {df['both_tolerable'].sum():3d} ({df['both_tolerable'].mean() * 100:5.1f}%)"
+                f"   - Tolerável apenas:         {both_tolerable_series.sum():3d} ({both_tolerable_series.mean() * 100:5.1f}%)"
+            )
+            print(
+                f"   - Total sucesso (<= {CONFIG['TOLERABLE_DISTANCE_MM']}mm): {(both_correct_series | both_tolerable_series).sum():3d} ({(both_correct_series | both_tolerable_series).mean() * 100:5.1f}%)"
             )
             if "dice_artery" in df.columns and df["dice_artery"].notna().any():
                 print(f"   - Dice médio:       {df['dice_artery'].mean():.4f}")

@@ -9,6 +9,23 @@ conectados para isolar estruturas anatômicas de interesse.
 import numpy as np
 import scipy.ndimage as ndi
 import cv2
+import warnings
+
+# Importa utilitários de GPU
+from .gpu_utils import (
+    use_gpu,
+    to_gpu,
+    to_cpu,
+    GPU_AVAILABLE,
+    cp,
+    cu_ndi,
+)
+
+# Importa operações binárias (morfológicas + componentes conectados)
+from .binary_operations import label, keep_largest_component
+
+# Importa normalização
+from .utils import normalize_image
 
 
 # =============================================================================
@@ -36,38 +53,8 @@ def _find_largest_component_label(labeled_array):
 
 
 # =============================================================================
-# Funções Públicas
+# Funções Públicas - Downscaling
 # =============================================================================
-
-
-def normalize_image(img):
-    """
-    Normaliza a imagem para o intervalo [0, 1] usando min-max scaling.
-
-    A normalização é feita pela fórmula: (img - min) / (max - min)
-
-    Args:
-        img (np.ndarray): Imagem de entrada de qualquer dimensão
-
-    Returns:
-        np.ndarray: Imagem normalizada no intervalo [0, 1]. Se a imagem tiver
-            valores constantes (max == min), retorna a imagem original
-
-    Example:
-        >>> img = np.array([[-100, 0, 200], [300, 400, 500]])
-        >>> norm_img = normalize_image(img)
-        >>> print(f"Range: [{norm_img.min()}, {norm_img.max()}]")
-        Range: [0.0, 1.0]
-
-    Note:
-        - Útil antes de aplicar filtros que esperam valores normalizados
-        - Preserva a distribuição relativa dos valores
-        - Retorna cópia da imagem original se todos valores forem iguais
-    """
-    min_val, max_val = np.min(img), np.max(img)
-    if max_val - min_val == 0:
-        return img
-    return (img - min_val) / (max_val - min_val)
 
 
 def downscale_image_ndi(image, factors, order=3):
@@ -304,40 +291,6 @@ def largest_connected_component(image, mask):
     return lcc_img, largest_comp_mask
 
 
-def keep_largest_component(mask):
-    """
-    Mantém apenas o maior componente conectado da máscara binária.
-
-    Versão simplificada de largest_connected_component() que opera apenas
-    na máscara, sem aplicar em uma imagem.
-
-    Args:
-        mask (np.ndarray): Máscara binária de entrada
-
-    Returns:
-        np.ndarray: Máscara binária (dtype=uint8) contendo apenas o maior
-            componente conectado
-
-    Example:
-        >>> noisy_mask = segment_structure(volume)
-        >>> clean_mask = keep_largest_component(noisy_mask)
-        >>> print(f"Redução: {noisy_mask.sum()} → {clean_mask.sum()} voxels")
-
-    Note:
-        - Equivalente a largest_connected_component() mas sem imagem associada
-        - Mais eficiente quando só precisa da máscara
-        - Retorna máscara original se vazia
-    """
-    labeled, num = ndi.label(mask)
-    if num == 0:
-        return mask
-
-    sizes = ndi.sum(mask, labeled, range(1, num + 1))
-    largest_label = np.argmax(sizes) + 1
-
-    return (labeled == largest_label).astype(np.uint8)
-
-
 def run_core_preprocessing_pipeline(
     image,
     downscale_factors,
@@ -439,3 +392,54 @@ def run_core_preprocessing_pipeline(
     lcc_image -= offset
 
     return down_image, thresh_image, lcc_image, thresh_vals
+
+
+# =============================================================================
+# Funções Públicas - Downscaling com GPU
+# =============================================================================
+
+
+def downscale_image(image, factors, order=3, use_opencv=False, opencv_interpolation=None):
+    """
+    Downscale otimizado com suporte automático a GPU.
+
+    Estratégia automática para máxima performance:
+    1. Se use_opencv=True, usa OpenCV cv2.resize
+    2. Se GPU disponível, usa CuPy (mais rápido para volumes grandes)
+    3. Caso contrário usa scipy.ndimage.zoom (CPU estável)
+
+    Args:
+        image (np.ndarray or cp.ndarray): Imagem a redimensionar
+        factors (tuple): Fatores de downscale para cada dimensão
+        order (int): Ordem de interpolação (0-5). Default: 3 (cúbica)
+        use_opencv (bool): Se True, força OpenCV em vez de GPU/scipy
+        opencv_interpolation (int): Método de interpolação do OpenCV (ex: cv2.INTER_AREA)
+
+    Returns:
+        np.ndarray: Imagem redimensionada
+
+    Note:
+        - GPU é ~2-5x mais rápido que CPU para volumes grandes
+        - Fallback automático para CPU se GPU falhar
+        - OpenCV pode ser mais rápido para volumes pequenos
+    """
+    # Força OpenCV se solicitado
+    if use_opencv:
+        if opencv_interpolation is None:
+            opencv_interpolation = cv2.INTER_AREA
+        return downscale_image_opencv(image, factors, interpolation=opencv_interpolation)
+
+    # Tenta GPU primeiro se disponível
+    if GPU_AVAILABLE:
+        try:
+            img_gpu = to_gpu(image)
+            zoom_factors = tuple(1.0 / f for f in factors)
+            result_gpu = cu_ndi.zoom(img_gpu, zoom=zoom_factors, order=order)
+            return to_cpu(result_gpu)
+        except Exception as e:
+            # Fallback para CPU se GPU falhar
+            warnings.warn(f"GPU downscaling falhou ({type(e).__name__}), usando CPU.", UserWarning)
+            return downscale_image_ndi(image, factors, order=order)
+    else:
+        # CPU version (scipy)
+        return downscale_image_ndi(image, factors, order=order)

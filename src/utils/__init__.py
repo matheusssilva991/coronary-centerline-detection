@@ -46,15 +46,32 @@ from .frangi import (
     load_vesselness_cache,
 )
 
+# GPU Utils
+from .gpu_utils import (
+    use_gpu,
+    to_gpu,
+    to_cpu,
+    get_array_module,
+)
+
+# Binary Operations (operações morfológicas + componentes conectados com GPU)
+from .binary_operations import (
+    binary_closing,
+    binary_dilation,
+    binary_erosion,
+    binary_opening,
+    label,
+    keep_largest_component,
+)
+
 # Pré-processamento
 from .preprocessing import (
-    normalize_image,
     downscale_image_ndi,
     downscale_image_opencv,
+    downscale_image,
     threshold_image,
     threshold_image_with_offset,
     largest_connected_component,
-    keep_largest_component,
     run_core_preprocessing_pipeline,
 )
 
@@ -69,6 +86,8 @@ from .plots import (
 
 # Utilitários gerais
 from .utils import (
+    normalize_image,
+    robust_normalize,
     load_img_and_label,
     load_raw_img_and_label,
     save_nii_image,
@@ -100,14 +119,24 @@ __all__ = [
     "get_vesselness_optimized",
     "save_vesselness_cache",
     "load_vesselness_cache",
+    # GPU Utils
+    "use_gpu",
+    "to_gpu",
+    "to_cpu",
+    "get_array_module",
+    # Morphology
+    "binary_closing",
+    "binary_dilation",
+    "binary_erosion",
+    "label",
+    "keep_largest_component",
     # Preprocessing
-    "normalize_image",
     "downscale_image_ndi",
-    "downscale_image_opencv"
+    "downscale_image_opencv",
+    "downscale_image",
     "threshold_image",
     "threshold_image_with_offset",
     "largest_connected_component",
-    "keep_largest_component",
     "run_core_preprocessing_pipeline",
     # Plots
     "plot_mip_projection",
@@ -116,6 +145,7 @@ __all__ = [
     "visualize_3d_k3d",
     "visualize_aorta_with_ostia",
     # Utils
+    "normalize_image",
     "load_img_and_label",
     "load_raw_img_and_label",
     "save_nii_image",

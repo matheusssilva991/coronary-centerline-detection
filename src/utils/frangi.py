@@ -2,88 +2,26 @@ import numpy as np
 from skimage.filters import ridges, gaussian
 import os
 import pickle
-import warnings
 
-# Detecta disponibilidade de GPU (teste simplificado)
-GPU_AVAILABLE = False
-cp = None
+# Importa utilitários de GPU centralizados
+from .gpu_utils import (
+    use_gpu,
+    to_gpu,
+    to_cpu,
+    GPU_AVAILABLE,
+    cp,
+)
+
+# Importa funções de normalização
+from .utils import normalize_image, robust_normalize
+
+# Importa cucim filters se GPU disponível
 gpu_filters = None
-
-try:
-    import cupy as cp
-    import cucim.skimage.filters as gpu_filters
-
-    # Teste simples: cria array pequeno na GPU
-    _ = cp.array([1, 2, 3])
-
-    GPU_AVAILABLE = True
-
-except Exception as e:
-    # Qualquer erro = usa CPU
-    cp = None
-    gpu_filters = None
-    GPU_AVAILABLE = False
-    warnings.warn(f"GPU não disponível ({type(e).__name__}). Usando CPU.", UserWarning)
-
-
-def use_gpu():
-    """Retorna True se GPU está disponível e CuPy está instalado."""
-    return GPU_AVAILABLE
-
-
-def to_gpu(arr):
-    """Converte array NumPy para CuPy se GPU disponível."""
-    if GPU_AVAILABLE and isinstance(arr, np.ndarray):
-        return cp.asarray(arr)
-    return arr
-
-
-def to_cpu(arr):
-    """Converte array CuPy para NumPy se necessário."""
-    if GPU_AVAILABLE and isinstance(arr, cp.ndarray):
-        return cp.asnumpy(arr)
-    return arr
-
-
-def normalize(img):
-    """
-    Normaliza para [0, 1] com proteção contra divisão por zero.
-    Funciona com NumPy ou CuPy arrays.
-    Retorna o mesmo tipo que recebeu (mantém na GPU se entrada for GPU).
-    """
-    is_gpu = GPU_AVAILABLE and isinstance(img, cp.ndarray)
-    xp = cp if is_gpu else np
-
-    min_val, max_val = xp.min(img), xp.max(img)
-    if max_val - min_val == 0:
-        return xp.zeros_like(img, dtype=float)
-    return (img - min_val) / (max_val - min_val)
-
-
-def robust_normalize(img, p_min=0, p_max=99.8):
-    """
-    Normaliza ignorando outliers extremos (cálcio/stents).
-    Tudo acima do percentil 99.5 vira 1.0.
-    Funciona com NumPy ou CuPy arrays.
-    Retorna o mesmo tipo que recebeu (mantém na GPU se entrada for GPU).
-    """
-    if img.size == 0:
-        return img
-
-    is_gpu = GPU_AVAILABLE and isinstance(img, cp.ndarray)
-    xp = cp if is_gpu else np
-
-    val_min = xp.percentile(img, p_min)
-    val_max = xp.percentile(img, p_max)
-
-    # Clipar os valores para ficar dentro do intervalo "seguro"
-    img_clipped = xp.clip(img, val_min, val_max)
-
-    # Evita divisão por zero
-    if val_max - val_min == 0:
-        return xp.zeros_like(img, dtype=float)
-
-    return (img_clipped - val_min) / (val_max - val_min)
+if GPU_AVAILABLE:
+    try:
+        import cucim.skimage.filters as gpu_filters
+    except ImportError:
+        gpu_filters = None
 
 
 def get_gf(image_volume):
@@ -198,7 +136,7 @@ def get_vesselness(
         if normalization == "robust":
             vesselness = robust_normalize(vesselness)
         elif normalization == "minmax":
-            vesselness = normalize(vesselness)
+            vesselness = normalize_image(vesselness)
         elif normalization != "none":
             raise ValueError(
                 f"Método de normalização '{normalization}' inválido. Use 'robust', 'minmax' ou 'none'."
@@ -226,7 +164,7 @@ def get_vesselness(
         if normalization == "robust":
             vesselness = robust_normalize(vesselness)
         elif normalization == "minmax":
-            vesselness = normalize(vesselness)
+            vesselness = normalize_image(vesselness)
         elif normalization != "none":
             raise ValueError(
                 f"Método de normalização '{normalization}' inválido. Use 'robust', 'minmax' ou 'none'."
@@ -293,7 +231,7 @@ def get_vesselness_optimized(
         if normalization == "robust":
             modified_vesselness = robust_normalize(modified_vesselness)
         elif normalization == "minmax":
-            modified_vesselness = normalize(modified_vesselness)
+            modified_vesselness = normalize_image(modified_vesselness)
 
         # Só converte para CPU no final
         return to_cpu(modified_vesselness)
@@ -325,7 +263,7 @@ def get_vesselness_optimized(
         if normalization == "robust":
             modified_vesselness = robust_normalize(modified_vesselness)
         elif normalization == "minmax":
-            modified_vesselness = normalize(modified_vesselness)
+            modified_vesselness = normalize_image(modified_vesselness)
 
         return modified_vesselness
 

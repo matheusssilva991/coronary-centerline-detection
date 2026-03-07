@@ -16,6 +16,95 @@ from numpy.typing import NDArray
 
 
 # =============================================================================
+# Funções de Normalização
+# =============================================================================
+
+
+def normalize_image(img):
+    """
+    Normaliza a imagem para o intervalo [0, 1] usando min-max scaling.
+
+    A normalização é feita pela fórmula: (img - min) / (max - min)
+
+    Args:
+        img (np.ndarray): Imagem de entrada de qualquer dimensão
+
+    Returns:
+        np.ndarray: Imagem normalizada no intervalo [0, 1]. Se a imagem tiver
+            valores constantes (max == min), retorna a imagem original
+
+    Example:
+        >>> img = np.array([[-100, 0, 200], [300, 400, 500]])
+        >>> norm_img = normalize_image(img)
+        >>> print(f"Range: [{norm_img.min()}, {norm_img.max()}]")
+        Range: [0.0, 1.0]
+
+    Note:
+        - Útil antes de aplicar filtros que esperam valores normalizados
+        - Preserva a distribuição relativa dos valores
+        - Retorna cópia da imagem original se todos valores forem iguais
+    """
+    min_val, max_val = np.min(img), np.max(img)
+    if max_val - min_val == 0:
+        return img
+    return (img - min_val) / (max_val - min_val)
+
+
+def robust_normalize(img, p_min=0, p_max=99.8):
+    """
+    Normaliza ignorando outliers extremos (cálcio/stents/artefatos).
+    Tudo acima do percentil máximo vira 1.0.
+
+    Funciona com NumPy ou CuPy arrays. Retorna o mesmo tipo que recebeu
+    (mantém na GPU se entrada for GPU).
+
+    Args:
+        img (np.ndarray or cp.ndarray): Imagem de entrada de qualquer dimensão
+        p_min (float): Percentil mínimo para clipping (padrão 0)
+        p_max (float): Percentil máximo para clipping (padrão 99.8, ignora outliers muito altos)
+
+    Returns:
+        np.ndarray or cp.ndarray: Imagem normalizada no intervalo [0, 1].
+            Tipo (NumPy ou CuPy) é o mesmo da entrada.
+
+    Example:
+        >>> img = np.array([[0, 100, 200], [300, 5000, 6000]])  # Valores com outliers
+        >>> norm = robust_normalize(img, p_min=1, p_max=99)
+        >>> print(f"Range: [{norm.min()}, {norm.max()}]")
+        Range: [0.0, 1.0]
+
+    Note:
+        - Útil para remover efeito de outliers extremos (metal, cálcio em CT)
+        - Preserva estruturas importantes ignorando apenas extremos
+        - Mantém tipo da entrada (NumPy ou CuPy array)
+        - Se img.size == 0, retorna img sem alterações
+    """
+    # Detecta GPU se necessário
+    try:
+        import cupy as cp
+        is_gpu = isinstance(img, cp.ndarray)
+    except ImportError:
+        is_gpu = False
+
+    xp = cp if is_gpu else np
+
+    if img.size == 0:
+        return img
+
+    val_min = xp.percentile(img, p_min)
+    val_max = xp.percentile(img, p_max)
+
+    # Clipar os valores para ficar dentro do intervalo "seguro"
+    img_clipped = xp.clip(img, val_min, val_max)
+
+    # Evita divisão por zero
+    if val_max - val_min == 0:
+        return xp.zeros_like(img, dtype=float)
+
+    return (img_clipped - val_min) / (val_max - val_min)
+
+
+# =============================================================================
 # Funções de I/O (Input/Output)
 # =============================================================================
 
@@ -364,148 +453,6 @@ def segment_by_hu(img_3d, include_labels=None):
     return segmented, hu_ranges
 
 
-def create_circle_points(center_x, center_y, radius, num_points=1000):
-    """
-    Gera pontos uniformemente espaçados ao longo da circunferência de um círculo.
-
-    Útil para inicializar contornos ativos (active contours/snakes) ou para
-    visualização de círculos detectados.
-
-    Args:
-        center_x (float): Coordenada x do centro do círculo
-        center_y (float): Coordenada y do centro do círculo
-        radius (float): Raio do círculo em pixels
-        num_points (int): Número de pontos a gerar. Default: 1000
-
-    Returns:
-        np.ndarray: Array de shape (num_points, 2) contendo coordenadas (y, x)
-            formato (row, col) compatível com skimage.segmentation.active_contour
-
-    Example:
-        >>> circle_coords = create_circle_points(256, 256, 50, num_points=500)
-        >>> print(f"Coordenadas shape: {circle_coords.shape}")  # (500, 2)
-        >>> # Usar como inicialização para active contour
-        >>> snake = active_contour(image, circle_coords)
-
-    Note:
-        - Pontos são gerados no sentido anti-horário começando de θ=0
-        - Retorna formato (y, x) para compatibilidade com convenções de imagem
-        - num_points alto (>=1000) dá contorno suave
-        - Para visualização, num_points=100 geralmente é suficiente
-    """
-    theta = np.linspace(0, 2 * np.pi, num_points)
-    x = center_x + radius * np.cos(theta)
-    y = center_y + radius * np.sin(theta)
-    return np.array([y, x]).T
-
-
-# =============================================================================
-# Funções de Visualização
-# =============================================================================
-
-
-def save_individual_circle_slices(
-    image, detected_circles, img_id, output_base_path, vmin=None, vmax=None
-):
-    """
-    Salva visualizações de círculos detectados, um arquivo PNG por slice.
-
-    Cria diretório para cada imagem e salva slices individuais com círculos
-    sobrepostos em vermelho, incluindo marcadores de centro.
-
-    Args:
-        image (np.ndarray): Volume 3D de entrada com shape (H, W, D)
-        detected_circles (list): Lista de dicts com círculos detectados.
-            Cada dict deve conter: 'slice_index', 'center_x', 'center_y', 'radius'
-        img_id (int or str): Identificador da imagem para nomeação de diretório
-        output_base_path (str): Diretório base onde criar subdiretório img_{id}
-        vmin (float, optional): Valor mínimo para escala de intensidade.
-            Se None, usa mínimo da imagem. Default: None
-        vmax (float, optional): Valor máximo para escala de intensidade.
-            Se None, usa máximo da imagem. Default: None
-
-    Returns:
-        str: Caminho do diretório onde as imagens foram salvas
-
-    Example:
-        >>> circles = detect_aorta_circles(volume)
-        >>> output_dir = save_individual_circle_slices(
-        ...     volume, circles, img_id=1,
-        ...     output_base_path='output/detected_circles',
-        ...     vmin=-200, vmax=600
-        ... )
-        ✓ Salvas 15 fatias com 15 círculos em: output/detected_circles/img_1
-
-    Note:
-        - Cria estrutura: output_base_path/img_{id}/aorta_z{idx}_pos{n}_of_{total}.png
-        - Círculos desenhados com borda vermelha (linewidth=2)
-        - Centro marcado com cruz vermelha
-        - Slices ordenados em ordem decrescente de z
-        - Resolução de saída: 150 DPI
-    """
-    # Criar diretório para a imagem
-    img_output_dir = os.path.join(output_base_path, f"img_{img_id}")
-    os.makedirs(img_output_dir, exist_ok=True)
-
-    # Agrupar círculos por fatia
-    circles_by_slice = {}
-    for circle in detected_circles:
-        slice_idx = circle["slice_index"]
-        if slice_idx not in circles_by_slice:
-            circles_by_slice[slice_idx] = []
-        circles_by_slice[slice_idx].append(circle)
-
-    total_slices = len(circles_by_slice)
-    total_circles = len(detected_circles)
-
-    # Salvar cada fatia
-    for position, (slice_idx, circles) in enumerate(
-        sorted(circles_by_slice.items(), reverse=True), start=1
-    ):
-        fig, ax = plt.subplots(figsize=(8, 8))
-
-        # Plotar fatia
-        ax.imshow(image[:, :, slice_idx], cmap="gray", vmin=vmin, vmax=vmax)
-
-        # Adicionar círculos
-        for circle in circles:
-            circle_patch = patches.Circle(
-                (circle["center_x"], circle["center_y"]),
-                circle["radius"],
-                fill=False,
-                edgecolor="red",
-                linewidth=2,
-            )
-            ax.add_patch(circle_patch)
-
-            # Marcar centro
-            ax.plot(
-                circle["center_x"],
-                circle["center_y"],
-                "r+",
-                markersize=12,
-                markeredgewidth=2,
-            )
-
-        ax.set_title(
-            f"Fatia Z={slice_idx} - Círculo {position}/{total_circles}", fontsize=12
-        )
-        ax.axis("off")
-
-        # Nome do arquivo melhorado
-        filename = f"aorta_z{slice_idx:03d}_pos{position:03d}_of_{total_circles}.png"
-        filepath = os.path.join(img_output_dir, filename)
-
-        plt.tight_layout()
-        plt.savefig(filepath, dpi=150, bbox_inches="tight")
-        plt.close()
-
-    print(
-        f"✓ Salvas {total_slices} fatias com {total_circles} círculos em: {img_output_dir}"
-    )
-    return img_output_dir
-
-
 # =============================================================================
 # Funções de Avaliação e Métricas
 # =============================================================================
@@ -554,63 +501,3 @@ def dice_score(pred, target):
 
     return 2.0 * intersection / union
 
-
-# =============================================================================
-# Funções Auxiliares
-# =============================================================================
-
-
-def convert_to_serializable(obj) -> object:
-    """
-    Converte recursivamente tipos NumPy para tipos nativos Python para JSON.
-
-    Permite serializar dicionários e listas contendo arrays NumPy, inteiros/floats
-    NumPy e outros tipos não-serializáveis diretamente para JSON.
-
-    Args:
-        obj (object): Objeto a ser convertido (dict, list, np.ndarray, etc.)
-
-    Returns:
-        object: Objeto com todos os tipos NumPy convertidos para tipos Python nativos:
-            - np.integer → int
-            - np.floating → float
-            - np.ndarray → list
-            - np.bool_ → bool
-            - dict/list → processados recursivamente
-
-    Example:
-        >>> import json
-        >>> results = {
-        ...     'circles': np.array([1, 2, 3]),
-        ...     'radius': np.float64(15.5),
-        ...     'count': np.int32(42),
-        ...     'metadata': {'found': np.bool_(True)}
-        ... }
-        >>> serializable = convert_to_serializable(results)
-        >>> json_str = json.dumps(serializable)
-        >>> print(json_str)
-        {"circles": [1, 2, 3], "radius": 15.5, "count": 42, "metadata": {"found": true}}
-
-    Note:
-        - Processa estruturas aninhadas recursivamente
-        - Arrays grandes podem consumir muita memória ao converter para list
-        - Útil antes de salvar resultados em JSON
-        - Preserva estrutura de dicts e lists
-    """
-    if isinstance(obj, dict):
-        return {
-            convert_to_serializable(k): convert_to_serializable(v)
-            for k, v in obj.items()
-        }
-    elif isinstance(obj, (list, tuple)):
-        return [convert_to_serializable(i) for i in obj]
-    elif isinstance(obj, np.integer):
-        return int(obj)
-    elif isinstance(obj, np.floating):
-        return float(obj)
-    elif isinstance(obj, np.ndarray):
-        return obj.tolist()
-    elif isinstance(obj, np.bool_):
-        return bool(obj)
-    else:
-        return obj

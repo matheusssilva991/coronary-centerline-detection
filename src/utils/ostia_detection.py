@@ -7,8 +7,11 @@ usando mapas de vesselness e restrições anatômicas.
 """
 
 import numpy as np
-from scipy.ndimage import binary_erosion, distance_transform_edt
 from skimage.morphology import ball
+from scipy.ndimage import distance_transform_edt
+
+# Importa operações morfológicas com suporte GPU
+from .binary_operations import binary_erosion
 
 
 # =============================================================================
@@ -199,7 +202,7 @@ def find_aorta_surface(aorta_mask, erosion_radius=2):
         - Útil para reduzir busca apenas à casca externa onde os óstios estão
     """
     struct_elem = ball(erosion_radius)
-    eroded = binary_erosion(aorta_mask.astype(bool), structure=struct_elem)
+    eroded = binary_erosion(aorta_mask.astype(bool), structure=struct_elem)  # Erosão com suporte GPU
 
     # Superfície = aorta original - aorta erodida
     surface = aorta_mask.astype(bool) & (~eroded)  # pyright: ignore[reportOperatorIssue]
