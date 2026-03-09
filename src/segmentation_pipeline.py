@@ -94,13 +94,13 @@ CONFIG = {
     },
     # Detecção de Círculos (Transformada de Hough)
     "CIRCLE_DETECTION": {
-        "radii_start_mm": 36,
+        "radii_start_mm": 38,
         "radii_end_mm": 62,
         "tol_radius_mm": 9.0,
         "tol_distance_mm": 20.0,
         "max_slice_miss_threshold": 5,
         "neighbor_distance_threshold": 5,
-        "total_num_peaks_initial": 10,
+        "total_num_peaks_initial": 15,
         "total_num_peaks": 15,
         "canny_sigma": 3,
     },
@@ -150,7 +150,7 @@ def create_timestamped_output_dir(base_output_dir, experiment_name="segmentation
     return output_path
 
 
-def get_data_splits(base_path, test_size=0.7, val_size=0.1, random_state=42):
+def get_data_splits(base_path, test_size=0.7, val_size=0.3, random_state=42):
     """
     Divide o dataset em treino, validação e teste.
 
@@ -337,13 +337,8 @@ def save_metadata(split_name, output_dir, config, ids, results, execution_time=N
             "total_processed": len(df),
             "both_correct": int(both_correct_series.sum()),
             "both_correct_percent": float(both_correct_series.mean() * 100),
-            # both_tolerable é exclusivo: tolerável, mas não correto estrito
             "both_tolerable": int(both_tolerable_series.sum()),
             "both_tolerable_percent": float(both_tolerable_series.mean() * 100),
-            # Mantido por compatibilidade com análises antigas
-            "both_tolerable_only": int(both_tolerable_series.sum()),
-            "both_tolerable_only_percent": float(both_tolerable_series.mean() * 100),
-            # Sucesso total sem dupla contagem
             "total_success": int((both_correct_series | both_tolerable_series).sum()),
             "total_success_percent": float(
                 (both_correct_series | both_tolerable_series).mean() * 100
