@@ -54,6 +54,37 @@ from .gpu_utils import (
     get_array_module,
 )
 
+# Configuração externa (JSON)
+from .config_utils import (
+    deep_update_dict,
+    normalize_runtime_config,
+    serialize_config_for_json,
+    load_config_json,
+    save_config_json,
+    scale_config_to_resolution,
+)
+
+# Dataset utilities
+from .dataset_utils import get_data_splits
+
+# Result/report utilities
+from .results_utils import (
+    create_timestamped_output_dir,
+    make_result_dataframe,
+    save_results,
+    save_metadata,
+)
+
+# Pipeline steps
+from .pipeline_steps import (
+    load_and_preprocess_image,
+    get_or_compute_vesselness,
+    get_or_detect_aorta_circles,
+    get_or_segment_aorta,
+    detect_and_evaluate_ostia,
+    segment_arteries_from_ostia,
+)
+
 # Binary Operations (operações morfológicas + componentes conectados com GPU)
 from .binary_operations import (
     binary_closing,
@@ -124,6 +155,27 @@ __all__ = [
     "to_gpu",
     "to_cpu",
     "get_array_module",
+    # Config
+    "deep_update_dict",
+    "normalize_runtime_config",
+    "serialize_config_for_json",
+    "load_config_json",
+    "save_config_json",
+    "scale_config_to_resolution",
+    # Dataset
+    "get_data_splits",
+    # Results
+    "create_timestamped_output_dir",
+    "make_result_dataframe",
+    "save_results",
+    "save_metadata",
+    # Pipeline steps
+    "load_and_preprocess_image",
+    "get_or_compute_vesselness",
+    "get_or_detect_aorta_circles",
+    "get_or_segment_aorta",
+    "detect_and_evaluate_ostia",
+    "segment_arteries_from_ostia",
     # Morphology
     "binary_closing",
     "binary_dilation",

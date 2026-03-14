@@ -112,6 +112,37 @@ def _is_circle_within_tolerance(
     return circle_distance <= distance_tolerance and radius_diff <= radius_tolerance
 
 
+def _compute_local_roi_bounds(
+    img_shape,
+    ref_x,
+    ref_y,
+    ref_radius,
+    distance_tolerance,
+    radius_tolerance,
+    local_roi_padding,
+):
+    """
+    Calcula limites de uma ROI quadrada local centrada no círculo de referência.
+
+    A ROI é dimensionada para cobrir deslocamentos esperados do centro e
+    variações de raio entre fatias consecutivas.
+    """
+    height, width = img_shape
+
+    search_radius = ref_radius + distance_tolerance + radius_tolerance + local_roi_padding
+    half_size = int(np.ceil(max(8.0, search_radius)))
+
+    cx = int(round(ref_x))
+    cy = int(round(ref_y))
+
+    x_min = max(0, cx - half_size)
+    x_max = min(width, cx + half_size)
+    y_min = max(0, cy - half_size)
+    y_max = min(height, cy + half_size)
+
+    return x_min, x_max, y_min, y_max
+
+
 def _process_initial_circle(
     img_slice,
     hough_radii,
@@ -176,6 +207,8 @@ def _process_slice(
     neighbor_distance_threshold,
     total_num_peaks,
     canny_sigma,
+    use_local_roi=True,
+    local_roi_padding=20,
 ):
     """
     Processa uma fatia individual, detectando e validando círculos.
@@ -194,6 +227,10 @@ def _process_slice(
             como vizinhos durante o refinamento
         total_num_peaks (int): Número de picos para detecção
         canny_sigma (float): Sigma para o filtro Canny
+        use_local_roi (bool): Se True, busca círculos primeiro em ROI local
+            centrada no círculo de referência. Default: True
+        local_roi_padding (int): Margem extra em pixels usada na ROI local.
+            Default: 20
 
     Returns:
         dict or None or str: Retorna:
@@ -205,17 +242,44 @@ def _process_slice(
         A string 'out_of_tolerance' é usada como sinal para interromper o processamento
         sequencial de fatias quando a geometria da aorta muda significativamente.
     """
-    accums, cx, cy, radii = _detect_circles_in_slice(
-        img_slice, hough_radii, total_num_peaks, canny_sigma
-    )
-
-    if len(radii) == 0:
-        return None
-
     # Encontrar círculo mais próximo da referência
     ref_x = reference_circle["center_x"]
     ref_y = reference_circle["center_y"]
     ref_radius = reference_circle["radius"]
+
+    # Detectar círculos priorizando ROI local para reduzir custo computacional
+    if use_local_roi:
+        x_min, x_max, y_min, y_max = _compute_local_roi_bounds(
+            img_slice.shape,
+            ref_x,
+            ref_y,
+            ref_radius,
+            distance_tolerance,
+            radius_tolerance,
+            local_roi_padding,
+        )
+
+        roi_slice = img_slice[y_min:y_max, x_min:x_max]
+        accums, cx, cy, radii = _detect_circles_in_slice(
+            roi_slice, hough_radii, total_num_peaks, canny_sigma
+        )
+
+        # Converter coordenadas da ROI para coordenadas da fatia completa
+        if len(radii) > 0:
+            cx = cx + x_min
+            cy = cy + y_min
+        else:
+            # Fallback para robustez quando ROI não retorna candidatos
+            accums, cx, cy, radii = _detect_circles_in_slice(
+                img_slice, hough_radii, total_num_peaks, canny_sigma
+            )
+    else:
+        accums, cx, cy, radii = _detect_circles_in_slice(
+            img_slice, hough_radii, total_num_peaks, canny_sigma
+        )
+
+    if len(radii) == 0:
+        return None
 
     min_idx, min_dist = _find_closest_circle(cx, cy, radii, ref_x, ref_y)
 
@@ -376,6 +440,8 @@ def detect_aorta_circles(
     total_num_peaks_initial=10,
     total_num_peaks=20,
     canny_sigma=3,
+    use_local_roi=True,
+    local_roi_padding=20,
 ):
     """
     Detecta círculos da aorta em um volume 3D de forma sequencial.
@@ -411,6 +477,10 @@ def detect_aorta_circles(
             Default: 20
         canny_sigma (float): Desvio padrão do filtro Gaussiano usado no detector
             de bordas Canny. Default: 3
+        use_local_roi (bool): Se True, usa busca local por ROI nas fatias
+            subsequentes para reduzir custo computacional. Default: True
+        local_roi_padding (int): Margem extra (pixels) na ROI local.
+            Default: 20
 
     Returns:
         list: Lista de dicionários, cada um representando um círculo detectado
@@ -483,6 +553,8 @@ def detect_aorta_circles(
             neighbor_distance_threshold,
             total_num_peaks,
             canny_sigma,
+            use_local_roi,
+            local_roi_padding,
         )
 
         if result is None:

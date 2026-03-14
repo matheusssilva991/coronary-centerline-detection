@@ -1,0 +1,31 @@
+IMG_ID,dice_artery,artery_voxels,both_correct,both_tolerable,left_intersects,right_intersects,left_dist_mm,right_dist_mm,ostia_left,ostia_right,error,status,downscale_method,opencv_interpolation,downscale_factors,max_threshold_percentile
+28,0.4168238043581138,40219.0,False,True,True,False,0.0,1.9834828210908457,"(206, 294, 184)","(253, 231, 216)",,ambos toleráveis,scipy,N/A,"(1, 1, 1)",99.7
+380,,,False,False,False,False,,,,,"Segundo óstio não encontrado! Tentou 2000 candidatos. Restrições: dist>=97.5, z_diff<=40.0mm, x_sep>=39.0. Tente aumentar 'top_n' ou relaxar os fatores.",erro,scipy,N/A,"(1, 1, 1)",99.7
+854,,,False,False,False,False,2.5666953378372335,8.680535687911291,"(204, 299, 157)","(227, 223, 169)",,nenhum correto,scipy,N/A,"(1, 1, 1)",99.7
+937,0.0,0.0,False,True,False,False,2.970376302083048,3.169107667499343,"(213, 336, 209)","(230, 260, 223)",,ambos toleráveis,scipy,N/A,"(1, 1, 1)",99.7
+315,,,False,False,True,False,0.0,14.32709635096566,"(199, 360, 146)","(239, 326, 193)",,um correto,scipy,N/A,"(1, 1, 1)",99.7
+428,,,False,False,True,False,0.0,21.157030550420487,"(189, 334, 103)","(242, 289, 119)",,um correto,scipy,N/A,"(1, 1, 1)",99.7
+752,,,False,False,False,False,1.91015625,9.052083731337795,"(197, 347, 208)","(163, 276, 195)",,nenhum correto,scipy,N/A,"(1, 1, 1)",99.7
+13,0.44954460491935766,70064.0,False,True,True,False,0.0,1.058709057373206,"(222, 353, 170)","(262, 289, 201)",,ambos toleráveis,scipy,N/A,"(1, 1, 1)",99.7
+538,,,False,False,False,False,4.731307342060867,14.44823304563119,"(198, 339, 191)","(230, 256, 198)",,nenhum correto,scipy,N/A,"(1, 1, 1)",99.7
+965,0.0,0.0,False,True,False,False,1.625675941147251,1.263314103623506,"(221, 307, 180)","(211, 242, 199)",,ambos toleráveis,scipy,N/A,"(1, 1, 1)",99.7
+447,0.45290175749146544,42763.0,False,True,True,False,0.0,6.986535337732904,"(238, 372, 172)","(262, 279, 179)",,ambos toleráveis,scipy,N/A,"(1, 1, 1)",99.7
+836,,,False,False,False,False,11.030398068477504,10.021964555892737,"(203, 269, 203)","(230, 198, 194)",,nenhum correto,scipy,N/A,"(1, 1, 1)",99.7
+603,0.0,0.0,False,True,False,False,2.0384946302764733,1.6191488709832242,"(165, 331, 166)","(231, 246, 187)",,ambos toleráveis,scipy,N/A,"(1, 1, 1)",99.7
+676,0.1671578629184614,10004.0,False,True,False,True,3.449809281979404,0.0,"(155, 364, 139)","(199, 323, 186)",,ambos toleráveis,scipy,N/A,"(1, 1, 1)",99.7
+44,0.40881522513948015,74255.0,False,True,False,True,3.8776816656473563,0.0,"(206, 254, 149)","(221, 183, 177)",,ambos toleráveis,scipy,N/A,"(1, 1, 1)",99.7
+129,0.42689535666589407,46842.0,False,True,False,False,0.74609375,0.8981402361485997,"(192, 318, 166)","(217, 237, 200)",,ambos toleráveis,scipy,N/A,"(1, 1, 1)",99.7
+518,,,False,False,False,False,2.4042516560024714,10.50089587068237,"(212, 316, 162)","(236, 233, 178)",,nenhum correto,scipy,N/A,"(1, 1, 1)",99.7
+793,,,False,False,False,False,2.946361405569005,7.028319701893992,"(193, 293, 147)","(245, 241, 170)",,nenhum correto,scipy,N/A,"(1, 1, 1)",99.7
+550,0.35772743202292356,26397.0,False,True,True,False,0.0,5.5171477293419295,"(194, 317, 200)","(225, 245, 200)",,ambos toleráveis,scipy,N/A,"(1, 1, 1)",99.7
+631,0.3343434431140324,27065.0,False,True,True,False,0.0,1.2190003749230351,"(189, 263, 153)","(247, 188, 197)",,ambos toleráveis,scipy,N/A,"(1, 1, 1)",99.7
+330,,,False,False,False,False,29.770798088962273,2.108551995117332,"(155, 281, 251)","(237, 226, 221)",,nenhum correto,scipy,N/A,"(1, 1, 1)",99.7
+90,0.0,0.0,False,True,False,False,0.330078125,2.052103368464484,"(171, 314, 154)","(223, 238, 182)",,ambos toleráveis,scipy,N/A,"(1, 1, 1)",99.7
+608,0.0,0.0,False,True,False,False,3.918105544253269,1.1855002178833889,"(191, 247, 139)","(190, 158, 169)",,ambos toleráveis,scipy,N/A,"(1, 1, 1)",99.7
+887,,,False,False,False,False,,,,,"Segundo óstio não encontrado! Tentou 2000 candidatos. Restrições: dist>=80.8, z_diff<=40.0mm, x_sep>=32.3. Tente aumentar 'top_n' ou relaxar os fatores.",erro,scipy,N/A,"(1, 1, 1)",99.7
+175,,,False,False,False,False,8.076943641329008,7.444853921639482,"(185, 376, 155)","(255, 311, 176)",,nenhum correto,scipy,N/A,"(1, 1, 1)",99.7
+760,0.5493957365504356,94426.0,False,True,True,False,0.0,0.4640388251536718,"(177, 329, 198)","(216, 254, 226)",,ambos toleráveis,scipy,N/A,"(1, 1, 1)",99.7
+696,,,False,False,False,False,2.475571876500995,8.33749806920248,"(210, 269, 164)","(237, 192, 182)",,nenhum correto,scipy,N/A,"(1, 1, 1)",99.7
+194,0.059349664095742584,6287.0,False,True,False,False,4.116568994843478,2.4550058722959935,"(197, 319, 172)","(243, 243, 208)",,ambos toleráveis,scipy,N/A,"(1, 1, 1)",99.7
+305,0.33913037231788173,33820.0,False,True,False,True,1.263314103623506,0.0,"(196, 329, 179)","(240, 257, 216)",,ambos toleráveis,scipy,N/A,"(1, 1, 1)",99.7
+344,,,False,False,False,False,0.8564224849081498,16.746833615857852,"(195, 330, 178)","(210, 232, 192)",,nenhum correto,scipy,N/A,"(1, 1, 1)",99.7
