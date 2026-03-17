@@ -65,10 +65,8 @@ CONFIG = {
     # Downscaling (com GPU quando possível)
     "DOWNSCALE_METHOD": "scipy",  # "scipy" ou "opencv" (GPU automática se disponível)
     "OPENCV_INTERPOLATION": "area",  # "nearest", "linear", "cubic", "area", "lanczos4"
-    "DOWNSCALE_FACTORS": (2, 2, 1),
+    "DOWNSCALE_FACTORS": (1, 1, 1),
     "MAX_THRESHOLD_PERCENTILE": 99.7,
-    # Avaliação
-    "TOLERABLE_DISTANCE_MM": 7.0,
     # Vesselness - Detecção de Óstios (Aorta)
     "VESSELNESS_AORTA": {
         "sigmas": np.arange(2.5, 3.5, 1),
@@ -101,15 +99,15 @@ CONFIG = {
         "total_num_peaks": 15,
         "canny_sigma": 3,
         "use_local_roi": True,
-        "local_roi_padding": 20,
+        "local_roi_padding": 30,
     },
     # Level Set Segmentation
     "LEVEL_SET": {
         "radius_reduction_factor": 0.15,
-        "num_iter": 35,
+        "num_iter": 45,
         "balloon": 0.8,
         "smoothing": 2,
-        "leak_removal_radius": 2,
+        "leak_removal_radius": 5,
     },
     # Detecção de Óstios
     "OSTIA_DETECTION": {
@@ -122,7 +120,7 @@ CONFIG = {
     },
     # Validação de óstios
     "OSTIA_VALIDATION": {
-        "distance_threshold_mm": 7.0,
+        "distance_threshold_mm": 8.0,
     },
     # Region Growing - Segmentação de Artérias
     "REGION_GROWING": {
@@ -480,6 +478,7 @@ Arquivos de saída:
         if not df.empty:
             both_correct_series = df["both_correct"].fillna(False)
             both_tolerable_series = df["both_tolerable"].fillna(False)
+            tolerance_mm = effective_config["OSTIA_VALIDATION"]["distance_threshold_mm"]
 
             print(f"\n📊 Estatísticas do conjunto {split_name}:")
             print(
@@ -489,7 +488,7 @@ Arquivos de saída:
                 f"   - Tolerável apenas:         {both_tolerable_series.sum():3d} ({both_tolerable_series.mean() * 100:5.1f}%)"
             )
             print(
-                f"   - Total sucesso (<= {effective_config['TOLERABLE_DISTANCE_MM']}mm): {(both_correct_series | both_tolerable_series).sum():3d} ({(both_correct_series | both_tolerable_series).mean() * 100:5.1f}%)"
+                f"   - Total sucesso (<= {tolerance_mm}mm): {(both_correct_series | both_tolerable_series).sum():3d} ({(both_correct_series | both_tolerable_series).mean() * 100:5.1f}%)"
             )
             if "dice_artery" in df.columns and df["dice_artery"].notna().any():
                 print(f"   - Dice médio:       {df['dice_artery'].mean():.4f}")

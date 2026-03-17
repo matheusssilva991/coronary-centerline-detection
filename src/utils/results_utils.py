@@ -134,7 +134,7 @@ def save_metadata(
             "save_cache": config.get("SAVE_CACHE"),
         },
         "evaluation_config": {
-            "tolerable_distance_mm": config.get("TOLERABLE_DISTANCE_MM"),
+            "tolerable_distance_mm": config["OSTIA_VALIDATION"]["distance_threshold_mm"],
         },
         "results_summary": {
             "total_processed": len(df),

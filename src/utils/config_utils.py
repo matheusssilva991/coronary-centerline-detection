@@ -91,6 +91,8 @@ def scale_config_to_resolution(config, reference_downscale_xy=2):
 
     #cfg["VESSELNESS_AORTA"]["sigmas"] = cfg["VESSELNESS_AORTA"]["sigmas"] * scale
     #cfg["VESSELNESS_ARTERY"]["sigmas"] = cfg["VESSELNESS_ARTERY"]["sigmas"] * scale
+    cfg['CIRCLE_DETECTION']['tol_distance_mm'] /= scale
+    #cfg['CIRCLE_DETECTION']['tol_radius_mm'] /= scale
 
     #cfg["CIRCLE_DETECTION"]["canny_sigma"] *= scale
     #cfg["CIRCLE_DETECTION"]["neighbor_distance_threshold"] *= scale

@@ -10,11 +10,9 @@
         1
     ],
     "MAX_THRESHOLD_PERCENTILE": 99.7,
-    "TOLERABLE_DISTANCE_MM": 7.0,
     "VESSELNESS_AORTA": {
         "sigmas": [
-            2.5,
-            3.0
+            2.5
         ],
         "black_ridges": false,
         "alpha": 0.5,
@@ -55,7 +53,7 @@
     },
     "LEVEL_SET": {
         "radius_reduction_factor": 0.15,
-        "num_iter": 35,
+        "num_iter": 100,
         "balloon": 0.8,
         "smoothing": 2,
         "leak_removal_radius": 2

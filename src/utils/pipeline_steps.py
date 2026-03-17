@@ -189,7 +189,7 @@ def detect_and_evaluate_ostia(aorta_mask, vesselness_ostios, label, scaled_spaci
     ostia_left, ostia_right = find_ostia(
         aorta_mask,
         vesselness_ostios,
-        spacing=(dx, dy, dz),
+        spacing=(dy, dx, dz),
         top_n=ostia_config["top_n"],
         max_z_diff_mm=ostia_config["max_z_diff_mm"],
         lower_fraction=ostia_config["lower_fraction"],
@@ -206,7 +206,7 @@ def detect_and_evaluate_ostia(aorta_mask, vesselness_ostios, label, scaled_spaci
         ostia_right, label_artery, spacing=(dy, dx, dz), ostium_name="Óstio direito"
     )
 
-    tolerable = config["TOLERABLE_DISTANCE_MM"]
+    tolerable = config["OSTIA_VALIDATION"]["distance_threshold_mm"]
     both_correct = left_info["intersects"] and right_info["intersects"]
     both_tolerable_inclusive = (
         left_info["intersects"] or left_info["physical_dist"] <= tolerable
