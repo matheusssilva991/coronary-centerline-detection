@@ -104,10 +104,10 @@ CONFIG = {
     # Level Set Segmentation
     "LEVEL_SET": {
         "radius_reduction_factor": 0.15,
-        "num_iter": 45,
+        "num_iter": 100,
         "balloon": 0.8,
         "smoothing": 2,
-        "leak_removal_radius": 5,
+        "leak_removal_radius": 2,
     },
     # Detecção de Óstios
     "OSTIA_DETECTION": {
@@ -126,8 +126,8 @@ CONFIG = {
     "REGION_GROWING": {
         "max_volume": 100000,
         "switch_at_voxels": 2000,
-        "min_vesselness_fraction": 0.078,
-        "threshold_divisor": 5,
+        "min_vesselness_fraction": 0.05,
+        "threshold_divisor": 12,
         "relaxed_floor_factor": 0.97,
         "comparison_window": 1,
         "smooth_relaxation": True,
