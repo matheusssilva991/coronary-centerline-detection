@@ -1,0 +1,1 @@
+nohup python src/segmentation_pipeline.py --split val > output.log 2>&1 &
