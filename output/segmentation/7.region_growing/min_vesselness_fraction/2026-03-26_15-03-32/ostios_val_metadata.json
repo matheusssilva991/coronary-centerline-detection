@@ -1,0 +1,147 @@
+{
+  "execution_info": {
+    "timestamp": "2026-03-26T15:49:48.267185",
+    "split_name": "val",
+    "num_images": 30,
+    "image_ids": [
+      28,
+      380,
+      854,
+      937,
+      315,
+      428,
+      752,
+      13,
+      538,
+      965,
+      447,
+      836,
+      603,
+      676,
+      44,
+      129,
+      518,
+      793,
+      550,
+      631,
+      330,
+      90,
+      608,
+      887,
+      175,
+      760,
+      696,
+      194,
+      305,
+      344
+    ],
+    "execution_time_seconds": 2775.826765537262,
+    "python_version": "3.12.0",
+    "platform": "Linux-5.15.0-173-generic-x86_64-with-glibc2.35"
+  },
+  "preprocessing_config": {
+    "downscale_method": "scipy",
+    "opencv_interpolation": null,
+    "downscale_factors": [
+      2,
+      2,
+      1
+    ],
+    "max_threshold_percentile": 99.7
+  },
+  "vesselness_config": {
+    "ostios": {
+      "sigmas": [
+        2.5
+      ],
+      "alpha": 0.5,
+      "beta": 1,
+      "gamma": 30
+    },
+    "artery": {
+      "sigmas": [
+        1.5,
+        2.0,
+        2.5,
+        3.0
+      ],
+      "alpha": 0.5,
+      "beta": 0.5,
+      "gamma": 55
+    }
+  },
+  "circle_detection_config": {
+    "radii_start_px": 38,
+    "radii_end_px": 62,
+    "radius_step_px": 1,
+    "tol_radius_mm": 9.0,
+    "tol_distance_mm": 20.0,
+    "quadrant_offset": [
+      30,
+      30
+    ],
+    "max_slice_miss_threshold": 5,
+    "neighbor_distance_threshold": 5,
+    "total_num_peaks_initial": 15,
+    "total_num_peaks": 15,
+    "canny_sigma": 3,
+    "use_local_roi": true,
+    "local_roi_padding": 30
+  },
+  "level_set_config": {
+    "radius_reduction_factor": 0.15,
+    "num_iter": 35,
+    "balloon": 0.8,
+    "smoothing": 2,
+    "leak_removal_radius": 2
+  },
+  "ostia_detection_config": {
+    "top_n": 2000,
+    "max_z_diff_mm": 40.0,
+    "lower_fraction": 0.8,
+    "min_center_distance_factor": 0.85,
+    "min_lateral_factor": 0.4,
+    "erosion_radius": 4
+  },
+  "region_growing_config": {
+    "max_volume": 100000,
+    "switch_at_voxels": 2000,
+    "min_vesselness_fraction": 0.105,
+    "threshold_divisor": 5,
+    "relaxed_floor_factor": 0.97,
+    "comparison_window": 1,
+    "smooth_relaxation": true,
+    "verbose": false
+  },
+  "postprocessing_config": {
+    "closing_radius": 3,
+    "dilation_radius": 2
+  },
+  "cache_config": {
+    "load_cache": false,
+    "save_cache": false
+  },
+  "evaluation_config": {
+    "tolerable_distance_mm": 8.0
+  },
+  "results_summary": {
+    "total_processed": 30,
+    "both_correct": 2,
+    "both_correct_percent": 6.666666666666667,
+    "both_tolerable": 26,
+    "both_tolerable_percent": 86.66666666666667,
+    "total_success": 28,
+    "total_success_percent": 93.33333333333333,
+    "left_correct": 8,
+    "right_correct": 9,
+    "errors": 0,
+    "dice_artery_mean": 0.6464740143377313,
+    "dice_artery_std": 0.09023632089339084,
+    "dice_artery_median": 0.6731029471135268
+  },
+  "paths": {
+    "base_path": "/data04/home/mpmaia/ImageCAS/database/1-1000",
+    "base_save_path": "/media/matheus/HD/DatasetsCCTA/Processed_ImageCAS",
+    "output_dir": "/data04/home/projetos/dac_seg_dlag/mssilva.ppgmc/matheus_codes/coronary-centerline-detection/output"
+  }
+}

@@ -1,6 +1,6 @@
 {
   "execution_info": {
-    "timestamp": "2026-03-14T12:06:14.779690",
+    "timestamp": "2026-03-26T11:24:53.282997",
     "split_name": "val",
     "num_images": 30,
     "image_ids": [
@@ -35,9 +35,9 @@
       305,
       344
     ],
-    "execution_time_seconds": 3012.3921003341675,
+    "execution_time_seconds": 3134.9480209350586,
     "python_version": "3.12.0",
-    "platform": "Linux-5.15.0-171-generic-x86_64-with-glibc2.35"
+    "platform": "Linux-5.15.0-173-generic-x86_64-with-glibc2.35"
   },
   "preprocessing_config": {
     "downscale_method": "scipy",
@@ -86,7 +86,7 @@
     "total_num_peaks": 15,
     "canny_sigma": 3,
     "use_local_roi": true,
-    "local_roi_padding": 20
+    "local_roi_padding": 30
   },
   "level_set_config": {
     "radius_reduction_factor": 0.15,
@@ -106,7 +106,7 @@
   "region_growing_config": {
     "max_volume": 100000,
     "switch_at_voxels": 2000,
-    "min_vesselness_fraction": 0.078,
+    "min_vesselness_fraction": 0.09,
     "threshold_divisor": 5,
     "relaxed_floor_factor": 0.97,
     "comparison_window": 1,
@@ -122,22 +122,22 @@
     "save_cache": false
   },
   "evaluation_config": {
-    "tolerable_distance_mm": 7.0
+    "tolerable_distance_mm": 8.0
   },
   "results_summary": {
     "total_processed": 30,
-    "both_correct": 1,
-    "both_correct_percent": 3.3333333333333335,
-    "both_tolerable": 25,
-    "both_tolerable_percent": 83.33333333333334,
-    "total_success": 26,
-    "total_success_percent": 86.66666666666667,
-    "left_correct": 7,
-    "right_correct": 8,
+    "both_correct": 2,
+    "both_correct_percent": 6.666666666666667,
+    "both_tolerable": 26,
+    "both_tolerable_percent": 86.66666666666667,
+    "total_success": 28,
+    "total_success_percent": 93.33333333333333,
+    "left_correct": 8,
+    "right_correct": 9,
     "errors": 0,
-    "dice_artery_mean": 0.6247386685610604,
-    "dice_artery_std": 0.11159944750518362,
-    "dice_artery_median": 0.6565897946177535
+    "dice_artery_mean": 0.6461116477264014,
+    "dice_artery_std": 0.09545496783110537,
+    "dice_artery_median": 0.6716549459050113
   },
   "paths": {
     "base_path": "/data04/home/mpmaia/ImageCAS/database/1-1000",

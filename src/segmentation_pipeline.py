@@ -65,7 +65,7 @@ CONFIG = {
     # Downscaling (com GPU quando possível)
     "DOWNSCALE_METHOD": "scipy",  # "scipy" ou "opencv" (GPU automática se disponível)
     "OPENCV_INTERPOLATION": "area",  # "nearest", "linear", "cubic", "area", "lanczos4"
-    "DOWNSCALE_FACTORS": (1, 1, 1),
+    "DOWNSCALE_FACTORS": (2, 2, 1),
     "MAX_THRESHOLD_PERCENTILE": 99.7,
     # Vesselness - Detecção de Óstios (Aorta)
     "VESSELNESS_AORTA": {
@@ -104,7 +104,7 @@ CONFIG = {
     # Level Set Segmentation
     "LEVEL_SET": {
         "radius_reduction_factor": 0.15,
-        "num_iter": 100,
+        "num_iter": 35,
         "balloon": 0.8,
         "smoothing": 2,
         "leak_removal_radius": 2,
@@ -126,9 +126,9 @@ CONFIG = {
     "REGION_GROWING": {
         "max_volume": 100000,
         "switch_at_voxels": 2000,
-        "min_vesselness_fraction": 0.05,
-        "threshold_divisor": 12,
-        "relaxed_floor_factor": 0.97,
+        "min_vesselness_fraction": 0.098,
+        "threshold_divisor": 7,
+        "relaxed_floor_factor": 0.98,
         "comparison_window": 1,
         "smooth_relaxation": True,
         "verbose": False,

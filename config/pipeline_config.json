@@ -5,8 +5,8 @@
     "DOWNSCALE_METHOD": "scipy",
     "OPENCV_INTERPOLATION": "area",
     "DOWNSCALE_FACTORS": [
-        1,
-        1,
+        2,
+        2,
         1
     ],
     "MAX_THRESHOLD_PERCENTILE": 99.7,

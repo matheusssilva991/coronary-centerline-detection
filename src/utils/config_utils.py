@@ -84,6 +84,19 @@ def scale_config_to_resolution(config, reference_downscale_xy=2):
     factor_xy = cfg["DOWNSCALE_FACTORS"][0]
     scale = reference_downscale_xy / factor_xy
 
+    # Ajuste específico calibrado para region growing por resolução.
+    # Ex.: imagem original (factor=1) usa divisor 12; resolução "normal" (factor=2) usa 5.
+    if "REGION_GROWING" in cfg:
+        if factor_xy == 1:
+            cfg["REGION_GROWING"]["threshold_divisor"] = 12
+            cfg["REGION_GROWING"]["min_vesselness_fraction"] = 0.05
+
+    # Ajuste de iterações do level set por resolução.
+    # Ex.: imagem original (factor=1) usa mais iterações; resolução "normal" (factor=2) usa menos.
+    if "LEVEL_SET" in cfg:
+        if factor_xy == 1:
+            cfg["LEVEL_SET"]["num_iter"] = 100
+
     if scale == 1.0:
         return cfg
 
