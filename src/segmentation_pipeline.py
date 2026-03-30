@@ -87,7 +87,7 @@ CONFIG = {
     },
     # Detecção de Círculos (Transformada de Hough)
     "CIRCLE_DETECTION": {
-        "radii_start_px": 38,
+        "radii_start_px": 36,
         "radii_end_px": 62,
         "radius_step_px": 1,
         "tol_radius_mm": 9.0,
@@ -104,7 +104,7 @@ CONFIG = {
     # Level Set Segmentation
     "LEVEL_SET": {
         "radius_reduction_factor": 0.15,
-        "num_iter": 35,
+        "num_iter": 31,
         "balloon": 0.8,
         "smoothing": 2,
         "leak_removal_radius": 2,
@@ -126,7 +126,7 @@ CONFIG = {
     "REGION_GROWING": {
         "max_volume": 100000,
         "switch_at_voxels": 2000,
-        "min_vesselness_fraction": 0.098,
+        "min_vesselness_fraction": 0.078,
         "threshold_divisor": 7,
         "relaxed_floor_factor": 0.98,
         "comparison_window": 1,
