@@ -75,6 +75,19 @@ from .results_utils import (
     save_metadata,
 )
 
+# EDA comparison utilities
+from .comparison_utils import (
+    load_split_metadata,
+    load_split_summary,
+    get_bad_cases,
+    map_ia_resolution_to_target,
+    prettify_method_label,
+    load_ia_results_for_comparison,
+    load_math_results_for_comparison,
+    build_comparison_agg_df,
+    plot_comparison_bar_by_resolution,
+)
+
 # Pipeline steps
 from .pipeline_steps import (
     load_and_preprocess_image,
@@ -171,6 +184,15 @@ __all__ = [
     "make_result_dataframe",
     "save_results",
     "save_metadata",
+    "load_split_metadata",
+    "load_split_summary",
+    "get_bad_cases",
+    "map_ia_resolution_to_target",
+    "prettify_method_label",
+    "load_ia_results_for_comparison",
+    "load_math_results_for_comparison",
+    "build_comparison_agg_df",
+    "plot_comparison_bar_by_resolution",
     # Pipeline steps
     "load_and_preprocess_image",
     "get_or_compute_vesselness",
