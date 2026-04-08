@@ -7,6 +7,7 @@ por unidades Hounsfield e cálculo de métricas de avaliação.
 """
 
 import os
+import json
 
 import matplotlib.pyplot as plt
 from matplotlib import patches
@@ -82,6 +83,7 @@ def robust_normalize(img, p_min=0, p_max=99.8):
     # Detecta GPU se necessário
     try:
         import cupy as cp
+
         is_gpu = isinstance(img, cp.ndarray)
     except ImportError:
         is_gpu = False
@@ -107,6 +109,77 @@ def robust_normalize(img, p_min=0, p_max=99.8):
 # =============================================================================
 # Funções de I/O (Input/Output)
 # =============================================================================
+
+
+def load_json_file(path: str) -> dict:
+    """
+    Carrega um arquivo JSON com validações e mensagens de erro claras.
+
+    Args:
+        path (str): Caminho do arquivo JSON.
+
+    Returns:
+        dict: Conteúdo do arquivo JSON.
+
+    Raises:
+        FileNotFoundError: Quando o arquivo não existe.
+        IsADirectoryError: Quando o caminho informado é um diretório.
+        ValueError: Quando o conteúdo não é um objeto JSON válido.
+        OSError: Quando ocorre erro de leitura no sistema de arquivos.
+    """
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"Arquivo JSON não encontrado: {path}")
+    if os.path.isdir(path):
+        raise IsADirectoryError(
+            f"Caminho aponta para diretório, não arquivo JSON: {path}"
+        )
+
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except json.JSONDecodeError as exc:
+        raise ValueError(
+            f"JSON inválido em {path} (linha {exc.lineno}, coluna {exc.colno})"
+        ) from exc
+    except OSError as exc:
+        raise OSError(f"Erro ao ler arquivo JSON em {path}: {exc}") from exc
+
+    if not isinstance(data, dict):
+        raise ValueError(
+            f"Conteúdo JSON deve ser um objeto (dict), mas recebeu {type(data).__name__} em {path}"
+        )
+
+    return data
+
+
+def save_json_file(
+    data: dict, path: str, indent: int = 2, ensure_ascii: bool = False
+) -> None:
+    """
+    Salva um dicionário em arquivo JSON com criação de diretório e validações.
+
+    Args:
+        data (dict): Conteúdo a ser salvo.
+        path (str): Caminho de saída do arquivo JSON.
+        indent (int): Quantidade de espaços para indentação. Padrão: 2.
+        ensure_ascii (bool): Se True, força escape ASCII. Padrão: False.
+
+    Raises:
+        TypeError: Quando os dados não são serializáveis em JSON.
+        OSError: Quando ocorre erro de escrita no sistema de arquivos.
+    """
+    directory = os.path.dirname(path)
+    if directory:
+        os.makedirs(directory, exist_ok=True)
+
+    try:
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=indent, ensure_ascii=ensure_ascii)
+            f.write("\n")
+    except TypeError as exc:
+        raise TypeError(f"Dados não serializáveis para JSON em {path}: {exc}") from exc
+    except OSError as exc:
+        raise OSError(f"Erro ao salvar JSON em {path}: {exc}") from exc
 
 
 def load_img_and_label(
@@ -500,4 +573,3 @@ def dice_score(pred, target):
         return 1.0 if intersection == 0 else 0.0
 
     return 2.0 * intersection / union
-

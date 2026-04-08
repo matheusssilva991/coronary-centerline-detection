@@ -119,6 +119,8 @@ from .plots import (
 from .utils import (
     normalize_image,
     robust_normalize,
+    load_json_file,
+    save_json_file,
     load_img_and_label,
     load_raw_img_and_label,
     save_nii_image,
@@ -180,6 +182,7 @@ __all__ = [
     "binary_closing",
     "binary_dilation",
     "binary_erosion",
+    "binary_opening",
     "label",
     "keep_largest_component",
     # Preprocessing
@@ -198,6 +201,9 @@ __all__ = [
     "visualize_aorta_with_ostia",
     # Utils
     "normalize_image",
+    "robust_normalize",
+    "load_json_file",
+    "save_json_file",
     "load_img_and_label",
     "load_raw_img_and_label",
     "save_nii_image",
