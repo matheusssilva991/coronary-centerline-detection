@@ -141,6 +141,16 @@ CONFIG = {
 }
 
 # ============================================================================
+# CONFIGURAÇÕES POR RESOLUÇÃO
+# ============================================================================
+# MID RESOLUTION (padrão): Downscale 2x em X e Y, mantém Z
+CONFIG_MID_RES = copy.deepcopy(CONFIG)
+
+# HIGH RESOLUTION: Mantém resolução original (sem downscale)
+CONFIG_HIGH_RES = copy.deepcopy(CONFIG)
+CONFIG_HIGH_RES["DOWNSCALE_FACTORS"] = (1, 1, 1)
+
+# ============================================================================
 # PROCESSAMENTO DE IMAGEM
 # ============================================================================
 
@@ -331,6 +341,12 @@ Exemplos de uso:
   # Combinação: carregar cache, usar OpenCV (cubic) e processar só validação
   python segmentation_pipeline.py --split val --cache --downscale-method opencv --opencv-interpolation cubic
 
+  # Usar resolução alta (sem downscaling)
+  python segmentation_pipeline.py --resolution high
+
+  # Usar resolução média (downscale 2x)
+  python segmentation_pipeline.py --resolution mid --split val
+
 Arquivos de saída:
   - ostios_{split}_summary.csv: Resultados detalhados por imagem com parâmetros usados
   - ostios_{split}_metadata.json: Metadados completos (configurações, estatísticas, timestamp)
@@ -343,6 +359,14 @@ Arquivos de saída:
         choices=["train", "val", "test", "all"],
         default=["all"],
         help="Conjunto(s) para processar (padrão: all)",
+    )
+
+    parser.add_argument(
+        "--resolution",
+        type=str,
+        choices=["mid", "high"],
+        default="mid",
+        help="Resolução da imagem: 'mid' (downscale 2x) ou 'high' (sem downscale) (padrão: mid)",
     )
 
     parser.add_argument(
@@ -387,7 +411,15 @@ Arquivos de saída:
 
     args = parser.parse_args()
 
-    effective_config = copy.deepcopy(CONFIG)
+    # Selecionar configuração baseada na resolução escolhida
+    if args.resolution == "high":
+        base_config = CONFIG_HIGH_RES
+        print(f"🔍 Resolução: HIGH (sem downscaling, DOWNSCALE_FACTORS = {base_config['DOWNSCALE_FACTORS']})")
+    else:
+        base_config = CONFIG_MID_RES
+        print(f"🔍 Resolução: MID (downscale 2x, DOWNSCALE_FACTORS = {base_config['DOWNSCALE_FACTORS']})")
+
+    effective_config = copy.deepcopy(base_config)
 
     if args.config_file:
         effective_config = load_config_json(args.config_file, effective_config)
