@@ -24,6 +24,12 @@ def make_result_dataframe(results):
             "IMG_ID": result.get("IMG_ID"),
             "dice_artery": result.get("dice_artery"),
             "artery_voxels": result.get("artery_voxels"),
+            "ostia_found": result.get("ostia_found", False),
+            "ostia_status": result.get("ostia_status"),
+            "segmentation_attempted": result.get("segmentation_attempted", False),
+            "proceeded_with_bad_ostia": result.get("proceeded_with_bad_ostia", False),
+            "skip_reason": result.get("skip_reason"),
+            "ostia_error": result.get("ostia_error"),
             "both_correct": result.get("both_correct", False),
             "both_tolerable": result.get("both_tolerable", False),
             "left_intersects": result.get("left_intersects", False),
@@ -35,11 +41,15 @@ def make_result_dataframe(results):
             "error": result.get("error", None),
         }
 
-        if result.get("both_correct", False):
+        if result.get("ostia_status") == "not_found":
+            row["status"] = "óstios não encontrados"
+        elif result.get("both_correct", False):
             row["status"] = "ambos corretos"
         elif result.get("both_tolerable", False):
             row["status"] = "ambos toleráveis"
-        elif result.get("left_intersects", False) or result.get("right_intersects", False):
+        elif result.get("left_intersects", False) or result.get(
+            "right_intersects", False
+        ):
             row["status"] = "um correto"
         elif result.get("error"):
             row["status"] = "erro"
@@ -87,6 +97,10 @@ def save_metadata(
 
     both_correct_series = df["both_correct"].fillna(False)
     both_tolerable_series = df["both_tolerable"].fillna(False)
+    ostia_found_series = df["ostia_found"].fillna(False)
+    segmentation_attempted_series = df["segmentation_attempted"].fillna(False)
+    proceeded_with_bad_ostia_series = df["proceeded_with_bad_ostia"].fillna(False)
+    ostia_not_found_series = df["ostia_status"].eq("not_found")
 
     metadata = {
         "execution_info": {
@@ -97,6 +111,13 @@ def save_metadata(
             "execution_time_seconds": execution_time,
             "python_version": platform.python_version(),
             "platform": platform.platform(),
+            "state_counters": {
+                "ostia_found": int(ostia_found_series.sum()),
+                "ostia_status_not_found": int(ostia_not_found_series.sum()),
+                "segmentation_attempted": int(segmentation_attempted_series.sum()),
+                "proceeded_with_bad_ostia": int(proceeded_with_bad_ostia_series.sum()),
+                "error_not_null": int(df["error"].notna().sum()),
+            },
         },
         "preprocessing_config": {
             "downscale_method": config.get("DOWNSCALE_METHOD"),
@@ -134,21 +155,37 @@ def save_metadata(
             "save_cache": config.get("SAVE_CACHE"),
         },
         "evaluation_config": {
-            "tolerable_distance_mm": config["OSTIA_VALIDATION"]["distance_threshold_mm"],
+            "tolerable_distance_mm": config["OSTIA_VALIDATION"][
+                "distance_threshold_mm"
+            ],
         },
         "results_summary": {
             "total_processed": len(df),
+            "ostia_found": int(ostia_found_series.sum()),
+            "ostia_found_percent": float(ostia_found_series.mean() * 100),
+            "ostia_status_not_found": int(ostia_not_found_series.sum()),
+            "ostia_status_not_found_percent": float(
+                ostia_not_found_series.mean() * 100
+            ),
             "both_correct": int(both_correct_series.sum()),
             "both_correct_percent": float(both_correct_series.mean() * 100),
             "both_tolerable": int(both_tolerable_series.sum()),
             "both_tolerable_percent": float(both_tolerable_series.mean() * 100),
+            "segmentation_attempted": int(segmentation_attempted_series.sum()),
+            "segmentation_attempted_percent": float(
+                segmentation_attempted_series.mean() * 100
+            ),
+            "proceeded_with_bad_ostia": int(proceeded_with_bad_ostia_series.sum()),
+            "proceeded_with_bad_ostia_percent": float(
+                proceeded_with_bad_ostia_series.mean() * 100
+            ),
             "total_success": int((both_correct_series | both_tolerable_series).sum()),
             "total_success_percent": float(
                 (both_correct_series | both_tolerable_series).mean() * 100
             ),
             "left_correct": int(df["left_intersects"].sum()),
             "right_correct": int(df["right_intersects"].sum()),
-            "errors": int(df["error"].notna().sum()),
+            "error_not_null": int(df["error"].notna().sum()),
             "dice_artery_mean": float(df["dice_artery"].mean())
             if df["dice_artery"].notna().any()
             else None,
@@ -161,7 +198,11 @@ def save_metadata(
         },
     }
 
-    if base_path is not None or base_save_path is not None or root_output_dir is not None:
+    if (
+        base_path is not None
+        or base_save_path is not None
+        or root_output_dir is not None
+    ):
         metadata["paths"] = {
             "base_path": base_path,
             "base_save_path": base_save_path,

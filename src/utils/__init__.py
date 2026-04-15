@@ -11,137 +11,104 @@ Módulos disponíveis:
 - utils: Funções utilitárias diversas
 """
 
-# Localização dos ostios
-from .ostia_detection import (
-    find_aorta_surface,
-    calculate_robust_diameter,
-    check_ostium_intersection,
-    find_ostia,
-)
-
-# Segmentação de artérias
-from .artery_segmentation import (
-    region_growing_segmentation,
-    region_growing_article,
-)
-
-# Segmentação da aorta
-from .aorta_segmentation import (
-    level_set_segmentation,
-    remove_leaks_morphology,
-)
-
-# Localização da aorta
-from .aorta_localization import (
-    detect_initial_circle,
-    refine_circle_with_neighbors,
-    detect_aorta_circles,
-)
-
-# Filtro de Frangi
-from .frangi import (
-    get_vesselness,
-    get_vesselness_optimized,
-    save_vesselness_cache,
-    load_vesselness_cache,
-)
-
-# GPU Utils
-from .gpu_utils import (
-    use_gpu,
-    to_gpu,
-    to_cpu,
-    get_array_module,
-)
-
-# Configuração externa (JSON)
-from .config_utils import (
-    deep_update_dict,
-    normalize_runtime_config,
-    serialize_config_for_json,
-    load_config_json,
-    save_config_json,
-    scale_config_to_resolution,
-)
-
-# Dataset utilities
-from .dataset_utils import get_data_splits
-
-# Result/report utilities
-from .results_utils import (
+from . import groups
+from .groups.io import (
     create_timestamped_output_dir,
+    deep_update_dict,
+    dice_score,
+    extract_circular_region,
+    extract_square_region,
+    get_data_splits,
+    load_config_json,
+    load_img_and_label,
+    load_json_file,
+    load_raw_img_and_label,
     make_result_dataframe,
-    save_results,
+    normalize_image,
+    normalize_runtime_config,
+    robust_normalize,
+    save_config_json,
+    save_json_file,
     save_metadata,
+    save_nii_image,
+    save_npy_array,
+    save_results,
+    scale_config_to_resolution,
+    segment_by_hu,
+    serialize_config_for_json,
 )
-
-# EDA comparison utilities
-from .comparison_utils import (
-    load_split_metadata,
-    load_split_summary,
-    get_bad_cases,
-    map_ia_resolution_to_target,
-    prettify_method_label,
-    load_ia_results_for_comparison,
-    load_math_results_for_comparison,
-    build_comparison_agg_df,
-    plot_comparison_bar_by_resolution,
-)
-
-# Pipeline steps
-from .pipeline_steps import (
-    load_and_preprocess_image,
-    get_or_compute_vesselness,
-    get_or_detect_aorta_circles,
-    get_or_segment_aorta,
-    detect_and_evaluate_ostia,
-    segment_arteries_from_ostia,
-)
-
-# Binary Operations (operações morfológicas + componentes conectados com GPU)
-from .binary_operations import (
+from .groups.processing import (
     binary_closing,
     binary_dilation,
     binary_erosion,
     binary_opening,
-    label,
-    keep_largest_component,
-)
-
-# Pré-processamento
-from .preprocessing import (
+    downscale_image,
     downscale_image_ndi,
     downscale_image_opencv,
-    downscale_image,
+    get_array_module,
+    get_vesselness,
+    get_vesselness_optimized,
+    keep_largest_component,
+    label,
+    largest_connected_component,
+    load_vesselness_cache,
+    run_core_preprocessing_pipeline,
+    save_vesselness_cache,
     threshold_image,
     threshold_image_with_offset,
-    largest_connected_component,
-    run_core_preprocessing_pipeline,
+    to_cpu,
+    to_gpu,
+    use_gpu,
 )
-
-# Visualização
-from .plots import (
+from .groups.segmentation import (
+    calculate_robust_diameter,
+    check_ostium_intersection,
+    detect_and_evaluate_ostia,
+    detect_aorta_circles,
+    detect_initial_circle,
+    find_aorta_surface,
+    find_ostia,
+    get_or_compute_vesselness,
+    get_or_detect_aorta_circles,
+    get_or_segment_aorta,
+    level_set_segmentation,
+    load_and_preprocess_image,
+    refine_circle_with_neighbors,
+    region_growing_article,
+    region_growing_segmentation,
+    remove_leaks_morphology,
+    segment_arteries_from_ostia,
+)
+from .groups.visualization import (
+    build_comparison_agg_df,
+    compare_shared_bad_cases,
+    get_bad_cases,
+    get_execution_time_seconds,
+    get_num_images,
+    get_total_success_percent,
+    load_ia_results_for_comparison,
+    load_math_results_for_comparison,
+    load_split_metadata,
+    load_split_summary,
+    map_ia_resolution_to_target,
+    plot_bad_cases_by_subset,
+    plot_comparison_bar_by_resolution,
+    plot_dice_distribution_by_subset,
+    plot_downscale_dice,
+    plot_downscale_execution_time,
+    plot_downscale_ostia_success,
     plot_mip_projection,
     plot_slices,
-    visualize_circles_on_slices,
+    plot_subset_execution_time_by_resolution,
+    plot_subset_metric_by_resolution,
+    plot_subset_ostia_success_by_resolution,
+    plot_validation_dice,
+    plot_validation_execution_time,
+    plot_validation_ostia_success,
+    prettify_method_label,
     visualize_3d_k3d,
     visualize_aorta_with_ostia,
-)
-
-# Utilitários gerais
-from .utils import (
-    normalize_image,
-    robust_normalize,
-    load_json_file,
-    save_json_file,
-    load_img_and_label,
-    load_raw_img_and_label,
-    save_nii_image,
-    extract_square_region,
-    extract_circular_region,
-    segment_by_hu,
-    dice_score,
-    save_npy_array,
+    visualize_circles_on_slices,
 )
 
 __all__ = [
@@ -192,7 +159,22 @@ __all__ = [
     "load_ia_results_for_comparison",
     "load_math_results_for_comparison",
     "build_comparison_agg_df",
+    "compare_shared_bad_cases",
+    "get_execution_time_seconds",
+    "get_num_images",
+    "get_total_success_percent",
+    "plot_bad_cases_by_subset",
     "plot_comparison_bar_by_resolution",
+    "plot_dice_distribution_by_subset",
+    "plot_downscale_dice",
+    "plot_downscale_execution_time",
+    "plot_downscale_ostia_success",
+    "plot_subset_execution_time_by_resolution",
+    "plot_subset_metric_by_resolution",
+    "plot_subset_ostia_success_by_resolution",
+    "plot_validation_dice",
+    "plot_validation_execution_time",
+    "plot_validation_ostia_success",
     # Pipeline steps
     "load_and_preprocess_image",
     "get_or_compute_vesselness",
@@ -234,4 +216,6 @@ __all__ = [
     "segment_by_hu",
     "dice_score",
     "save_npy_array",
+    # Grouped namespaces
+    "groups",
 ]

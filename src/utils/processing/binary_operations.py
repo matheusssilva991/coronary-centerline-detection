@@ -10,11 +10,9 @@ import numpy as np
 import scipy.ndimage as ndi
 
 from .gpu_utils import (
-    use_gpu,
     to_gpu,
     to_cpu,
     GPU_AVAILABLE,
-    cp,
     cu_ndi,
 )
 

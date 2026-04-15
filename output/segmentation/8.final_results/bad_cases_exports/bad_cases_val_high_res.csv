@@ -1,0 +1,6 @@
+image_id,bad_case_status,subset,resolution
+380,one_correct,val,high_res
+538,low_dice,val,high_res
+330,none_correct,val,high_res
+175,error,val,high_res
+344,none_correct,val,high_res

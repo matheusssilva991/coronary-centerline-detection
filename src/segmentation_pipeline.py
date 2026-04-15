@@ -50,7 +50,7 @@ else:
     print("⚠ GPU não disponível. Acelerações CPU usadas.")
 
 # Caminhos padrão
-#BASE_PATH = "/media/matheus/HD/DatasetsCCTA/ImageCAS"
+# BASE_PATH = "/media/matheus/HD/DatasetsCCTA/ImageCAS"
 BASE_PATH = "/data04/home/mpmaia/ImageCAS/database/1-1000"
 BASE_SAVE_PATH = "/media/matheus/HD/DatasetsCCTA/Processed_ImageCAS"
 OUTPUT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "output"))
@@ -173,6 +173,12 @@ def process_image(IMG_ID, config=CONFIG):
         "ostia_right": None,
         "artery_voxels": None,
         "dice_artery": None,
+        "ostia_found": False,
+        "ostia_status": "not_evaluated",
+        "segmentation_attempted": False,
+        "proceeded_with_bad_ostia": False,
+        "skip_reason": None,
+        "ostia_error": None,
         "left_intersects": False,
         "right_intersects": False,
         "left_dist_voxels": None,
@@ -216,16 +222,25 @@ def process_image(IMG_ID, config=CONFIG):
             load_cache=config["LOAD_CACHE"],
             save_cache=config["SAVE_CACHE"],
         )
-        ostia_eval = detect_and_evaluate_ostia(
-            aorta_mask,
-            vesselness_ostios,
-            label,
-            scaled_spacing,
-            config,
-        )
+
+        try:
+            ostia_eval = detect_and_evaluate_ostia(
+                aorta_mask,
+                vesselness_ostios,
+                label,
+                scaled_spacing,
+                config,
+            )
+        except ValueError as ostia_exc:
+            result["ostia_status"] = "not_found"
+            result["ostia_error"] = str(ostia_exc)
+            result["skip_reason"] = "ostia_not_found"
+            result["dice_artery"] = 0.0
+            return result
 
         result["ostia_left"] = tuple(map(int, ostia_eval["ostia_left"]))
         result["ostia_right"] = tuple(map(int, ostia_eval["ostia_right"]))
+        result["ostia_found"] = True
         result["left_intersects"] = ostia_eval["left_info"]["intersects"]
         result["right_intersects"] = ostia_eval["right_info"]["intersects"]
         result["left_dist_voxels"] = ostia_eval["left_info"]["euclidean_dist"]
@@ -235,17 +250,29 @@ def process_image(IMG_ID, config=CONFIG):
         result["both_correct"] = ostia_eval["both_correct"]
         result["both_tolerable"] = ostia_eval["both_tolerable"]
 
-        if result["both_correct"] or result["both_tolerable"]:
-            artery_metrics = segment_arteries_from_ostia(
-                IMG_ID,
-                lcc_image,
-                ostia_eval["label_artery"],
-                ostia_eval["ostia_left"],
-                ostia_eval["ostia_right"],
-                config,
-                BASE_SAVE_PATH,
-            )
-            result.update(artery_metrics)
+        if result["both_correct"]:
+            result["ostia_status"] = "both_correct"
+        elif result["both_tolerable"]:
+            result["ostia_status"] = "both_tolerable"
+        else:
+            result["ostia_status"] = "found_but_wrong"
+
+        is_bad_ostia = not (result["both_correct"] or result["both_tolerable"])
+
+        if is_bad_ostia:
+            result["proceeded_with_bad_ostia"] = True
+
+        result["segmentation_attempted"] = True
+        artery_metrics = segment_arteries_from_ostia(
+            IMG_ID,
+            lcc_image,
+            ostia_eval["label_artery"],
+            ostia_eval["ostia_left"],
+            ostia_eval["ostia_right"],
+            config,
+            BASE_SAVE_PATH,
+        )
+        result.update(artery_metrics)
 
     except Exception as e:
         result["error"] = str(e)
@@ -414,10 +441,14 @@ Arquivos de saída:
     # Selecionar configuração baseada na resolução escolhida
     if args.resolution == "high":
         base_config = CONFIG_HIGH_RES
-        print(f"🔍 Resolução: HIGH (sem downscaling, DOWNSCALE_FACTORS = {base_config['DOWNSCALE_FACTORS']})")
+        print(
+            f"🔍 Resolução: HIGH (sem downscaling, DOWNSCALE_FACTORS = {base_config['DOWNSCALE_FACTORS']})"
+        )
     else:
         base_config = CONFIG_MID_RES
-        print(f"🔍 Resolução: MID (downscale 2x, DOWNSCALE_FACTORS = {base_config['DOWNSCALE_FACTORS']})")
+        print(
+            f"🔍 Resolução: MID (downscale 2x, DOWNSCALE_FACTORS = {base_config['DOWNSCALE_FACTORS']})"
+        )
 
     effective_config = copy.deepcopy(base_config)
 
@@ -487,7 +518,10 @@ Arquivos de saída:
 
         # Salvar resultados CSV
         output_path = save_results(
-            summary["details"], split_name, timestamped_output_dir, config=effective_config
+            summary["details"],
+            split_name,
+            timestamped_output_dir,
+            config=effective_config,
         )
         print(f"✅ Resumo CSV salvo em: {output_path}")
 
@@ -510,14 +544,32 @@ Arquivos de saída:
         if not df.empty:
             both_correct_series = df["both_correct"].fillna(False)
             both_tolerable_series = df["both_tolerable"].fillna(False)
+            ostia_found_series = df["ostia_found"].fillna(False)
+            ostia_not_found_series = df["ostia_status"].eq("not_found")
+            segmentation_attempted_series = df["segmentation_attempted"].fillna(False)
+            proceeded_with_bad_ostia_series = df["proceeded_with_bad_ostia"].fillna(
+                False
+            )
             tolerance_mm = effective_config["OSTIA_VALIDATION"]["distance_threshold_mm"]
 
             print(f"\n📊 Estatísticas do conjunto {split_name}:")
+            print(
+                f"   - Óstios encontrados:         {ostia_found_series.sum():3d} ({ostia_found_series.mean() * 100:5.1f}%)"
+            )
+            print(
+                f"   - Óstios não encontrados:     {ostia_not_found_series.sum():3d} ({ostia_not_found_series.mean() * 100:5.1f}%)"
+            )
             print(
                 f"   - Ambos corretos (estrito): {both_correct_series.sum():3d} ({both_correct_series.mean() * 100:5.1f}%)"
             )
             print(
                 f"   - Tolerável apenas:         {both_tolerable_series.sum():3d} ({both_tolerable_series.mean() * 100:5.1f}%)"
+            )
+            print(
+                f"   - Segmentação tentada:      {segmentation_attempted_series.sum():3d} ({segmentation_attempted_series.mean() * 100:5.1f}%)"
+            )
+            print(
+                f"   - Prosseguiu com óstio ruim:{proceeded_with_bad_ostia_series.sum():3d} ({proceeded_with_bad_ostia_series.mean() * 100:5.1f}%)"
             )
             print(
                 f"   - Total sucesso (<= {tolerance_mm}mm): {(both_correct_series | both_tolerable_series).sum():3d} ({(both_correct_series | both_tolerable_series).mean() * 100:5.1f}%)"

@@ -10,11 +10,22 @@ from skimage.morphology import ball
 from .aorta_localization import detect_aorta_circles
 from .aorta_segmentation import level_set_segmentation, remove_leaks_morphology
 from .artery_segmentation import region_growing_segmentation
-from .binary_operations import binary_closing, binary_dilation, keep_largest_component
-from .frangi import get_vesselness, load_vesselness_cache, save_vesselness_cache
+from ..processing.binary_operations import (
+    binary_closing,
+    binary_dilation,
+    keep_largest_component,
+)
+from ..processing.frangi import (
+    get_vesselness,
+    load_vesselness_cache,
+    save_vesselness_cache,
+)
 from .ostia_detection import check_ostium_intersection, find_ostia
-from .preprocessing import downscale_image_ndi, run_core_preprocessing_pipeline
-from .utils import dice_score, load_raw_img_and_label, save_npy_array
+from ..processing.preprocessing import (
+    downscale_image_ndi,
+    run_core_preprocessing_pipeline,
+)
+from ..utils import dice_score, load_raw_img_and_label, save_npy_array
 
 
 def load_and_preprocess_image(img_id, base_path, config):
@@ -182,7 +193,9 @@ def get_or_segment_aorta(
     return aorta_mask
 
 
-def detect_and_evaluate_ostia(aorta_mask, vesselness_ostios, label, scaled_spacing, config):
+def detect_and_evaluate_ostia(
+    aorta_mask, vesselness_ostios, label, scaled_spacing, config
+):
     """Detecta os óstios e avalia correção/tolerância."""
     dx, dy, dz = scaled_spacing
     ostia_config = config["OSTIA_DETECTION"]
@@ -247,7 +260,8 @@ def segment_arteries_from_ostia(
         "threshold": (vesselness_artery.max() - vesselness_artery.min())
         / rg_config["threshold_divisor"],
         "max_volume": rg_config["max_volume"],
-        "min_vesselness": vesselness_artery.max() * rg_config["min_vesselness_fraction"],
+        "min_vesselness": vesselness_artery.max()
+        * rg_config["min_vesselness_fraction"],
         "relaxed_floor_factor": rg_config["relaxed_floor_factor"],
         "switch_at_voxels": rg_config["switch_at_voxels"],
         "comparison_window": rg_config["comparison_window"],

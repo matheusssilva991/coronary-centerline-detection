@@ -5,7 +5,6 @@ import pickle
 
 # Importa utilitários de GPU centralizados
 from .gpu_utils import (
-    use_gpu,
     to_gpu,
     to_cpu,
     GPU_AVAILABLE,
@@ -13,7 +12,7 @@ from .gpu_utils import (
 )
 
 # Importa funções de normalização
-from .utils import normalize_image, robust_normalize
+from ..utils import normalize_image, robust_normalize
 
 # Importa cucim filters se GPU disponível
 gpu_filters = None
@@ -120,7 +119,7 @@ def get_vesselness(
 
         # IMPORTANTE: sigmas deve ser lista Python, não array CuPy
         # Evita problemas com driver NVIDIA em algumas versões do cuCIM
-        sigmas_list = list(sigmas) if hasattr(sigmas, '__iter__') else [sigmas]
+        sigmas_list = list(sigmas) if hasattr(sigmas, "__iter__") else [sigmas]
 
         # Usa cuCIM para Frangi na GPU
         vesselness = gpu_filters.frangi(
@@ -129,7 +128,7 @@ def get_vesselness(
             alpha=alpha,
             beta=beta,
             gamma=gamma,
-            black_ridges=black_ridges
+            black_ridges=black_ridges,
         )
 
         # Mantém na GPU durante normalização para eficiência
@@ -157,7 +156,7 @@ def get_vesselness(
             alpha=alpha,
             beta=beta,
             gamma=gamma,
-            black_ridges=black_ridges
+            black_ridges=black_ridges,
         )
 
         # Normalização na CPU
@@ -206,10 +205,12 @@ def get_vesselness_optimized(
         img_gpu = to_gpu(image)
 
         # IMPORTANTE: sigmas deve ser lista Python, não array CuPy
-        sigmas_list = list(sigmas) if hasattr(sigmas, '__iter__') else [sigmas]
+        sigmas_list = list(sigmas) if hasattr(sigmas, "__iter__") else [sigmas]
 
         # Suavização leve para remover ruído na GPU
-        img_smooth = gpu_filters.gaussian(img_gpu, sigma=smooth_sigma, preserve_range=True)
+        img_smooth = gpu_filters.gaussian(
+            img_gpu, sigma=smooth_sigma, preserve_range=True
+        )
 
         # Frangi tunado na GPU
         vesselness = gpu_filters.frangi(

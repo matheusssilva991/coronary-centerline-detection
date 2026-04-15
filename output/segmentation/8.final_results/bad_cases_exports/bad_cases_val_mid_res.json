@@ -1,0 +1,14 @@
+[
+  {
+    "image_id": 676,
+    "bad_case_status": "none_correct",
+    "subset": "val",
+    "resolution": "mid_res"
+  },
+  {
+    "image_id": 330,
+    "bad_case_status": "none_correct",
+    "subset": "val",
+    "resolution": "mid_res"
+  }
+]

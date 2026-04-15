@@ -1,0 +1,32 @@
+[
+  {
+    "image_id": 380,
+    "bad_case_status": "one_correct",
+    "subset": "val",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 538,
+    "bad_case_status": "low_dice",
+    "subset": "val",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 330,
+    "bad_case_status": "none_correct",
+    "subset": "val",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 175,
+    "bad_case_status": "error",
+    "subset": "val",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 344,
+    "bad_case_status": "none_correct",
+    "subset": "val",
+    "resolution": "high_res"
+  }
+]

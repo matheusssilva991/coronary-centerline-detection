@@ -1,0 +1,1364 @@
+[
+  {
+    "image_id": 568,
+    "bad_case_status": "one_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 469,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 662,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 220,
+    "bad_case_status": "one_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 671,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 975,
+    "bad_case_status": "one_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 386,
+    "bad_case_status": "one_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 432,
+    "bad_case_status": "error",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 41,
+    "bad_case_status": "one_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 431,
+    "bad_case_status": "error",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 277,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 348,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 64,
+    "bad_case_status": "low_dice",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 333,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 119,
+    "bad_case_status": "one_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 125,
+    "bad_case_status": "one_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 654,
+    "bad_case_status": "one_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 298,
+    "bad_case_status": "one_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 63,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 361,
+    "bad_case_status": "one_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 133,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 158,
+    "bad_case_status": "one_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 741,
+    "bad_case_status": "low_dice",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 777,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 569,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 295,
+    "bad_case_status": "low_dice",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 787,
+    "bad_case_status": "one_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 155,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 414,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 25,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 833,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 58,
+    "bad_case_status": "error",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 901,
+    "bad_case_status": "one_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 481,
+    "bad_case_status": "error",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 740,
+    "bad_case_status": "one_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 311,
+    "bad_case_status": "one_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 601,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 88,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 638,
+    "bad_case_status": "low_dice",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 575,
+    "bad_case_status": "one_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 320,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 240,
+    "bad_case_status": "error",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 683,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 684,
+    "bad_case_status": "one_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 367,
+    "bad_case_status": "error",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 53,
+    "bad_case_status": "error",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 331,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 543,
+    "bad_case_status": "one_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 701,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 438,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 86,
+    "bad_case_status": "error",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 221,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 427,
+    "bad_case_status": "one_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 278,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 398,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 286,
+    "bad_case_status": "one_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 650,
+    "bad_case_status": "one_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 124,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 580,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 635,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 925,
+    "bad_case_status": "low_dice",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 840,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 157,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 225,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 931,
+    "bad_case_status": "low_dice",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 843,
+    "bad_case_status": "one_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 397,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 373,
+    "bad_case_status": "low_dice",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 100,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 561,
+    "bad_case_status": "one_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 168,
+    "bad_case_status": "one_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 809,
+    "bad_case_status": "low_dice",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 903,
+    "bad_case_status": "low_dice",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 929,
+    "bad_case_status": "one_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 102,
+    "bad_case_status": "one_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 517,
+    "bad_case_status": "one_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 54,
+    "bad_case_status": "one_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 909,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 275,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 171,
+    "bad_case_status": "low_dice",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 421,
+    "bad_case_status": "one_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 954,
+    "bad_case_status": "error",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 815,
+    "bad_case_status": "error",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 424,
+    "bad_case_status": "error",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 484,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 238,
+    "bad_case_status": "error",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 479,
+    "bad_case_status": "low_dice",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 8,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 953,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 4,
+    "bad_case_status": "one_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 576,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 735,
+    "bad_case_status": "one_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 501,
+    "bad_case_status": "error",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 231,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 370,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 554,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 739,
+    "bad_case_status": "one_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 218,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 749,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 734,
+    "bad_case_status": "one_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 591,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 210,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 596,
+    "bad_case_status": "one_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 18,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 261,
+    "bad_case_status": "error",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 904,
+    "bad_case_status": "one_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 369,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 620,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 22,
+    "bad_case_status": "one_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 503,
+    "bad_case_status": "one_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 246,
+    "bad_case_status": "one_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 123,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 795,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 272,
+    "bad_case_status": "one_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 448,
+    "bad_case_status": "error",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 250,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 224,
+    "bad_case_status": "low_dice",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 254,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 830,
+    "bad_case_status": "one_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 229,
+    "bad_case_status": "low_dice",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 297,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 990,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 149,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 463,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 497,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 12,
+    "bad_case_status": "one_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 655,
+    "bad_case_status": "low_dice",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 801,
+    "bad_case_status": "one_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 336,
+    "bad_case_status": "one_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 738,
+    "bad_case_status": "error",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 712,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 565,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 742,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 489,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 422,
+    "bad_case_status": "error",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 417,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 349,
+    "bad_case_status": "low_dice",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 262,
+    "bad_case_status": "one_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 892,
+    "bad_case_status": "one_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 613,
+    "bad_case_status": "one_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 687,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 59,
+    "bad_case_status": "error",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 704,
+    "bad_case_status": "error",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 452,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 245,
+    "bad_case_status": "low_dice",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 321,
+    "bad_case_status": "one_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 436,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 47,
+    "bad_case_status": "one_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 45,
+    "bad_case_status": "one_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 192,
+    "bad_case_status": "low_dice",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 51,
+    "bad_case_status": "error",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 400,
+    "bad_case_status": "one_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 632,
+    "bad_case_status": "low_dice",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 249,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 546,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 189,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 482,
+    "bad_case_status": "error",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 710,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 258,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 919,
+    "bad_case_status": "error",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 583,
+    "bad_case_status": "error",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 111,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 419,
+    "bad_case_status": "low_dice",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 699,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 487,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 595,
+    "bad_case_status": "low_dice",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 849,
+    "bad_case_status": "one_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 281,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 666,
+    "bad_case_status": "one_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 182,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 600,
+    "bad_case_status": "error",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 659,
+    "bad_case_status": "one_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 50,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 56,
+    "bad_case_status": "error",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 841,
+    "bad_case_status": "one_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 630,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 524,
+    "bad_case_status": "one_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 722,
+    "bad_case_status": "error",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 430,
+    "bad_case_status": "low_dice",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 412,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 85,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 372,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 143,
+    "bad_case_status": "error",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 661,
+    "bad_case_status": "error",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 827,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 582,
+    "bad_case_status": "error",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 657,
+    "bad_case_status": "error",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 132,
+    "bad_case_status": "error",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 256,
+    "bad_case_status": "one_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 237,
+    "bad_case_status": "low_dice",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 357,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 610,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 768,
+    "bad_case_status": "low_dice",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 113,
+    "bad_case_status": "one_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 212,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 328,
+    "bad_case_status": "one_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 690,
+    "bad_case_status": "error",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 201,
+    "bad_case_status": "one_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 75,
+    "bad_case_status": "one_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 980,
+    "bad_case_status": "error",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 973,
+    "bad_case_status": "error",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 562,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 353,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 968,
+    "bad_case_status": "low_dice",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 435,
+    "bad_case_status": "low_dice",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 97,
+    "bad_case_status": "one_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 864,
+    "bad_case_status": "one_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 732,
+    "bad_case_status": "error",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 868,
+    "bad_case_status": "error",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 877,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 916,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 993,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 301,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 476,
+    "bad_case_status": "low_dice",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 774,
+    "bad_case_status": "one_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 800,
+    "bad_case_status": "one_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 703,
+    "bad_case_status": "low_dice",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 858,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 785,
+    "bad_case_status": "error",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 105,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 505,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 685,
+    "bad_case_status": "one_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 371,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 66,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 900,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 334,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 471,
+    "bad_case_status": "none_correct",
+    "subset": "test",
+    "resolution": "high_res"
+  }
+]

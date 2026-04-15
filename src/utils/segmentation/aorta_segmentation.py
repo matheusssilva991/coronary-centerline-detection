@@ -15,7 +15,7 @@ from skimage.segmentation import (
 from skimage.morphology import ball
 
 # Importa operação morfológica com suporte GPU
-from .binary_operations import binary_opening
+from ..processing.binary_operations import binary_opening
 
 
 # =============================================================================
