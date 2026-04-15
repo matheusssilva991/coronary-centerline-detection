@@ -95,6 +95,23 @@ def get_bad_cases(df, success_status=None, dice_threshold=0.30):
     return bad_df
 
 
+def filter_correct_ostia_cases(df, success_status=None):
+    """Return only cases where ostia detection is considered successful."""
+    if success_status is None:
+        success_status = [
+            "ambos toleráveis",
+            "ambos corretos",
+            "both_tolerable",
+            "both_correct",
+        ]
+
+    if df is None or df.empty:
+        return pd.DataFrame(columns=df.columns if df is not None else None)
+
+    success_mask = _compute_success_mask(df, success_status)
+    return df.loc[success_mask].copy()
+
+
 def build_bad_cases_export_df(df_bad_cases, subset_name, resolution):
     """Create a standardized bad-cases export DataFrame with English keys."""
     if df_bad_cases is None or df_bad_cases.empty:

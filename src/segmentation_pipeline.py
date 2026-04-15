@@ -50,8 +50,8 @@ else:
     print("⚠ GPU não disponível. Acelerações CPU usadas.")
 
 # Caminhos padrão
-# BASE_PATH = "/media/matheus/HD/DatasetsCCTA/ImageCAS"
-BASE_PATH = "/data04/home/mpmaia/ImageCAS/database/1-1000"
+BASE_PATH = "/media/matheus/HD/DatasetsCCTA/ImageCAS"
+# BASE_PATH = "/data04/home/mpmaia/ImageCAS/database/1-1000"
 BASE_SAVE_PATH = "/media/matheus/HD/DatasetsCCTA/Processed_ImageCAS"
 OUTPUT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "output"))
 

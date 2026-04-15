@@ -9,6 +9,7 @@ from .metadata import (
 )
 from .bad_cases import (
     build_bad_cases_export_df,
+    filter_correct_ostia_cases,
     get_bad_cases,
     save_bad_cases_artifacts,
 )
@@ -31,6 +32,7 @@ __all__ = [
     "get_num_images",
     "get_total_success_percent",
     "get_bad_cases",
+    "filter_correct_ostia_cases",
     "build_bad_cases_export_df",
     "save_bad_cases_artifacts",
     "build_comparison_agg_df",
