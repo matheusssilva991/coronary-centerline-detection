@@ -1,0 +1,6 @@
+Diâmetro/raio minimo e máximo da aorta ascendente (Encontrar círculos da aorta)
+Diâmetro/raio inicial das artérias coronárias (Encontrar os óstios: Mapa de vasos)
+Diâmetro/raio médio das artérias coronárias (Encontrar as artérias: Mapa de vasos arteŕias)
+Distância lateral mínima/máxima entre os óstios
+Distância em z mínima/máxima entre os óstios
+Os óstios estão sempre localizados na parte inferior da aorta ?

@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import seaborn as sns
 
@@ -8,11 +9,9 @@ def compare_shared_bad_cases(
     df_high,
     subset_label,
     dice_threshold=0.30,
-    max_examples=10,
 ):
     """Compara casos ruins compartilhados entre resultados mid e high."""
     if df_mid is None or df_high is None or df_mid.empty or df_high.empty:
-        print(f"Sem dados suficientes para comparativo em {subset_label}.")
         return None
 
     id_col_mid = "IMG_ID" if "IMG_ID" in df_mid.columns else "img_id"
@@ -53,22 +52,6 @@ def compare_shared_bad_cases(
         ids_high = _status_ids(df_high, status_label, id_col_high)
         status_intersections[display_name] = ids_mid & ids_high
 
-    print("\n" + "-" * 60)
-    print(f"COMPARATIVO MID vs HIGH - {subset_label}")
-    print("-" * 60)
-    print(f"Mesmo caso com Dice < {dice_threshold} em ambos: {len(ids_low_both)}")
-    for display_name in status_intersections:
-        print(f"{display_name}: {len(status_intersections[display_name])}")
-
-    if ids_low_both:
-        exemplos_low = sorted(ids_low_both)[:max_examples]
-        print(f"Exemplos (Dice baixo em ambos): {exemplos_low}")
-
-    for display_name, ids in status_intersections.items():
-        if ids:
-            exemplos = sorted(ids)[:max_examples]
-            print(f"Exemplos ({display_name.lower()}): {exemplos}")
-
     compare_rows = [
         {"tipo": f"Dice < {dice_threshold} em ambos", "quantidade": len(ids_low_both)}
     ]
@@ -91,6 +74,88 @@ def compare_shared_bad_cases(
     plt.show()
 
     return {"ids_low_both": ids_low_both, "status_intersections": status_intersections}
+
+
+def plot_bad_dice_indicator(
+    df_mid_bad,
+    df_high_bad,
+    subset_label,
+    summarize_bad_dice_fn,
+    dice_threshold=0.3,
+):
+    """Plot Dice indicator for bad cases with and without low-dice successful ostia."""
+    mid_stats = summarize_bad_dice_fn(df_mid_bad, dice_threshold=dice_threshold)
+    high_stats = summarize_bad_dice_fn(df_high_bad, dice_threshold=dice_threshold)
+
+    rows = []
+    for resolution_label, stats in [
+        ("Mid Res", mid_stats),
+        ("High Res", high_stats),
+    ]:
+        if stats["n_with_low_dice"] == 0:
+            continue
+        rows.append(
+            {
+                "resolution": resolution_label,
+                "com_dice_baixo_ok": stats["mean_with_low_dice"],
+                "sem_dice_baixo_ok": stats["mean_without_low_dice"],
+                "n_total_dice": stats["n_with_low_dice"],
+                "n_removidos_dice_baixo_ok": stats["n_low_dice_correct"],
+            }
+        )
+
+    indicator_df = pd.DataFrame(rows)
+
+    fig, ax = plt.subplots(figsize=(10, 4.8))
+    if indicator_df.empty:
+        ax.text(0.5, 0.5, "Sem dados de Dice para plotar", ha="center", va="center")
+        ax.axis("off")
+        plt.tight_layout()
+        return indicator_df
+
+    x = np.arange(len(indicator_df))
+    width = 0.35
+
+    bars_with = ax.bar(
+        x - width / 2,
+        indicator_df["com_dice_baixo_ok"],
+        width,
+        label=f"Com Dice < {int(dice_threshold * 100)}% (óstio correto)",
+        color="#4C78A8",
+    )
+    bars_without = ax.bar(
+        x + width / 2,
+        indicator_df["sem_dice_baixo_ok"],
+        width,
+        label=f"Sem Dice < {int(dice_threshold * 100)}% (óstio correto)",
+        color="#F58518",
+    )
+
+    ax.set_xticks(x)
+    ax.set_xticklabels(indicator_df["resolution"].tolist())
+    ax.set_ylim(0, 1)
+    ax.set_ylabel("Dice Score médio")
+    ax.set_title(
+        f"Indicador de Dice dos casos ruins - {subset_label}", fontweight="bold"
+    )
+    ax.grid(axis="y", alpha=0.3)
+    ax.legend()
+
+    for bars in (bars_with, bars_without):
+        for bar in bars:
+            height = bar.get_height()
+            if pd.notna(height):
+                ax.text(
+                    bar.get_x() + bar.get_width() / 2,
+                    height + 0.015,
+                    f"{height:.4f}",
+                    ha="center",
+                    va="bottom",
+                    fontsize=9,
+                )
+
+    plt.tight_layout()
+    return indicator_df
 
 
 def change_status_label_for_plot(status):

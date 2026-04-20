@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 
@@ -160,4 +161,89 @@ def save_bad_cases_artifacts(df_bad_cases, output_dir, subset_name, resolution):
         "csv_path": str(csv_path),
         "json_path": str(json_path),
         "num_bad_cases": int(export_df.shape[0]),
+    }
+
+
+def prepare_bad_cases_for_subset(
+    split_paths_by_resolution,
+    split_name,
+    output_dir,
+    valid_splits=("train", "val", "test"),
+):
+    """Load, filter and export bad cases for a given subset."""
+    if split_name not in valid_splits:
+        raise ValueError(f"split_name must be one of {valid_splits}")
+
+    from .io import load_split_summary
+
+    df_mid = load_split_summary(split_paths_by_resolution, "mid_res", split_name)
+    df_high = load_split_summary(split_paths_by_resolution, "high_res", split_name)
+
+    df_mid_bad = get_bad_cases(df_mid) if df_mid is not None else pd.DataFrame()
+    df_high_bad = get_bad_cases(df_high) if df_high is not None else pd.DataFrame()
+
+    mid_export = save_bad_cases_artifacts(
+        df_bad_cases=df_mid_bad,
+        output_dir=output_dir,
+        subset_name=split_name,
+        resolution="mid_res",
+    )
+
+    high_export = None
+    if df_high is not None:
+        high_export = save_bad_cases_artifacts(
+            df_bad_cases=df_high_bad,
+            output_dir=output_dir,
+            subset_name=split_name,
+            resolution="high_res",
+        )
+
+    return {
+        "df_mid": df_mid,
+        "df_high": df_high,
+        "df_mid_bad": df_mid_bad,
+        "df_high_bad": df_high_bad,
+        "mid_export": mid_export,
+        "high_export": high_export,
+        "output_dir": output_dir,
+    }
+
+
+def summarize_bad_dice_with_threshold(df_bad, dice_threshold=0.3):
+    """Summarize bad-case Dice with and without low-dice successful ostia cases."""
+    if df_bad is None or df_bad.empty or "dice_artery" not in df_bad.columns:
+        return {
+            "mean_with_low_dice": np.nan,
+            "mean_without_low_dice": np.nan,
+            "n_with_low_dice": 0,
+            "n_without_low_dice": 0,
+            "n_low_dice_correct": 0,
+        }
+
+    dice = pd.to_numeric(df_bad["dice_artery"], errors="coerce")
+    valid_dice = dice.notna()
+    success_mask = _compute_success_mask(
+        df_bad,
+        [
+            "ambos toleráveis",
+            "ambos corretos",
+            "both_tolerable",
+            "both_correct",
+        ],
+    )
+    low_dice_correct_mask = valid_dice & success_mask & (dice < dice_threshold)
+
+    dice_with_low = dice[valid_dice]
+    dice_without_low = dice[valid_dice & ~low_dice_correct_mask]
+
+    return {
+        "mean_with_low_dice": dice_with_low.mean()
+        if not dice_with_low.empty
+        else np.nan,
+        "mean_without_low_dice": (
+            dice_without_low.mean() if not dice_without_low.empty else np.nan
+        ),
+        "n_with_low_dice": int(dice_with_low.shape[0]),
+        "n_without_low_dice": int(dice_without_low.shape[0]),
+        "n_low_dice_correct": int(low_dice_correct_mask.sum()),
     }
