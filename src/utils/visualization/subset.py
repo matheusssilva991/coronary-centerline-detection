@@ -5,7 +5,9 @@ import seaborn as sns
 
 def prepare_subset_plot_df(subset_summary_df):
     """Prepara DataFrame de subconjuntos disponível para plotagem."""
+    # Filtra apenas linhas marcadas como disponíveis.
     plot_subset_df = subset_summary_df[subset_summary_df["disponivel"]].copy()
+    # Traduz nome do subset para rótulo do eixo X.
     plot_subset_df["conjunto"] = plot_subset_df["subset"].map(
         {"train": "Treino", "val": "Validacao", "test": "Teste"}
     )
@@ -24,8 +26,10 @@ def plot_subset_metric_by_resolution(
     bar_label_fmt="%.3f",
 ):
     """Plota uma métrica por subconjunto com separação por resolução."""
+    # Gera base de plot com subsets válidos.
     plot_subset_df = prepare_subset_plot_df(subset_summary_df)
 
+    # Barra agrupada por subset e resolução.
     plt.figure(figsize=(8, 5))
     ax = sns.barplot(
         data=plot_subset_df,
@@ -36,9 +40,11 @@ def plot_subset_metric_by_resolution(
     )
 
     if ylim is not None:
+        # Aplica limite fixo quando definido.
         ax.set_ylim(*ylim)
 
     if hline_y is not None:
+        # Linha de referência opcional.
         line_kwargs = {"color": "black", "linewidth": 1, "linestyle": "--"}
         if hline_kwargs:
             line_kwargs.update(hline_kwargs)
@@ -48,9 +54,11 @@ def plot_subset_metric_by_resolution(
     ax.set_xlabel("Conjunto")
     ax.set_ylabel(ylabel)
     ax.grid(axis="y", alpha=0.3)
+    # Legenda identifica cada resolução.
     ax.legend(title="Resolucao")
 
     for container in ax.containers:
+        # Rótulo numérico em cada barra.
         ax.bar_label(container, fmt=bar_label_fmt, padding=3)
 
     plt.tight_layout()
@@ -64,6 +72,7 @@ def plot_subset_execution_time_by_resolution(
     ymax_factor=1.12,
 ):
     """Plota tempo de execução por subconjunto e resolução."""
+    # Plota tempo (min) por subset usando helper comum.
     if palette is None:
         palette = ["#F58518", "#E45756"]
 
@@ -74,6 +83,7 @@ def plot_subset_execution_time_by_resolution(
     else:
         ylim = (0, 1)
 
+    # Ajusta o formato do label para reforçar a leitura dos minutos.
     return plot_subset_metric_by_resolution(
         subset_summary_df=subset_summary_df,
         metric_col="tempo_execucao_min",
@@ -90,6 +100,7 @@ def plot_subset_ostia_success_by_resolution(
     palette=None,
 ):
     """Plota sucesso de detecção de óstios por subconjunto e resolução."""
+    # Plota sucesso total (%) por subset usando helper comum.
     if palette is None:
         palette = ["#54A24B", "#2E8B57"]
 

@@ -6,17 +6,21 @@ import pandas as pd
 
 def map_ia_resolution_to_target(ia_resolution):
     """Map IA resolution bucket to the target mathematical resolution."""
+    # Mapeia bucket da IA para a resolucao usada no comparativo final.
     return "high_res" if ia_resolution == "high" else "mid_res"
 
 
 def prettify_method_label(method_name):
     """Create a more readable method label for plot axes."""
+    # Converte nome tecnico para rótulo de eixo.
     if method_name == "pipeline_matematico":
+        # Nome fixo para o baseline matematico.
         return "Pipeline Matematico"
 
     resolution_prefix = ""
     base_name = method_name
     if "::" in method_name:
+        # Separa prefixo de resolucao do nome do modelo.
         prefix, base_name = method_name.split("::", 1)
         resolution_prefix = prefix.upper()
 
@@ -30,10 +34,12 @@ def prettify_method_label(method_name):
 
     pretty_tokens = []
     for token in base_name.split("_"):
+        # Mantem siglas conhecidas em caixa adequada.
         pretty_tokens.append(
             token_map.get(token.lower(), token.upper() if token.isdigit() else token)
         )
 
+    # Reconstroi o nome final com prefixo opcional.
     pretty_base = " ".join(pretty_tokens).replace("  ", " ").strip()
     if resolution_prefix:
         return f"{resolution_prefix} - {pretty_base}"
@@ -44,6 +50,7 @@ def load_ia_results_for_comparison(
     ia_results_base, allowed_ia_resolutions=("mid", "high")
 ):
     """Load IA CSV outputs from all folds and methods."""
+    # Lê resultados IA e padroniza colunas para comparacao.
     ia_results_base = Path(ia_results_base)
     ia_frames = []
     missing_ia_files = []
@@ -60,6 +67,7 @@ def load_ia_results_for_comparison(
     ]
 
     if not ia_results_base.exists():
+        # Diretório ausente: retorna estrutura vazia + aviso.
         return pd.DataFrame(columns=columns), [
             f"Diretorio nao encontrado: {ia_results_base}"
         ]
@@ -70,6 +78,7 @@ def load_ia_results_for_comparison(
 
         ia_resolution = ia_resolution_dir.name
         if ia_resolution not in allowed_ia_resolutions:
+            # Ignora buckets fora do escopo (ex.: low).
             continue
 
         for fold_dir in sorted(ia_resolution_dir.glob("fold_*")):
@@ -77,19 +86,24 @@ def load_ia_results_for_comparison(
                 continue
 
             fold_name = fold_dir.name
+            # Cada fold pode conter varios CSVs, um por metodo.
             csv_files = sorted(fold_dir.glob("result_*.csv"))
             if not csv_files:
+                # Fold sem CSVs: registra para diagnostico.
                 missing_ia_files.append(f"Sem CSVs em {fold_dir}")
                 continue
 
             for csv_file in csv_files:
+                # Cada CSV representa um método dentro do fold.
                 method_name = csv_file.stem.replace("result_", "")
                 df_ia = pd.read_csv(csv_file)
 
                 if "dice" not in df_ia.columns or "ID" not in df_ia.columns:
+                    # Schema inválido: não entra no comparativo.
                     missing_ia_files.append(f"Schema inesperado em {csv_file}")
                     continue
 
+                # Conserva apenas ID e Dice para unificar formato.
                 df_ia = df_ia[["ID", "dice"]].copy()
                 df_ia["dice"] = pd.to_numeric(df_ia["dice"], errors="coerce")
                 df_ia = df_ia.dropna(subset=["dice"])
@@ -97,6 +111,7 @@ def load_ia_results_for_comparison(
                     continue
 
                 df_ia = df_ia.rename(columns={"ID": "img_id"})
+                # Inclui metadados usados nos agrupamentos finais.
                 df_ia["source"] = "ia"
                 df_ia["ia_resolution"] = ia_resolution
                 df_ia["target_resolution"] = map_ia_resolution_to_target(ia_resolution)
@@ -112,6 +127,7 @@ def load_ia_results_for_comparison(
 
 def load_math_results_for_comparison(math_paths):
     """Load mathematical pipeline summary CSVs for selected resolutions/splits."""
+    # Lê resumos matemáticos no mesmo schema da IA.
     math_frames = []
     missing_math_files = []
 
@@ -127,25 +143,31 @@ def load_math_results_for_comparison(math_paths):
 
     for target_resolution, resolution_paths in math_paths.items():
         if isinstance(resolution_paths, dict):
+            # Caso com múltiplos splits por resolução.
             split_items = resolution_paths.items()
         else:
+            # Caso com caminho único.
             split_items = [("test", resolution_paths)]
 
         for split_name, summary_path in split_items:
             summary_path = Path(summary_path)
             if not summary_path.exists():
+                # Arquivo faltante: registra e continua.
                 missing_math_files.append(
                     f"Arquivo nao encontrado: {summary_path} ({target_resolution}/{split_name})"
                 )
                 continue
 
+            # Valida colunas mínimas do summary matemático.
             df_math = pd.read_csv(summary_path)
             if "IMG_ID" not in df_math.columns or "dice_artery" not in df_math.columns:
+                # Schema inválido: não entra no comparativo.
                 missing_math_files.append(
                     f"Schema inesperado em {summary_path} ({target_resolution}/{split_name})"
                 )
                 continue
 
+            # Renomeia colunas para o padrão comum.
             df_math = df_math[["IMG_ID", "dice_artery"]].copy()
             df_math["dice"] = pd.to_numeric(df_math["dice_artery"], errors="coerce")
             df_math = df_math.dropna(subset=["dice"])
@@ -170,10 +192,12 @@ def load_math_results_for_comparison(math_paths):
 def build_comparison_agg_df(comparison_raw):
     """Aggregate Dice metrics by resolution, source and method."""
     if comparison_raw.empty:
+        # Mantém contrato de retorno mesmo sem entrada.
         return pd.DataFrame()
 
     required_cols_for_filter = {"source", "target_resolution", "img_id"}
     if required_cols_for_filter.issubset(comparison_raw.columns):
+        # Lista chaves de imagem que existem na IA.
         ia_keys = (
             comparison_raw[comparison_raw["source"] == "ia"][
                 ["target_resolution", "img_id"]
@@ -183,10 +207,12 @@ def build_comparison_agg_df(comparison_raw):
         )
 
         if not ia_keys.empty:
+            # Mantém no bloco matemático só imagens presentes na IA.
             math_mask = comparison_raw["source"] == "math"
             df_non_math = comparison_raw[~math_mask]
             df_math = comparison_raw[math_mask]
 
+            # Inner join garante comparação 1:1 por imagem.
             df_math = df_math.merge(
                 ia_keys,
                 on=["target_resolution", "img_id"],
@@ -195,6 +221,7 @@ def build_comparison_agg_df(comparison_raw):
 
             comparison_raw = pd.concat([df_non_math, df_math], ignore_index=True)
 
+    # Agrega métricas de Dice por resolução, origem e método.
     agg = comparison_raw.groupby(
         ["target_resolution", "source", "method"], as_index=False
     )["dice"].agg(
@@ -213,6 +240,7 @@ def build_comparison_agg_df(comparison_raw):
         .rename(columns={"fold": "n_folds_present"})
     )
 
+    # Conta folds esperados por resolução (somente IA).
     expected_folds = (
         comparison_raw[comparison_raw["source"] == "ia"]
         .groupby("target_resolution")["fold"]
@@ -220,6 +248,7 @@ def build_comparison_agg_df(comparison_raw):
         .to_dict()
     )
 
+    # Marca métodos IA com cobertura parcial de folds.
     agg = agg.merge(fold_coverage, on=["target_resolution", "method"], how="left")
     agg["n_folds_present"] = agg["n_folds_present"].fillna(np.nan)
     agg["expected_folds"] = agg["target_resolution"].map(expected_folds)
@@ -227,4 +256,8 @@ def build_comparison_agg_df(comparison_raw):
         agg["n_folds_present"] < agg["expected_folds"]
     )
 
-    return agg.sort_values(["target_resolution", "mean_dice"], ascending=[True, False])
+    # Ordena por resolução e melhor média primeiro.
+    return agg.sort_values(
+        ["target_resolution", "mean_dice"],
+        ascending=[True, False],
+    )

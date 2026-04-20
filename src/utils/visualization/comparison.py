@@ -7,6 +7,7 @@ from ..comparison_utils.ia_math import prettify_method_label
 
 def plot_comparison_bar_by_resolution(agg, resolution):
     """Plota comparação de Dice por método para uma resolução alvo."""
+    # Filtra somente a resolução solicitada.
     subset = agg[agg["target_resolution"] == resolution].copy()
     if subset.empty:
         plt.figure(figsize=(10, 5))
@@ -17,6 +18,7 @@ def plot_comparison_bar_by_resolution(agg, resolution):
 
     subset["origin_label"] = subset["source"].map({"ia": "IA", "math": "Matematico"})
     subset["method_label"] = subset["method"].apply(prettify_method_label)
+    # Ordena métodos por média de Dice.
     method_order = subset.sort_values("mean_dice", ascending=False)[
         "method_label"
     ].tolist()
@@ -25,6 +27,7 @@ def plot_comparison_bar_by_resolution(agg, resolution):
     )
     subset = subset.sort_values("method_label")
 
+    # Plota barras separando IA e Matemático por cor.
     plt.figure(figsize=(12, 5))
     ax = sns.barplot(
         data=subset,
@@ -35,6 +38,7 @@ def plot_comparison_bar_by_resolution(agg, resolution):
     )
 
     for idx, row in subset.reset_index(drop=True).iterrows():
+        # Usa desvio padrão como barra de erro.
         std_val = row["std_dice"]
         if pd.notna(std_val):
             ax.errorbar(
@@ -67,12 +71,18 @@ def plot_comparison_bar_by_resolution(agg, resolution):
 
 def plot_dice_distribution_by_subset(df_mid, df_high, subset_label):
     """Plota distribuição dos Dice scores para mid e high por subconjunto."""
+    # Mostra histogramas de Dice para Mid e High no mesmo painel.
     fig, axes = plt.subplots(1, 2, figsize=(14, 5))
 
     if df_mid is not None and not df_mid.empty:
-        dice_scores_mid = pd.to_numeric(df_mid["dice_artery"], errors="coerce").dropna()
+        # Converte e remove valores inválidos de Dice.
+        dice_scores_mid = pd.to_numeric(
+            df_mid["dice_artery"],
+            errors="coerce",
+        ).dropna()
         mu_mid = dice_scores_mid.mean()
         sigma_mid = dice_scores_mid.std()
+        # KDE mostra a forma da distribuição.
         sns.histplot(
             dice_scores_mid,
             bins=20,
@@ -105,6 +115,7 @@ def plot_dice_distribution_by_subset(df_mid, df_high, subset_label):
         axes[0].axvspan(
             mu_mid - sigma_mid, mu_mid + sigma_mid, color="orange", alpha=0.15
         )
+        # Marca média e faixa de 1 sigma.
         axes[0].set_title(f"Distribuicao dos Dice Scores - Mid Res ({subset_label})")
         axes[0].set_xlabel("Dice Score")
         axes[0].set_ylabel("Frequencia")
@@ -122,6 +133,7 @@ def plot_dice_distribution_by_subset(df_mid, df_high, subset_label):
         axes[0].set_title(f"Distribuicao dos Dice Scores - Mid Res ({subset_label})")
 
     if df_high is not None and not df_high.empty:
+        # Repete o mesmo fluxo para High.
         dice_scores_high = pd.to_numeric(
             df_high["dice_artery"], errors="coerce"
         ).dropna()

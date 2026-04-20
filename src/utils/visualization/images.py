@@ -23,14 +23,17 @@ def plot_mip_projection(
     return_fig: bool = False,
 ):
     """Plota projeções MIP (ou min/mean) em vistas ortogonais de um volume 3D."""
+    # Garante entrada 3D antes da projeção.
     if image_volume.ndim != 3:
         raise ValueError("A imagem deve ser 3D.")
 
     if window_level is not None and window_width is not None:
+        # Aplica windowing de intensidade no volume.
         lower = window_level - window_width // 2
         upper = window_level + window_width // 2
         image_volume = np.clip(image_volume, lower, upper)
 
+    # Define eixo colapsado para cada vista.
     axis_map = {"axial": 2, "coronal": 1, "sagital": 0}
     proj_func = {"max": np.max, "min": np.min, "mean": np.mean}[projection]
 
@@ -50,6 +53,7 @@ def plot_mip_projection(
             raise ValueError(
                 f"View inválida: {view}. Use 'axial', 'coronal' ou 'sagital'."
             )
+        # Gera projeção da vista atual.
         mip = proj_func(image_volume, axis=axis_map[view])
         axes[i].imshow(mip, **imshow_kwargs)
         axes[i].set_title(f"MIP {view.capitalize()} ({projection}) - shape {mip.shape}")
@@ -65,6 +69,7 @@ def plot_mip_projection(
 
 def plot_slices(img, slices_indices, cmap="gray", title=None, vmin=None, vmax=None):
     """Exibe múltiplas fatias 2D selecionadas de um volume."""
+    # Calcula grade de subplots para as fatias solicitadas.
     n_slices = len(slices_indices)
     n_cols = min(5, n_slices)
     n_rows = (n_slices + n_cols - 1) // n_cols
@@ -78,6 +83,7 @@ def plot_slices(img, slices_indices, cmap="gray", title=None, vmin=None, vmax=No
     for i, slice_idx in enumerate(slices_indices):
         row, col = i // n_cols, i % n_cols
         ax = axes[row, col]
+        # Renderiza a fatia no eixo correspondente.
         ax.imshow(img[:, :, slice_idx], cmap=cmap, vmin=vmin, vmax=vmax)
         ax.set_title(f"Fatia {slice_idx}")
         ax.axis("off")
@@ -98,10 +104,12 @@ def visualize_circles_on_slices(
     image, detected_circles, num_samples=6, vmin=None, vmax=None
 ):
     """Sobrepõe círculos detectados em fatias amostradas do volume."""
+    # Seleciona fatias de amostra onde há círculos detectados.
     slice_indices = sorted(set([c["slice_index"] for c in detected_circles]))
     step = max(1, len(slice_indices) // num_samples)
     selected_slices = slice_indices[::step][:num_samples]
 
+    # Painel fixo para comparação visual rápida.
     fig, axes = plt.subplots(2, 3, figsize=(15, 10))
     axes = axes.flatten()
 
@@ -112,6 +120,7 @@ def visualize_circles_on_slices(
         circles_in_slice = [
             c for c in detected_circles if c["slice_index"] == slice_idx
         ]
+        # Desenha a fatia de fundo.
         axes[i].imshow(image[:, :, slice_idx], cmap="gray", vmin=vmin, vmax=vmax)
 
         for circle in circles_in_slice:
