@@ -1,12 +1,18 @@
 [
   {
-    "image_id": 676,
+    "image_id": 428,
     "bad_case_status": "none_correct",
     "subset": "val",
     "resolution": "mid_res"
   },
   {
-    "image_id": 330,
+    "image_id": 447,
+    "bad_case_status": "none_correct",
+    "subset": "val",
+    "resolution": "mid_res"
+  },
+  {
+    "image_id": 676,
     "bad_case_status": "none_correct",
     "subset": "val",
     "resolution": "mid_res"

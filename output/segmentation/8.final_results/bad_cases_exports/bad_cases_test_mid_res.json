@@ -181,7 +181,7 @@
   },
   {
     "image_id": 536,
-    "bad_case_status": "error",
+    "bad_case_status": "ostia_not_found",
     "subset": "test",
     "resolution": "mid_res"
   },
@@ -205,7 +205,7 @@
   },
   {
     "image_id": 86,
-    "bad_case_status": "error",
+    "bad_case_status": "ostia_not_found",
     "subset": "test",
     "resolution": "mid_res"
   },
@@ -517,7 +517,7 @@
   },
   {
     "image_id": 436,
-    "bad_case_status": "error",
+    "bad_case_status": "ostia_not_found",
     "subset": "test",
     "resolution": "mid_res"
   },
@@ -607,7 +607,7 @@
   },
   {
     "image_id": 281,
-    "bad_case_status": "error",
+    "bad_case_status": "ostia_not_found",
     "subset": "test",
     "resolution": "mid_res"
   },
@@ -643,7 +643,7 @@
   },
   {
     "image_id": 458,
-    "bad_case_status": "error",
+    "bad_case_status": "ostia_not_found",
     "subset": "test",
     "resolution": "mid_res"
   },
@@ -673,7 +673,7 @@
   },
   {
     "image_id": 657,
-    "bad_case_status": "error",
+    "bad_case_status": "ostia_not_found",
     "subset": "test",
     "resolution": "mid_res"
   },

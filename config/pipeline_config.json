@@ -74,7 +74,7 @@
         "switch_at_voxels": 2000,
         "min_vesselness_fraction": 0.078,
         "threshold_divisor": 7,
-        "relaxed_floor_factor": 0.97,
+        "relaxed_floor_factor": 0.98,
         "comparison_window": 1,
         "smooth_relaxation": true,
         "verbose": false

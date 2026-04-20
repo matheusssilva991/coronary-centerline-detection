@@ -24,18 +24,6 @@
     "resolution": "mid_res"
   },
   {
-    "image_id": 134,
-    "bad_case_status": "none_correct",
-    "subset": "train",
-    "resolution": "mid_res"
-  },
-  {
-    "image_id": 822,
-    "bad_case_status": "error",
-    "subset": "train",
-    "resolution": "mid_res"
-  },
-  {
     "image_id": 248,
     "bad_case_status": "one_correct",
     "subset": "train",
@@ -56,12 +44,6 @@
   {
     "image_id": 798,
     "bad_case_status": "none_correct",
-    "subset": "train",
-    "resolution": "mid_res"
-  },
-  {
-    "image_id": 32,
-    "bad_case_status": "one_correct",
     "subset": "train",
     "resolution": "mid_res"
   },
@@ -90,8 +72,8 @@
     "resolution": "mid_res"
   },
   {
-    "image_id": 960,
-    "bad_case_status": "none_correct",
+    "image_id": 239,
+    "bad_case_status": "one_correct",
     "subset": "train",
     "resolution": "mid_res"
   },
@@ -114,26 +96,20 @@
     "resolution": "mid_res"
   },
   {
-    "image_id": 222,
-    "bad_case_status": "none_correct",
-    "subset": "train",
-    "resolution": "mid_res"
-  },
-  {
-    "image_id": 269,
-    "bad_case_status": "low_dice",
-    "subset": "train",
-    "resolution": "mid_res"
-  },
-  {
     "image_id": 597,
     "bad_case_status": "none_correct",
     "subset": "train",
     "resolution": "mid_res"
   },
   {
-    "image_id": 791,
+    "image_id": 759,
     "bad_case_status": "none_correct",
+    "subset": "train",
+    "resolution": "mid_res"
+  },
+  {
+    "image_id": 791,
+    "bad_case_status": "one_correct",
     "subset": "train",
     "resolution": "mid_res"
   },
@@ -151,7 +127,19 @@
   },
   {
     "image_id": 314,
-    "bad_case_status": "error",
+    "bad_case_status": "ostia_not_found",
+    "subset": "train",
+    "resolution": "mid_res"
+  },
+  {
+    "image_id": 838,
+    "bad_case_status": "one_correct",
+    "subset": "train",
+    "resolution": "mid_res"
+  },
+  {
+    "image_id": 284,
+    "bad_case_status": "one_correct",
     "subset": "train",
     "resolution": "mid_res"
   },
@@ -164,12 +152,6 @@
   {
     "image_id": 556,
     "bad_case_status": "low_dice",
-    "subset": "train",
-    "resolution": "mid_res"
-  },
-  {
-    "image_id": 702,
-    "bad_case_status": "none_correct",
     "subset": "train",
     "resolution": "mid_res"
   },
@@ -198,12 +180,6 @@
     "resolution": "mid_res"
   },
   {
-    "image_id": 242,
-    "bad_case_status": "none_correct",
-    "subset": "train",
-    "resolution": "mid_res"
-  },
-  {
     "image_id": 728,
     "bad_case_status": "none_correct",
     "subset": "train",
@@ -218,6 +194,12 @@
   {
     "image_id": 938,
     "bad_case_status": "one_correct",
+    "subset": "train",
+    "resolution": "mid_res"
+  },
+  {
+    "image_id": 307,
+    "bad_case_status": "none_correct",
     "subset": "train",
     "resolution": "mid_res"
   },
@@ -294,12 +276,6 @@
     "resolution": "mid_res"
   },
   {
-    "image_id": 162,
-    "bad_case_status": "one_correct",
-    "subset": "train",
-    "resolution": "mid_res"
-  },
-  {
     "image_id": 101,
     "bad_case_status": "none_correct",
     "subset": "train",
@@ -307,6 +283,12 @@
   },
   {
     "image_id": 835,
+    "bad_case_status": "none_correct",
+    "subset": "train",
+    "resolution": "mid_res"
+  },
+  {
+    "image_id": 974,
     "bad_case_status": "none_correct",
     "subset": "train",
     "resolution": "mid_res"
@@ -330,32 +312,20 @@
     "resolution": "mid_res"
   },
   {
-    "image_id": 496,
-    "bad_case_status": "none_correct",
-    "subset": "train",
-    "resolution": "mid_res"
-  },
-  {
     "image_id": 407,
     "bad_case_status": "none_correct",
     "subset": "train",
     "resolution": "mid_res"
   },
   {
-    "image_id": 746,
-    "bad_case_status": "none_correct",
-    "subset": "train",
-    "resolution": "mid_res"
-  },
-  {
     "image_id": 767,
-    "bad_case_status": "none_correct",
+    "bad_case_status": "low_dice",
     "subset": "train",
     "resolution": "mid_res"
   },
   {
     "image_id": 190,
-    "bad_case_status": "none_correct",
+    "bad_case_status": "ostia_not_found",
     "subset": "train",
     "resolution": "mid_res"
   }
