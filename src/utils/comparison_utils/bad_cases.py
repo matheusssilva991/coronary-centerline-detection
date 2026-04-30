@@ -64,12 +64,15 @@ def _compute_bad_case_status(df, bad_mask, success_mask, low_dice_mask):
     bad_case_status = pd.Series(index=df.index, dtype="object")
 
     # Falhas de óstio entram primeiro.
+    # Remove casos de sucesso para evitar sobreposição com low_dice.
     failed_status_mask = bad_mask & (~success_mask)
+
+    # Tenta mapear status textual para inglês, quando disponível.
     bad_case_status.loc[failed_status_mask] = status_series.loc[failed_status_mask].map(
         _status_to_english
     )
 
-    # Fallback para coluna alternativa de status.
+    # Se o status original for ausente, tenta usar ostia_status.
     missing_status_mask = failed_status_mask & bad_case_status.isna()
     bad_case_status.loc[missing_status_mask] = ostia_status_series.loc[
         missing_status_mask

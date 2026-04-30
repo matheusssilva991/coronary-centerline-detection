@@ -79,38 +79,50 @@ from .groups.segmentation import (
     remove_leaks_morphology,
     segment_arteries_from_ostia,
 )
-from .groups.visualization import (
-    build_comparison_agg_df,
-    compare_shared_bad_cases,
-    get_bad_cases,
-    get_execution_time_seconds,
-    get_num_images,
-    get_total_success_percent,
-    load_ia_results_for_comparison,
-    load_math_results_for_comparison,
-    load_split_metadata,
-    load_split_summary,
-    map_ia_resolution_to_target,
-    plot_bad_cases_by_subset,
-    plot_comparison_bar_by_resolution,
-    plot_dice_distribution_by_subset,
-    plot_downscale_dice,
-    plot_downscale_execution_time,
-    plot_downscale_ostia_success,
-    plot_mip_projection,
-    plot_slices,
-    plot_subset_execution_time_by_resolution,
-    plot_subset_metric_by_resolution,
-    plot_subset_ostia_success_by_resolution,
-    plot_validation_dice,
-    plot_validation_execution_time,
-    plot_validation_ostia_success,
-    prettify_method_label,
-    visualize_arteries_comparison,
-    visualize_3d_k3d,
-    visualize_aorta_with_ostia,
-    visualize_circles_on_slices,
-)
+from importlib import import_module
+
+_VISUALIZATION_EXPORTS = {
+    "build_comparison_agg_df",
+    "compare_shared_bad_cases",
+    "get_bad_cases",
+    "get_execution_time_seconds",
+    "get_num_images",
+    "get_total_success_percent",
+    "load_ia_results_for_comparison",
+    "load_math_results_for_comparison",
+    "load_split_metadata",
+    "load_split_summary",
+    "map_ia_resolution_to_target",
+    "plot_bad_cases_by_subset",
+    "plot_comparison_bar_by_resolution",
+    "plot_dice_distribution_by_subset",
+    "plot_downscale_dice",
+    "plot_downscale_execution_time",
+    "plot_downscale_ostia_success",
+    "plot_mip_projection",
+    "plot_slices",
+    "plot_subset_execution_time_by_resolution",
+    "plot_subset_metric_by_resolution",
+    "plot_subset_ostia_success_by_resolution",
+    "plot_validation_dice",
+    "plot_validation_execution_time",
+    "plot_validation_ostia_success",
+    "prettify_method_label",
+    "visualize_arteries_comparison",
+    "visualize_3d_k3d",
+    "visualize_aorta_with_ostia",
+    "visualize_circles_on_slices",
+}
+
+
+def __getattr__(name):
+    if name in _VISUALIZATION_EXPORTS:
+        module = import_module(".groups.visualization", __name__)
+        value = getattr(module, name)
+        globals()[name] = value
+        return value
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
 
 __all__ = [
     # Ostia detection

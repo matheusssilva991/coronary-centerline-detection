@@ -96,7 +96,7 @@ def load_ia_results_for_comparison(
             for csv_file in csv_files:
                 # Cada CSV representa um método dentro do fold.
                 method_name = csv_file.stem.replace("result_", "")
-                df_ia = pd.read_csv(csv_file)
+                df_ia = pd.read_csv(csv_file, usecols=["ID", "dice"])
 
                 if "dice" not in df_ia.columns or "ID" not in df_ia.columns:
                     # Schema inválido: não entra no comparativo.
@@ -159,7 +159,7 @@ def load_math_results_for_comparison(math_paths):
                 continue
 
             # Valida colunas mínimas do summary matemático.
-            df_math = pd.read_csv(summary_path)
+            df_math = pd.read_csv(summary_path, usecols=["IMG_ID", "dice_artery"])
             if "IMG_ID" not in df_math.columns or "dice_artery" not in df_math.columns:
                 # Schema inválido: não entra no comparativo.
                 missing_math_files.append(
@@ -212,12 +212,11 @@ def build_comparison_agg_df(comparison_raw):
             df_non_math = comparison_raw[~math_mask]
             df_math = comparison_raw[math_mask]
 
-            # Inner join garante comparação 1:1 por imagem.
-            df_math = df_math.merge(
-                ia_keys,
-                on=["target_resolution", "img_id"],
-                how="inner",
+            ia_index = pd.MultiIndex.from_frame(ia_keys)
+            math_index = pd.MultiIndex.from_frame(
+                df_math[["target_resolution", "img_id"]]
             )
+            df_math = df_math.loc[math_index.isin(ia_index)]
 
             comparison_raw = pd.concat([df_non_math, df_math], ignore_index=True)
 
