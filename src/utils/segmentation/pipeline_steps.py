@@ -50,7 +50,7 @@ def load_and_preprocess_image(img_id, base_path, config):
         config["OPENCV_INTERPOLATION"], cv2.INTER_AREA
     )
 
-    down_image, thresh_image, lcc_image, thresh_vals = run_core_preprocessing_pipeline(
+    _, _, lcc_image, _ = run_core_preprocessing_pipeline(
         img,
         downscale_factors=downscale_factors,
         lcc_per_slice=True,
@@ -67,12 +67,6 @@ def load_and_preprocess_image(img_id, base_path, config):
     )
 
     return {
-        "nii_img": nii_img,
-        "nii_label": nii_label,
-        "img": img,
-        "down_image": down_image,
-        "thresh_image": thresh_image,
-        "thresh_vals": thresh_vals,
         "lcc_image": lcc_image,
         "label": label,
         "spacing": spacing,
@@ -269,15 +263,14 @@ def segment_arteries_from_ostia(
         "verbose": False,
     }
 
-    left_mask = region_growing_segmentation(
-        vesselness_artery,
-        seed_point=ostia_left,
-        **region_growing_params,
+    left_mask = (
+        region_growing_segmentation(vesselness_artery, seed_point=ostia_left, **region_growing_params)
+        if ostia_left is not None else np.zeros_like(vesselness_artery, dtype=np.uint8)
     )
-    right_mask = region_growing_segmentation(
-        vesselness_artery,
-        seed_point=ostia_right,
-        **region_growing_params,
+
+    right_mask = (
+        region_growing_segmentation(vesselness_artery, seed_point=ostia_right, **region_growing_params)
+        if ostia_right is not None else np.zeros_like(vesselness_artery, dtype=np.uint8)
     )
 
     artery_mask = (left_mask + right_mask).astype(np.uint8)

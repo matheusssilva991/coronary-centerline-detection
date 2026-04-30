@@ -124,6 +124,16 @@ def check_ostium_intersection(
     verbose=False,
 ):
     """Verifica se o óstio intersecta a máscara arterial ou está suficientemente próximo em mm."""
+
+    if ostium_coords is None:
+        return {
+            "intersects": False,
+            "euclidean_dist": float('inf'),
+            "physical_dist": float('inf'),
+            "nearest_voxel": (0, 0, 0),
+            "is_acceptable": False,
+        }
+
     _validate_coordinates(ostium_coords, label_mask.shape)
     y, x, z = map(int, ostium_coords)
     dy, dx, dz = spacing
@@ -220,12 +230,8 @@ def find_ostia(
     )
 
     if ostium_2 is None:
-        raise ValueError(
-            f"Segundo óstio não encontrado! Tentou {top_n} candidatos. "
-            f"Restrições: dist>={min_center_dist:.1f}, z_diff<={max_z_diff_mm}mm, "
-            f"x_sep>={min_lateral_sep:.1f}. "
-            f"Tente aumentar 'top_n' ou relaxar os fatores."
-        )
+        print("⚠️ AVISO: Segundo óstio não encontrado. Retornando None para a coronária direita.")
+        return ostium_1.copy(), None
 
     ostia_left, ostia_right = _classify_left_right(ostium_1, ostium_2)
     return ostia_left, ostia_right

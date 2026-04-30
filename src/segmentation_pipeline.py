@@ -50,8 +50,8 @@ else:
     print("⚠ GPU não disponível. Acelerações CPU usadas.")
 
 # Caminhos padrão
-#BASE_PATH = "/media/matheus/HD/DatasetsCCTA/ImageCAS"
-BASE_PATH = "/data04/home/mpmaia/ImageCAS/database/1-1000"
+BASE_PATH = "/media/matheus/HD/DatasetsCCTA/ImageCAS/1-1000"
+#BASE_PATH = "/data04/home/mpmaia/ImageCAS/database/1-1000"
 BASE_SAVE_PATH = "/media/matheus/HD/DatasetsCCTA/Processed_ImageCAS"
 OUTPUT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "output"))
 
@@ -111,7 +111,7 @@ CONFIG = {
     },
     # Detecção de Óstios
     "OSTIA_DETECTION": {
-        "top_n": 2000,
+        "top_n": 10000,
         "max_z_diff_mm": 40.0,
         "lower_fraction": 0.80,
         "min_center_distance_factor": 0.85,
@@ -245,8 +245,8 @@ def process_image(IMG_ID, config=CONFIG):
             result["dice_artery"] = 0.0
             return result
 
-        result["ostia_left"] = tuple(map(int, ostia_eval["ostia_left"]))
-        result["ostia_right"] = tuple(map(int, ostia_eval["ostia_right"]))
+        result["ostia_left"] = tuple(map(int, ostia_eval["ostia_left"])) if ostia_eval["ostia_left"] is not None else None
+        result["ostia_right"] = tuple(map(int, ostia_eval["ostia_right"])) if ostia_eval["ostia_right"] is not None else None
         result["ostia_found"] = True
         result["left_intersects"] = ostia_eval["left_info"]["intersects"]
         result["right_intersects"] = ostia_eval["right_info"]["intersects"]

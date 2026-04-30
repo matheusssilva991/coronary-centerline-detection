@@ -112,12 +112,16 @@ def threshold_image(image, min_val=-300, max_val=675):
 
 
 def threshold_image_with_offset(image, min_val=-300, max_val=675):
-    """Aplica threshold e desloca os valores para evitar números negativos."""
     offset = np.abs(min_val)
-    image_offset = image + offset
 
+    # 1. Cria a máscara binária
     thresh_mask = (image >= min_val) & (image <= max_val)
-    thresh_img = thresh_mask * image_offset
+
+    # 2. Cria uma matriz vazia preenchida com zeros
+    thresh_img = np.zeros_like(image)
+
+    # 3. Aplica o offset onde a máscara é True
+    thresh_img[thresh_mask] = image[thresh_mask] + offset
 
     return thresh_img, thresh_mask, offset
 
@@ -168,7 +172,7 @@ def run_core_preprocessing_pipeline(
     )
 
     if lcc_per_slice:
-        lcc_image = np.zeros_like(thresh_image, dtype=float)
+        lcc_image = np.zeros_like(thresh_image, dtype=thresh_image.dtype)
         for z in range(thresh_image.shape[2]):
             slice_mask = thresh_mask[:, :, z]
             slice_image = thresh_image[:, :, z]

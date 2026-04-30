@@ -59,7 +59,7 @@
         "leak_removal_radius": 2
     },
     "OSTIA_DETECTION": {
-        "top_n": 2000,
+        "top_n": 10000,
         "max_z_diff_mm": 40.0,
         "lower_fraction": 0.8,
         "min_center_distance_factor": 0.85,
