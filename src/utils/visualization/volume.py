@@ -1,10 +1,17 @@
 import numpy as np
 import k3d
 from skimage import measure
+from pathlib import Path
 
 
 def visualize_3d_k3d(
-    mask_3d, spacing=(1, 1, 1), color=0xFF0000, opacity=0.5, use_physical_coords=True
+    mask_3d,
+    spacing=(1, 1, 1),
+    color=0xFF0000,
+    opacity=0.5,
+    use_physical_coords=True,
+    save_html_path=None,
+    display_plot=True,
 ):
     """Renderiza uma máscara 3D em k3d usando marching cubes."""
     # Define unidade de coordenada (mm ou pixel).
@@ -38,7 +45,12 @@ def visualize_3d_k3d(
 
     # Adiciona malha e renderiza.
     plot += mesh
-    plot.display()
+    if save_html_path is not None:
+        with open(save_html_path, "w", encoding="utf-8") as html_file:
+            html_file.write(plot.get_snapshot())
+
+    if display_plot:
+        plot.display()
     return plot
 
 
@@ -49,6 +61,8 @@ def visualize_aorta_with_ostia(
     spacing=(1, 1, 1),
     label_mask=None,
     use_physical_coords=True,
+    save_html_path=None,
+    display_plot=True,
 ):
     """Renderiza a aorta 3D com marcação dos óstios e rótulo opcional."""
 
@@ -140,5 +154,74 @@ def visualize_aorta_with_ostia(
     # Marca o óstio direito.
     plot += point_right
 
-    plot.display()
+    if save_html_path is not None:
+        with open(save_html_path, "w", encoding="utf-8") as html_file:
+            html_file.write(plot.get_snapshot())
+
+    if display_plot:
+        plot.display()
     return plot
+
+
+def visualize_arteries_comparison(
+    label_mask,
+    predicted_mask,
+    spacing=(1, 1, 1),
+    use_physical_coords=True,
+    save_html_path=None,
+    display_plot=True,
+    plot_name="Artéria original vs predita",
+    label_color=0x00FF00,
+    predicted_color=0xFF0000,
+    label_opacity=0.35,
+    predicted_opacity=0.35,
+):
+    """Renderiza a artéria de referência e a predita no mesmo gráfico 3D."""
+
+    if use_physical_coords:
+        dy, dx, dz = tuple(float(s) for s in spacing)
+        axes_labels = ["Y (mm)", "X (mm)", "Z (mm)"]
+    else:
+        dy, dx, dz = 1.0, 1.0, 1.0
+        axes_labels = ["Y (pixels)", "X (pixels)", "Z (pixels)"]
+
+    plot = k3d.plot(name=plot_name, height=800, grid_visible=True, axes=axes_labels)
+
+    verts_label, faces_label, _, _ = measure.marching_cubes(
+        label_mask.astype(float), level=0.5, spacing=(dy, dx, dz)
+    )
+    mesh_label = k3d.mesh(
+        verts_label.astype(np.float32),
+        faces_label.astype(np.uint32),
+        color=label_color,
+        opacity=label_opacity,
+        name="Label",
+    )
+    plot += mesh_label
+
+    verts_pred, faces_pred, _, _ = measure.marching_cubes(
+        predicted_mask.astype(float), level=0.5, spacing=(dy, dx, dz)
+    )
+    mesh_pred = k3d.mesh(
+        verts_pred.astype(np.float32),
+        faces_pred.astype(np.uint32),
+        color=predicted_color,
+        opacity=predicted_opacity,
+        name="Predita",
+    )
+    plot += mesh_pred
+
+    if save_html_path is not None:
+        with open(save_html_path, "w", encoding="utf-8") as html_file:
+            html_file.write(plot.get_snapshot())
+
+    if display_plot:
+        plot.display()
+    return plot
+
+
+def save_k3d_plot_html(plot, html_path):
+    html_path = Path(html_path)
+    html_path.parent.mkdir(parents=True, exist_ok=True)
+    html_path.write_text(plot.get_snapshot(), encoding='utf-8')
+    print(f"HTML salvo em: {html_path}")

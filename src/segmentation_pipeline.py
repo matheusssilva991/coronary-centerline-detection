@@ -194,6 +194,9 @@ def process_image(IMG_ID, config=CONFIG):
         lcc_image = image_data["lcc_image"]
         label = image_data["label"]
         scaled_spacing = image_data["scaled_spacing"]
+        downscale_factors = image_data["downscale_factors"]
+
+        image_data = None  # Liberar memória
 
         vesselness_ostios = get_or_compute_vesselness(
             IMG_ID,
@@ -203,16 +206,18 @@ def process_image(IMG_ID, config=CONFIG):
             load_cache=config["LOAD_CACHE"],
             save_cache=config["SAVE_CACHE"],
         )
+
         detected_circles = get_or_detect_aorta_circles(
             IMG_ID,
             lcc_image,
-            image_data["downscale_factors"],
+            downscale_factors,
             scaled_spacing,
             config["CIRCLE_DETECTION"],
             BASE_SAVE_PATH,
             load_cache=config["LOAD_CACHE"],
             save_cache=config["SAVE_CACHE"],
         )
+
         aorta_mask = get_or_segment_aorta(
             IMG_ID,
             lcc_image,
@@ -231,6 +236,8 @@ def process_image(IMG_ID, config=CONFIG):
                 scaled_spacing,
                 config,
             )
+
+            del aorta_mask  # Liberar memória
         except ValueError as ostia_exc:
             result["ostia_status"] = "not_found"
             result["ostia_error"] = str(ostia_exc)

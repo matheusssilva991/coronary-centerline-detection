@@ -33,6 +33,8 @@ from ..visualization import (
     visualize_3d_k3d,
     visualize_aorta_with_ostia,
     visualize_circles_on_slices,
+    save_k3d_plot_html,
+    visualize_arteries_comparison
 )
 
 __all__ = [
@@ -66,4 +68,6 @@ __all__ = [
     "plot_validation_execution_time",
     "plot_validation_ostia_success",
     "prettify_method_label",
+    "save_k3d_plot_html",
+    "visualize_arteries_comparison",
 ]

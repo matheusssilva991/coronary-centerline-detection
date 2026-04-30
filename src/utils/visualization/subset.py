@@ -30,7 +30,7 @@ def plot_subset_metric_by_resolution(
     plot_subset_df = prepare_subset_plot_df(subset_summary_df)
 
     # Barra agrupada por subset e resolução.
-    plt.figure(figsize=(8, 5))
+    fig, ax = plt.subplots(figsize=(9, 5.5), constrained_layout=True)
     ax = sns.barplot(
         data=plot_subset_df,
         x="conjunto",
@@ -50,9 +50,9 @@ def plot_subset_metric_by_resolution(
             line_kwargs.update(hline_kwargs)
         ax.axhline(hline_y, **line_kwargs)
 
-    ax.set_title(title)
+    ax.set_title(title, pad=16)
     ax.set_xlabel("Conjunto")
-    ax.set_ylabel(ylabel)
+    ax.set_ylabel(ylabel, labelpad=10)
     ax.grid(axis="y", alpha=0.3)
     # Legenda identifica cada resolução.
     ax.legend(title="Resolucao")
@@ -61,7 +61,6 @@ def plot_subset_metric_by_resolution(
         # Rótulo numérico em cada barra.
         ax.bar_label(container, fmt=bar_label_fmt, padding=3)
 
-    plt.tight_layout()
     plt.show()
     return ax
 

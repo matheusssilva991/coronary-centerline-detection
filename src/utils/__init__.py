@@ -106,6 +106,7 @@ from .groups.visualization import (
     plot_validation_execution_time,
     plot_validation_ostia_success,
     prettify_method_label,
+    visualize_arteries_comparison,
     visualize_3d_k3d,
     visualize_aorta_with_ostia,
     visualize_circles_on_slices,
@@ -201,6 +202,7 @@ __all__ = [
     "plot_mip_projection",
     "plot_slices",
     "visualize_circles_on_slices",
+    "visualize_arteries_comparison",
     "visualize_3d_k3d",
     "visualize_aorta_with_ostia",
     # Utils

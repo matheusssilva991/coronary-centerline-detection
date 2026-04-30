@@ -34,7 +34,7 @@ def load_and_preprocess_image(img_id, base_path, config):
         f"{base_path}/{img_id}.img.nii.gz", f"{base_path}/{img_id}.label.nii.gz"
     )
     spacing = nii_img.header.get_zooms()
-    img = np.array(nii_img.get_fdata())
+    img = np.array(nii_img.get_fdata(), dtype=np.float32)
     label = np.array(nii_label.get_fdata()).astype(np.uint8)
 
     downscale_factors = config["DOWNSCALE_FACTORS"]
@@ -291,6 +291,7 @@ def segment_arteries_from_ostia(
     artery_mask = dilated_mask
 
     return {
+        "artery_mask": artery_mask,
         "artery_voxels": int(np.sum(artery_mask)),
         "dice_artery": float(dice_score(artery_mask, label_artery)),
     }
