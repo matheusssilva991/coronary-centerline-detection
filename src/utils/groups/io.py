@@ -15,6 +15,7 @@ _SYMBOL_TO_MODULE = {
     # results_utils
     "create_timestamped_output_dir": "results_utils",
     "make_result_dataframe": "results_utils",
+    "merge_batch_results": "results_utils",
     "save_metadata": "results_utils",
     "save_results": "results_utils",
     # utils

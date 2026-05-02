@@ -12,6 +12,7 @@ import numpy as np
 
 # Terceiros - Machine Learning
 from tqdm import tqdm
+import pandas as pd
 
 # Usa GPU 1 por padrão quando a variável não for definida externamente.
 os.environ.setdefault("CUDA_VISIBLE_DEVICES", "1")
@@ -24,6 +25,7 @@ from utils import (
     get_data_splits,
     create_timestamped_output_dir,
     make_result_dataframe,
+    merge_batch_results,
     save_results,
     save_metadata,
     load_and_preprocess_image,
@@ -51,7 +53,7 @@ else:
 
 # Caminhos padrão
 BASE_PATH = "/media/matheus/HD/DatasetsCCTA/ImageCAS/1-1000"
-#BASE_PATH = "/data04/home/mpmaia/ImageCAS/database/1-1000"
+# BASE_PATH = "/data04/home/mpmaia/ImageCAS/database/1-1000"
 BASE_SAVE_PATH = "/media/matheus/HD/DatasetsCCTA/Processed_ImageCAS"
 OUTPUT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "output"))
 
@@ -138,6 +140,8 @@ CONFIG = {
         "closing_radius": 3,
         "dilation_radius": 2,
     },
+    # Processamento em Lotes
+    "BATCH_SIZE": None,  # None = processar todas, ou número inteiro para lotes (ex: 10)
 }
 
 # ============================================================================
@@ -245,8 +249,16 @@ def process_image(IMG_ID, config=CONFIG):
             result["dice_artery"] = 0.0
             return result
 
-        result["ostia_left"] = tuple(map(int, ostia_eval["ostia_left"])) if ostia_eval["ostia_left"] is not None else None
-        result["ostia_right"] = tuple(map(int, ostia_eval["ostia_right"])) if ostia_eval["ostia_right"] is not None else None
+        result["ostia_left"] = (
+            tuple(map(int, ostia_eval["ostia_left"]))
+            if ostia_eval["ostia_left"] is not None
+            else None
+        )
+        result["ostia_right"] = (
+            tuple(map(int, ostia_eval["ostia_right"]))
+            if ostia_eval["ostia_right"] is not None
+            else None
+        )
         result["ostia_found"] = True
         result["left_intersects"] = ostia_eval["left_info"]["intersects"]
         result["right_intersects"] = ostia_eval["right_info"]["intersects"]
@@ -287,32 +299,88 @@ def process_image(IMG_ID, config=CONFIG):
     return result
 
 
-def run_pipeline(ids, split_name, config=CONFIG):
+def run_pipeline(ids, split_name, config=CONFIG, output_dir=None, resume_from_batch=0):
     """
-    Processa um conjunto de imagens.
+    Processa um conjunto de imagens, opcionalmente em lotes com salvamento incremental.
 
     Args:
         ids: Lista de IDs das imagens
         split_name: Nome do conjunto (train, val, test)
         config: Dicionário de configurações
+        output_dir: Diretório de saída para salvamento incremental (se None, retorna tudo ao final)
+        resume_from_batch: Número do lote para retomar (0 = começar do início)
 
     Returns:
-        dict: Dicionário com lista de resultados e tempo de execução
+        dict: Dicionário com lista de resultados, tempo de execução e info de lotes
     """
     start_time = time.time()
 
     # Escalar parâmetros em voxels uma vez para toda a execução
     scaled_config = scale_config_to_resolution(config)
 
-    results = []
-    for img_id in tqdm(ids, desc=f"Processando {split_name}"):
-        results.append(process_image(img_id, scaled_config))
+    batch_size = config.get("BATCH_SIZE")
+    all_results = []
+    batches_processed = []
+
+    # Se não há batch_size definido ou output_dir não fornecido, processar tudo de uma vez
+    if batch_size is None or output_dir is None:
+        for img_id in tqdm(ids, desc=f"Processando {split_name}"):
+            all_results.append(process_image(img_id, scaled_config))
+    else:
+        # Processar em lotes com salvamento incremental
+        num_batches = (len(ids) + batch_size - 1) // batch_size
+
+        # Se retomando, carregar lotes anteriores
+        if resume_from_batch > 0:
+            print(f"🔄 Retomando a partir do lote {resume_from_batch}...")
+            for batch_num in range(0, resume_from_batch):
+                batch_csv_path = os.path.join(
+                    output_dir, f"ostios_{split_name}_lote_{batch_num + 1}.csv"
+                )
+                if os.path.exists(batch_csv_path):
+                    df_batch = pd.read_csv(batch_csv_path)
+                    # Converter DataFrame para lista de dicts (formato dos resultados)
+                    batch_data = df_batch.to_dict("records")
+                    all_results.extend(batch_data)
+                    batches_processed.append(batch_num + 1)
+                    print(
+                        f"   ✓ Lote {batch_num + 1} carregado ({len(batch_data)} registros)"
+                    )
+
+        for batch_num in range(resume_from_batch, num_batches):
+            start_idx = batch_num * batch_size
+            end_idx = min((batch_num + 1) * batch_size, len(ids))
+            batch_ids = ids[start_idx:end_idx]
+
+            print(
+                f"\n📦 Processando lote {batch_num + 1}/{num_batches} ({len(batch_ids)} imagens)"
+            )
+            batch_results = []
+
+            for img_id in tqdm(
+                batch_ids, desc=f"Lote {batch_num + 1}/{num_batches}", leave=False
+            ):
+                batch_results.append(process_image(img_id, scaled_config))
+
+            all_results.extend(batch_results)
+            batches_processed.append(batch_num + 1)
+
+            # Salvar resultados intermediários
+            batch_output_path = save_results(
+                batch_results,
+                f"{split_name}_lote_{batch_num + 1}",
+                output_dir,
+                config=scaled_config,
+            )
+            print(f"✅ Lote {batch_num + 1} salvo: {batch_output_path}")
 
     execution_time = time.time() - start_time
 
     return {
-        "details": results,
+        "details": all_results,
         "execution_time": execution_time,
+        "batches_processed": batches_processed,
+        "is_batched": batch_size is not None and output_dir is not None,
     }
 
 
@@ -381,8 +449,26 @@ Exemplos de uso:
   # Usar resolução média (downscale 2x)
   python segmentation_pipeline.py --resolution mid --split val
 
+  # PROCESSAMENTO EM LOTES (salvamento incremental):
+  # Processar 10 imagens por vez (salva cada lote, depois prossegue)
+  python segmentation_pipeline.py --batch-size 10
+
+  # Processar teste em lotes de 5 imagens
+  python segmentation_pipeline.py --split test --batch-size 5
+
+  # Combinar: teste em lotes com cache
+  python segmentation_pipeline.py --split test --batch-size 10 --cache
+
+  # RETOMADA DE LOTES (em caso de falha):
+  # Se processamento falhou no lote 3, retomar a partir dali
+  python segmentation_pipeline.py --batch-size 10 --resume-batch 3
+
+  # Retomar treino do lote 2
+  python segmentation_pipeline.py --split train --batch-size 10 --resume-batch 2
+
 Arquivos de saída:
-  - ostios_{split}_summary.csv: Resultados detalhados por imagem com parâmetros usados
+  - ostios_{split}_summary.csv: Resultados consolidados ao final (ou após merge)
+  - ostios_{split}_lote_1.csv, ostios_{split}_lote_2.csv, etc: Resultados de cada lote (modo batch)
   - ostios_{split}_metadata.json: Metadados completos (configurações, estatísticas, timestamp)
         """,
     )
@@ -443,6 +529,20 @@ Arquivos de saída:
         help="Arquivo JSON com configurações para sobrescrever valores padrão",
     )
 
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=None,
+        help="Tamanho do lote para processamento incremental com salvamento. Ex: 10 (processa 10 imagens, salva, depois mais 10, etc.)",
+    )
+
+    parser.add_argument(
+        "--resume-batch",
+        type=int,
+        default=0,
+        help="Número do lote para retomar (padrão: 0 = começar do início). Use se um processamento foi interrompido.",
+    )
+
     args = parser.parse_args()
 
     # Selecionar configuração baseada na resolução escolhida
@@ -488,6 +588,15 @@ Arquivos de saída:
     else:
         print(f"🔧 Método de downscale: {effective_config['DOWNSCALE_METHOD']}")
 
+    # Configurar batch processing
+    if args.batch_size is not None:
+        effective_config["BATCH_SIZE"] = args.batch_size
+        print(f"📦 Processamento em lotes: {args.batch_size} imagens por lote")
+        if args.resume_batch > 0:
+            print(f"🔄 Retomando a partir do lote {args.resume_batch}")
+    else:
+        print("🔧 Processamento em imagem única (sem lotes)")
+
     # Criar diretório com timestamp
     timestamped_output_dir = create_timestamped_output_dir(
         args.output_dir, experiment_name="segmentation"
@@ -520,17 +629,30 @@ Arquivos de saída:
         print(f"🔬 Processando conjunto: {split_name.upper()}")
         print(f"{'=' * 60}")
 
-        summary = run_pipeline(ids, split_name, effective_config)
+        summary = run_pipeline(
+            ids,
+            split_name,
+            effective_config,
+            timestamped_output_dir,
+            resume_from_batch=args.resume_batch,
+        )
         execution_time = summary.get("execution_time")
+        is_batched = summary.get("is_batched", False)
 
         # Salvar resultados CSV
-        output_path = save_results(
-            summary["details"],
-            split_name,
-            timestamped_output_dir,
-            config=effective_config,
-        )
-        print(f"✅ Resumo CSV salvo em: {output_path}")
+        if is_batched:
+            # Modo batch: mesclar todos os lotes em um arquivo final
+            print("\n🔄 Finalizando processamento em lotes...")
+            merge_batch_results(split_name, timestamped_output_dir)
+        else:
+            # Modo normal: salvar resultado único
+            output_path = save_results(
+                summary["details"],
+                split_name,
+                timestamped_output_dir,
+                config=effective_config,
+            )
+            print(f"✅ Resumo CSV salvo em: {output_path}")
 
         # Salvar metadados JSON
         metadata_path = save_metadata(

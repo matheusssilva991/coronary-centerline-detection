@@ -215,3 +215,46 @@ def save_metadata(
         json.dump(metadata, file_handle, indent=2, ensure_ascii=False)
 
     return metadata_path
+
+
+def merge_batch_results(split_name, output_dir):
+    """
+    Mescla todos os CSVs de lotes em um único arquivo final.
+
+    Args:
+        split_name: Nome do split (train, val, test)
+        output_dir: Diretório contendo os CSVs dos lotes
+
+    Returns:
+        str: Caminho do arquivo final mesclado
+    """
+    import glob
+
+    # Procurar por arquivos de lotes: ostios_{split_name}_lote_*.csv
+    pattern = os.path.join(output_dir, f"ostios_{split_name}_lote_*.csv")
+    batch_files = sorted(glob.glob(pattern))
+
+    if not batch_files:
+        print(f"⚠️  Nenhum arquivo de lote encontrado em {output_dir}")
+        return None
+
+    print(f"\n🔄 Mesclando {len(batch_files)} arquivo(s) de lote...")
+
+    # Ler e concatenar todos os CSVs
+    dfs = []
+    for batch_file in batch_files:
+        df = pd.read_csv(batch_file)
+        dfs.append(df)
+        print(f"   ✓ {os.path.basename(batch_file)} ({len(df)} registros)")
+
+    # Mesclar em um único DataFrame
+    merged_df = pd.concat(dfs, ignore_index=True)
+
+    # Salvar arquivo final
+    final_path = os.path.join(output_dir, f"ostios_{split_name}_summary.csv")
+    merged_df.to_csv(final_path, index=False)
+
+    print(
+        f"✅ Arquivo final mesclado: {final_path} ({len(merged_df)} registros totais)\n"
+    )
+    return final_path

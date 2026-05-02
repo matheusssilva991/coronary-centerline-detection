@@ -24,6 +24,7 @@ from .groups.io import (
     load_json_file,
     load_raw_img_and_label,
     make_result_dataframe,
+    merge_batch_results,
     normalize_image,
     normalize_runtime_config,
     robust_normalize,
@@ -162,6 +163,7 @@ __all__ = [
     # Results
     "create_timestamped_output_dir",
     "make_result_dataframe",
+    "merge_batch_results",
     "save_results",
     "save_metadata",
     "load_split_metadata",
