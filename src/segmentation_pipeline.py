@@ -460,11 +460,15 @@ Exemplos de uso:
   python segmentation_pipeline.py --split test --batch-size 10 --cache
 
   # RETOMADA DE LOTES (em caso de falha):
-  # Se processamento falhou no lote 3, retomar a partir dali
-  python segmentation_pipeline.py --batch-size 10 --resume-batch 3
+  # Primeira execução - cria novo diretório
+  python segmentation_pipeline.py --split test --batch-size 70
+  # Saída: output/segmentation/2026-03-14_10-30-00/
 
-  # Retomar treino do lote 2
-  python segmentation_pipeline.py --split train --batch-size 10 --resume-batch 2
+  # Se falhar no lote 3, retomar no MESMO diretório:
+  python segmentation_pipeline.py --split test --batch-size 70 --resume-batch 3 --resume-dir output/segmentation/2026-03-14_10-30-00
+
+  # Versão curta (se no mesmo diretório):
+  python segmentation_pipeline.py --split test --batch-size 70 --resume-batch 3 --resume-dir ./output/segmentation/2026-03-14_10-30-00
 
 Arquivos de saída:
   - ostios_{split}_summary.csv: Resultados consolidados ao final (ou após merge)
@@ -543,6 +547,13 @@ Arquivos de saída:
         help="Número do lote para retomar (padrão: 0 = começar do início). Use se um processamento foi interrompido.",
     )
 
+    parser.add_argument(
+        "--resume-dir",
+        type=str,
+        default=None,
+        help="Diretório anterior para retomar (ex: output/segmentation/2026-03-14_10-30-00). Se não fornecido e --resume-batch > 0, cria novo diretório.",
+    )
+
     args = parser.parse_args()
 
     # Selecionar configuração baseada na resolução escolhida
@@ -597,11 +608,27 @@ Arquivos de saída:
     else:
         print("🔧 Processamento em imagem única (sem lotes)")
 
-    # Criar diretório com timestamp
-    timestamped_output_dir = create_timestamped_output_dir(
-        args.output_dir, experiment_name="segmentation"
-    )
-    print(f"\n📁 Diretório de saída: {timestamped_output_dir}\n")
+    # Criar ou reusar diretório
+    if args.resume_batch > 0 and args.resume_dir:
+        # Modo retomada: usar diretório anterior
+        if os.path.exists(args.resume_dir):
+            timestamped_output_dir = args.resume_dir
+            print(f"\n📁 Usando diretório anterior: {timestamped_output_dir}\n")
+        else:
+            print(f"❌ Erro: Diretório não encontrado: {args.resume_dir}")
+            print(f"   Use --resume-dir com o caminho do diretório anterior")
+            exit(1)
+    else:
+        # Modo normal: criar novo diretório com timestamp
+        timestamped_output_dir = create_timestamped_output_dir(
+            args.output_dir, experiment_name="segmentation"
+        )
+        if args.resume_batch > 0:
+            print(f"⚠️  Dica: Para retomar no mesmo diretório, use:")
+            print(
+                f"   --resume-batch {args.resume_batch} --resume-dir {timestamped_output_dir}\n"
+            )
+        print(f"📁 Diretório de saída: {timestamped_output_dir}\n")
 
     # Obter splits de dados
     train_ids, val_ids, test_ids, all_ids = get_data_splits(BASE_PATH)
