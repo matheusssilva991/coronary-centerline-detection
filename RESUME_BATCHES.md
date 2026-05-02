@@ -13,6 +13,7 @@ python src/segmentation_pipeline.py --split test --batch-size 70 --cache
 ```
 
 **Saída:**
+
 ```
 📁 Diretório de saída: output/segmentation/2026-03-14_10-30-00
 
@@ -29,6 +30,7 @@ python src/segmentation_pipeline.py --split test --batch-size 70 --resume-batch 
 ```
 
 **O que acontece:**
+
 - ✅ Carrega os lotes 1 e 2 dos CSVs anteriores
 - ✅ **Processa a partir do lote 3**
 - ✅ **Salva no MESMO diretório** (não cria novo)
@@ -52,6 +54,7 @@ ls -la output/segmentation/2026-03-14_10-30-00/
 ## 🎯 Comandos Prontos
 
 ### Cenário 1: Falhou no lote 3
+
 ```bash
 # Primeiro
 python src/segmentation_pipeline.py --split test --batch-size 70 --cache
@@ -61,6 +64,7 @@ python src/segmentation_pipeline.py --split test --batch-size 70 --resume-batch 
 ```
 
 ### Cenário 2: Com 700 imagens, lotes de 70
+
 ```bash
 # Primeira execução
 python src/segmentation_pipeline.py --split test --batch-size 70
@@ -73,6 +77,7 @@ python src/segmentation_pipeline.py --split test --batch-size 70 --resume-batch 
 ```
 
 ### Cenário 3: Múltiplos splits
+
 ```bash
 # Processar train, val e test em lotes
 python src/segmentation_pipeline.py --split train val test --batch-size 100 --cache
