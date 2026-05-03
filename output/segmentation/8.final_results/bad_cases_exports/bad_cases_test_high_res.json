@@ -43,7 +43,7 @@
   },
   {
     "image_id": 432,
-    "bad_case_status": "error",
+    "bad_case_status": "ostia_not_found",
     "subset": "test",
     "resolution": "high_res"
   },
@@ -55,7 +55,7 @@
   },
   {
     "image_id": 431,
-    "bad_case_status": "error",
+    "bad_case_status": "ostia_not_found",
     "subset": "test",
     "resolution": "high_res"
   },
@@ -187,7 +187,7 @@
   },
   {
     "image_id": 58,
-    "bad_case_status": "error",
+    "bad_case_status": "ostia_not_found",
     "subset": "test",
     "resolution": "high_res"
   },
@@ -199,7 +199,7 @@
   },
   {
     "image_id": 481,
-    "bad_case_status": "error",
+    "bad_case_status": "ostia_not_found",
     "subset": "test",
     "resolution": "high_res"
   },
@@ -247,7 +247,7 @@
   },
   {
     "image_id": 240,
-    "bad_case_status": "error",
+    "bad_case_status": "ostia_not_found",
     "subset": "test",
     "resolution": "high_res"
   },
@@ -265,13 +265,13 @@
   },
   {
     "image_id": 367,
-    "bad_case_status": "error",
+    "bad_case_status": "ostia_not_found",
     "subset": "test",
     "resolution": "high_res"
   },
   {
     "image_id": 53,
-    "bad_case_status": "error",
+    "bad_case_status": "ostia_not_found",
     "subset": "test",
     "resolution": "high_res"
   },
@@ -301,7 +301,7 @@
   },
   {
     "image_id": 86,
-    "bad_case_status": "error",
+    "bad_case_status": "ostia_not_found",
     "subset": "test",
     "resolution": "high_res"
   },
@@ -487,19 +487,19 @@
   },
   {
     "image_id": 954,
-    "bad_case_status": "error",
+    "bad_case_status": "ostia_not_found",
     "subset": "test",
     "resolution": "high_res"
   },
   {
     "image_id": 815,
-    "bad_case_status": "error",
+    "bad_case_status": "ostia_not_found",
     "subset": "test",
     "resolution": "high_res"
   },
   {
     "image_id": 424,
-    "bad_case_status": "error",
+    "bad_case_status": "ostia_not_found",
     "subset": "test",
     "resolution": "high_res"
   },
@@ -511,7 +511,7 @@
   },
   {
     "image_id": 238,
-    "bad_case_status": "error",
+    "bad_case_status": "ostia_not_found",
     "subset": "test",
     "resolution": "high_res"
   },
@@ -553,7 +553,7 @@
   },
   {
     "image_id": 501,
-    "bad_case_status": "error",
+    "bad_case_status": "ostia_not_found",
     "subset": "test",
     "resolution": "high_res"
   },
@@ -625,7 +625,7 @@
   },
   {
     "image_id": 261,
-    "bad_case_status": "error",
+    "bad_case_status": "ostia_not_found",
     "subset": "test",
     "resolution": "high_res"
   },
@@ -685,7 +685,7 @@
   },
   {
     "image_id": 448,
-    "bad_case_status": "error",
+    "bad_case_status": "ostia_not_found",
     "subset": "test",
     "resolution": "high_res"
   },
@@ -775,7 +775,7 @@
   },
   {
     "image_id": 738,
-    "bad_case_status": "error",
+    "bad_case_status": "ostia_not_found",
     "subset": "test",
     "resolution": "high_res"
   },
@@ -805,7 +805,7 @@
   },
   {
     "image_id": 422,
-    "bad_case_status": "error",
+    "bad_case_status": "ostia_not_found",
     "subset": "test",
     "resolution": "high_res"
   },
@@ -847,13 +847,13 @@
   },
   {
     "image_id": 59,
-    "bad_case_status": "error",
+    "bad_case_status": "ostia_not_found",
     "subset": "test",
     "resolution": "high_res"
   },
   {
     "image_id": 704,
-    "bad_case_status": "error",
+    "bad_case_status": "ostia_not_found",
     "subset": "test",
     "resolution": "high_res"
   },
@@ -901,7 +901,7 @@
   },
   {
     "image_id": 51,
-    "bad_case_status": "error",
+    "bad_case_status": "ostia_not_found",
     "subset": "test",
     "resolution": "high_res"
   },
@@ -937,7 +937,7 @@
   },
   {
     "image_id": 482,
-    "bad_case_status": "error",
+    "bad_case_status": "ostia_not_found",
     "subset": "test",
     "resolution": "high_res"
   },
@@ -955,13 +955,13 @@
   },
   {
     "image_id": 919,
-    "bad_case_status": "error",
+    "bad_case_status": "ostia_not_found",
     "subset": "test",
     "resolution": "high_res"
   },
   {
     "image_id": 583,
-    "bad_case_status": "error",
+    "bad_case_status": "ostia_not_found",
     "subset": "test",
     "resolution": "high_res"
   },
@@ -1021,7 +1021,7 @@
   },
   {
     "image_id": 600,
-    "bad_case_status": "error",
+    "bad_case_status": "ostia_not_found",
     "subset": "test",
     "resolution": "high_res"
   },
@@ -1039,7 +1039,7 @@
   },
   {
     "image_id": 56,
-    "bad_case_status": "error",
+    "bad_case_status": "ostia_not_found",
     "subset": "test",
     "resolution": "high_res"
   },
@@ -1063,7 +1063,7 @@
   },
   {
     "image_id": 722,
-    "bad_case_status": "error",
+    "bad_case_status": "ostia_not_found",
     "subset": "test",
     "resolution": "high_res"
   },
@@ -1093,13 +1093,13 @@
   },
   {
     "image_id": 143,
-    "bad_case_status": "error",
+    "bad_case_status": "ostia_not_found",
     "subset": "test",
     "resolution": "high_res"
   },
   {
     "image_id": 661,
-    "bad_case_status": "error",
+    "bad_case_status": "ostia_not_found",
     "subset": "test",
     "resolution": "high_res"
   },
@@ -1111,19 +1111,19 @@
   },
   {
     "image_id": 582,
-    "bad_case_status": "error",
+    "bad_case_status": "ostia_not_found",
     "subset": "test",
     "resolution": "high_res"
   },
   {
     "image_id": 657,
-    "bad_case_status": "error",
+    "bad_case_status": "ostia_not_found",
     "subset": "test",
     "resolution": "high_res"
   },
   {
     "image_id": 132,
-    "bad_case_status": "error",
+    "bad_case_status": "ostia_not_found",
     "subset": "test",
     "resolution": "high_res"
   },
@@ -1177,7 +1177,7 @@
   },
   {
     "image_id": 690,
-    "bad_case_status": "error",
+    "bad_case_status": "ostia_not_found",
     "subset": "test",
     "resolution": "high_res"
   },
@@ -1195,13 +1195,13 @@
   },
   {
     "image_id": 980,
-    "bad_case_status": "error",
+    "bad_case_status": "ostia_not_found",
     "subset": "test",
     "resolution": "high_res"
   },
   {
     "image_id": 973,
-    "bad_case_status": "error",
+    "bad_case_status": "ostia_not_found",
     "subset": "test",
     "resolution": "high_res"
   },
@@ -1243,13 +1243,13 @@
   },
   {
     "image_id": 732,
-    "bad_case_status": "error",
+    "bad_case_status": "ostia_not_found",
     "subset": "test",
     "resolution": "high_res"
   },
   {
     "image_id": 868,
-    "bad_case_status": "error",
+    "bad_case_status": "ostia_not_found",
     "subset": "test",
     "resolution": "high_res"
   },
@@ -1309,7 +1309,7 @@
   },
   {
     "image_id": 785,
-    "bad_case_status": "error",
+    "bad_case_status": "ostia_not_found",
     "subset": "test",
     "resolution": "high_res"
   },

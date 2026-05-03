@@ -24,6 +24,12 @@
     "resolution": "mid_res"
   },
   {
+    "image_id": 822,
+    "bad_case_status": "ostia_not_found",
+    "subset": "train",
+    "resolution": "mid_res"
+  },
+  {
     "image_id": 248,
     "bad_case_status": "one_correct",
     "subset": "train",
@@ -121,7 +127,7 @@
   },
   {
     "image_id": 187,
-    "bad_case_status": "none_correct",
+    "bad_case_status": "one_correct",
     "subset": "train",
     "resolution": "mid_res"
   },

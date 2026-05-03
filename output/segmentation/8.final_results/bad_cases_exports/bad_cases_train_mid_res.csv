@@ -3,6 +3,7 @@ image_id,bad_case_status,subset,resolution
 450,none_correct,train,mid_res
 23,none_correct,train,mid_res
 553,none_correct,train,mid_res
+822,ostia_not_found,train,mid_res
 248,one_correct,train,mid_res
 988,none_correct,train,mid_res
 459,none_correct,train,mid_res
@@ -19,7 +20,7 @@ image_id,bad_case_status,subset,resolution
 759,none_correct,train,mid_res
 791,one_correct,train,mid_res
 861,none_correct,train,mid_res
-187,none_correct,train,mid_res
+187,one_correct,train,mid_res
 314,ostia_not_found,train,mid_res
 838,one_correct,train,mid_res
 284,one_correct,train,mid_res

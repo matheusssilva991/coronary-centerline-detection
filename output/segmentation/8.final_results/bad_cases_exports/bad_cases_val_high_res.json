@@ -12,14 +12,8 @@
     "resolution": "high_res"
   },
   {
-    "image_id": 330,
-    "bad_case_status": "none_correct",
-    "subset": "val",
-    "resolution": "high_res"
-  },
-  {
-    "image_id": 175,
-    "bad_case_status": "error",
+    "image_id": 887,
+    "bad_case_status": "one_correct",
     "subset": "val",
     "resolution": "high_res"
   },
