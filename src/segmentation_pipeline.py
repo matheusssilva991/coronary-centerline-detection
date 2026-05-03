@@ -52,7 +52,7 @@ else:
     print("⚠ GPU não disponível. Acelerações CPU usadas.")
 
 # Caminhos padrão
-#BASE_PATH = "/media/matheus/HD/DatasetsCCTA/ImageCAS/1-1000"
+# BASE_PATH = "/media/matheus/HD/DatasetsCCTA/ImageCAS/1-1000"
 BASE_PATH = "/data04/home/mpmaia/ImageCAS/database/1-1000"
 BASE_SAVE_PATH = "/media/matheus/HD/DatasetsCCTA/Processed_ImageCAS"
 OUTPUT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "output"))
@@ -333,6 +333,7 @@ def run_pipeline(ids, split_name, config=CONFIG, output_dir=None, resume_from_ba
         # Se retomando, carregar lotes anteriores
         if resume_from_batch > 0:
             print(f"🔄 Retomando a partir do lote {resume_from_batch}...")
+            missing_batches = []
             for batch_num in range(0, resume_from_batch):
                 batch_csv_path = os.path.join(
                     output_dir, f"ostios_{split_name}_lote_{batch_num + 1}.csv"
@@ -346,6 +347,15 @@ def run_pipeline(ids, split_name, config=CONFIG, output_dir=None, resume_from_ba
                     print(
                         f"   ✓ Lote {batch_num + 1} carregado ({len(batch_data)} registros)"
                     )
+                else:
+                    missing_batches.append(batch_num + 1)
+
+            if missing_batches:
+                missing_list = ", ".join(str(batch) for batch in missing_batches)
+                raise FileNotFoundError(
+                    f"Não foi possível retomar o split '{split_name}': faltam os arquivos dos lotes {missing_list}. "
+                    "A retomada em batch exige os CSVs anteriores no mesmo diretório."
+                )
 
         for batch_num in range(resume_from_batch, num_batches):
             start_idx = batch_num * batch_size
@@ -407,6 +417,41 @@ def print_statistics(train_ids, val_ids, test_ids, all_ids):
     print("=" * 50 + "\n")
 
 
+def parse_resume_batches(resume_batches_arg):
+    """Converte um argumento no formato 'train=1,val=0,test=3' em um dicionário."""
+    resume_map = {"train": 0, "val": 0, "test": 0}
+
+    if not resume_batches_arg:
+        return resume_map
+
+    entries = [
+        entry.strip() for entry in resume_batches_arg.split(",") if entry.strip()
+    ]
+    for entry in entries:
+        if "=" not in entry:
+            raise ValueError(
+                "Formato inválido para --resume-batches. Use algo como 'train=1,val=0,test=3'."
+            )
+
+        split_name, batch_text = entry.split("=", 1)
+        split_name = split_name.strip()
+        batch_text = batch_text.strip()
+
+        if split_name not in resume_map:
+            raise ValueError(
+                f"Split inválido em --resume-batches: {split_name}. Use train, val ou test."
+            )
+
+        try:
+            resume_map[split_name] = int(batch_text)
+        except ValueError as exc:
+            raise ValueError(
+                f"Valor inválido para o split '{split_name}' em --resume-batches: {batch_text}"
+            ) from exc
+
+    return resume_map
+
+
 # ============================================================================
 # FUNÇÃO PRINCIPAL
 # ============================================================================
@@ -466,6 +511,9 @@ Exemplos de uso:
 
   # Se falhar no lote 3, retomar no MESMO diretório:
   python segmentation_pipeline.py --split test --batch-size 70 --resume-batch 3 --resume-dir output/segmentation/2026-03-14_10-30-00
+
+    # Retomada explícita por subset:
+    python segmentation_pipeline.py --split all --batch-size 70 --resume-batches train=0,val=3,test=0
 
   # Versão curta (se no mesmo diretório):
   python segmentation_pipeline.py --split test --batch-size 70 --resume-batch 3 --resume-dir ./output/segmentation/2026-03-14_10-30-00
@@ -548,6 +596,13 @@ Arquivos de saída:
     )
 
     parser.add_argument(
+        "--resume-batches",
+        type=str,
+        default=None,
+        help="Retomada explícita por subset no formato 'train=1,val=0,test=3'. Se informado, sobrescreve --resume-batch para os splits listados.",
+    )
+
+    parser.add_argument(
         "--resume-dir",
         type=str,
         default=None,
@@ -608,6 +663,20 @@ Arquivos de saída:
     else:
         print("🔧 Processamento em imagem única (sem lotes)")
 
+    try:
+        resume_batches_by_split = parse_resume_batches(args.resume_batches)
+    except ValueError as exc:
+        print(f"❌ Erro: {exc}")
+        exit(1)
+
+    if args.resume_batches:
+        print(
+            "🔄 Retomada por subset: "
+            f"train={resume_batches_by_split['train']}, "
+            f"val={resume_batches_by_split['val']}, "
+            f"test={resume_batches_by_split['test']}"
+        )
+
     # Criar ou reusar diretório
     if args.resume_batch > 0 and args.resume_dir:
         # Modo retomada: usar diretório anterior
@@ -661,7 +730,9 @@ Arquivos de saída:
             split_name,
             effective_config,
             timestamped_output_dir,
-            resume_from_batch=args.resume_batch,
+            resume_from_batch=resume_batches_by_split.get(
+                split_name, args.resume_batch
+            ),
         )
         execution_time = summary.get("execution_time")
         is_batched = summary.get("is_batched", False)
