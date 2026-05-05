@@ -10,10 +10,10 @@ def plot_mip_projection(
     image_volume: NDArray,
     title: str = "Maximum Intensity Projections (MIP)",
     cmap: str = "gray",
-    views: Sequence[Literal["axial", "coronal", "sagital"]] = (
+    views: Sequence[Literal["axial", "coronal", "sagittal"]] = (
         "axial",
         "coronal",
-        "sagital",
+        "sagittal",
     ),
     vmin: Optional[float] = None,
     vmax: Optional[float] = None,
@@ -21,6 +21,7 @@ def plot_mip_projection(
     window_level: Optional[float] = None,
     window_width: Optional[float] = None,
     return_fig: bool = False,
+    show_labels: bool = True,
 ):
     """Plota projeções MIP (ou min/mean) em vistas ortogonais de um volume 3D."""
     # Garante entrada 3D antes da projeção.
@@ -34,7 +35,7 @@ def plot_mip_projection(
         image_volume = np.clip(image_volume, lower, upper)
 
     # Define eixo colapsado para cada vista.
-    axis_map = {"axial": 2, "coronal": 1, "sagital": 0}
+    axis_map = {"axial": 2, "coronal": 1, "sagittal": 0}
     proj_func = {"max": np.max, "min": np.min, "mean": np.mean}[projection]
 
     n_views = len(views)
@@ -51,12 +52,15 @@ def plot_mip_projection(
     for i, view in enumerate(views):
         if view not in axis_map:
             raise ValueError(
-                f"View inválida: {view}. Use 'axial', 'coronal' ou 'sagital'."
+                f"View inválida: {view}. Use 'axial', 'coronal' ou 'sagittal'."
             )
         # Gera projeção da vista atual.
         mip = proj_func(image_volume, axis=axis_map[view])
         axes[i].imshow(mip, **imshow_kwargs)
-        axes[i].set_title(f"MIP {view.capitalize()} ({projection}) - shape {mip.shape}")
+        if show_labels:
+            axes[i].set_title(
+                f"MIP {view.capitalize()} ({projection}) - shape {mip.shape}"
+            )
         axes[i].axis("off")
 
     plt.suptitle(title, fontsize=16, y=0.96)

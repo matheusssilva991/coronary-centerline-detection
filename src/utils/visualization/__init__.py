@@ -11,6 +11,11 @@ _SYMBOL_TO_MODULE = {
     # comparison
     "plot_comparison_bar_by_resolution": "comparison",
     "plot_dice_distribution_by_subset": "comparison",
+    # segmentation_eda
+    "build_dice_summary_by_subset": "segmentation_eda",
+    "plot_distance_distribution_by_subset": "segmentation_eda",
+    "plot_status_distribution_by_subset": "segmentation_eda",
+    "plot_success_error_by_subset": "segmentation_eda",
     # images
     "plot_mip_projection": "images",
     "plot_slices": "images",

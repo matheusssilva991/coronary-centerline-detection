@@ -33,8 +33,14 @@ coronary-centerline-detection/
 ├── src/                        # Código fonte
 │   ├── segmentation_pipeline.py    # Pipeline principal de processamento
 │   ├── main.ipynb                  # Notebook de execução principal
-│   ├── eda_imgs.ipynb              # Análise exploratória de imagens
-│   ├── eda_segmentacao.ipynb       # Análise de segmentações
+│   ├── eda/                        # Notebooks de análise exploratória
+│   │   ├── eda_imgs.ipynb              # Análise exploratória de imagens
+│   │   ├── eda_segmentacao.ipynb       # Análise de segmentações
+│   │   ├── eda_tests.ipynb             # Testes comparativos
+│   │   ├── eda_tests_subsets.ipynb     # Subsets e grupos de casos
+│   │   ├── eda_tests_casos_ruins.ipynb # Análise de casos ruins
+│   │   ├── cases_analysis.ipynb        # Análise de casos
+│   │   └── viz_imgs.ipynb              # Análise visual de imagens
 │   ├── segmentacao_arteria.ipynb   # Notebook de segmentação de artérias
 │   └── utils/                      # Módulos utilitários
 │       ├── preprocessing.py        # Pré-processamento de imagens
@@ -316,7 +322,9 @@ jupyter notebook
 
 # Abrir:
 # - src/main.ipynb: Pipeline principal
-# - src/eda_imgs.ipynb: Exploração de imagens
+# - src/eda/eda_imgs.ipynb: Exploração de imagens
+# - src/eda/eda_segmentacao.ipynb: Análise de segmentações
+# - src/eda/viz_imgs.ipynb: Análise visual de imagens
 # - src/segmentacao_arteria.ipynb: Análise de segmentação
 ```
 
