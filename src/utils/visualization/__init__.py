@@ -10,6 +10,10 @@ _SYMBOL_TO_MODULE = {
     "plot_bad_cases_by_subset": "bad_cases",
     # comparison
     "plot_comparison_bar_by_resolution": "comparison",
+    "plot_image_dice_scatter_by_resolution": "comparison",
+    "plot_ia_vs_math_scatter_by_resolution": "comparison",
+    "plot_image_dice_scatter_interactive": "comparison",
+    "plot_ia_vs_math_scatter_interactive": "comparison",
     "plot_dice_distribution_by_subset": "comparison",
     # segmentation_eda
     "build_dice_summary_by_subset": "segmentation_eda",

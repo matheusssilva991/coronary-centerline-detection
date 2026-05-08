@@ -1,11 +1,17 @@
 """Utilities package for IA vs mathematical comparison in EDA notebooks."""
 
-from . import bad_cases, ia_math, io, metadata
+from . import bad_cases, ia_math, io, metadata, ostia_scenarios
 from .io import load_split_metadata, load_split_summary
 from .metadata import (
     get_execution_time_seconds,
     get_num_images,
     get_total_success_percent,
+)
+from .ostia_scenarios import (
+    build_ostia_image_comparison_df,
+    filter_ia_results_for_math_ids,
+    load_math_results_for_ostia_scenario,
+    load_ostia_comparison_scenario,
 )
 from .bad_cases import (
     build_bad_cases_export_df,
@@ -28,6 +34,7 @@ __all__ = [
     "metadata",
     "bad_cases",
     "ia_math",
+    "ostia_scenarios",
     "load_split_metadata",
     "load_split_summary",
     "get_execution_time_seconds",
@@ -42,6 +49,10 @@ __all__ = [
     "build_comparison_agg_df",
     "load_ia_results_for_comparison",
     "load_math_results_for_comparison",
+    "build_ostia_image_comparison_df",
+    "filter_ia_results_for_math_ids",
+    "load_math_results_for_ostia_scenario",
+    "load_ostia_comparison_scenario",
     "map_ia_resolution_to_target",
     "prettify_method_label",
 ]
