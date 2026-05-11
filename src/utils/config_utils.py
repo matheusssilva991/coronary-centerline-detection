@@ -122,6 +122,8 @@ def scale_config_to_resolution(config, reference_downscale_xy=2):
         1, round(cfg["OSTIA_DETECTION"]["erosion_radius"] * scale)
     )
 
+    cfg["OSTIA_DETECTION"]["top_n"] = round(cfg["OSTIA_DETECTION"]["top_n"] * scale_area)
+
     cfg["REGION_GROWING"]["max_volume"] = round(
         cfg["REGION_GROWING"]["max_volume"] * scale_area
     )

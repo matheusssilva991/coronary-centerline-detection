@@ -21,6 +21,8 @@ _SYMBOL_TO_MODULE = {
     "plot_status_distribution_by_subset": "segmentation_eda",
     "plot_success_error_by_subset": "segmentation_eda",
     # images
+    "plot_preprocessing_grid": "images",
+    "plot_stage": "images",
     "plot_mip_projection": "images",
     "plot_slices": "images",
     "visualize_circles_on_slices": "images",

@@ -101,6 +101,8 @@ _VISUALIZATION_EXPORTS = {
     "plot_downscale_execution_time",
     "plot_downscale_ostia_success",
     "plot_mip_projection",
+    "plot_preprocessing_grid",
+    "plot_stage",
     "plot_slices",
     "plot_subset_execution_time_by_resolution",
     "plot_subset_metric_by_resolution",
@@ -212,6 +214,8 @@ __all__ = [
     "threshold_image_with_offset",
     "largest_connected_component",
     "run_core_preprocessing_pipeline",
+    "plot_preprocessing_grid",
+    "plot_stage",
     # Plots
     "plot_mip_projection",
     "plot_slices",
