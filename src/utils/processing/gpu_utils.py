@@ -7,6 +7,8 @@ entre NumPy e CuPy, usadas em todos os módulos que suportam GPU.
 
 import numpy as np
 import warnings
+from typing import Any, Optional
+from numpy.typing import NDArray
 
 # =============================================================================
 # Detecção de GPU e Imports
@@ -36,8 +38,7 @@ except Exception as e:
     cu_ndi = None
     GPU_AVAILABLE = False
     warnings.warn(
-        f"GPU não disponível ({type(e).__name__}). Operações usarão CPU.",
-        UserWarning
+        f"GPU não disponível ({type(e).__name__}). Operações usarão CPU.", UserWarning
     )
 
 
@@ -46,7 +47,7 @@ except Exception as e:
 # =============================================================================
 
 
-def use_gpu():
+def use_gpu() -> bool:
     """
     Retorna True se GPU está disponível e CuPy está instalado.
 
@@ -62,7 +63,7 @@ def use_gpu():
     return GPU_AVAILABLE
 
 
-def to_gpu(arr):
+def to_gpu(arr: Any) -> Any:
     """
     Converte array NumPy para CuPy (GPU) se GPU disponível.
 
@@ -83,7 +84,7 @@ def to_gpu(arr):
     return arr
 
 
-def to_cpu(arr):
+def to_cpu(arr: Any) -> Any:
     """
     Converte array CuPy (GPU) para NumPy (CPU) se necessário.
 
@@ -104,7 +105,7 @@ def to_cpu(arr):
     return arr
 
 
-def get_array_module(arr):
+def get_array_module(arr: Any) -> Any:
     """
     Retorna o módulo apropriado (numpy ou cupy) baseado no tipo do array.
 
@@ -126,7 +127,7 @@ def get_array_module(arr):
     return np
 
 
-def ensure_cpu(arr):
+def ensure_cpu(arr: Any) -> Any:
     """
     Garante que o array está na CPU (NumPy).
 
@@ -141,7 +142,7 @@ def ensure_cpu(arr):
     return to_cpu(arr)
 
 
-def ensure_gpu(arr):
+def ensure_gpu(arr: Any) -> Any:
     """
     Garante que o array está na GPU (CuPy) se GPU disponível.
 

@@ -2,17 +2,19 @@ import numpy as np
 import k3d
 from skimage import measure
 from pathlib import Path
+from typing import Any, Optional, Sequence
+from numpy.typing import NDArray
 
 
 def visualize_3d_k3d(
-    mask_3d,
-    spacing=(1, 1, 1),
-    color=0xFF0000,
-    opacity=0.5,
-    use_physical_coords=True,
-    save_html_path=None,
-    display_plot=True,
-):
+    mask_3d: NDArray[Any],
+    spacing: Sequence[float] = (1, 1, 1),
+    color: int = 0xFF0000,
+    opacity: float = 0.5,
+    use_physical_coords: bool = True,
+    save_html_path: Optional[str] = None,
+    display_plot: bool = True,
+) -> Any:
     """Renderiza uma máscara 3D em k3d usando marching cubes."""
     # Define unidade de coordenada (mm ou pixel).
     if use_physical_coords:
@@ -55,15 +57,15 @@ def visualize_3d_k3d(
 
 
 def visualize_aorta_with_ostia(
-    aorta_mask,
-    ostia_left,
-    ostia_right,
-    spacing=(1, 1, 1),
-    label_mask=None,
-    use_physical_coords=True,
-    save_html_path=None,
-    display_plot=True,
-):
+    aorta_mask: NDArray[Any],
+    ostia_left: Sequence[float],
+    ostia_right: Sequence[float],
+    spacing: Sequence[float] = (1, 1, 1),
+    label_mask: Optional[NDArray[Any]] = None,
+    use_physical_coords: bool = True,
+    save_html_path: Optional[str] = None,
+    display_plot: bool = True,
+) -> Any:
     """Renderiza a aorta 3D com marcação dos óstios e rótulo opcional."""
 
     # Define unidade de coordenada (mm ou pixel).
@@ -164,18 +166,18 @@ def visualize_aorta_with_ostia(
 
 
 def visualize_arteries_comparison(
-    label_mask,
-    predicted_mask,
-    spacing=(1, 1, 1),
-    use_physical_coords=True,
-    save_html_path=None,
-    display_plot=True,
-    plot_name="Artéria original vs predita",
-    label_color=0x00FF00,
-    predicted_color=0xFF0000,
-    label_opacity=0.35,
-    predicted_opacity=0.35,
-):
+    label_mask: NDArray[Any],
+    predicted_mask: NDArray[Any],
+    spacing: Sequence[float] = (1, 1, 1),
+    use_physical_coords: bool = True,
+    save_html_path: Optional[str] = None,
+    display_plot: bool = True,
+    plot_name: str = "Artéria original vs predita",
+    label_color: int = 0x00FF00,
+    predicted_color: int = 0xFF0000,
+    label_opacity: float = 0.35,
+    predicted_opacity: float = 0.35,
+) -> Any:
     """Renderiza a artéria de referência e a predita no mesmo gráfico 3D."""
 
     if use_physical_coords:
@@ -220,8 +222,8 @@ def visualize_arteries_comparison(
     return plot
 
 
-def save_k3d_plot_html(plot, html_path):
+def save_k3d_plot_html(plot: Any, html_path: str) -> None:
     html_path = Path(html_path)
     html_path.parent.mkdir(parents=True, exist_ok=True)
-    html_path.write_text(plot.get_snapshot(), encoding='utf-8')
+    html_path.write_text(plot.get_snapshot(), encoding="utf-8")
     print(f"HTML salvo em: {html_path}")

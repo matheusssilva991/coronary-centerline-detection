@@ -13,6 +13,8 @@ from skimage.segmentation import (
     morphological_geodesic_active_contour,
 )
 from skimage.morphology import ball
+from typing import Any, Dict, Sequence
+from numpy.typing import NDArray
 
 # Importa operação morfológica com suporte GPU
 from ..processing.binary_operations import binary_opening
@@ -23,7 +25,11 @@ from ..processing.binary_operations import binary_opening
 # =============================================================================
 
 
-def _calculate_roi_bounds(detected_circles, volume_shape, roi_margin):
+def _calculate_roi_bounds(
+    detected_circles: Sequence[Dict[str, Any]],
+    volume_shape: Sequence[int],
+    roi_margin: int,
+) -> Dict[str, int]:
     """
     Calcula os limites da região de interesse (ROI) baseado nos círculos detectados.
 
@@ -63,7 +69,9 @@ def _calculate_roi_bounds(detected_circles, volume_shape, roi_margin):
     }
 
 
-def _adjust_circles_to_roi(detected_circles, roi_bounds):
+def _adjust_circles_to_roi(
+    detected_circles: Sequence[Dict[str, Any]], roi_bounds: Dict[str, int]
+) -> Sequence[Dict[str, Any]]:
     """
     Ajusta as coordenadas dos círculos para o sistema de coordenadas da ROI.
 
@@ -94,8 +102,10 @@ def _adjust_circles_to_roi(detected_circles, roi_bounds):
 
 
 def _initialize_level_set_from_circles(
-    volume_shape, circles, radius_reduction_factor=0.8
-):
+    volume_shape: Sequence[int],
+    circles: Sequence[Dict[str, Any]],
+    radius_reduction_factor: float = 0.8,
+) -> NDArray[Any]:
     """
     Inicializa a máscara do level set usando círculos detectados como sementes.
 
@@ -135,18 +145,18 @@ def _initialize_level_set_from_circles(
 
 
 def level_set_segmentation(
-    volume_ccta,
-    detected_circles,
-    num_iter=50,
-    smoothing=1,
-    balloon=1,
-    threshold="auto",
-    radius_reduction_factor=0.8,
-    roi_margin=10,
-    use_roi=True,
-    alpha=1000,
-    sigma=2,
-):
+    volume_ccta: NDArray[Any],
+    detected_circles: Sequence[Dict[str, Any]],
+    num_iter: int = 50,
+    smoothing: int = 1,
+    balloon: int = 1,
+    threshold: Any = "auto",
+    radius_reduction_factor: float = 0.8,
+    roi_margin: int = 10,
+    use_roi: bool = True,
+    alpha: float = 1000,
+    sigma: float = 2,
+) -> NDArray[Any]:
     """
     Segmenta a aorta usando Level Set 3D inicializado com círculos detectados.
 
@@ -260,7 +270,7 @@ def level_set_segmentation(
     return refined_segmentation
 
 
-def remove_leaks_morphology(mask_3d, radius=3):
+def remove_leaks_morphology(mask_3d: NDArray[Any], radius: int = 3) -> NDArray[Any]:
     """
     Remove vazamentos e ruído da máscara 3D usando abertura morfológica.
 

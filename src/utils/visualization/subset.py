@@ -1,9 +1,10 @@
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
+from typing import Any, Optional, Sequence
 
 
-def prepare_subset_plot_df(subset_summary_df):
+def prepare_subset_plot_df(subset_summary_df: pd.DataFrame) -> pd.DataFrame:
     """Prepara DataFrame de subconjuntos disponível para plotagem."""
     # Filtra apenas linhas marcadas como disponíveis.
     plot_subset_df = subset_summary_df[subset_summary_df["disponivel"]].copy()
@@ -15,16 +16,16 @@ def prepare_subset_plot_df(subset_summary_df):
 
 
 def plot_subset_metric_by_resolution(
-    subset_summary_df,
-    metric_col,
-    title,
-    ylabel,
-    palette,
-    ylim=None,
-    hline_y=None,
-    hline_kwargs=None,
-    bar_label_fmt="%.3f",
-):
+    subset_summary_df: pd.DataFrame,
+    metric_col: str,
+    title: str,
+    ylabel: str,
+    palette: Any,
+    ylim: Optional[tuple] = None,
+    hline_y: Optional[float] = None,
+    hline_kwargs: Optional[dict] = None,
+    bar_label_fmt: str = "%.3f",
+) -> Any:
     """Plota uma métrica por subconjunto com separação por resolução."""
     # Gera base de plot com subsets válidos.
     plot_subset_df = prepare_subset_plot_df(subset_summary_df)
@@ -66,10 +67,10 @@ def plot_subset_metric_by_resolution(
 
 
 def plot_subset_execution_time_by_resolution(
-    subset_summary_df,
-    palette=None,
-    ymax_factor=1.12,
-):
+    subset_summary_df: pd.DataFrame,
+    palette: Optional[Sequence[str]] = None,
+    ymax_factor: float = 1.12,
+) -> Any:
     """Plota tempo de execução por subconjunto e resolução."""
     # Plota tempo (min) por subset usando helper comum.
     if palette is None:
@@ -95,9 +96,8 @@ def plot_subset_execution_time_by_resolution(
 
 
 def plot_subset_ostia_success_by_resolution(
-    subset_summary_df,
-    palette=None,
-):
+    subset_summary_df: pd.DataFrame, palette: Optional[Sequence[str]] = None
+) -> Any:
     """Plota sucesso de detecção de óstios por subconjunto e resolução."""
     # Plota sucesso total (%) por subset usando helper comum.
     if palette is None:

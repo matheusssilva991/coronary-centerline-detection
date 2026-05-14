@@ -1,9 +1,11 @@
 """Funções auxiliares de normalização de imagem para pré-processamento de volumes CT."""
 
 import numpy as np
+from typing import Any
+from numpy.typing import NDArray
 
 
-def normalize_image(img):
+def normalize_image(img: NDArray[Any]) -> NDArray[Any]:
     """Normaliza a imagem para [0, 1] com escalonamento min-max."""
     min_val, max_val = np.min(img), np.max(img)
     if max_val - min_val == 0:
@@ -11,7 +13,9 @@ def normalize_image(img):
     return (img - min_val) / (max_val - min_val)
 
 
-def robust_normalize(img, p_min=0, p_max=99.8):
+def robust_normalize(
+    img: NDArray[Any], p_min: float = 0, p_max: float = 99.8
+) -> NDArray[Any]:
     """Normaliza de forma robusta usando percentis para reduzir influência de outliers."""
     try:
         import cupy as cp

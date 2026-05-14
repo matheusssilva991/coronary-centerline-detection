@@ -1,10 +1,22 @@
 """Funções auxiliares para extração de regiões de interesse em volumes 3D."""
 
 import numpy as np
+from typing import Optional, Sequence, Tuple
+from numpy.typing import NDArray
 
 
-def extract_square_region(image, x_min, x_max, y_min, y_max):
-    """Extrai uma ROI retangular de um volume 3D."""
+def extract_square_region(
+    image: NDArray, x_min: int, x_max: int, y_min: int, y_max: int
+) -> NDArray:
+    """Extrai uma ROI retangular de um volume 3D.
+
+    Args:
+        image: Volume 3D com shape (H, W, D) ou similar.
+        x_min/x_max/y_min/y_max: Coordenadas inteiras da ROI.
+
+    Returns:
+        Sub-volume recortado como NDArray.
+    """
     h, w, _ = image.shape
 
     x_min = max(0, x_min)
@@ -20,8 +32,23 @@ def extract_square_region(image, x_min, x_max, y_min, y_max):
     return image[x_min:x_max, y_min:y_max, :]
 
 
-def extract_circular_region(image, center=None, radius=None, mask_background=True):
-    """Extrai uma ROI circular de um volume 3D mascarando cada fatia 2D."""
+def extract_circular_region(
+    image: NDArray,
+    center: Optional[Tuple[int, int]] = None,
+    radius: Optional[int] = None,
+    mask_background: bool = True,
+) -> NDArray:
+    """Extrai uma ROI circular de um volume 3D mascarando cada fatia 2D.
+
+    Args:
+        image: Volume 3D (H, W, D).
+        center: Tupla (y, x) do centro; se None usa centro da imagem.
+        radius: Raio em pixels; se None usa min(H,W)//4.
+        mask_background: Se True, aplica máscara circular nas fatias.
+
+    Returns:
+        Sub-volume (com máscara aplicada se solicitado).
+    """
     h, w, _ = image.shape
 
     if center is None:

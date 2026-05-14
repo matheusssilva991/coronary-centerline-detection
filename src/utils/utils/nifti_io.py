@@ -2,14 +2,24 @@
 
 import nibabel as nib
 import numpy as np
+from typing import Any, Optional, Tuple
 from numpy.typing import NDArray
 
 
 def load_img_and_label(
-    img_path: str, label_path: str = None
-) -> tuple[NDArray, NDArray]:
-    """Carrega imagem NIfTI e rótulo opcional como arrays NumPy."""
-    img, label = None, None
+    img_path: str, label_path: Optional[str] = None
+) -> Tuple[Optional[NDArray[Any]], Optional[NDArray[Any]]]:
+    """Carrega imagem NIfTI e rótulo opcional como arrays NumPy.
+
+    Args:
+        img_path: Caminho para o arquivo de imagem NIfTI.
+        label_path: Caminho opcional para arquivo de rótulo NIfTI.
+
+    Returns:
+        Tupla (img, label) com arrays NumPy ou None quando não informado.
+    """
+    img: Optional[NDArray[Any]] = None
+    label: Optional[NDArray[Any]] = None
 
     if img_path:
         img = nib.load(img_path).get_fdata()
@@ -19,9 +29,15 @@ def load_img_and_label(
     return img, label
 
 
-def load_raw_img_and_label(img_path: str, label_path: str = None) -> tuple:
-    """Carrega imagem NIfTI e rótulo opcional como objetos nibabel."""
-    img, label = None, None
+def load_raw_img_and_label(
+    img_path: str, label_path: Optional[str] = None
+) -> Tuple[Optional[Any], Optional[Any]]:
+    """Carrega imagem NIfTI e rótulo opcional como objetos nibabel.
+
+    Retorna objetos nibabel (ex.: Nifti1Image) ou None quando não informado.
+    """
+    img: Optional[Any] = None
+    label: Optional[Any] = None
 
     if img_path:
         img = nib.load(img_path)
@@ -31,8 +47,16 @@ def load_raw_img_and_label(img_path: str, label_path: str = None) -> tuple:
     return img, label
 
 
-def save_nii_image(image, affine, path_to_save="."):
-    """Salva um volume NumPy como imagem NIfTI."""
+def save_nii_image(
+    image: NDArray[Any], affine: NDArray[Any], path_to_save: str = "."
+) -> None:
+    """Salva um volume NumPy como imagem NIfTI.
+
+    Args:
+        image: Array NumPy do volume.
+        affine: Matriz afin para o NIfTI.
+        path_to_save: Caminho de saída.
+    """
     nifti_img = nib.Nifti1Image(image, affine)
 
     try:
@@ -42,7 +66,7 @@ def save_nii_image(image, affine, path_to_save="."):
         print("Erro ao salvar a imagem:", e)
 
 
-def save_npy_array(array: NDArray, path: str):
+def save_npy_array(array: NDArray[Any], path: str) -> None:
     """Salva um array em arquivo .npy."""
     try:
         np.save(path, array)

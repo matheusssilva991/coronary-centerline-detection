@@ -25,7 +25,7 @@ def plot_mip_projection(
     return_fig: bool = False,
     show_labels: bool = True,
     dpi: int = 100,
-):
+) -> Any:
     """Plota projeções MIP (ou min/mean) em vistas ortogonais de um volume 3D."""
     # Garante entrada 3D antes da projeção.
     if image_volume.ndim != 3:
@@ -79,7 +79,14 @@ def plot_mip_projection(
     plt.close(fig)
 
 
-def plot_slices(img, slices_indices, cmap="gray", title=None, vmin=None, vmax=None):
+def plot_slices(
+    img: NDArray,
+    slices_indices: Sequence[int],
+    cmap: str = "gray",
+    title: Optional[str] = None,
+    vmin: Optional[float] = None,
+    vmax: Optional[float] = None,
+) -> None:
     """Exibe múltiplas fatias 2D selecionadas de um volume."""
     # Calcula grade de subplots para as fatias solicitadas.
     n_slices = len(slices_indices)
@@ -114,8 +121,12 @@ def plot_slices(img, slices_indices, cmap="gray", title=None, vmin=None, vmax=No
 
 
 def visualize_circles_on_slices(
-    image, detected_circles, num_samples=6, vmin=None, vmax=None
-):
+    image: NDArray,
+    detected_circles: Sequence[dict],
+    num_samples: int = 6,
+    vmin: Optional[float] = None,
+    vmax: Optional[float] = None,
+) -> None:
     """Sobrepõe círculos detectados em fatias amostradas do volume."""
     # Seleciona fatias de amostra onde há círculos detectados.
     slice_indices = sorted(set([c["slice_index"] for c in detected_circles]))
@@ -162,7 +173,7 @@ def _resolve_stage_image(
     volume: NDArray,
     center_slice: int,
     mode: Literal["slice", "mip"],
-):
+) -> tuple[NDArray, str]:
     if mode == "slice":
         return volume[:, :, center_slice], f"fatia {center_slice}"
     return np.max(volume, axis=2), "MIP axial"
@@ -178,7 +189,7 @@ def plot_stage(
     show_subtitle: bool = True,
     cmap: str = "gray",
     dpi: int = 100,
-):
+) -> None:
     """Plota uma etapa de pre-processamento para um unico caso."""
     volume = preprocessed[img_id][stage_key]
     center_slice = preprocessed[img_id]["center_slice"]
@@ -210,7 +221,7 @@ def plot_preprocessing_grid(
     show_subtitle: bool = True,
     cmap: str = "gray",
     dpi: int = 100,
-):
+) -> None:
     """Plota grid das etapas de pre-processamento em fatia, MIP ou ambos."""
     if ids_to_plot is None:
         ids_to_plot = sorted(preprocessed.keys())
@@ -278,7 +289,7 @@ def compute_vesselness_maps(
     ids_to_plot: Optional[Sequence[int]] = None,
     ostia_config: Optional[dict[str, Any]] = None,
     artery_config: Optional[dict[str, Any]] = None,
-):
+) -> dict[int, dict[str, NDArray]]:
     """Computa mapas de vesselness para ostios e arterias a partir da imagem LCC."""
     from utils import get_vesselness
 
@@ -340,7 +351,7 @@ def plot_vesselness_mip_grid(
     title: str = "Mapa de vasos (MIP axial)",
     cmap: str = "gray",
     dpi: int = 100,
-):
+) -> None:
     """Plota MIP axial dos mapas de vesselness para uma lista de IDs."""
     if ids_to_plot is None:
         ids_to_plot = sorted(vessel_maps.keys())
@@ -375,7 +386,7 @@ def plot_vesselness_mip(
     show_subtitle: bool = True,
     show_colorbar: bool = True,
     dpi: int = 100,
-):
+) -> None:
     """Plota MIP axial de um mapa de vesselness para um unico ID."""
     mip = np.max(vessel_maps[img_id][map_key], axis=2)
 

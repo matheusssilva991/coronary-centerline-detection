@@ -1,22 +1,23 @@
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
+from typing import Any, Optional, Sequence
 
 
 def plot_category_metric_bar(
-    df,
-    x_col,
-    y_col,
-    title,
-    xlabel,
-    ylabel,
-    color,
-    figsize=(8, 5),
-    ylim=None,
-    ymax_factor=None,
-    x_rotation=15,
-    bar_label_fmt="%.3f",
-):
+    df: pd.DataFrame,
+    x_col: str,
+    y_col: str,
+    title: str,
+    xlabel: str,
+    ylabel: str,
+    color: Any,
+    figsize: tuple = (8, 5),
+    ylim: Optional[tuple] = None,
+    ymax_factor: Optional[float] = None,
+    x_rotation: int = 15,
+    bar_label_fmt: str = "%.3f",
+) -> Any:
     """Plota barra de uma métrica categórica com rótulos e grade."""
     # Função base para barras usadas nos relatórios do notebook.
     plt.figure(figsize=figsize)
@@ -47,7 +48,9 @@ def plot_category_metric_bar(
     return ax
 
 
-def plot_downscale_execution_time(downscale_df, color="#F58518"):
+def plot_downscale_execution_time(
+    downscale_df: pd.DataFrame, color: str = "#F58518"
+) -> Any:
     """Plota tempo de execução por método de downscale."""
     # Compara minutos de execução por método de downscale.
     return plot_category_metric_bar(
@@ -65,7 +68,7 @@ def plot_downscale_execution_time(downscale_df, color="#F58518"):
     )
 
 
-def plot_downscale_dice(downscale_df, color="#4C78A8"):
+def plot_downscale_dice(downscale_df: pd.DataFrame, color: str = "#4C78A8") -> Any:
     """Plota Dice médio por método de downscale."""
     # Compara Dice médio por método de downscale.
     return plot_category_metric_bar(
@@ -83,7 +86,9 @@ def plot_downscale_dice(downscale_df, color="#4C78A8"):
     )
 
 
-def plot_downscale_ostia_success(downscale_df, color="#54A24B"):
+def plot_downscale_ostia_success(
+    downscale_df: pd.DataFrame, color: str = "#54A24B"
+) -> Any:
     """Plota sucesso de detecção de óstios por método de downscale."""
     # Compara sucesso total (%) por método de downscale.
     return plot_category_metric_bar(
@@ -101,7 +106,7 @@ def plot_downscale_ostia_success(downscale_df, color="#54A24B"):
     )
 
 
-def plot_validation_dice(summary_df, color="#4C78A8"):
+def plot_validation_dice(summary_df: pd.DataFrame, color: str = "#4C78A8") -> Any:
     """Plota Dice médio por conjunto de validação."""
     # Compara Dice médio entre conjuntos de validação.
     return plot_category_metric_bar(
@@ -119,7 +124,9 @@ def plot_validation_dice(summary_df, color="#4C78A8"):
     )
 
 
-def plot_validation_execution_time(summary_df, color="#F58518"):
+def plot_validation_execution_time(
+    summary_df: pd.DataFrame, color: str = "#F58518"
+) -> Any:
     """Plota tempo de execução por conjunto de validação."""
     # Compara tempo total (min) entre conjuntos de validação.
     return plot_category_metric_bar(
@@ -137,7 +144,9 @@ def plot_validation_execution_time(summary_df, color="#F58518"):
     )
 
 
-def plot_validation_ostia_success(summary_df, color="#54A24B"):
+def plot_validation_ostia_success(
+    summary_df: pd.DataFrame, color: str = "#54A24B"
+) -> Any:
     """Plota sucesso total de óstios por conjunto de validação."""
     # Compara sucesso total (%) entre conjuntos de validação.
     return plot_category_metric_bar(

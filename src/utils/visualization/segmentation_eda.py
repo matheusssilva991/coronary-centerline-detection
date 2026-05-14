@@ -1,19 +1,22 @@
 import matplotlib.pyplot as plt
 import pandas as pd
+from typing import Any, Dict, Optional, Sequence, Tuple
 
 
-def _get_split_df(data_by_resolution, resolution, split_name):
+def _get_split_df(
+    data_by_resolution: Optional[Dict[str, Any]], resolution: str, split_name: str
+) -> Optional[pd.DataFrame]:
     if data_by_resolution is None:
         return None
     resolution_data = data_by_resolution.get(resolution, {})
     return resolution_data.get(split_name)
 
 
-def _get_split_title(split_name):
+def _get_split_title(split_name: str) -> str:
     return str(split_name).upper()
 
 
-def _get_status_color(split_name):
+def _get_status_color(split_name: str) -> str:
     return {
         "train": "skyblue",
         "val": "lightgreen",
@@ -22,8 +25,10 @@ def _get_status_color(split_name):
 
 
 def plot_status_distribution_by_subset(
-    data_by_resolution, split_name, status_column="status"
-):
+    data_by_resolution: Optional[Dict[str, Any]],
+    split_name: str,
+    status_column: str = "status",
+) -> None:
     """Plota a distribuição de status para High e Mid dentro de um subset."""
     fig, axes = plt.subplots(1, 2, figsize=(14, 6))
     title_suffix = _get_split_title(split_name)
@@ -79,13 +84,13 @@ def plot_status_distribution_by_subset(
 
 
 def plot_success_error_by_subset(
-    data_by_resolution,
-    split_name,
-    success_status,
-    status_column="status",
-    success_color="#4CAF50",
-    error_color="#F44336",
-):
+    data_by_resolution: Optional[Dict[str, Any]],
+    split_name: str,
+    success_status: Sequence[str],
+    status_column: str = "status",
+    success_color: str = "#4CAF50",
+    error_color: str = "#F44336",
+) -> None:
     """Plota acertos vs erros para High e Mid dentro de um subset."""
     fig, axes = plt.subplots(1, 2, figsize=(14, 6))
     title_suffix = _get_split_title(split_name)
@@ -153,15 +158,15 @@ def plot_success_error_by_subset(
 
 
 def plot_distance_distribution_by_subset(
-    data_by_resolution,
-    split_name,
-    left_column="left_dist_mm",
-    right_column="right_dist_mm",
-    tolerance_mm=7.0,
-    bins=None,
-    high_color="#FF6B6B",
-    mid_color="#4ECDC4",
-):
+    data_by_resolution: Optional[Dict[str, Any]],
+    split_name: str,
+    left_column: str = "left_dist_mm",
+    right_column: str = "right_dist_mm",
+    tolerance_mm: float = 7.0,
+    bins: Optional[int] = None,
+    high_color: str = "#FF6B6B",
+    mid_color: str = "#4ECDC4",
+) -> None:
     """Plota histogramas de distâncias left/right para High e Mid dentro de um subset."""
     if bins is None:
         bins = {"train": 25, "val": 15, "test": 25}.get(split_name, 25)
@@ -257,8 +262,10 @@ def plot_distance_distribution_by_subset(
 
 
 def build_dice_summary_by_subset(
-    data_by_resolution, split_name, dice_column="dice_artery"
-):
+    data_by_resolution: Optional[Dict[str, Any]],
+    split_name: str,
+    dice_column: str = "dice_artery",
+) -> pd.DataFrame:
     """Retorna um resumo de Dice por resolução para um subset."""
     rows = []
 

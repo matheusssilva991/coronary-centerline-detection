@@ -10,11 +10,13 @@ import warnings
 import cv2
 import numpy as np
 import scipy.ndimage as ndi
+from typing import Any, Optional, Tuple, Sequence
+from numpy.typing import NDArray
 
 from .gpu_utils import GPU_AVAILABLE, cu_ndi, to_cpu, to_gpu
 
 
-def _find_largest_component_label(labeled_array):
+def _find_largest_component_label(labeled_array: NDArray[Any]) -> Optional[int]:
     """Retorna o rótulo do maior componente conectado, excluindo o fundo."""
     comp_sizes = np.bincount(labeled_array.ravel())
     comp_sizes[0] = 0
@@ -25,13 +27,17 @@ def _find_largest_component_label(labeled_array):
     return np.argmax(comp_sizes)
 
 
-def downscale_image_ndi(image, factors, order=3):
+def downscale_image_ndi(
+    image: NDArray[Any], factors: Sequence[float], order: int = 3
+) -> NDArray[Any]:
     """Reduz a resolução da imagem usando scipy.ndimage.zoom."""
     zoom_factors = tuple(1.0 / f for f in factors)
     return ndi.zoom(image, zoom=zoom_factors, order=order)
 
 
-def downscale_image_opencv(image, factors, interpolation=cv2.INTER_LINEAR):
+def downscale_image_opencv(
+    image: NDArray[Any], factors: Sequence[float], interpolation: int = cv2.INTER_LINEAR
+) -> NDArray[Any]:
     """Reduz a resolução de imagem 2D/3D usando OpenCV resize."""
     if image.ndim == 2:
         new_shape = (
@@ -79,8 +85,12 @@ def downscale_image_opencv(image, factors, interpolation=cv2.INTER_LINEAR):
 
 
 def downscale_image(
-    image, factors, order=3, use_opencv=False, opencv_interpolation=None
-):
+    image: NDArray[Any],
+    factors: Sequence[float],
+    order: int = 3,
+    use_opencv: bool = False,
+    opencv_interpolation: Optional[int] = None,
+) -> NDArray[Any]:
     """Downscale otimizado com suporte opcional a OpenCV e GPU."""
     if use_opencv:
         if opencv_interpolation is None:
@@ -104,14 +114,18 @@ def downscale_image(
     return downscale_image_ndi(image, factors, order=order)
 
 
-def threshold_image(image, min_val=-300, max_val=675):
+def threshold_image(
+    image: NDArray[Any], min_val: int = -300, max_val: int = 675
+) -> Tuple[NDArray[Any], NDArray[Any]]:
     """Aplica máscara de threshold por faixa inclusiva de HU/intensidade."""
     thresh_mask = (image >= min_val) & (image <= max_val)
     thresh_img = thresh_mask * image
     return thresh_img, thresh_mask
 
 
-def threshold_image_with_offset(image, min_val=-300, max_val=675):
+def threshold_image_with_offset(
+    image: NDArray[Any], min_val: int = -300, max_val: int = 675
+) -> Tuple[NDArray[Any], NDArray[Any], int]:
     offset = np.abs(min_val)
 
     # 1. Cria a máscara binária
@@ -126,7 +140,9 @@ def threshold_image_with_offset(image, min_val=-300, max_val=675):
     return thresh_img, thresh_mask, offset
 
 
-def largest_connected_component(image, mask):
+def largest_connected_component(
+    image: NDArray[Any], mask: NDArray[Any]
+) -> Tuple[NDArray[Any], NDArray[Any]]:
     """Mantém apenas o maior componente conectado e o aplica à imagem."""
     labeled_array, num_features = ndi.label(mask)
     if num_features == 0:
@@ -143,15 +159,15 @@ def largest_connected_component(image, mask):
 
 
 def run_core_preprocessing_pipeline(
-    image,
-    downscale_factors,
-    min_threshold=-300,
-    max_threshold_percentile=99.5,
-    lcc_per_slice=True,
-    order=3,
-    use_opencv=False,
-    opencv_interpolation=None,
-):
+    image: NDArray[Any],
+    downscale_factors: Sequence[float],
+    min_threshold: int = -300,
+    max_threshold_percentile: float = 99.5,
+    lcc_per_slice: bool = True,
+    order: int = 3,
+    use_opencv: bool = False,
+    opencv_interpolation: Optional[int] = None,
+) -> Tuple[NDArray[Any], NDArray[Any], NDArray[Any], Tuple[int, int]]:
     """Executa pipeline com downscale, threshold adaptativo e maior componente conectado."""
     if use_opencv:
         if opencv_interpolation is None:

@@ -7,21 +7,34 @@ usando Canny + transformada de Hough com restrições de continuidade geométric
 import numpy as np
 from skimage import feature
 from skimage.transform import hough_circle, hough_circle_peaks
+from typing import Any, Optional, Sequence, Tuple
+from numpy.typing import NDArray
 
 
-def _calculate_distance(x1, y1, x2, y2):
+def _calculate_distance(x1: float, y1: float, x2: float, y2: float) -> float:
     """Calcula a distância euclidiana entre dois pontos 2D."""
     return np.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
 
 
-def _detect_circles_in_slice(img_slice, hough_radii, total_num_peaks, canny_sigma):
+def _detect_circles_in_slice(
+    img_slice: NDArray[Any],
+    hough_radii: Sequence[float],
+    total_num_peaks: int,
+    canny_sigma: float,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """Detecta círculos em uma fatia usando Canny e transformada de Hough."""
     edges = feature.canny(img_slice.astype(float), sigma=canny_sigma)
     hough_res = hough_circle(edges, hough_radii)
     return hough_circle_peaks(hough_res, hough_radii, total_num_peaks=total_num_peaks)
 
 
-def _find_closest_circle(cx, cy, radii, ref_x, ref_y):
+def _find_closest_circle(
+    cx: Sequence[float],
+    cy: Sequence[float],
+    radii: Sequence[float],
+    ref_x: float,
+    ref_y: float,
+) -> Tuple[int, float]:
     """Encontra o círculo detectado mais próximo de um ponto de referência."""
     distances = [
         _calculate_distance(cx[i], cy[i], ref_x, ref_y) for i in range(len(cx))
@@ -31,22 +44,26 @@ def _find_closest_circle(cx, cy, radii, ref_x, ref_y):
 
 
 def _is_circle_within_tolerance(
-    circle_radius, circle_distance, ref_radius, radius_tolerance, distance_tolerance
-):
+    circle_radius: float,
+    circle_distance: float,
+    ref_radius: float,
+    radius_tolerance: float,
+    distance_tolerance: float,
+) -> bool:
     """Valida se raio e distância estão dentro das tolerâncias definidas."""
     radius_diff = abs(circle_radius - ref_radius)
     return circle_distance <= distance_tolerance and radius_diff <= radius_tolerance
 
 
 def _compute_local_roi_bounds(
-    img_shape,
-    ref_x,
-    ref_y,
-    ref_radius,
-    distance_tolerance,
-    radius_tolerance,
-    local_roi_padding,
-):
+    img_shape: Sequence[int],
+    ref_x: float,
+    ref_y: float,
+    ref_radius: float,
+    distance_tolerance: float,
+    radius_tolerance: float,
+    local_roi_padding: int,
+) -> Tuple[int, int, int, int]:
     """Calcula os limites de ROI local para busca de círculos na fatia."""
     height, width = img_shape
 
@@ -67,13 +84,13 @@ def _compute_local_roi_bounds(
 
 
 def _process_initial_circle(
-    img_slice,
-    hough_radii,
-    initial_circle,
-    neighbor_distance_threshold,
-    total_num_peaks,
-    canny_sigma,
-):
+    img_slice: NDArray[Any],
+    hough_radii: Sequence[float],
+    initial_circle: dict,
+    neighbor_distance_threshold: float,
+    total_num_peaks: int,
+    canny_sigma: float,
+) -> dict:
     """Refina o círculo inicial com base em vizinhos próximos."""
     _, cx, cy, radii = _detect_circles_in_slice(
         img_slice, hough_radii, total_num_peaks, canny_sigma
@@ -100,17 +117,17 @@ def _process_initial_circle(
 
 
 def _process_slice(
-    img_slice,
-    hough_radii,
-    reference_circle,
-    radius_tolerance,
-    distance_tolerance,
-    neighbor_distance_threshold,
-    total_num_peaks,
-    canny_sigma,
-    use_local_roi=True,
-    local_roi_padding=20,
-):
+    img_slice: NDArray[Any],
+    hough_radii: Sequence[float],
+    reference_circle: dict,
+    radius_tolerance: float,
+    distance_tolerance: float,
+    neighbor_distance_threshold: float,
+    total_num_peaks: int,
+    canny_sigma: float,
+    use_local_roi: bool = True,
+    local_roi_padding: int = 20,
+) -> Optional[dict]:
     """Processa uma fatia e retorna o melhor círculo rastreado."""
     ref_x = reference_circle["center_x"]
     ref_y = reference_circle["center_y"]
@@ -179,8 +196,12 @@ def _process_slice(
 
 
 def detect_initial_circle(
-    img_slice, hough_radii, quadrant_offset=(30, 30), total_num_peaks=10, canny_sigma=3
-):
+    img_slice: NDArray[Any],
+    hough_radii: Sequence[float],
+    quadrant_offset: Sequence[int] = (30, 30),
+    total_num_peaks: int = 10,
+    canny_sigma: float = 3,
+) -> Optional[dict]:
     """Detecta o círculo inicial da aorta em uma fatia de referência."""
     accums, cx, cy, radii = _detect_circles_in_slice(
         img_slice, hough_radii, total_num_peaks, canny_sigma
@@ -210,13 +231,13 @@ def detect_initial_circle(
 
 
 def get_initial_circle_diagnostics(
-    img_slice,
-    hough_radii,
-    quadrant_offset=(30, 30),
-    total_num_peaks_initial=10,
-    canny_sigma=3,
-    neighbor_distance_threshold=5,
-):
+    img_slice: NDArray[Any],
+    hough_radii: Sequence[float],
+    quadrant_offset: Sequence[int] = (30, 30),
+    total_num_peaks_initial: int = 10,
+    canny_sigma: float = 3,
+    neighbor_distance_threshold: float = 5,
+) -> dict:
     """Retorna o círculo inicial, os candidatos da fatia e o círculo refinado."""
     accums, cx, cy, radii = _detect_circles_in_slice(
         img_slice, hough_radii, total_num_peaks_initial, canny_sigma
@@ -288,7 +309,14 @@ def get_initial_circle_diagnostics(
     }
 
 
-def refine_circle_with_neighbors(cx, cy, radii, ref_x, ref_y, distance_threshold=5):
+def refine_circle_with_neighbors(
+    cx: Sequence[float],
+    cy: Sequence[float],
+    radii: Sequence[float],
+    ref_x: float,
+    ref_y: float,
+    distance_threshold: float = 5,
+) -> Tuple[float, float, Optional[float]]:
     """Refina centro e raio pela média dos círculos vizinhos próximos."""
     nearest_circles = []
 
@@ -308,20 +336,20 @@ def refine_circle_with_neighbors(cx, cy, radii, ref_x, ref_y, distance_threshold
 
 
 def detect_aorta_circles(
-    img_volume,
-    hough_radii,
-    pixel_spacing,
-    tol_radius_mm=9.0,
-    tol_distance_mm=18.0,
-    max_slice_miss_threshold=5,
-    neighbor_distance_threshold=5,
-    quadrant_offset=(30, 30),
-    total_num_peaks_initial=10,
-    total_num_peaks=20,
-    canny_sigma=3,
-    use_local_roi=True,
-    local_roi_padding=20,
-):
+    img_volume: NDArray[Any],
+    hough_radii: Sequence[float],
+    pixel_spacing: float,
+    tol_radius_mm: float = 9.0,
+    tol_distance_mm: float = 18.0,
+    max_slice_miss_threshold: int = 5,
+    neighbor_distance_threshold: float = 5,
+    quadrant_offset: Sequence[int] = (30, 30),
+    total_num_peaks_initial: int = 10,
+    total_num_peaks: int = 20,
+    canny_sigma: float = 3,
+    use_local_roi: bool = True,
+    local_roi_padding: int = 20,
+) -> list:
     """Detecta círculos da aorta ao longo do volume 3D fatia a fatia."""
     num_slices = img_volume.shape[2]
     first_slice_idx = num_slices - 1

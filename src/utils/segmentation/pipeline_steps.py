@@ -2,6 +2,7 @@
 
 import json
 import os
+from typing import Any, Dict, List, Optional, Sequence
 
 import cv2
 import numpy as np
@@ -28,7 +29,9 @@ from ..processing.preprocessing import (
 from ..utils import dice_score, load_raw_img_and_label, save_npy_array
 
 
-def load_and_preprocess_image(img_id, base_path, config):
+def load_and_preprocess_image(
+    img_id: str, base_path: str, config: Dict[str, Any]
+) -> Dict[str, Any]:
     """Carrega imagem/label e executa o pré-processamento básico."""
     nii_img, nii_label = load_raw_img_and_label(
         f"{base_path}/{img_id}.img.nii.gz", f"{base_path}/{img_id}.label.nii.gz"
@@ -76,13 +79,13 @@ def load_and_preprocess_image(img_id, base_path, config):
 
 
 def get_or_compute_vesselness(
-    img_id,
-    image,
-    cache_dir,
-    vesselness_config,
-    load_cache=False,
-    save_cache=False,
-):
+    img_id: str,
+    image: Any,
+    cache_dir: str,
+    vesselness_config: Dict[str, Any],
+    load_cache: bool = False,
+    save_cache: bool = False,
+) -> Any:
     """Carrega ou calcula vesselness para um volume 3D."""
     cache = load_vesselness_cache(img_id, cache_dir=cache_dir)
     if cache is not None and load_cache:
@@ -103,15 +106,15 @@ def get_or_compute_vesselness(
 
 
 def get_or_detect_aorta_circles(
-    img_id,
-    lcc_image,
-    downscale_factors,
-    scaled_spacing,
-    circle_config,
-    base_save_path,
-    load_cache=False,
-    save_cache=False,
-):
+    img_id: str,
+    lcc_image: Any,
+    downscale_factors: Sequence[int],
+    scaled_spacing: Sequence[float],
+    circle_config: Dict[str, Any],
+    base_save_path: str,
+    load_cache: bool = False,
+    save_cache: bool = False,
+) -> List[Dict[str, Any]]:
     """Carrega ou detecta círculos da aorta."""
     saved_dir_circles = f"{base_save_path}/detected_circles"
     json_path = os.path.join(saved_dir_circles, f"{img_id}_detected_circles.json")
@@ -151,14 +154,14 @@ def get_or_detect_aorta_circles(
 
 
 def get_or_segment_aorta(
-    img_id,
-    lcc_image,
-    detected_circles,
-    level_set_config,
-    base_save_path,
-    load_cache=False,
-    save_cache=False,
-):
+    img_id: str,
+    lcc_image: Any,
+    detected_circles: List[Dict[str, Any]],
+    level_set_config: Dict[str, Any],
+    base_save_path: str,
+    load_cache: bool = False,
+    save_cache: bool = False,
+) -> Any:
     """Carrega ou segmenta a aorta com level set + pós-processamento."""
     saved_dir_aorta = f"{base_save_path}/segmented_aorta"
     mask_path = os.path.join(saved_dir_aorta, f"{img_id}_mask_aorta.npy")
@@ -188,8 +191,12 @@ def get_or_segment_aorta(
 
 
 def detect_and_evaluate_ostia(
-    aorta_mask, vesselness_ostios, label, scaled_spacing, config
-):
+    aorta_mask: Any,
+    vesselness_ostios: Any,
+    label: Any,
+    scaled_spacing: Sequence[float],
+    config: Dict[str, Any],
+) -> Dict[str, Any]:
     """Detecta os óstios e avalia correção/tolerância."""
     dx, dy, dz = scaled_spacing
     ostia_config = config["OSTIA_DETECTION"]
@@ -231,14 +238,14 @@ def detect_and_evaluate_ostia(
 
 
 def segment_arteries_from_ostia(
-    img_id,
-    lcc_image,
-    label_artery,
-    ostia_left,
-    ostia_right,
-    config,
-    base_save_path,
-):
+    img_id: str,
+    lcc_image: Any,
+    label_artery: Any,
+    ostia_left: Optional[Sequence[int]],
+    ostia_right: Optional[Sequence[int]],
+    config: Dict[str, Any],
+    base_save_path: str,
+) -> Dict[str, Any]:
     """Calcula vesselness arterial, executa region growing e avalia Dice."""
     vesselness_artery = get_or_compute_vesselness(
         img_id,

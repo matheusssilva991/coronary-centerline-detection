@@ -1,10 +1,22 @@
 """Utilitários de segmentação grosseira de tecidos baseada em HU."""
 
 import numpy as np
+from typing import Any, Dict, Optional, Sequence, Tuple
+from numpy.typing import NDArray
 
 
-def segment_by_hu(img_3d, include_labels=None):
-    """Segmenta volume de CT em classes de tecido com base em faixas de HU."""
+def segment_by_hu(
+    img_3d: NDArray[Any], include_labels: Optional[Sequence[int]] = None
+) -> Tuple[NDArray[np.uint8], Dict[int, Dict[str, Any]]]:
+    """Segmenta volume de CT em classes de tecido com base em faixas de HU.
+
+    Args:
+        img_3d: Volume 3D de intensidades (HU).
+        include_labels: Sequência opcional de rótulos (inteiros) a manter.
+
+    Returns:
+        Tupla contendo o volume segmentado (dtype uint8) e o dicionário de faixas HU.
+    """
     hu_ranges = {
         1: {"name": "Ar", "range": (-1050, -950), "color": [0, 0, 0]},
         2: {"name": "Pulmão", "range": (-950, -500), "color": [194, 220, 232]},

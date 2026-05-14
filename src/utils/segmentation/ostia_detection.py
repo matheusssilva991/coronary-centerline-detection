@@ -11,11 +11,13 @@ Este módulo fornece funções auxiliares para:
 import numpy as np
 from scipy.ndimage import distance_transform_edt
 from skimage.morphology import ball
+from typing import Any, Optional, Sequence, Tuple
+from numpy.typing import NDArray
 
 from ..processing.binary_operations import binary_erosion
 
 
-def _validate_coordinates(coords, volume_shape):
+def _validate_coordinates(coords: Sequence[int], volume_shape: Sequence[int]) -> bool:
     """Valida se uma coordenada (y, x, z) está dentro dos limites do volume."""
     y, x, z = map(int, coords)
     height, width, depth = volume_shape
@@ -28,7 +30,9 @@ def _validate_coordinates(coords, volume_shape):
     return True
 
 
-def _extract_lower_region(surface_mask, lower_fraction=0.3):
+def _extract_lower_region(
+    surface_mask: NDArray[Any], lower_fraction: float = 0.3
+) -> Tuple[NDArray[Any], int, int]:
     """Extrai a região inferior em z da superfície da aorta onde os óstios são esperados."""
     z_indices = np.where(np.any(surface_mask, axis=(0, 1)))[0]
     if len(z_indices) == 0:
@@ -43,7 +47,9 @@ def _extract_lower_region(surface_mask, lower_fraction=0.3):
     return lower_region_mask, z_min, z_max
 
 
-def _get_top_candidates(surface_mask, vesselness_map, top_n=50):
+def _get_top_candidates(
+    surface_mask: NDArray[Any], vesselness_map: NDArray[Any], top_n: int = 50
+) -> NDArray[Any]:
     """Retorna os top-N candidatos de superfície ordenados por vesselness decrescente."""
     surface_coords = np.argwhere(surface_mask > 0)
     if len(surface_coords) == 0:
@@ -55,8 +61,13 @@ def _get_top_candidates(surface_mask, vesselness_map, top_n=50):
 
 
 def _validate_ostium_pair(
-    ostium_1, ostium_2, min_center_dist, max_z_diff_mm, min_lateral_sep, spacing_dz
-):
+    ostium_1: Sequence[float],
+    ostium_2: Sequence[float],
+    min_center_dist: float,
+    max_z_diff_mm: float,
+    min_lateral_sep: float,
+    spacing_dz: float,
+) -> bool:
     """Verifica restrições anatômicas para um par candidato de óstios."""
     dist = np.linalg.norm(ostium_1 - ostium_2)
     z_diff_voxels = abs(ostium_1[2] - ostium_2[2])
@@ -71,13 +82,13 @@ def _validate_ostium_pair(
 
 
 def _find_second_ostium(
-    first_ostium,
-    candidates,
-    min_center_dist,
-    max_z_diff_mm,
-    min_lateral_sep,
-    spacing_dz,
-):
+    first_ostium: Sequence[float],
+    candidates: NDArray[Any],
+    min_center_dist: float,
+    max_z_diff_mm: float,
+    min_lateral_sep: float,
+    spacing_dz: float,
+) -> Optional[NDArray[Any]]:
     """Busca o segundo óstio entre candidatos com base em restrições anatômicas."""
     for candidate in candidates[1:]:
         if _validate_ostium_pair(
@@ -92,14 +103,18 @@ def _find_second_ostium(
     return None
 
 
-def _classify_left_right(ostium_1, ostium_2):
+def _classify_left_right(
+    ostium_1: Sequence[float], ostium_2: Sequence[float]
+) -> Tuple[NDArray[Any], NDArray[Any]]:
     """Classifica o óstio esquerdo/direito com base na convenção da coordenada x."""
     if ostium_1[1] < ostium_2[1]:
         return ostium_2.copy(), ostium_1.copy()
     return ostium_1.copy(), ostium_2.copy()
 
 
-def find_aorta_surface(aorta_mask, erosion_radius=2):
+def find_aorta_surface(
+    aorta_mask: NDArray[Any], erosion_radius: int = 2
+) -> NDArray[Any]:
     """Extrai a casca da aorta como (máscara - máscara erodida)."""
     struct_elem = ball(erosion_radius)
     eroded = binary_erosion(aorta_mask.astype(bool), structure=struct_elem)
@@ -107,29 +122,29 @@ def find_aorta_surface(aorta_mask, erosion_radius=2):
     return surface.astype(np.uint8)
 
 
-def calculate_robust_diameter(mask_slice):
+def calculate_robust_diameter(mask_slice: NDArray[Any]) -> float:
     """Estima o diâmetro a partir da área circular equivalente em uma fatia 2D."""
     area = np.sum(mask_slice)
     if area == 0:
-        return 0
+        return 0.0
     return 2 * np.sqrt(area / np.pi)
 
 
 def check_ostium_intersection(
-    ostium_coords,
-    label_mask,
-    spacing,
-    ostium_name="Óstio",
-    distance_threshold_mm=5.0,
-    verbose=False,
-):
+    ostium_coords: Optional[Sequence[int]],
+    label_mask: NDArray[Any],
+    spacing: Sequence[float],
+    ostium_name: str = "Óstio",
+    distance_threshold_mm: float = 5.0,
+    verbose: bool = False,
+) -> dict:
     """Verifica se o óstio intersecta a máscara arterial ou está suficientemente próximo em mm."""
 
     if ostium_coords is None:
         return {
             "intersects": False,
-            "euclidean_dist": float('inf'),
-            "physical_dist": float('inf'),
+            "euclidean_dist": float("inf"),
+            "physical_dist": float("inf"),
             "nearest_voxel": (0, 0, 0),
             "is_acceptable": False,
         }
@@ -194,16 +209,16 @@ def check_ostium_intersection(
 
 
 def find_ostia(
-    aorta_mask,
-    vesselness_map,
-    spacing,
-    top_n=50,
-    max_z_diff_mm=40.0,
-    lower_fraction=0.3,
-    min_center_distance_factor=0.8,
-    min_lateral_factor=0.5,
-    erosion_radius=2,
-):
+    aorta_mask: NDArray[Any],
+    vesselness_map: NDArray[Any],
+    spacing: Sequence[float],
+    top_n: int = 50,
+    max_z_diff_mm: float = 40.0,
+    lower_fraction: float = 0.3,
+    min_center_distance_factor: float = 0.8,
+    min_lateral_factor: float = 0.5,
+    erosion_radius: int = 2,
+) -> Tuple[NDArray[Any], Optional[NDArray[Any]]]:
     """Detecta óstios coronários esquerdo e direito a partir da superfície da aorta e do vesselness."""
     if aorta_mask.shape != vesselness_map.shape:
         raise ValueError(
@@ -230,7 +245,9 @@ def find_ostia(
     )
 
     if ostium_2 is None:
-        print("⚠️ AVISO: Segundo óstio não encontrado. Retornando None para a coronária direita.")
+        print(
+            "⚠️ AVISO: Segundo óstio não encontrado. Retornando None para a coronária direita."
+        )
         return ostium_1.copy(), None
 
     ostia_left, ostia_right = _classify_left_right(ostium_1, ostium_2)

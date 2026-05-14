@@ -2,14 +2,15 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
+from typing import Any, Optional
 
 
 def compare_shared_bad_cases(
-    df_mid,
-    df_high,
-    subset_label,
-    dice_threshold=0.30,
-):
+    df_mid: Optional[pd.DataFrame],
+    df_high: Optional[pd.DataFrame],
+    subset_label: str,
+    dice_threshold: float = 0.30,
+) -> Optional[dict]:
     """Compara casos ruins compartilhados entre resultados mid e high."""
     if df_mid is None or df_high is None or df_mid.empty or df_high.empty:
         return None
@@ -77,12 +78,12 @@ def compare_shared_bad_cases(
 
 
 def plot_bad_dice_indicator(
-    df_mid_bad,
-    df_high_bad,
-    subset_label,
-    summarize_bad_dice_fn,
-    dice_threshold=0.3,
-):
+    df_mid_bad: Optional[pd.DataFrame],
+    df_high_bad: Optional[pd.DataFrame],
+    subset_label: str,
+    summarize_bad_dice_fn: Any,
+    dice_threshold: float = 0.3,
+) -> pd.DataFrame:
     """Plot Dice indicator for bad cases with and without low-dice successful ostia."""
     mid_stats = summarize_bad_dice_fn(df_mid_bad, dice_threshold=dice_threshold)
     high_stats = summarize_bad_dice_fn(df_high_bad, dice_threshold=dice_threshold)
@@ -158,7 +159,7 @@ def plot_bad_dice_indicator(
     return indicator_df
 
 
-def change_status_label_for_plot(status):
+def change_status_label_for_plot(status: Any) -> str:
     """Normaliza rótulos de status para visualização em gráfico."""
     status = str(status)
     if "erro" in status.lower():
@@ -168,7 +169,13 @@ def change_status_label_for_plot(status):
     return status.lower()
 
 
-def plot_bad_cases_by_subset(df_mid, df_high, df_mid_bad, df_high_bad, subset_label):
+def plot_bad_cases_by_subset(
+    df_mid: Optional[pd.DataFrame],
+    df_high: Optional[pd.DataFrame],
+    df_mid_bad: Optional[pd.DataFrame],
+    df_high_bad: Optional[pd.DataFrame],
+    subset_label: str,
+) -> None:
     """Plota distribuição de status dos casos ruins por subconjunto."""
     fig, axes = plt.subplots(1, 2, figsize=(14, 5))
 

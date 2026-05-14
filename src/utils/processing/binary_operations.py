@@ -8,6 +8,8 @@ disponível.
 
 import numpy as np
 import scipy.ndimage as ndi
+from typing import Any, Optional, Tuple
+from numpy.typing import NDArray
 
 from .gpu_utils import (
     to_gpu,
@@ -22,7 +24,11 @@ from .gpu_utils import (
 # =============================================================================
 
 
-def binary_closing(mask, structure=None, gpu=None):
+def binary_closing(
+    mask: NDArray[Any],
+    structure: Optional[NDArray[Any]] = None,
+    gpu: Optional[bool] = None,
+) -> NDArray[np.uint8]:
     """
     Binary closing com suporte automático a GPU.
 
@@ -71,7 +77,11 @@ def binary_closing(mask, structure=None, gpu=None):
         return ndi.binary_closing(mask, structure=structure).astype(np.uint8)
 
 
-def binary_dilation(mask, structure=None, gpu=None):
+def binary_dilation(
+    mask: NDArray[Any],
+    structure: Optional[NDArray[Any]] = None,
+    gpu: Optional[bool] = None,
+) -> NDArray[np.uint8]:
     """
     Binary dilation com suporte automático a GPU.
 
@@ -115,7 +125,11 @@ def binary_dilation(mask, structure=None, gpu=None):
         return ndi.binary_dilation(mask, structure=structure).astype(np.uint8)
 
 
-def binary_erosion(mask, structure=None, gpu=None):
+def binary_erosion(
+    mask: NDArray[Any],
+    structure: Optional[NDArray[Any]] = None,
+    gpu: Optional[bool] = None,
+) -> NDArray[np.uint8]:
     """
     Binary erosion com suporte automático a GPU.
 
@@ -164,7 +178,7 @@ def binary_erosion(mask, structure=None, gpu=None):
 # =============================================================================
 
 
-def label(mask, gpu=None):
+def label(mask: NDArray[Any], gpu: Optional[bool] = None) -> Tuple[NDArray[Any], int]:
     """
     Connected components labeling com suporte automático a GPU.
 
@@ -203,7 +217,9 @@ def label(mask, gpu=None):
         return ndi.label(mask)
 
 
-def keep_largest_component(mask, gpu=None):
+def keep_largest_component(
+    mask: NDArray[Any], gpu: Optional[bool] = None
+) -> NDArray[np.uint8]:
     """
     Mantém apenas o maior componente conectado da máscara binária.
 
@@ -257,7 +273,11 @@ def keep_largest_component(mask, gpu=None):
     return (labeled == largest_label).astype(np.uint8)
 
 
-def binary_opening(input, structure=None, gpu=None):
+def binary_opening(
+    input: NDArray[Any],
+    structure: Optional[NDArray[Any]] = None,
+    gpu: Optional[bool] = None,
+) -> NDArray[np.uint8]:
     """
     Abertura binária: erosão seguida de dilatação.
 
@@ -309,4 +329,3 @@ def binary_opening(input, structure=None, gpu=None):
     else:
         # CPU version
         return ndi.binary_opening(input, structure=structure).astype(np.uint8)
-

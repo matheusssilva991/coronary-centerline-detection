@@ -7,6 +7,8 @@ de artérias coronárias a partir de volumes de vesselness.
 from collections import deque
 
 import numpy as np
+from typing import Any, Deque, Iterable, Optional, Sequence, Tuple
+from numpy.typing import NDArray
 
 
 NEIGHBORS_26 = [
@@ -18,7 +20,9 @@ NEIGHBORS_26 = [
 ]
 
 
-def _validate_seed(seed_point, volume_shape):
+def _validate_seed(
+    seed_point: Sequence[int], volume_shape: Sequence[int]
+) -> Optional[Tuple[int, int, int]]:
     """Valida se a semente está dentro dos limites do volume."""
     sy, sx, sz = map(int, seed_point)
     height, width, depth = volume_shape
@@ -29,8 +33,12 @@ def _validate_seed(seed_point, volume_shape):
 
 
 def _calculate_adaptive_floor(
-    count, min_start, min_end, switch_at_voxels, smooth_relaxation
-):
+    count: int,
+    min_start: float,
+    min_end: float,
+    switch_at_voxels: int,
+    smooth_relaxation: bool,
+) -> float:
     """Calcula o piso adaptativo usado na aceitação de vizinhos."""
     if count >= switch_at_voxels:
         return min_end
@@ -42,13 +50,13 @@ def _calculate_adaptive_floor(
 
 
 def _calculate_comparison_mean(
-    comparison_window,
-    use_running_mean,
-    current_value,
-    running_sum,
-    running_count,
-    value_history,
-):
+    comparison_window: int,
+    use_running_mean: bool,
+    current_value: float,
+    running_sum: float,
+    running_count: int,
+    value_history: Optional[Deque[float]],
+) -> float:
     """Calcula a média de referência para comparar novos voxels."""
     if comparison_window == 1:
         return current_value
@@ -57,7 +65,9 @@ def _calculate_comparison_mean(
     return np.mean(value_history)
 
 
-def _is_neighbor_acceptable(neighbor_val, comparison_mean, current_floor, threshold):
+def _is_neighbor_acceptable(
+    neighbor_val: float, comparison_mean: float, current_floor: float, threshold: float
+) -> bool:
     """Verifica se um voxel vizinho atende aos critérios de inclusão."""
     if neighbor_val < current_floor:
         return False
@@ -66,7 +76,11 @@ def _is_neighbor_acceptable(neighbor_val, comparison_mean, current_floor, thresh
     return True
 
 
-def _initialize_seed_region(vesselness_map, seeds, min_vesselness=None):
+def _initialize_seed_region(
+    vesselness_map: NDArray[Any],
+    seeds: Iterable[Sequence[int]],
+    min_vesselness: Optional[float] = None,
+):
     """Inicializa máscara, visitados e fila a partir das sementes válidas."""
     mask = np.zeros_like(vesselness_map, dtype=bool)
     visited = np.zeros_like(vesselness_map, dtype=bool)
@@ -97,17 +111,17 @@ def _initialize_seed_region(vesselness_map, seeds, min_vesselness=None):
 
 
 def region_growing_segmentation(
-    vesselness_map,
-    seed_point,
-    threshold=None,
-    min_vesselness=None,
-    max_volume=100000,
-    relaxed_floor_factor=0.40,
-    switch_at_voxels=1000,
-    comparison_window=1,
-    smooth_relaxation=False,
-    verbose=False,
-):
+    vesselness_map: NDArray[Any],
+    seed_point: Sequence[int],
+    threshold: Optional[float] = None,
+    min_vesselness: Optional[float] = None,
+    max_volume: int = 100000,
+    relaxed_floor_factor: float = 0.40,
+    switch_at_voxels: int = 1000,
+    comparison_window: int = 1,
+    smooth_relaxation: bool = False,
+    verbose: bool = False,
+) -> NDArray[Any]:
     """Segmenta vasos por crescimento de região com controle adaptativo."""
     height, width, depth = vesselness_map.shape
     v_max, v_min = np.max(vesselness_map), np.min(vesselness_map)
@@ -216,8 +230,12 @@ def region_growing_segmentation(
 
 
 def region_growing_article(
-    vesselness_map, seeds, threshold=None, min_vesselness=None, max_volume=None
-):
+    vesselness_map: NDArray[Any],
+    seeds: Iterable[Sequence[int]],
+    threshold: Optional[float] = None,
+    min_vesselness: Optional[float] = None,
+    max_volume: Optional[int] = None,
+) -> NDArray[Any]:
     """Executa variante de crescimento de região baseada no método do artigo."""
     if threshold is None:
         threshold = (vesselness_map.max() - vesselness_map.min()) / 10.0

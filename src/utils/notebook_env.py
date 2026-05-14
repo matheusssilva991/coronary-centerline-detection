@@ -7,8 +7,12 @@ import sys
 from pathlib import Path
 
 
-def configure_notebook_environment():
-    """Add src to sys.path and switch cwd to the src directory."""
+def configure_notebook_environment() -> Path:
+    """Add src to sys.path and switch cwd to the src directory.
+
+    Returns:
+        Path to the repository root.
+    """
     repo_root = Path(__file__).resolve().parents[2]
     src_dir = repo_root / "src"
 

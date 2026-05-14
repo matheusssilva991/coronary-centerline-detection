@@ -2,10 +2,18 @@
 
 import json
 import os
+from typing import Any, Dict
 
 
-def load_json_file(path: str) -> dict:
-    """Carrega um arquivo JSON com validação e mensagens de erro claras."""
+def load_json_file(path: str) -> Dict[str, Any]:
+    """Carrega um arquivo JSON com validação e mensagens de erro claras.
+
+    Args:
+        path: Caminho para o arquivo JSON.
+
+    Returns:
+        Dicionário representando o conteúdo JSON.
+    """
     if not os.path.exists(path):
         raise FileNotFoundError(f"Arquivo JSON não encontrado: {path}")
     if os.path.isdir(path):
@@ -32,7 +40,7 @@ def load_json_file(path: str) -> dict:
 
 
 def save_json_file(
-    data: dict, path: str, indent: int = 2, ensure_ascii: bool = False
+    data: Dict[str, Any], path: str, indent: int = 2, ensure_ascii: bool = False
 ) -> None:
     """Salva dados de dicionário em JSON, criando diretórios quando necessário."""
     directory = os.path.dirname(path)

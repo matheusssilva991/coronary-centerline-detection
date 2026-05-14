@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
+from typing import Any, Optional
 
 try:
     import plotly.graph_objects as go
@@ -13,7 +14,9 @@ except Exception:
 from ..comparison_utils.ia_math import prettify_method_label
 
 
-def plot_comparison_bar_by_resolution(agg, resolution, comparison_title=None):
+def plot_comparison_bar_by_resolution(
+    agg: pd.DataFrame, resolution: str, comparison_title: Optional[str] = None
+) -> None:
     """Plota comparação de Dice por método para uma resolução alvo."""
     # Filtra somente a resolução solicitada.
     subset = agg[agg["target_resolution"] == resolution].copy()
@@ -81,8 +84,8 @@ def plot_comparison_bar_by_resolution(agg, resolution, comparison_title=None):
 
 
 def plot_image_dice_scatter_by_resolution(
-    comparison_df, resolution, comparison_title=None
-):
+    comparison_df: pd.DataFrame, resolution: str, comparison_title: Optional[str] = None
+) -> None:
     """Plota Dice por imagem para IA e método matemático no mesmo eixo X."""
     subset = comparison_df[comparison_df["target_resolution"] == resolution].copy()
     if subset.empty:
@@ -137,8 +140,8 @@ def plot_image_dice_scatter_by_resolution(
 
 
 def plot_ia_vs_math_scatter_by_resolution(
-    comparison_df, resolution, comparison_title=None
-):
+    comparison_df: pd.DataFrame, resolution: str, comparison_title: Optional[str] = None
+) -> None:
     """Plota Dice da IA versus Dice do método matemático por imagem."""
     subset = comparison_df[comparison_df["target_resolution"] == resolution].copy()
     if subset.empty:
@@ -175,8 +178,8 @@ def plot_ia_vs_math_scatter_by_resolution(
 
 
 def plot_image_dice_scatter_interactive(
-    comparison_df, resolution, comparison_title=None
-):
+    comparison_df: pd.DataFrame, resolution: str, comparison_title: Optional[str] = None
+) -> None:
     """Interactive per-image scatter (IA and Math) using Plotly.
 
     Hover shows `img_id`, dice and method.
@@ -238,8 +241,8 @@ def plot_image_dice_scatter_interactive(
 
 
 def plot_ia_vs_math_scatter_interactive(
-    comparison_df, resolution, comparison_title=None
-):
+    comparison_df: pd.DataFrame, resolution: str, comparison_title: Optional[str] = None
+) -> None:
     """Interactive IA vs Math scatter using Plotly.
 
     Hover shows `img_id` plus methods and scores.
@@ -278,7 +281,9 @@ def plot_ia_vs_math_scatter_interactive(
     fig.show()
 
 
-def plot_dice_distribution_by_subset(df_mid, df_high, subset_label):
+def plot_dice_distribution_by_subset(
+    df_mid: Optional[pd.DataFrame], df_high: Optional[pd.DataFrame], subset_label: str
+) -> None:
     """Plota distribuição dos Dice scores para mid e high por subconjunto."""
     # Mostra histogramas de Dice para Mid e High no mesmo painel.
     fig, axes = plt.subplots(1, 2, figsize=(14, 5))

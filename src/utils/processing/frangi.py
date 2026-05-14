@@ -2,6 +2,8 @@ import numpy as np
 from skimage.filters import ridges, gaussian
 import os
 import pickle
+from typing import Any, Optional, Sequence
+from numpy.typing import NDArray
 
 # Importa utilitários de GPU centralizados
 from .gpu_utils import (
@@ -23,7 +25,7 @@ if GPU_AVAILABLE:
         gpu_filters = None
 
 
-def get_gf(image_volume):
+def get_gf(image_volume: NDArray[Any]) -> NDArray[Any]:
     """
     Calcula a medida de grayness (Gf) baseada na Equação (7) do artigo.
     Funciona com NumPy ou CuPy arrays.
@@ -51,7 +53,7 @@ def get_gf(image_volume):
     return gf
 
 
-def get_gd(image_volume):
+def get_gd(image_volume: NDArray[Any]) -> NDArray[Any]:
     """
     Calcula a medida de gradiente (Gd).
     Funciona com NumPy ou CuPy arrays.
@@ -81,15 +83,15 @@ def get_gd(image_volume):
 
 
 def get_vesselness(
-    image,
-    sigmas=np.arange(1.0, 4.0, 0.5),
-    alpha=0.5,
-    beta=0.5,
-    gamma=None,
-    black_ridges=False,
-    normalization="none",
-    gpu=None,
-):
+    image: Any,
+    sigmas: Sequence[float] = np.arange(1.0, 4.0, 0.5),
+    alpha: float = 0.5,
+    beta: float = 0.5,
+    gamma: Optional[float] = None,
+    black_ridges: bool = False,
+    normalization: str = "none",
+    gpu: Optional[bool] = None,
+) -> NDArray[Any]:
     """
     Calcula o mapa de vesselness usando o filtro de Frangi.
     Usa GPU se disponível, caso contrário usa CPU.
@@ -173,14 +175,14 @@ def get_vesselness(
 
 
 def get_vesselness_optimized(
-    image,
-    sigmas=np.arange(1.0, 4.0, 0.5),
-    alpha=0.5,
-    beta=0.5,
-    normalization="none",
-    smooth_sigma=1.0,
-    gpu=None,
-):
+    image: Any,
+    sigmas: Sequence[float] = np.arange(1.0, 4.0, 0.5),
+    alpha: float = 0.5,
+    beta: float = 0.5,
+    normalization: str = "none",
+    smooth_sigma: float = 1.0,
+    gpu: Optional[bool] = None,
+) -> NDArray[Any]:
     """
     Pipeline otimizado com pré-processamento e medidas auxiliares.
     Usa GPU se disponível, caso contrário usa CPU.
@@ -269,7 +271,9 @@ def get_vesselness_optimized(
         return modified_vesselness
 
 
-def save_vesselness_cache(vesselness_i, img_id, cache_dir="../cache"):
+def save_vesselness_cache(
+    vesselness_i: Any, img_id: Any, cache_dir: str = "../cache"
+) -> None:
     """
     Salva o mapa de vesselness em cache.
     Converte para NumPy se necessário.
@@ -287,7 +291,9 @@ def save_vesselness_cache(vesselness_i, img_id, cache_dir="../cache"):
         pickle.dump(vesselness_i, f)
 
 
-def load_vesselness_cache(img_id, cache_dir="../cache"):
+def load_vesselness_cache(
+    img_id: Any, cache_dir: str = "../cache"
+) -> Optional[NDArray[Any]]:
     """
     Carrega o mapa de vesselness do cache se disponível.
 
