@@ -113,7 +113,7 @@ CONFIG = {
     },
     # Detecção de Óstios
     "OSTIA_DETECTION": {
-        "top_n": 10000,
+        "top_n": 2000,
         "max_z_diff_mm": 40.0,
         "lower_fraction": 0.80,
         "min_center_distance_factor": 0.85,
@@ -335,17 +335,42 @@ def run_pipeline(ids, split_name, config=CONFIG, output_dir=None, resume_from_ba
             print(f"🔄 Retomando a partir do lote {resume_from_batch}...")
             missing_batches = []
             for batch_num in range(0, resume_from_batch):
-                batch_csv_path = os.path.join(
+                # Tentar variantes de nome de arquivo criadas por save_results
+                # Possíveis saídas: ostios_{split}_lote_{n}_summary.csv
+                #                 ostios_{split}_lote_{n}.csv
+                candidate1 = os.path.join(
+                    output_dir, f"ostios_{split_name}_lote_{batch_num + 1}_summary.csv"
+                )
+                candidate2 = os.path.join(
                     output_dir, f"ostios_{split_name}_lote_{batch_num + 1}.csv"
                 )
-                if os.path.exists(batch_csv_path):
-                    df_batch = pd.read_csv(batch_csv_path)
+
+                # Glob fallback (qualquer arquivo que comece com ostios_{split}_lote_{n})
+                import glob
+
+                pattern = os.path.join(
+                    output_dir, f"ostios_{split_name}_lote_{batch_num + 1}*.csv"
+                )
+
+                found_path = None
+                for p in (candidate1, candidate2):
+                    if os.path.exists(p):
+                        found_path = p
+                        break
+
+                if not found_path:
+                    matches = sorted(glob.glob(pattern))
+                    if matches:
+                        found_path = matches[0]
+
+                if found_path:
+                    df_batch = pd.read_csv(found_path)
                     # Converter DataFrame para lista de dicts (formato dos resultados)
                     batch_data = df_batch.to_dict("records")
                     all_results.extend(batch_data)
                     batches_processed.append(batch_num + 1)
                     print(
-                        f"   ✓ Lote {batch_num + 1} carregado ({len(batch_data)} registros)"
+                        f"   ✓ Lote {batch_num + 1} carregado ({len(batch_data)} registros) (arquivo: {os.path.basename(found_path)})"
                     )
                 else:
                     missing_batches.append(batch_num + 1)
