@@ -209,6 +209,85 @@ def detect_initial_circle(
     }
 
 
+def get_initial_circle_diagnostics(
+    img_slice,
+    hough_radii,
+    quadrant_offset=(30, 30),
+    total_num_peaks_initial=10,
+    canny_sigma=3,
+    neighbor_distance_threshold=5,
+):
+    """Retorna o círculo inicial, os candidatos da fatia e o círculo refinado."""
+    accums, cx, cy, radii = _detect_circles_in_slice(
+        img_slice, hough_radii, total_num_peaks_initial, canny_sigma
+    )
+
+    initial_circle = detect_initial_circle(
+        img_slice,
+        hough_radii,
+        quadrant_offset=quadrant_offset,
+        total_num_peaks=total_num_peaks_initial,
+        canny_sigma=canny_sigma,
+    )
+
+    if initial_circle is None or len(accums) == 0:
+        return {
+            "initial_circle": None,
+            "refined_circle": None,
+            "candidates": [],
+            "refinement_candidates": [],
+        }
+
+    refinement_candidates = []
+    for idx in range(len(cx)):
+        dist = _calculate_distance(
+            cx[idx], cy[idx], initial_circle["center_x"], initial_circle["center_y"]
+        )
+        candidate = {
+            "center_x": float(cx[idx]),
+            "center_y": float(cy[idx]),
+            "radius": float(radii[idx]),
+            "accum": float(accums[idx]),
+        }
+        if dist <= neighbor_distance_threshold:
+            refinement_candidates.append(candidate)
+
+    refined_x, refined_y, refined_radius = refine_circle_with_neighbors(
+        cx,
+        cy,
+        radii,
+        initial_circle["center_x"],
+        initial_circle["center_y"],
+        distance_threshold=neighbor_distance_threshold,
+    )
+
+    refined_circle = {
+        "center_x": float(refined_x),
+        "center_y": float(refined_y),
+        "radius": float(refined_radius)
+        if refined_radius is not None
+        else float(initial_circle["radius"]),
+        "accum": float(initial_circle["accum"]),
+    }
+
+    candidates = [
+        {
+            "center_x": float(cx[idx]),
+            "center_y": float(cy[idx]),
+            "radius": float(radii[idx]),
+            "accum": float(accums[idx]),
+        }
+        for idx in range(len(cx))
+    ]
+
+    return {
+        "initial_circle": initial_circle,
+        "refined_circle": refined_circle,
+        "candidates": candidates,
+        "refinement_candidates": refinement_candidates,
+    }
+
+
 def refine_circle_with_neighbors(cx, cy, radii, ref_x, ref_y, distance_threshold=5):
     """Refina centro e raio pela média dos círculos vizinhos próximos."""
     nearest_circles = []
@@ -309,5 +388,6 @@ def detect_aorta_circles(
 __all__ = [
     "detect_aorta_circles",
     "detect_initial_circle",
+    "get_initial_circle_diagnostics",
     "refine_circle_with_neighbors",
 ]

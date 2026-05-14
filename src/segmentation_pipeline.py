@@ -89,8 +89,8 @@ CONFIG = {
     },
     # Detecção de Círculos (Transformada de Hough)
     "CIRCLE_DETECTION": {
-        "radii_start_px": 36,
-        "radii_end_px": 62,
+        "radii_start_px": 18,
+        "radii_end_px": 31,
         "radius_step_px": 1,
         "tol_radius_mm": 9.0,
         "tol_distance_mm": 20.0,

@@ -121,9 +121,9 @@ def get_or_detect_aorta_circles(
             return json.load(file_handle)
 
     dx, dy, _ = scaled_spacing
-    radii_start = circle_config["radii_start_px"] / downscale_factors[0]
-    radii_end = circle_config["radii_end_px"] / downscale_factors[0]
-    radius_step = circle_config.get("radius_step_px", 1) / downscale_factors[0]
+    radii_start = circle_config["radii_start_px"]
+    radii_end = circle_config["radii_end_px"]
+    radius_step = circle_config.get("radius_step_px", 1)
     hough_radii = np.arange(radii_start, radii_end, radius_step)
     pixel_spacing = (dx + dy) / 2.0
 
@@ -264,13 +264,19 @@ def segment_arteries_from_ostia(
     }
 
     left_mask = (
-        region_growing_segmentation(vesselness_artery, seed_point=ostia_left, **region_growing_params)
-        if ostia_left is not None else np.zeros_like(vesselness_artery, dtype=np.uint8)
+        region_growing_segmentation(
+            vesselness_artery, seed_point=ostia_left, **region_growing_params
+        )
+        if ostia_left is not None
+        else np.zeros_like(vesselness_artery, dtype=np.uint8)
     )
 
     right_mask = (
-        region_growing_segmentation(vesselness_artery, seed_point=ostia_right, **region_growing_params)
-        if ostia_right is not None else np.zeros_like(vesselness_artery, dtype=np.uint8)
+        region_growing_segmentation(
+            vesselness_artery, seed_point=ostia_right, **region_growing_params
+        )
+        if ostia_right is not None
+        else np.zeros_like(vesselness_artery, dtype=np.uint8)
     )
 
     artery_mask = (left_mask + right_mask).astype(np.uint8)

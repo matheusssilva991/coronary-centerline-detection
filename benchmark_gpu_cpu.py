@@ -47,6 +47,7 @@ try:
 except Exception:
     cp = None
 
+
 def bytes_to_mb(value):
     return float(value) / (1024.0 * 1024.0)
 
@@ -131,7 +132,11 @@ def print_stage_table(rows):
 
     for row in rows:
         gpu_used = "-" if row["gpu_used_mb"] is None else f"{row['gpu_used_mb']:.1f}"
-        gpu_delta = "-" if row["gpu_used_delta_mb"] is None else f"{row['gpu_used_delta_mb']:+.1f}"
+        gpu_delta = (
+            "-"
+            if row["gpu_used_delta_mb"] is None
+            else f"{row['gpu_used_delta_mb']:+.1f}"
+        )
         gpu_pool = "-" if row["gpu_pool_mb"] is None else f"{row['gpu_pool_mb']:.1f}"
         print(
             f"{row['stage'][:32]:32s} {row['time_s']:10.3f} {row['cpu_peak_mb']:14.1f} "
@@ -141,7 +146,9 @@ def print_stage_table(rows):
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Benchmark do pipeline completo de extração de artéria")
+    parser = argparse.ArgumentParser(
+        description="Benchmark do pipeline completo de extração de artéria"
+    )
     parser.add_argument("--img-id", type=int, default=1, help="ID da imagem do dataset")
     parser.add_argument(
         "--base-path",
@@ -157,14 +164,23 @@ def parse_args():
         default=None,
     )
     parser.add_argument("--max-threshold-percentile", type=float, default=None)
-    parser.add_argument("--config-file", type=str, default=None, help="Arquivo JSON de configuração")
-    parser.add_argument("--save-config", type=str, default=None, help="Salva configuração efetiva em JSON")
+    parser.add_argument(
+        "--config-file", type=str, default=None, help="Arquivo JSON de configuração"
+    )
+    parser.add_argument(
+        "--save-config",
+        type=str,
+        default=None,
+        help="Salva configuração efetiva em JSON",
+    )
     parser.add_argument(
         "--strict-ostia-gate",
         action="store_true",
         help="Se ligado, só segmenta artéria quando ambos os óstios forem corretos/toleráveis",
     )
-    parser.add_argument("--save-json", type=str, default=None, help="Salva relatório em JSON")
+    parser.add_argument(
+        "--save-json", type=str, default=None, help="Salva relatório em JSON"
+    )
     return parser.parse_args()
 
 
@@ -191,8 +207,8 @@ def main():
             "gamma": 55,
         },
         "CIRCLE_DETECTION": {
-            "radii_start_px": 38,
-            "radii_end_px": 62,
+            "radii_start_px": 18,
+            "radii_end_px": 31,
             "radius_step_px": 1,
             "tol_radius_mm": 9.0,
             "tol_distance_mm": 20.0,
@@ -329,10 +345,11 @@ def main():
 
     # 4) Detecção de círculos da aorta
     circle_config = config["CIRCLE_DETECTION"]
+    # Os raios já estão escalados em scale_config_to_resolution()
     hough_radii = np.arange(
-        circle_config["radii_start_px"] / config["DOWNSCALE_FACTORS"][0],
-        circle_config["radii_end_px"] / config["DOWNSCALE_FACTORS"][0],
-        circle_config.get("radius_step_px", 1) / config["DOWNSCALE_FACTORS"][0],
+        circle_config["radii_start_px"],
+        circle_config["radii_end_px"],
+        circle_config.get("radius_step_px", 1),
     )
     pixel_spacing = (dx + dy) / 2.0
 
@@ -355,7 +372,9 @@ def main():
     )
 
     if len(detected_circles) == 0:
-        raise RuntimeError("Nenhum círculo da aorta detectado. Não foi possível continuar o pipeline.")
+        raise RuntimeError(
+            "Nenhum círculo da aorta detectado. Não foi possível continuar o pipeline."
+        )
 
     # 5) Segmentação da aorta
     ls_config = config["LEVEL_SET"]
@@ -377,7 +396,9 @@ def main():
         ls_config["leak_removal_radius"],
     )
 
-    aorta_mask = profiler.run("keep_largest_component", keep_largest_component, aorta_mask)
+    aorta_mask = profiler.run(
+        "keep_largest_component", keep_largest_component, aorta_mask
+    )
     aorta_mask = aorta_mask.astype(np.uint8)
 
     # 6) Detecção de óstios
@@ -418,9 +439,8 @@ def main():
     tolerable = config["TOLERABLE_DISTANCE_MM"]
     both_correct = left_info["intersects"] and right_info["intersects"]
     both_tolerable = (
-        (left_info["intersects"] or left_info["physical_dist"] <= tolerable)
-        and (right_info["intersects"] or right_info["physical_dist"] <= tolerable)
-    )
+        left_info["intersects"] or left_info["physical_dist"] <= tolerable
+    ) and (right_info["intersects"] or right_info["physical_dist"] <= tolerable)
 
     should_run_artery = True
     if args.strict_ostia_gate:
@@ -446,7 +466,8 @@ def main():
         # 9) Region growing (esquerda e direita)
         rg = config["REGION_GROWING"]
         rg_params = {
-            "threshold": (vesselness_artery.max() - vesselness_artery.min()) / rg["threshold_divisor"],
+            "threshold": (vesselness_artery.max() - vesselness_artery.min())
+            / rg["threshold_divisor"],
             "max_volume": rg["max_volume"],
             "min_vesselness": vesselness_artery.max() * rg["min_vesselness_fraction"],
             "relaxed_floor_factor": rg["relaxed_floor_factor"],
@@ -471,7 +492,12 @@ def main():
             **rg_params,
         )
 
-        artery_mask = profiler.run("merge_artery_masks", lambda a, b: (a + b).astype(np.uint8), left_mask, right_mask)
+        artery_mask = profiler.run(
+            "merge_artery_masks",
+            lambda a, b: (a + b).astype(np.uint8),
+            left_mask,
+            right_mask,
+        )
 
         # 10) Pós-processamento morfológico
         post = config["POSTPROCESSING"]
@@ -516,7 +542,9 @@ def main():
         print(f"Voxels de artéria: {int(np.sum(artery_mask))}")
         print(f"Dice artéria: {float(dice):.5f}")
     else:
-        print("Segmentação de artéria não executada (strict-ostia-gate ativo e óstios fora do critério).")
+        print(
+            "Segmentação de artéria não executada (strict-ostia-gate ativo e óstios fora do critério)."
+        )
 
     if args.save_json:
         report = {
@@ -533,7 +561,9 @@ def main():
                 "ostia_right": tuple(map(int, ostia_right)),
                 "both_correct": bool(both_correct),
                 "both_tolerable": bool(both_tolerable),
-                "artery_voxels": None if artery_mask is None else int(np.sum(artery_mask)),
+                "artery_voxels": None
+                if artery_mask is None
+                else int(np.sum(artery_mask)),
                 "dice_artery": None if dice is None else float(dice),
             },
         }

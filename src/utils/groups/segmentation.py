@@ -18,6 +18,7 @@ _SYMBOL_TO_MODULE = {
     "detect_aorta_circles": "aorta_localization",
     "detect_initial_circle": "aorta_localization",
     "refine_circle_with_neighbors": "aorta_localization",
+    "get_initial_circle_diagnostics": "aorta_localization",
     # pipeline_steps
     "detect_and_evaluate_ostia": "pipeline_steps",
     "get_or_compute_vesselness": "pipeline_steps",
