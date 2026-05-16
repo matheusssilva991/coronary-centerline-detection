@@ -12,7 +12,8 @@
     "MAX_THRESHOLD_PERCENTILE": 99.7,
     "VESSELNESS_AORTA": {
         "sigmas": [
-            2.5
+            2.5,
+            3.5
         ],
         "black_ridges": false,
         "alpha": 0.5,
@@ -82,5 +83,6 @@
     "POSTPROCESSING": {
         "closing_radius": 3,
         "dilation_radius": 2
-    }
+    },
+    "NUM_BATCHES": 5
 }

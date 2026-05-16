@@ -310,6 +310,9 @@ from segmentation_pipeline import run_pipeline
 # Processar múltiplas imagens
 ids = [1, 2, 3, 4, 134, 195]
 results = run_pipeline(ids, split_name="train")
+
+# O pipeline divide automaticamente os IDs em num_batches lotes
+# (padrão: num_batches=5)
 ```
 
 ### Notebooks Jupyter
@@ -358,70 +361,29 @@ Os resultados são salvos em:
 
 ### Parâmetros Principais
 
-Edite [segmentation_pipeline.py](src/segmentation_pipeline.py) para ajustar:
+Edite [config/pipeline_config.json](config/pipeline_config.json) para ajustar:
+
+```text
+Os ajustes mais importantes agora são:
+
+- `NUM_BATCHES`: número de lotes em que o conjunto é dividido; o padrão é `5`
+- `USE_GPU`: ativa/desativa uso de GPU
+- `LOAD_CACHE` e `SAVE_CACHE`: controle de cache dos intermediários
+- `DOWNSCALE_METHOD` e `DOWNSCALE_FACTORS`: controle do pré-processamento
+- `CIRCLE_DETECTION`, `LEVEL_SET`, `OSTIA_DETECTION`, `REGION_GROWING`: hiperparâmetros das etapas do pipeline
+- `POSTPROCESSING`: refinamento final da máscara
+
+Se precisar ajustar os valores técnicos com mais detalhe, altere apenas o JSON e mantenha o código do pipeline estável.
+```
+
+### Exemplo rápido de lote
 
 ```python
-# ==================== Caminhos ====================
-base_path = "/media/matheus/HD/DatasetsCCTA/ImageCAS"
-base_save_path = "/media/matheus/HD/DatasetsCCTA/Processed_ImageCAS"
+from segmentation_pipeline import run_pipeline
 
-# ==================== Cache ====================
-LOAD_CACHE = False  # True para usar resultados salvos (desenvolvimento)
-
-# ==================== Pré-processamento ====================
-downscale_factors = (2, 2, 1)  # (x, y, z) - reduz xy por 2, mantém z
-min_threshold = -300           # HU mínimo
-max_threshold_percentile = 99.7 # Percentil para threshold superior
-lcc_per_slice = True           # Aplicar LCC por fatia (2D) ou 3D
-
-# ==================== Vesselness - Pass 1 (Aorta) ====================
-sigmas = np.arange(2.5, 3.5, 1)  # Escalas para estruturas grandes
-alpha = 0.5   # Tubular vs Plano
-beta = 1.0    # Tubo vs Blob
-gamma = 30    # Sensibilidade ao contraste
-
-# ==================== Vesselness - Pass 2 (Artérias) ====================
-sigmas = np.arange(1.5, 2.5, 0.5)  # Escalas menores
-alpha = 0.5
-beta = 0.5
-gamma = 55    # Maior sensibilidade
-
-# ==================== Transformada de Hough ====================
-radii_start = 36  # mm - raio mínimo da aorta
-radii_end = 62    # mm - raio máximo da aorta
-tol_radius_mm = 9.0              # Tolerância de variação de raio
-tol_distance_mm = 18.0           # Tolerância de distância entre centros
-max_slice_miss_threshold = 5     # Máx. fatias sem detecção
-total_num_peaks_initial = 10     # Círculos na primeira fatia
-total_num_peaks = 15             # Círculos nas demais fatias
-canny_sigma = 3                  # Sigma do filtro Canny
-
-# ==================== Level Set (Segmentação Aorta) ====================
-radius_reduction_factor = 0.15   # Redução do raio inicial (85%)
-num_iter = 31                    # Iterações do algoritmo
-balloon = 0.8                    # Força de expansão
-smoothing = 2                    # Suavização do contorno
-
-# ==================== Detecção de Óstios ====================
-top_n = 2000                     # Top candidatos com maior vesselness
-max_z_diff = 52                  # Diferença máxima em z entre óstios
-lower_fraction = 0.80            # Região inferior da aorta (80%)
-min_center_distance_factor = 0.70  # Distância mínima entre óstios
-min_lateral_factor = 0.50        # Separação lateral mínima
-erosion_radius = 4               # Erosão para extrair superfície
-
-# ==================== Region Growing (Artérias) ====================
-threshold = (vesselness_max - vesselness_min) / 5  # Threshold adaptativo
-max_volume = 100000              # Voxels máximos (limite de vazamento)
-min_vesselness = vesselness_max * 0.078  # Piso mínimo
-relaxed_floor_factor = 0.97      # Fator de relaxamento
-switch_at_voxels = 2000          # Quando relaxar critério
-comparison_window = 1            # Janela de comparação
-smooth_relaxation = True         # Relaxamento suave
-
-# ==================== Pós-processamento ====================
-closing_radius = 3               # Raio do fechamento morfológico
-dilation_radius = 2              # Raio da dilatação
+ids = [1, 2, 3, 4, 134, 195]
+results = run_pipeline(ids, split_name="train")
+# O número de lotes é definido em config/pipeline_config.json via NUM_BATCHES
 ```
 
 ## 📈 Estado Atual do Projeto

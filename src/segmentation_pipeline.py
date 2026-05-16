@@ -4,14 +4,11 @@
 # Biblioteca padrão
 import argparse
 import os
-import time
 import copy
-
-# Terceiros - Processamento Numérico
-import numpy as np
+import logging
+from pathlib import Path
 
 # Terceiros - Machine Learning
-from tqdm import tqdm
 import pandas as pd
 
 # Usa GPU 1 por padrão quando a variável não for definida externamente.
@@ -21,19 +18,16 @@ os.environ.setdefault("CUDA_VISIBLE_DEVICES", "1")
 from utils import (
     use_gpu,
     load_config_json,
-    scale_config_to_resolution,
     get_data_splits,
     create_timestamped_output_dir,
     make_result_dataframe,
     merge_batch_results,
-    save_results,
     save_metadata,
-    load_and_preprocess_image,
-    get_or_compute_vesselness,
-    get_or_detect_aorta_circles,
-    get_or_segment_aorta,
-    detect_and_evaluate_ostia,
-    segment_arteries_from_ostia,
+)
+from utils.segmentation.pipeline_orchestration import (
+    parse_resume_batches,
+    print_statistics,
+    run_pipeline,
 )
 
 
@@ -42,440 +36,46 @@ from utils import (
 # ============================================================================
 
 # Informações sobre aceleração GPU
+logger = logging.getLogger(__name__)
+# Formato de logging mais rico: timestamp, nível, logger, arquivo:linha
+LOG_FORMAT = "%(asctime)s %(levelname)s %(name)s [%(filename)s:%(lineno)d] %(message)s"
+logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
+
 GPU_ENABLED = use_gpu()
 if GPU_ENABLED:
-    print("✓ GPU detectada! Operações aceleradas por GPU ativadas.")
-    print("  - Binary morphology operations (closing, dilation)")
-    print("  - Connected components labeling")
-    print("  - Image downscaling")
+    logger.info("GPU detectada! Operações aceleradas por GPU ativadas.")
 else:
-    print("⚠ GPU não disponível. Acelerações CPU usadas.")
+    logger.warning("GPU não disponível. Acelerações CPU usadas.")
 
-# Caminhos padrão
-# BASE_PATH = "/media/matheus/HD/DatasetsCCTA/ImageCAS/1-1000"
-BASE_PATH = "/data04/home/mpmaia/ImageCAS/database/1-1000"
-BASE_SAVE_PATH = "/media/matheus/HD/DatasetsCCTA/Processed_ImageCAS"
-OUTPUT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "output"))
+# Caminhos padrão (usar pathlib)
+# BASE_PATH = Path("/media/matheus/HD/DatasetsCCTA/ImageCAS/1-1000")
+BASE_PATH = Path("/data04/home/mpmaia/ImageCAS/database/1-1000")
+BASE_SAVE_PATH = Path("/media/matheus/HD/DatasetsCCTA/Processed_ImageCAS")
+OUTPUT_DIR = Path(__file__).resolve().parent.parent / "output"
 
-# Parâmetros de processamento padrão
-CONFIG = {
-    # GPU acceleration
-    "USE_GPU": GPU_ENABLED,
-    # Cache
-    "LOAD_CACHE": False,
-    "SAVE_CACHE": False,
-    # Downscaling (com GPU quando possível)
-    "DOWNSCALE_METHOD": "scipy",  # "scipy" ou "opencv" (GPU automática se disponível)
-    "OPENCV_INTERPOLATION": "area",  # "nearest", "linear", "cubic", "area", "lanczos4"
-    "DOWNSCALE_FACTORS": (2, 2, 1),
-    "MAX_THRESHOLD_PERCENTILE": 99.7,
-    # Vesselness - Detecção de Óstios (Aorta)
-    "VESSELNESS_AORTA": {
-        "sigmas": np.arange(2.5, 3.5, 1),
-        "black_ridges": False,
-        "alpha": 0.5,
-        "beta": 1,
-        "gamma": 30,
-        "normalization": "none",
-    },
-    # Vesselness - Segmentação de Artérias
-    "VESSELNESS_ARTERY": {
-        "sigmas": np.arange(1.5, 3.5, 0.5),
-        "black_ridges": False,
-        "alpha": 0.5,
-        "beta": 0.5,
-        "gamma": 55,
-        "normalization": "none",
-    },
-    # Detecção de Círculos (Transformada de Hough)
-    "CIRCLE_DETECTION": {
-        "radii_start_px": 18,
-        "radii_end_px": 31,
-        "radius_step_px": 1,
-        "tol_radius_mm": 9.0,
-        "tol_distance_mm": 20.0,
-        "quadrant_offset": (30, 30),
-        "max_slice_miss_threshold": 5,
-        "neighbor_distance_threshold": 5,
-        "total_num_peaks_initial": 15,
-        "total_num_peaks": 15,
-        "canny_sigma": 3,
-        "use_local_roi": True,
-        "local_roi_padding": 30,
-    },
-    # Level Set Segmentation
-    "LEVEL_SET": {
-        "radius_reduction_factor": 0.15,
-        "num_iter": 31,
-        "balloon": 0.8,
-        "smoothing": 2,
-        "leak_removal_radius": 2,
-    },
-    # Detecção de Óstios
-    "OSTIA_DETECTION": {
-        "top_n": 2000,
-        "max_z_diff_mm": 40.0,
-        "lower_fraction": 0.80,
-        "min_center_distance_factor": 0.85,
-        "min_lateral_factor": 0.4,
-        "erosion_radius": 4,
-    },
-    # Validação de óstios
-    "OSTIA_VALIDATION": {
-        "distance_threshold_mm": 8.0,
-    },
-    # Region Growing - Segmentação de Artérias
-    "REGION_GROWING": {
-        "max_volume": 100000,
-        "switch_at_voxels": 2000,
-        "min_vesselness_fraction": 0.078,
-        "threshold_divisor": 7,
-        "relaxed_floor_factor": 0.98,
-        "comparison_window": 1,
-        "smooth_relaxation": True,
-        "verbose": False,
-    },
-    # Pós-processamento (Closing e Dilation)
-    "POSTPROCESSING": {
-        "closing_radius": 3,
-        "dilation_radius": 2,
-    },
-    # Processamento em Lotes
-    "BATCH_SIZE": None,  # None = processar todas, ou número inteiro para lotes (ex: 10)
-}
+# Carregar apenas pipeline_config.json (usuário)
+pipeline_config_path = (
+    Path(__file__).resolve().parent.parent / "config" / "pipeline_config.json"
+)
+try:
+    CONFIG = load_config_json(str(pipeline_config_path), {})
+    logger.info(f"Config carregada de pipeline_config.json: {pipeline_config_path}")
+except Exception as e:
+    logger.warning(
+        f"Falha ao carregar {pipeline_config_path}: {e}. Usando defaults mínimos."
+    )
+    CONFIG = {
+        "USE_GPU": GPU_ENABLED,
+        "NUM_BATCHES": 5,
+    }
 
 # ============================================================================
 # CONFIGURAÇÕES POR RESOLUÇÃO
 # ============================================================================
-# MID RESOLUTION (padrão): Downscale 2x em X e Y, mantém Z
+# MID/HIGH configs: permitir sobreposição via deepcopy
 CONFIG_MID_RES = copy.deepcopy(CONFIG)
-
-# HIGH RESOLUTION: Mantém resolução original (sem downscale)
 CONFIG_HIGH_RES = copy.deepcopy(CONFIG)
-CONFIG_HIGH_RES["DOWNSCALE_FACTORS"] = (1, 1, 1)
-
-# ============================================================================
-# PROCESSAMENTO DE IMAGEM
-# ============================================================================
-
-
-def process_image(IMG_ID, config=CONFIG):
-    """
-    Processa uma imagem completa: pré-processamento, segmentação de aorta,
-    detecção de óstios e segmentação de artérias.
-
-    Args:
-        IMG_ID: ID da imagem a processar
-        config: Dicionário de configurações
-
-    Returns:
-        dict: Resultados do processamento
-    """
-    result = {
-        "IMG_ID": IMG_ID,
-        "ostia_left": None,
-        "ostia_right": None,
-        "artery_voxels": None,
-        "dice_artery": None,
-        "ostia_found": False,
-        "ostia_status": "not_evaluated",
-        "segmentation_attempted": False,
-        "proceeded_with_bad_ostia": False,
-        "skip_reason": None,
-        "ostia_error": None,
-        "left_intersects": False,
-        "right_intersects": False,
-        "left_dist_voxels": None,
-        "right_dist_voxels": None,
-        "left_dist_mm": None,
-        "right_dist_mm": None,
-        "both_correct": False,
-        "both_tolerable": False,
-    }
-
-    try:
-        image_data = load_and_preprocess_image(IMG_ID, BASE_PATH, config)
-        lcc_image = image_data["lcc_image"]
-        label = image_data["label"]
-        scaled_spacing = image_data["scaled_spacing"]
-        downscale_factors = image_data["downscale_factors"]
-
-        image_data = None  # Liberar memória
-
-        vesselness_ostios = get_or_compute_vesselness(
-            IMG_ID,
-            lcc_image,
-            cache_dir=f"{BASE_SAVE_PATH}/vesselness_ostios_cache",
-            vesselness_config=config["VESSELNESS_AORTA"],
-            load_cache=config["LOAD_CACHE"],
-            save_cache=config["SAVE_CACHE"],
-        )
-
-        detected_circles = get_or_detect_aorta_circles(
-            IMG_ID,
-            lcc_image,
-            downscale_factors,
-            scaled_spacing,
-            config["CIRCLE_DETECTION"],
-            BASE_SAVE_PATH,
-            load_cache=config["LOAD_CACHE"],
-            save_cache=config["SAVE_CACHE"],
-        )
-
-        aorta_mask = get_or_segment_aorta(
-            IMG_ID,
-            lcc_image,
-            detected_circles,
-            config["LEVEL_SET"],
-            BASE_SAVE_PATH,
-            load_cache=config["LOAD_CACHE"],
-            save_cache=config["SAVE_CACHE"],
-        )
-
-        try:
-            ostia_eval = detect_and_evaluate_ostia(
-                aorta_mask,
-                vesselness_ostios,
-                label,
-                scaled_spacing,
-                config,
-            )
-
-            del aorta_mask  # Liberar memória
-        except ValueError as ostia_exc:
-            result["ostia_status"] = "not_found"
-            result["ostia_error"] = str(ostia_exc)
-            result["skip_reason"] = "ostia_not_found"
-            result["dice_artery"] = 0.0
-            return result
-
-        result["ostia_left"] = (
-            tuple(map(int, ostia_eval["ostia_left"]))
-            if ostia_eval["ostia_left"] is not None
-            else None
-        )
-        result["ostia_right"] = (
-            tuple(map(int, ostia_eval["ostia_right"]))
-            if ostia_eval["ostia_right"] is not None
-            else None
-        )
-        result["ostia_found"] = True
-        result["left_intersects"] = ostia_eval["left_info"]["intersects"]
-        result["right_intersects"] = ostia_eval["right_info"]["intersects"]
-        result["left_dist_voxels"] = ostia_eval["left_info"]["euclidean_dist"]
-        result["right_dist_voxels"] = ostia_eval["right_info"]["euclidean_dist"]
-        result["left_dist_mm"] = ostia_eval["left_info"]["physical_dist"]
-        result["right_dist_mm"] = ostia_eval["right_info"]["physical_dist"]
-        result["both_correct"] = ostia_eval["both_correct"]
-        result["both_tolerable"] = ostia_eval["both_tolerable"]
-
-        if result["both_correct"]:
-            result["ostia_status"] = "both_correct"
-        elif result["both_tolerable"]:
-            result["ostia_status"] = "both_tolerable"
-        else:
-            result["ostia_status"] = "found_but_wrong"
-
-        is_bad_ostia = not (result["both_correct"] or result["both_tolerable"])
-
-        if is_bad_ostia:
-            result["proceeded_with_bad_ostia"] = True
-
-        result["segmentation_attempted"] = True
-        artery_metrics = segment_arteries_from_ostia(
-            IMG_ID,
-            lcc_image,
-            ostia_eval["label_artery"],
-            ostia_eval["ostia_left"],
-            ostia_eval["ostia_right"],
-            config,
-            BASE_SAVE_PATH,
-        )
-        result.update(artery_metrics)
-
-    except Exception as e:
-        result["error"] = str(e)
-
-    return result
-
-
-def run_pipeline(ids, split_name, config=CONFIG, output_dir=None, resume_from_batch=0):
-    """
-    Processa um conjunto de imagens, opcionalmente em lotes com salvamento incremental.
-
-    Args:
-        ids: Lista de IDs das imagens
-        split_name: Nome do conjunto (train, val, test)
-        config: Dicionário de configurações
-        output_dir: Diretório de saída para salvamento incremental (se None, retorna tudo ao final)
-        resume_from_batch: Número do lote para retomar (0 = começar do início)
-
-    Returns:
-        dict: Dicionário com lista de resultados, tempo de execução e info de lotes
-    """
-    start_time = time.time()
-
-    # Escalar parâmetros em voxels uma vez para toda a execução
-    scaled_config = scale_config_to_resolution(config)
-
-    batch_size = config.get("BATCH_SIZE")
-    all_results = []
-    batches_processed = []
-
-    # Se não há batch_size definido ou output_dir não fornecido, processar tudo de uma vez
-    if batch_size is None or output_dir is None:
-        for img_id in tqdm(ids, desc=f"Processando {split_name}"):
-            all_results.append(process_image(img_id, scaled_config))
-    else:
-        # Processar em lotes com salvamento incremental
-        num_batches = (len(ids) + batch_size - 1) // batch_size
-
-        # Se retomando, carregar lotes anteriores
-        if resume_from_batch > 0:
-            print(f"🔄 Retomando a partir do lote {resume_from_batch}...")
-            missing_batches = []
-            for batch_num in range(0, resume_from_batch):
-                # Tentar variantes de nome de arquivo criadas por save_results
-                # Possíveis saídas: ostios_{split}_lote_{n}_summary.csv
-                #                 ostios_{split}_lote_{n}.csv
-                candidate1 = os.path.join(
-                    output_dir, f"ostios_{split_name}_lote_{batch_num + 1}_summary.csv"
-                )
-                candidate2 = os.path.join(
-                    output_dir, f"ostios_{split_name}_lote_{batch_num + 1}.csv"
-                )
-
-                # Glob fallback (qualquer arquivo que comece com ostios_{split}_lote_{n})
-                import glob
-
-                pattern = os.path.join(
-                    output_dir, f"ostios_{split_name}_lote_{batch_num + 1}*.csv"
-                )
-
-                found_path = None
-                for p in (candidate1, candidate2):
-                    if os.path.exists(p):
-                        found_path = p
-                        break
-
-                if not found_path:
-                    matches = sorted(glob.glob(pattern))
-                    if matches:
-                        found_path = matches[0]
-
-                if found_path:
-                    df_batch = pd.read_csv(found_path)
-                    # Converter DataFrame para lista de dicts (formato dos resultados)
-                    batch_data = df_batch.to_dict("records")
-                    all_results.extend(batch_data)
-                    batches_processed.append(batch_num + 1)
-                    print(
-                        f"   ✓ Lote {batch_num + 1} carregado ({len(batch_data)} registros) (arquivo: {os.path.basename(found_path)})"
-                    )
-                else:
-                    missing_batches.append(batch_num + 1)
-
-            if missing_batches:
-                missing_list = ", ".join(str(batch) for batch in missing_batches)
-                raise FileNotFoundError(
-                    f"Não foi possível retomar o split '{split_name}': faltam os arquivos dos lotes {missing_list}. "
-                    "A retomada em batch exige os CSVs anteriores no mesmo diretório."
-                )
-
-        for batch_num in range(resume_from_batch, num_batches):
-            start_idx = batch_num * batch_size
-            end_idx = min((batch_num + 1) * batch_size, len(ids))
-            batch_ids = ids[start_idx:end_idx]
-
-            print(
-                f"\n📦 Processando lote {batch_num + 1}/{num_batches} ({len(batch_ids)} imagens)"
-            )
-            batch_results = []
-
-            for img_id in tqdm(
-                batch_ids, desc=f"Lote {batch_num + 1}/{num_batches}", leave=False
-            ):
-                batch_results.append(process_image(img_id, scaled_config))
-
-            all_results.extend(batch_results)
-            batches_processed.append(batch_num + 1)
-
-            # Salvar resultados intermediários
-            batch_output_path = save_results(
-                batch_results,
-                f"{split_name}_lote_{batch_num + 1}",
-                output_dir,
-                config=scaled_config,
-            )
-            print(f"✅ Lote {batch_num + 1} salvo: {batch_output_path}")
-
-    execution_time = time.time() - start_time
-
-    return {
-        "details": all_results,
-        "execution_time": execution_time,
-        "batches_processed": batches_processed,
-        "is_batched": batch_size is not None and output_dir is not None,
-    }
-
-
-# ============================================================================
-# FUNÇÕES AUXILIARES - PIPELINE
-# ============================================================================
-
-
-def print_statistics(train_ids, val_ids, test_ids, all_ids):
-    """Imprime estatísticas dos conjuntos de dados."""
-    print("\n" + "=" * 50)
-    print("ESTATÍSTICAS DOS CONJUNTOS")
-    print("=" * 50)
-    print(
-        f"Treino:    {len(train_ids):3d} imagens ({len(train_ids) / len(all_ids) * 100:5.1f}%)"
-    )
-    print(
-        f"Validação: {len(val_ids):3d} imagens ({len(val_ids) / len(all_ids) * 100:5.1f}%)"
-    )
-    print(
-        f"Teste:     {len(test_ids):3d} imagens ({len(test_ids) / len(all_ids) * 100:5.1f}%)"
-    )
-    print(f"Total:     {len(all_ids):3d} imagens")
-    print("=" * 50 + "\n")
-
-
-def parse_resume_batches(resume_batches_arg):
-    """Converte um argumento no formato 'train=1,val=0,test=3' em um dicionário."""
-    resume_map = {"train": 0, "val": 0, "test": 0}
-
-    if not resume_batches_arg:
-        return resume_map
-
-    entries = [
-        entry.strip() for entry in resume_batches_arg.split(",") if entry.strip()
-    ]
-    for entry in entries:
-        if "=" not in entry:
-            raise ValueError(
-                "Formato inválido para --resume-batches. Use algo como 'train=1,val=0,test=3'."
-            )
-
-        split_name, batch_text = entry.split("=", 1)
-        split_name = split_name.strip()
-        batch_text = batch_text.strip()
-
-        if split_name not in resume_map:
-            raise ValueError(
-                f"Split inválido em --resume-batches: {split_name}. Use train, val ou test."
-            )
-
-        try:
-            resume_map[split_name] = int(batch_text)
-        except ValueError as exc:
-            raise ValueError(
-                f"Valor inválido para o split '{split_name}' em --resume-batches: {batch_text}"
-            ) from exc
-
-    return resume_map
-
+CONFIG_HIGH_RES["DOWNSCALE_FACTORS"] = [1, 1, 1]
 
 # ============================================================================
 # FUNÇÃO PRINCIPAL
@@ -520,28 +120,28 @@ Exemplos de uso:
   python segmentation_pipeline.py --resolution mid --split val
 
   # PROCESSAMENTO EM LOTES (salvamento incremental):
-  # Processar 10 imagens por vez (salva cada lote, depois prossegue)
-  python segmentation_pipeline.py --batch-size 10
+    # Processar em 10 lotes (divide as imagens entre 10 blocos)
+    python segmentation_pipeline.py --num-batches 10
 
-  # Processar teste em lotes de 5 imagens
-  python segmentation_pipeline.py --split test --batch-size 5
+    # Processar teste em 5 lotes
+    python segmentation_pipeline.py --split test --num-batches 5
 
   # Combinar: teste em lotes com cache
-  python segmentation_pipeline.py --split test --batch-size 10 --cache
+    python segmentation_pipeline.py --split test --num-batches 10 --cache
 
   # RETOMADA DE LOTES (em caso de falha):
   # Primeira execução - cria novo diretório
-  python segmentation_pipeline.py --split test --batch-size 70
+    python segmentation_pipeline.py --split test --num-batches 70
   # Saída: output/segmentation/2026-03-14_10-30-00/
 
   # Se falhar no lote 3, retomar no MESMO diretório:
-  python segmentation_pipeline.py --split test --batch-size 70 --resume-batch 3 --resume-dir output/segmentation/2026-03-14_10-30-00
+    python segmentation_pipeline.py --split test --num-batches 70 --resume-batch 3 --resume-dir output/segmentation/2026-03-14_10-30-00
 
     # Retomada explícita por subset:
-    python segmentation_pipeline.py --split all --batch-size 70 --resume-batches train=0,val=3,test=0
+    python segmentation_pipeline.py --split all --num-batches 70 --resume-batches train=0,val=3,test=0
 
   # Versão curta (se no mesmo diretório):
-  python segmentation_pipeline.py --split test --batch-size 70 --resume-batch 3 --resume-dir ./output/segmentation/2026-03-14_10-30-00
+    python segmentation_pipeline.py --split test --num-batches 70 --resume-batch 3 --resume-dir ./output/segmentation/2026-03-14_10-30-00
 
 Arquivos de saída:
   - ostios_{split}_summary.csv: Resultados consolidados ao final (ou após merge)
@@ -607,10 +207,16 @@ Arquivos de saída:
     )
 
     parser.add_argument(
-        "--batch-size",
+        "--verbose",
+        action="store_true",
+        help="Habilitar logging detalhado (DEBUG)",
+    )
+
+    parser.add_argument(
+        "--num-batches",
         type=int,
-        default=None,
-        help="Tamanho do lote para processamento incremental com salvamento. Ex: 10 (processa 10 imagens, salva, depois mais 10, etc.)",
+        default=5,
+        help="Número de lotes para dividir o conjunto de imagens (ex: 5 divide as 700 imagens em 5 lotes)",
     )
 
     parser.add_argument(
@@ -635,6 +241,11 @@ Arquivos de saída:
     )
 
     args = parser.parse_args()
+
+    # Ajustar nível de logging se solicitado
+    if args.verbose:
+        logging.getLogger().setLevel(logging.DEBUG)
+        logger.debug("Logging verbose habilitado (DEBUG)")
 
     # Selecionar configuração baseada na resolução escolhida
     if args.resolution == "high":
@@ -680,13 +291,10 @@ Arquivos de saída:
         print(f"🔧 Método de downscale: {effective_config['DOWNSCALE_METHOD']}")
 
     # Configurar batch processing
-    if args.batch_size is not None:
-        effective_config["BATCH_SIZE"] = args.batch_size
-        print(f"📦 Processamento em lotes: {args.batch_size} imagens por lote")
-        if args.resume_batch > 0:
-            print(f"🔄 Retomando a partir do lote {args.resume_batch}")
-    else:
-        print("🔧 Processamento em imagem única (sem lotes)")
+    effective_config["NUM_BATCHES"] = args.num_batches
+    print(f"📦 Processamento em {args.num_batches} lotes")
+    if args.resume_batch > 0:
+        print(f"🔄 Retomando a partir do lote {args.resume_batch}")
 
     try:
         resume_batches_by_split = parse_resume_batches(args.resume_batches)
@@ -710,7 +318,7 @@ Arquivos de saída:
             print(f"\n📁 Usando diretório anterior: {timestamped_output_dir}\n")
         else:
             print(f"❌ Erro: Diretório não encontrado: {args.resume_dir}")
-            print(f"   Use --resume-dir com o caminho do diretório anterior")
+            print("   Use --resume-dir com o caminho do diretório anterior")
             exit(1)
     else:
         # Modo normal: criar novo diretório com timestamp
@@ -718,11 +326,22 @@ Arquivos de saída:
             args.output_dir, experiment_name="segmentation"
         )
         if args.resume_batch > 0:
-            print(f"⚠️  Dica: Para retomar no mesmo diretório, use:")
+            print("⚠️  Dica: Para retomar no mesmo diretório, use:")
             print(
                 f"   --resume-batch {args.resume_batch} --resume-dir {timestamped_output_dir}\n"
             )
         print(f"📁 Diretório de saída: {timestamped_output_dir}\n")
+
+    # Configurar FileHandler de logging no diretório de saída (debug)
+    try:
+        fh_path = Path(timestamped_output_dir) / "pipeline.log"
+        fh = logging.FileHandler(fh_path, encoding="utf-8")
+        fh.setLevel(logging.DEBUG)
+        fh.setFormatter(logging.Formatter(LOG_FORMAT))
+        logging.getLogger().addHandler(fh)
+        logger.info(f"Logs também serão gravados em: {fh_path}")
+    except Exception:
+        logger.warning("Não foi possível criar arquivo de log no diretório de saída.")
 
     # Obter splits de dados
     train_ids, val_ids, test_ids, all_ids = get_data_splits(BASE_PATH)
@@ -754,45 +373,45 @@ Arquivos de saída:
             ids,
             split_name,
             effective_config,
+            BASE_PATH,
+            BASE_SAVE_PATH,
             timestamped_output_dir,
             resume_from_batch=resume_batches_by_split.get(
                 split_name, args.resume_batch
             ),
         )
         execution_time = summary.get("execution_time")
-        is_batched = summary.get("is_batched", False)
 
-        # Salvar resultados CSV
-        if is_batched:
-            # Modo batch: mesclar todos os lotes em um arquivo final
-            print("\n🔄 Finalizando processamento em lotes...")
-            merge_batch_results(split_name, timestamped_output_dir)
+        # Salvar/conciliar resultados CSV
+        logger.info("Finalizando processamento em lotes...")
+        merge_batch_results(split_name, timestamped_output_dir)
+        output_path = Path(timestamped_output_dir) / f"ostios_{split_name}_summary.csv"
+        logger.info(f"Resumo final salvo em: {output_path}")
+
+        # Salvar metadados JSON (carregar detalhes do CSV se necessário)
+        if summary.get("details") is None:
+            details_for_metadata = pd.read_csv(output_path).to_dict("records")
         else:
-            # Modo normal: salvar resultado único
-            output_path = save_results(
-                summary["details"],
-                split_name,
-                timestamped_output_dir,
-                config=effective_config,
-            )
-            print(f"✅ Resumo CSV salvo em: {output_path}")
+            details_for_metadata = summary["details"]
 
-        # Salvar metadados JSON
         metadata_path = save_metadata(
             split_name,
             timestamped_output_dir,
             effective_config,
             ids,
-            summary["details"],
+            details_for_metadata,
             execution_time,
             base_path=BASE_PATH,
             base_save_path=BASE_SAVE_PATH,
             root_output_dir=OUTPUT_DIR,
         )
-        print(f"📊 Metadados salvos em: {metadata_path}")
+        logger.info(f"Metadados salvos em: {metadata_path}")
 
         # Estatísticas do conjunto
-        df = make_result_dataframe(summary["details"])
+        if summary.get("details") is None:
+            df = pd.read_csv(output_path)
+        else:
+            df = make_result_dataframe(summary["details"])
         if not df.empty:
             both_correct_series = df["both_correct"].fillna(False)
             both_tolerable_series = df["both_tolerable"].fillna(False)
