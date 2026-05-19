@@ -120,8 +120,7 @@ def scale_config_to_resolution(config, reference_downscale_xy=2):
 
     if "LEVEL_SET" in cfg:
         if factor_xy == 1:  # HIGH RESOLUTION (sem downscale)
-            # Mais iterações do level set para maior detalhe
-            cfg["LEVEL_SET"]["num_iter"] = 100
+            cfg["LEVEL_SET"]["num_iter"] = 72
 
     # Se não há scaling necessário, retorna configuração sem mudanças
     if scale == 1.0:
@@ -144,7 +143,7 @@ def scale_config_to_resolution(config, reference_downscale_xy=2):
 
     # Tolerância de distância entre detecções
     # Para HIGH RESOLUTION: aumenta a tolerância (multiplica)
-    cfg["CIRCLE_DETECTION"]["tol_distance_mm"] *= scale
+    # cfg["CIRCLE_DETECTION"]["tol_distance_mm"] *= scale
 
     # Offset de quadrante para restrição de busca
     qx, qy = cfg["CIRCLE_DETECTION"]["quadrant_offset"]
