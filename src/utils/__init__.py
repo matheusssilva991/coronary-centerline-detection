@@ -1,87 +1,80 @@
-"""
-Pacote utils para segmentação de artérias coronárias.
+"""Pacote utils para segmentação de artérias coronárias.
 
-Módulos disponíveis:
-- artery_segmentation: Segmentação de artérias coronárias
-- aorta_segmentation: Segmentação da aorta
-- aorta_localization: Localização e detecção de círculos na aorta
-- frangi: Filtro de Frangi para detecção de vasos
-- preprocessing: Pré-processamento de imagens
-- plots: Visualização de imagens e máscaras 3D
-- utils: Funções utilitárias diversas
+Os símbolos são carregados de forma preguiçosa para evitar imports caros ou
+cíclicos durante a inicialização do pacote.
 """
 
-from . import groups
-from .groups.io import (
-    create_timestamped_output_dir,
-    deep_update_dict,
-    dice_score,
-    extract_circular_region,
-    extract_square_region,
-    get_data_splits,
-    load_config_json,
-    load_img_and_label,
-    load_json_file,
-    load_raw_img_and_label,
-    make_result_dataframe,
-    merge_batch_results,
-    normalize_image,
-    normalize_runtime_config,
-    robust_normalize,
-    save_config_json,
-    save_json_file,
-    save_metadata,
-    save_nii_image,
-    save_npy_array,
-    save_results,
-    scale_config_to_resolution,
-    segment_by_hu,
-    serialize_config_for_json,
-)
-from .groups.processing import (
-    binary_closing,
-    binary_dilation,
-    binary_erosion,
-    binary_opening,
-    downscale_image,
-    downscale_image_ndi,
-    downscale_image_opencv,
-    get_array_module,
-    get_vesselness,
-    get_vesselness_optimized,
-    keep_largest_component,
-    label,
-    largest_connected_component,
-    load_vesselness_cache,
-    run_core_preprocessing_pipeline,
-    save_vesselness_cache,
-    threshold_image,
-    threshold_image_with_offset,
-    to_cpu,
-    to_gpu,
-    use_gpu,
-)
-from .groups.segmentation import (
-    calculate_robust_diameter,
-    check_ostium_intersection,
-    detect_and_evaluate_ostia,
-    detect_aorta_circles,
-    detect_initial_circle,
-    find_aorta_surface,
-    find_ostia,
-    get_or_compute_vesselness,
-    get_or_detect_aorta_circles,
-    get_or_segment_aorta,
-    get_initial_circle_diagnostics,
-    level_set_segmentation,
-    load_and_preprocess_image,
-    refine_circle_with_neighbors,
-    region_growing_article,
-    region_growing_segmentation,
-    remove_leaks_morphology,
-    segment_arteries_from_ostia,
-)
 from importlib import import_module
+
+_LAZY_EXPORTS = {
+    # Normalization
+    "normalize_image": ".utils.normalization",
+    "robust_normalize": ".utils.normalization",
+    # IO / config / results / metrics / nifti / geometry
+    "create_timestamped_output_dir": ".groups.io",
+    "deep_update_dict": ".groups.io",
+    "dice_score": ".groups.io",
+    "extract_circular_region": ".groups.io",
+    "extract_square_region": ".groups.io",
+    "get_data_splits": ".groups.io",
+    "load_config_json": ".groups.io",
+    "load_img_and_label": ".groups.io",
+    "load_json_file": ".groups.io",
+    "load_raw_img_and_label": ".groups.io",
+    "make_result_dataframe": ".groups.io",
+    "merge_batch_results": ".groups.io",
+    "normalize_runtime_config": ".groups.io",
+    "save_config_json": ".groups.io",
+    "save_json_file": ".groups.io",
+    "save_metadata": ".groups.io",
+    "save_nii_image": ".groups.io",
+    "save_npy_array": ".groups.io",
+    "save_results": ".groups.io",
+    "scale_config_to_resolution": ".groups.io",
+    "segment_by_hu": ".groups.io",
+    "serialize_config_for_json": ".groups.io",
+    # Processing / GPU / preprocessing
+    "binary_closing": ".groups.processing",
+    "binary_dilation": ".groups.processing",
+    "binary_erosion": ".groups.processing",
+    "binary_opening": ".groups.processing",
+    "downscale_image": ".groups.processing",
+    "downscale_image_ndi": ".groups.processing",
+    "downscale_image_opencv": ".groups.processing",
+    "get_array_module": ".groups.processing",
+    "get_vesselness": ".groups.processing",
+    "get_vesselness_optimized": ".groups.processing",
+    "keep_largest_component": ".groups.processing",
+    "label": ".groups.processing",
+    "largest_connected_component": ".groups.processing",
+    "load_vesselness_cache": ".groups.processing",
+    "run_core_preprocessing_pipeline": ".groups.processing",
+    "save_vesselness_cache": ".groups.processing",
+    "threshold_image": ".groups.processing",
+    "threshold_image_with_offset": ".groups.processing",
+    "to_cpu": ".groups.processing",
+    "to_gpu": ".groups.processing",
+    "use_gpu": ".groups.processing",
+    # Segmentation pipeline
+    "calculate_robust_diameter": ".groups.segmentation",
+    "check_ostium_intersection": ".groups.segmentation",
+    "detect_and_evaluate_ostia": ".groups.segmentation",
+    "detect_aorta_circles": ".groups.segmentation",
+    "detect_initial_circle": ".groups.segmentation",
+    "find_aorta_surface": ".groups.segmentation",
+    "find_ostia": ".groups.segmentation",
+    "get_or_compute_vesselness": ".groups.segmentation",
+    "get_or_detect_aorta_circles": ".groups.segmentation",
+    "get_or_segment_aorta": ".groups.segmentation",
+    "get_initial_circle_diagnostics": ".groups.segmentation",
+    "level_set_segmentation": ".groups.segmentation",
+    "load_and_preprocess_image": ".groups.segmentation",
+    "refine_circle_with_neighbors": ".groups.segmentation",
+    "region_growing_article": ".groups.segmentation",
+    "region_growing_segmentation": ".groups.segmentation",
+    "remove_leaks_morphology": ".groups.segmentation",
+    "segment_arteries_from_ostia": ".groups.segmentation",
+}
 
 _VISUALIZATION_EXPORTS = {
     "build_comparison_agg_df",
@@ -133,6 +126,15 @@ def __getattr__(name):
         value = getattr(module, name)
         globals()[name] = value
         return value
+    if name in _LAZY_EXPORTS:
+        module = import_module(_LAZY_EXPORTS[name], __name__)
+        value = getattr(module, name)
+        globals()[name] = value
+        return value
+    if name == "groups":
+        module = import_module(".groups", __name__)
+        globals()[name] = module
+        return module
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 

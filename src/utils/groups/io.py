@@ -25,8 +25,6 @@ _SYMBOL_TO_MODULE = {
     "load_img_and_label": "utils",
     "load_json_file": "utils",
     "load_raw_img_and_label": "utils",
-    "normalize_image": "utils",
-    "robust_normalize": "utils",
     "save_json_file": "utils",
     "save_nii_image": "utils",
     "save_npy_array": "utils",
@@ -37,7 +35,10 @@ _SYMBOL_TO_MODULE = {
 def __getattr__(name):
     if name in _SYMBOL_TO_MODULE:
         submodule = _SYMBOL_TO_MODULE[name]
-        module = import_module(f"utils.{submodule}")
+        # Import relative to the parent `utils` package to avoid circular
+        # absolute imports while the top-level package is still initializing.
+        parent_pkg = __package__.rpartition(".")[0] or __package__
+        module = import_module(f".{submodule}", parent_pkg)
         value = getattr(module, name)
         globals()[name] = value
         return value

@@ -114,6 +114,7 @@ def get_or_detect_aorta_circles(
     base_save_path: str,
     load_cache: bool = False,
     save_cache: bool = False,
+    use_gpu: bool = False,
 ) -> List[Dict[str, Any]]:
     """Carrega ou detecta círculos da aorta."""
     saved_dir_circles = f"{base_save_path}/detected_circles"
@@ -130,6 +131,9 @@ def get_or_detect_aorta_circles(
     hough_radii = np.arange(radii_start, radii_end, radius_step)
     pixel_spacing = (dx + dy) / 2.0
 
+    # Use explicit flag from caller (pipeline orchestration) — prefer global USE_GPU
+    use_gpu_circles = bool(use_gpu)
+
     detected_circles = detect_aorta_circles(
         lcc_image,
         hough_radii,
@@ -144,6 +148,7 @@ def get_or_detect_aorta_circles(
         canny_sigma=circle_config["canny_sigma"],
         use_local_roi=circle_config.get("use_local_roi", True),
         local_roi_padding=circle_config.get("local_roi_padding", 20),
+        use_gpu=use_gpu_circles,
     )
     if save_cache:
         os.makedirs(saved_dir_circles, exist_ok=True)
@@ -161,6 +166,7 @@ def get_or_segment_aorta(
     base_save_path: str,
     load_cache: bool = False,
     save_cache: bool = False,
+    use_gpu: bool = False,
 ) -> Any:
     """Carrega ou segmenta a aorta com level set + pós-processamento."""
     saved_dir_aorta = f"{base_save_path}/segmented_aorta"
@@ -176,6 +182,7 @@ def get_or_segment_aorta(
         num_iter=level_set_config["num_iter"],
         balloon=level_set_config["balloon"],
         smoothing=level_set_config["smoothing"],
+        use_gpu=bool(use_gpu),
     )
     aorta_mask = remove_leaks_morphology(
         mask_refined, radius=level_set_config["leak_removal_radius"]

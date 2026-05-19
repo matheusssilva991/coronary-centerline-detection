@@ -19,6 +19,9 @@ from numpy.typing import NDArray
 # Importa operação morfológica com suporte GPU
 from ..processing.binary_operations import binary_opening
 
+# GPU utilities (consistent style with binary_operations)
+from ..processing.gpu_utils import GPU_AVAILABLE, to_gpu, to_cpu, cu_ndi, cp
+
 
 # =============================================================================
 # Funções Auxiliares Privadas
@@ -156,6 +159,7 @@ def level_set_segmentation(
     use_roi: bool = True,
     alpha: float = 1000,
     sigma: float = 2,
+    use_gpu: bool = False,
 ) -> NDArray[Any]:
     """
     Segmenta a aorta usando Level Set 3D inicializado com círculos detectados.
@@ -245,7 +249,17 @@ def level_set_segmentation(
     )
 
     # Calcular gradiente inverso para guiar a evolução do contorno
-    gimage = inverse_gaussian_gradient(work_volume, alpha=alpha, sigma=sigma)
+    if use_gpu and GPU_AVAILABLE:
+        # compute inverse gaussian gradient on GPU and transfer once to CPU
+        vol_gpu = to_gpu(work_volume.astype(np.float32))
+        blurred = cu_ndi.gaussian_filter(vol_gpu, sigma=sigma)
+        gx = cu_ndi.sobel(blurred, axis=1)
+        gy = cu_ndi.sobel(blurred, axis=0)
+        gmag = cp.sqrt(gx ** 2 + gy ** 2)
+        g_gpu = 1.0 / (1.0 + alpha * (gmag ** 2))
+        gimage = to_cpu(g_gpu)
+    else:
+        gimage = inverse_gaussian_gradient(work_volume, alpha=alpha, sigma=sigma)
 
     # Aplicar segmentação por contorno ativo geodésico morfológico
     refined_segmentation = morphological_geodesic_active_contour(

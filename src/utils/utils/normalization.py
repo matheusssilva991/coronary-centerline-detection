@@ -3,6 +3,7 @@
 import numpy as np
 from typing import Any
 from numpy.typing import NDArray
+from ..processing.gpu_utils import get_array_module
 
 
 def normalize_image(img: NDArray[Any]) -> NDArray[Any]:
@@ -17,14 +18,7 @@ def robust_normalize(
     img: NDArray[Any], p_min: float = 0, p_max: float = 99.8
 ) -> NDArray[Any]:
     """Normaliza de forma robusta usando percentis para reduzir influência de outliers."""
-    try:
-        import cupy as cp
-
-        is_gpu = isinstance(img, cp.ndarray)
-    except ImportError:
-        is_gpu = False
-
-    xp = cp if is_gpu else np
+    xp = get_array_module(img)
 
     if img.size == 0:
         return img
