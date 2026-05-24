@@ -1,0 +1,36 @@
+IMG_ID,dice_artery,artery_voxels,ostia_found,ostia_status,segmentation_attempted,proceeded_with_bad_ostia,skip_reason,ostia_error,both_correct,both_tolerable,left_intersects,right_intersects,left_dist_mm,right_dist_mm,ostia_left,ostia_right,error,status,downscale_method,opencv_interpolation,downscale_factors,max_threshold_percentile
+679,0.0,,False,not_found,False,False,ostia_not_found,Nenhuma superfície de aorta encontrada!,False,False,False,False,,,,,,óstios não encontrados,scipy,N/A,"[1, 1, 1]",99.7
+598,0.6762214405576352,156288.0,True,both_correct,True,False,,,True,False,True,True,0.0,0.0,"(187, 335, 181)","(240, 258, 215)",,ambos corretos,scipy,N/A,"[1, 1, 1]",99.7
+962,0.4732259602812005,122448.0,True,both_correct,True,False,,,True,False,True,True,0.0,0.0,"(195, 343, 165)","(272, 241, 193)",,ambos corretos,scipy,N/A,"[1, 1, 1]",99.7
+25,0.705159238691917,189353.0,True,both_correct,True,False,,,True,False,True,True,0.0,0.0,"(192, 340, 182)","(248, 265, 219)",,ambos corretos,scipy,N/A,"[1, 1, 1]",99.7
+924,0.312301178861894,245141.0,True,found_but_wrong,True,True,,,False,False,False,True,8.29243146222289,0.0,"(187, 400, 226)","(271, 317, 246)",,um correto,scipy,N/A,"[1, 1, 1]",99.7
+574,0.5213033171635347,181274.0,True,both_tolerable,True,False,,,False,True,False,True,1.029961908617559,0.0,"(203, 264, 205)","(278, 195, 223)",,ambos toleráveis,scipy,N/A,"[1, 1, 1]",99.7
+84,0.33360340532565846,59702.0,True,found_but_wrong,True,True,,,False,False,False,True,10.065625197070977,0.0,"(176, 345, 160)","(233, 267, 168)",,um correto,scipy,N/A,"[1, 1, 1]",99.7
+986,0.5251698034016983,87426.0,True,found_but_wrong,True,True,,,False,False,False,True,13.4094732362291,0.0,"(144, 307, 172)","(216, 254, 204)",,um correto,scipy,N/A,"[1, 1, 1]",99.7
+833,0.2518050814878671,300889.0,True,found_but_wrong,True,True,,,False,False,True,False,0.0,40.76981050081917,"(208, 301, 130)","(95, 235, 181)",,um correto,scipy,N/A,"[1, 1, 1]",99.7
+176,0.571821852215806,148045.0,True,both_tolerable,True,False,,,False,True,False,True,1.2520323444125068,0.0,"(216, 329, 169)","(267, 265, 195)",,ambos toleráveis,scipy,N/A,"[1, 1, 1]",99.7
+488,0.6294764991496808,184847.0,True,both_correct,True,False,,,True,False,True,True,0.0,0.0,"(201, 325, 173)","(270, 254, 212)",,ambos corretos,scipy,N/A,"[1, 1, 1]",99.7
+264,0.4648201743549924,88590.0,True,both_correct,True,False,,,True,False,True,True,0.0,0.0,"(148, 310, 140)","(242, 224, 188)",,ambos corretos,scipy,N/A,"[1, 1, 1]",99.7
+98,0.5988876760746401,249526.0,True,both_tolerable,True,False,,,False,True,True,False,0.0,1.5761379914263782,"(193, 332, 162)","(235, 239, 187)",,ambos toleráveis,scipy,N/A,"[1, 1, 1]",99.7
+58,0.44732032659261367,69950.0,True,found_but_wrong,True,True,,,False,False,False,True,21.06251304014804,0.0,"(145, 360, 180)","(231, 276, 176)",,um correto,scipy,N/A,"[1, 1, 1]",99.7
+363,0.6030402841443794,177029.0,True,both_tolerable,True,False,,,False,True,False,True,1.1484375,0.0,"(205, 314, 191)","(227, 225, 219)",,ambos toleráveis,scipy,N/A,"[1, 1, 1]",99.7
+901,0.5332344470878322,214561.0,True,both_correct,True,False,,,True,False,True,True,0.0,0.0,"(162, 342, 201)","(269, 277, 239)",,ambos corretos,scipy,N/A,"[1, 1, 1]",99.7
+481,0.46544169048985784,79758.0,True,found_but_wrong,True,True,,,False,False,False,True,11.829975421844516,0.0,"(154, 371, 208)","(229, 295, 211)",,um correto,scipy,N/A,"[1, 1, 1]",99.7
+740,0.504708927094855,100852.0,True,both_tolerable,True,False,,,False,True,False,True,5.4798283437310165,0.0,"(181, 343, 175)","(268, 272, 209)",,ambos toleráveis,scipy,N/A,"[1, 1, 1]",99.7
+332,0.6608893276741288,223623.0,True,both_correct,True,False,,,True,False,True,True,0.0,0.0,"(191, 348, 176)","(287, 260, 216)",,ambos corretos,scipy,N/A,"[1, 1, 1]",99.7
+311,0.0,0.0,True,found_but_wrong,True,True,,,False,False,False,False,39.12759975778192,10.237020322486803,"(89, 319, 244)","(199, 260, 225)",,nenhum correto,scipy,N/A,"[1, 1, 1]",99.7
+601,0.6751397329676843,221753.0,True,both_correct,True,False,,,True,False,True,True,0.0,0.0,"(167, 342, 216)","(264, 246, 219)",,ambos corretos,scipy,N/A,"[1, 1, 1]",99.7
+623,0.5654559310496327,243432.0,True,both_tolerable,True,False,,,False,True,False,True,0.341796875,0.0,"(172, 343, 153)","(274, 272, 207)",,ambos toleráveis,scipy,N/A,"[1, 1, 1]",99.7
+5,0.6726585848194887,135720.0,True,both_correct,True,False,,,True,False,True,True,0.0,0.0,"(196, 339, 150)","(283, 265, 183)",,ambos corretos,scipy,N/A,"[1, 1, 1]",99.7
+88,0.6416171166977661,140855.0,True,both_correct,True,False,,,True,False,True,True,0.0,0.0,"(191, 336, 154)","(263, 247, 194)",,ambos corretos,scipy,N/A,"[1, 1, 1]",99.7
+819,0.7235938831208214,219841.0,True,both_correct,True,False,,,True,False,True,True,0.0,0.0,"(197, 312, 185)","(292, 233, 211)",,ambos corretos,scipy,N/A,"[1, 1, 1]",99.7
+638,0.38788946470612606,370994.0,True,both_correct,True,False,,,True,False,True,True,0.0,0.0,"(208, 280, 159)","(277, 198, 183)",,ambos corretos,scipy,N/A,"[1, 1, 1]",99.7
+863,0.6307552936945908,188720.0,True,both_correct,True,False,,,True,False,True,True,0.0,0.0,"(191, 325, 186)","(291, 244, 240)",,ambos corretos,scipy,N/A,"[1, 1, 1]",99.7
+337,0.5291496885935194,98749.0,True,both_correct,True,False,,,True,False,True,True,0.0,0.0,"(203, 330, 151)","(240, 228, 192)",,ambos corretos,scipy,N/A,"[1, 1, 1]",99.7
+995,0.585677290613334,103139.0,True,both_correct,True,False,,,True,False,True,True,0.0,0.0,"(136, 357, 173)","(229, 284, 215)",,ambos corretos,scipy,N/A,"[1, 1, 1]",99.7
+575,0.0,522.0,True,found_but_wrong,True,True,,,False,False,False,False,54.24705732952114,31.42841385269296,"(73, 326, 229)","(169, 253, 231)",,nenhum correto,scipy,N/A,"[1, 1, 1]",99.7
+148,0.631817708565734,180526.0,True,both_tolerable,True,False,,,False,True,False,True,0.8428928118309754,0.0,"(180, 313, 150)","(235, 246, 179)",,ambos toleráveis,scipy,N/A,"[1, 1, 1]",99.7
+206,0.0,,False,not_found,False,False,ostia_not_found,Nenhuma superfície de aorta encontrada!,False,False,False,False,,,,,,óstios não encontrados,scipy,N/A,"[1, 1, 1]",99.7
+292,0.41291939900264135,76017.0,True,found_but_wrong,True,True,,,False,False,False,True,22.476311314637464,0.0,"(157, 337, 254)","(230, 270, 217)",,um correto,scipy,N/A,"[1, 1, 1]",99.7
+120,0.0,,False,not_found,False,False,ostia_not_found,Nenhuma superfície de aorta encontrada!,False,False,False,False,,,,,,óstios não encontrados,scipy,N/A,"[1, 1, 1]",99.7
+163,0.44918374645517783,81373.0,True,found_but_wrong,True,True,,,False,False,False,True,16.577357009227285,0.0,"(132, 309, 215)","(215, 256, 214)",,um correto,scipy,N/A,"[1, 1, 1]",99.7
