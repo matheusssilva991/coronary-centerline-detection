@@ -34,15 +34,19 @@ def _extract_lower_region(
     surface_mask: NDArray[Any], lower_fraction: float = 0.3
 ) -> Tuple[NDArray[Any], int, int]:
     """Extrai a região inferior em z da superfície da aorta onde os óstios são esperados."""
+    if not 0 < lower_fraction <= 1:
+        raise ValueError("lower_fraction deve estar no intervalo (0, 1]")
+
     z_indices = np.where(np.any(surface_mask, axis=(0, 1)))[0]
     if len(z_indices) == 0:
         raise ValueError("Nenhuma superfície de aorta encontrada!")
 
     z_min, z_max = z_indices.min(), z_indices.max()
-    z_threshold = z_min + int((z_max - z_min) * lower_fraction)
+    z_stop = z_min + int((z_max - z_min) * lower_fraction)
+    z_stop = min(z_max + 1, max(z_min + 1, z_stop))
 
     lower_region_mask = np.zeros_like(surface_mask)
-    lower_region_mask[:, :, z_min:z_threshold] = surface_mask[:, :, z_min:z_threshold]
+    lower_region_mask[:, :, z_min:z_stop] = surface_mask[:, :, z_min:z_stop]
 
     return lower_region_mask, z_min, z_max
 
@@ -51,6 +55,9 @@ def _get_top_candidates(
     surface_mask: NDArray[Any], vesselness_map: NDArray[Any], top_n: int = 50
 ) -> NDArray[Any]:
     """Retorna os top-N candidatos de superfície ordenados por vesselness decrescente."""
+    if top_n <= 0:
+        raise ValueError("top_n deve ser maior que 0")
+
     surface_coords = np.argwhere(surface_mask > 0)
     if len(surface_coords) == 0:
         raise ValueError("Nenhum voxel encontrado na superfície!")
@@ -218,6 +225,7 @@ def find_ostia(
     min_center_distance_factor: float = 0.8,
     min_lateral_factor: float = 0.5,
     erosion_radius: int = 2,
+    verbose: bool = True,
 ) -> Tuple[NDArray[Any], Optional[NDArray[Any]]]:
     """Detecta óstios coronários esquerdo e direito a partir da superfície da aorta e do vesselness."""
     if aorta_mask.shape != vesselness_map.shape:
@@ -245,9 +253,10 @@ def find_ostia(
     )
 
     if ostium_2 is None:
-        print(
-            "⚠️ AVISO: Segundo óstio não encontrado. Retornando None para a coronária direita."
-        )
+        if verbose:
+            print(
+                "⚠️ AVISO: Segundo óstio não encontrado. Retornando None para a coronária direita."
+            )
         return ostium_1.copy(), None
 
     ostia_left, ostia_right = _classify_left_right(ostium_1, ostium_2)

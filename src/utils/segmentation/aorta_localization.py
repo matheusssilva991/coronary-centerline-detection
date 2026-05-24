@@ -14,9 +14,7 @@ from numpy.typing import NDArray
 from ..processing.gpu_utils import GPU_AVAILABLE, to_gpu, to_cpu, cu_ndi, cp
 
 
-def _calculate_distance(x1: float, y1: float, x2: float, y2: float) -> float:
-    """Calcula a distância euclidiana entre dois pontos 2D."""
-    return np.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
+OUT_OF_TOLERANCE = "out_of_tolerance"
 
 
 def _calculate_distances_vectorized(
@@ -157,6 +155,7 @@ def _process_slice(
     use_local_roi: bool = True,
     local_roi_padding: int = 20,
     use_gpu: bool = False,
+    verbose: bool = True,
 ) -> Optional[dict]:
     """Processa uma fatia e retorna o melhor círculo rastreado (evita detecção duplicada)."""
     ref_x = reference_circle["center_x"]
@@ -220,10 +219,11 @@ def _process_slice(
         radii[min_idx], min_dist, ref_radius, radius_tolerance, distance_tolerance
     ):
         slice_idx = reference_circle.get("slice_index", "N/A")
-        print(
-            f"Parada na fatia {slice_idx - 1}: Δr={abs(radii[min_idx] - ref_radius):.2f} ou dist={min_dist:.2f}"
-        )
-        return "out_of_tolerance"
+        if verbose:
+            print(
+                f"Parada na fatia {slice_idx - 1}: Δr={abs(radii[min_idx] - ref_radius):.2f} ou dist={min_dist:.2f}"
+            )
+        return OUT_OF_TOLERANCE
 
     cx_mean, cy_mean, radius_mean = refine_circle_with_neighbors(
         cx,
@@ -421,8 +421,16 @@ def detect_aorta_circles(
     use_local_roi: bool = True,
     local_roi_padding: int = 20,
     use_gpu: bool = False,
+    verbose: bool = True,
 ) -> list:
     """Detecta círculos da aorta ao longo do volume 3D fatia a fatia."""
+    if img_volume.ndim != 3:
+        raise ValueError(f"img_volume deve ser 3D, recebido shape={img_volume.shape}")
+    if len(hough_radii) == 0:
+        raise ValueError("hough_radii não pode ser vazio")
+    if pixel_spacing <= 0:
+        raise ValueError("pixel_spacing deve ser maior que 0")
+
     num_slices = img_volume.shape[2]
     first_slice_idx = num_slices - 1
 
@@ -439,7 +447,8 @@ def detect_aorta_circles(
     )
 
     if initial_circle is None:
-        print("Nenhum círculo inicial detectado.")
+        if verbose:
+            print("Nenhum círculo inicial detectado.")
         return []
 
     refined_initial = _process_initial_circle(
@@ -468,18 +477,20 @@ def detect_aorta_circles(
             use_local_roi,
             local_roi_padding,
             use_gpu=use_gpu,
+            verbose=verbose,
         )
 
         if result is None:
             miss_counter += 1
             if miss_counter >= max_slice_miss_threshold:
-                print(
-                    f"Parada: {max_slice_miss_threshold} fatias consecutivas sem detecção."
-                )
+                if verbose:
+                    print(
+                        f"Parada: {max_slice_miss_threshold} fatias consecutivas sem detecção."
+                    )
                 break
             continue
 
-        if result == "out_of_tolerance":
+        if result == OUT_OF_TOLERANCE:
             break
 
         detected_circles.append({"slice_index": slice_idx, **result})

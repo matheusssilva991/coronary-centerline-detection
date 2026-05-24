@@ -12,6 +12,7 @@ _LAZY_EXPORTS = {
     "robust_normalize": ".utils.normalization",
     # IO / config / results / metrics / nifti / geometry
     "create_timestamped_output_dir": ".groups.io",
+    "get_batch_result_file": ".groups.io",
     "deep_update_dict": ".groups.io",
     "dice_score": ".groups.io",
     "extract_circular_region": ".groups.io",
@@ -21,6 +22,7 @@ _LAZY_EXPORTS = {
     "load_img_and_label": ".groups.io",
     "load_json_file": ".groups.io",
     "load_raw_img_and_label": ".groups.io",
+    "list_batch_result_files": ".groups.io",
     "make_result_dataframe": ".groups.io",
     "merge_batch_results": ".groups.io",
     "normalize_runtime_config": ".groups.io",
@@ -176,6 +178,8 @@ __all__ = [
     "get_data_splits",
     # Results
     "create_timestamped_output_dir",
+    "get_batch_result_file",
+    "list_batch_result_files",
     "make_result_dataframe",
     "merge_batch_results",
     "save_results",

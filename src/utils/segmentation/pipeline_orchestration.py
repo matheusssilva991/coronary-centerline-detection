@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import glob
 import logging
 import math
 import time
@@ -11,15 +10,14 @@ from pathlib import Path
 import pandas as pd
 from tqdm import tqdm
 
-from ..groups.io import save_results, scale_config_to_resolution
-from .pipeline_steps import (
+from ..groups.io import get_batch_result_file, save_results, scale_config_to_resolution
+from .pipeline_arteries import segment_arteries_from_ostia
+from .pipeline_detection import (
     detect_and_evaluate_ostia,
-    get_or_compute_vesselness,
     get_or_detect_aorta_circles,
     get_or_segment_aorta,
-    load_and_preprocess_image,
-    segment_arteries_from_ostia,
 )
+from .pipeline_preprocessing import get_or_compute_vesselness, load_and_preprocess_image
 
 
 logger = logging.getLogger(__name__)
@@ -147,6 +145,7 @@ def process_image(img_id, config, base_path, base_save_path):
             config,
             base_save_path,
         )
+        artery_metrics.pop("artery_mask", None)
         result.update(artery_metrics)
 
     except Exception as exc:
@@ -168,9 +167,13 @@ def run_pipeline(
     start_time = time.time()
     scaled_config = scale_config_to_resolution(config)
 
+    if not ids:
+        raise ValueError(f"Nenhuma imagem encontrada para o split '{split_name}'.")
+
     num_batches = config.get("NUM_BATCHES") or 5
     if num_batches <= 0:
         num_batches = 5
+    num_batches = min(num_batches, len(ids))
     all_results = []
     batches_processed = []
     if output_dir is None:
@@ -179,28 +182,22 @@ def run_pipeline(
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     batch_size = max(1, math.ceil(len(ids) / num_batches))
+    if resume_from_batch < 0:
+        raise ValueError("resume_from_batch não pode ser negativo.")
+    if resume_from_batch > num_batches:
+        raise ValueError(
+            f"resume_from_batch={resume_from_batch} é maior que o total de lotes ({num_batches})."
+        )
+
+    start_batch_index = resume_from_batch - 1 if resume_from_batch > 0 else 0
 
     if resume_from_batch > 0:
         logger.info(f"Retomando a partir do lote {resume_from_batch}...")
         missing_batches = []
-        for batch_num in range(0, resume_from_batch):
-            candidate1 = (
-                output_dir / f"ostios_{split_name}_lote_{batch_num + 1}_summary.csv"
+        for batch_num in range(0, start_batch_index):
+            found_path = get_batch_result_file(
+                output_dir, split_name, batch_num + 1
             )
-            candidate2 = output_dir / f"ostios_{split_name}_lote_{batch_num + 1}.csv"
-
-            found_path = None
-            if candidate1.exists():
-                found_path = candidate1
-            elif candidate2.exists():
-                found_path = candidate2
-            else:
-                pattern = str(
-                    output_dir / f"ostios_{split_name}_lote_{batch_num + 1}*.csv"
-                )
-                matches = sorted(glob.glob(pattern))
-                if matches:
-                    found_path = Path(matches[0])
 
             if found_path:
                 df_batch = pd.read_csv(found_path)
@@ -219,7 +216,7 @@ def run_pipeline(
                 f"Não foi possível retomar o split '{split_name}': faltam os arquivos dos lotes {missing_list}. "
             )
 
-    for batch_num in range(resume_from_batch, num_batches):
+    for batch_num in range(start_batch_index, num_batches):
         start_idx = batch_num * batch_size
         end_idx = min((batch_num + 1) * batch_size, len(ids))
         batch_ids = ids[start_idx:end_idx]
@@ -256,56 +253,3 @@ def run_pipeline(
     }
 
     return result
-
-
-def print_statistics(train_ids, val_ids, test_ids, all_ids):
-    """Imprime estatísticas dos conjuntos de dados."""
-    print("\n" + "=" * 50)
-    print("ESTATÍSTICAS DOS CONJUNTOS")
-    print("=" * 50)
-    print(
-        f"Treino:    {len(train_ids):3d} imagens ({len(train_ids) / len(all_ids) * 100:5.1f}%)"
-    )
-    print(
-        f"Validação: {len(val_ids):3d} imagens ({len(val_ids) / len(all_ids) * 100:5.1f}%)"
-    )
-    print(
-        f"Teste:     {len(test_ids):3d} imagens ({len(test_ids) / len(all_ids) * 100:5.1f}%)"
-    )
-    print(f"Total:     {len(all_ids):3d} imagens")
-    print("=" * 50 + "\n")
-
-
-def parse_resume_batches(resume_batches_arg):
-    """Converte um argumento no formato 'train=1,val=0,test=3' em um dicionário."""
-    resume_map = {"train": 0, "val": 0, "test": 0}
-
-    if not resume_batches_arg:
-        return resume_map
-
-    entries = [
-        entry.strip() for entry in resume_batches_arg.split(",") if entry.strip()
-    ]
-    for entry in entries:
-        if "=" not in entry:
-            raise ValueError(
-                "Formato inválido para --resume-batches. Use algo como 'train=1,val=0,test=3'."
-            )
-
-        split_name, batch_text = entry.split("=", 1)
-        split_name = split_name.strip()
-        batch_text = batch_text.strip()
-
-        if split_name not in resume_map:
-            raise ValueError(
-                f"Split inválido em --resume-batches: {split_name}. Use train, val ou test."
-            )
-
-        try:
-            resume_map[split_name] = int(batch_text)
-        except ValueError as exc:
-            raise ValueError(
-                f"Valor inválido para o split '{split_name}' em --resume-batches: {batch_text}"
-            ) from exc
-
-    return resume_map

@@ -14,6 +14,8 @@ _SYMBOL_TO_MODULE = {
     "get_data_splits": "dataset_utils",
     # results_utils
     "create_timestamped_output_dir": "results_utils",
+    "get_batch_result_file": "results_utils",
+    "list_batch_result_files": "results_utils",
     "make_result_dataframe": "results_utils",
     "merge_batch_results": "results_utils",
     "save_metadata": "results_utils",

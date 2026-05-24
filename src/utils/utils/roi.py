@@ -1,7 +1,7 @@
 """Funções auxiliares para extração de regiões de interesse em volumes 3D."""
 
 import numpy as np
-from typing import Optional, Sequence, Tuple
+from typing import Optional, Tuple
 from numpy.typing import NDArray
 
 

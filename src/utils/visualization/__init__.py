@@ -20,20 +20,23 @@ _SYMBOL_TO_MODULE = {
     "plot_distance_distribution_by_subset": "segmentation_eda",
     "plot_status_distribution_by_subset": "segmentation_eda",
     "plot_success_error_by_subset": "segmentation_eda",
-    # images
-    "plot_preprocessing_grid": "images",
-    "plot_stage": "images",
-    "plot_mip_projection": "images",
-    "plot_slices": "images",
-    "visualize_circles_on_slices": "images",
-    "compute_vesselness_maps": "images",
-    "plot_vesselness_mip_grid": "images",
-    "plot_vesselness_mip": "images",
-    "plot_hough_initial_diagnostics": "images",
-    "plot_hough_initial_circle": "images",
-    "plot_hough_refinement_candidates": "images",
-    "plot_hough_refined_circle": "images",
-    "plot_spaced_detected_circles": "images",
+    # image_slices
+    "plot_mip_projection": "image_slices",
+    "plot_slices": "image_slices",
+    "visualize_circles_on_slices": "image_slices",
+    # preprocessing_views
+    "plot_preprocessing_grid": "preprocessing_views",
+    "plot_stage": "preprocessing_views",
+    # vesselness
+    "compute_vesselness_maps": "vesselness",
+    "plot_vesselness_mip_grid": "vesselness",
+    "plot_vesselness_mip": "vesselness",
+    # hough
+    "plot_hough_initial_diagnostics": "hough",
+    "plot_hough_initial_circle": "hough",
+    "plot_hough_refinement_candidates": "hough",
+    "plot_hough_refined_circle": "hough",
+    "plot_spaced_detected_circles": "hough",
     # subset
     "prepare_subset_plot_df": "subset",
     "plot_subset_metric_by_resolution": "subset",

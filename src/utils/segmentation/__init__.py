@@ -1,37 +1,40 @@
-"""Segmentation domain subpackage.
+"""Segmentation domain subpackage - public symbols loaded on demand."""
 
-Contains submodules for aorta localization/segmentation, ostia detection,
-artery segmentation and reusable pipeline steps.
-"""
+from importlib import import_module
 
-from .aorta_localization import *
-from .aorta_segmentation import *
-from .artery_segmentation import *
-from .ostia_detection import *
-from .pipeline_steps import *
+_SYMBOL_TO_MODULE = {
+    # ostia_detection
+    "calculate_robust_diameter": "ostia_detection",
+    "check_ostium_intersection": "ostia_detection",
+    "find_aorta_surface": "ostia_detection",
+    "find_ostia": "ostia_detection",
+    # artery_segmentation
+    "region_growing_article": "artery_segmentation",
+    "region_growing_segmentation": "artery_segmentation",
+    # aorta_segmentation
+    "level_set_segmentation": "aorta_segmentation",
+    "remove_leaks_morphology": "aorta_segmentation",
+    # aorta_localization
+    "detect_aorta_circles": "aorta_localization",
+    "detect_initial_circle": "aorta_localization",
+    "get_initial_circle_diagnostics": "aorta_localization",
+    "refine_circle_with_neighbors": "aorta_localization",
+    # pipeline modules
+    "detect_and_evaluate_ostia": "pipeline_detection",
+    "get_or_compute_vesselness": "pipeline_preprocessing",
+    "get_or_detect_aorta_circles": "pipeline_detection",
+    "get_or_segment_aorta": "pipeline_detection",
+    "load_and_preprocess_image": "pipeline_preprocessing",
+    "segment_arteries_from_ostia": "pipeline_arteries",
+}
 
-__all__ = [
-    # Ostia detection
-    "find_aorta_surface",
-    "calculate_robust_diameter",
-    "check_ostium_intersection",
-    "find_ostia",
-    # Artery segmentation
-    "region_growing_segmentation",
-    "region_growing_article",
-    # Aorta segmentation
-    "level_set_segmentation",
-    "remove_leaks_morphology",
-    # Aorta localization
-    "detect_initial_circle",
-    "get_initial_circle_diagnostics",
-    "refine_circle_with_neighbors",
-    "detect_aorta_circles",
-    # Pipeline steps
-    "load_and_preprocess_image",
-    "get_or_compute_vesselness",
-    "get_or_detect_aorta_circles",
-    "get_or_segment_aorta",
-    "detect_and_evaluate_ostia",
-    "segment_arteries_from_ostia",
-]
+__all__ = list(_SYMBOL_TO_MODULE)
+
+
+def __getattr__(name):
+    if name in _SYMBOL_TO_MODULE:
+        module = import_module(f".{_SYMBOL_TO_MODULE[name]}", __name__)
+        value = getattr(module, name)
+        globals()[name] = value
+        return value
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

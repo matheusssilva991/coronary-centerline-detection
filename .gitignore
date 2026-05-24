@@ -11,3 +11,4 @@ wheels/
 .vscode
 /output/cases_analysis_cache
 *.log
+.ruff_cache/

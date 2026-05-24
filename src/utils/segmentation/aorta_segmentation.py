@@ -49,7 +49,7 @@ def _calculate_roi_bounds(
     """
     slice_indices = [int(c["slice_index"]) for c in detected_circles]
     z_min = max(0, min(slice_indices) - roi_margin)
-    z_max = min(volume_shape[2], max(slice_indices) + roi_margin)
+    z_max = min(volume_shape[2], max(slice_indices) + roi_margin + 1)
 
     # Encontrar limites x, y baseados nos círculos
     x_coords = [c["center_x"] for c in detected_circles]
@@ -222,6 +222,11 @@ def level_set_segmentation(
         - O parâmetro balloon controla se o contorno expande ou contrai
         - Ajuste alpha e sigma se houver muito ruído ou bordas fracas
     """
+    if volume_ccta.ndim != 3:
+        raise ValueError(f"volume_ccta deve ser 3D, recebido shape={volume_ccta.shape}")
+    if not detected_circles:
+        return np.zeros_like(volume_ccta, dtype=np.int8)
+
     # Determinar ROI e volume de trabalho
     if use_roi and len(detected_circles) > 0:
         roi_bounds = _calculate_roi_bounds(
@@ -321,6 +326,10 @@ def remove_leaks_morphology(mask_3d: NDArray[Any], radius: int = 3) -> NDArray[A
         skimage.morphology.opening: Documentação da operação morfológica
         skimage.morphology.ball: Elemento estruturante esférico 3D
     """
+    radius = int(radius)
+    if radius <= 0:
+        return mask_3d.copy()
+
     kernel = ball(radius)
 
     # Aplicar abertura morfológica (erosão → dilatação) com suporte GPU

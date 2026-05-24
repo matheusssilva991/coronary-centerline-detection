@@ -19,20 +19,21 @@ _SYMBOL_TO_MODULE = {
     "detect_initial_circle": "aorta_localization",
     "refine_circle_with_neighbors": "aorta_localization",
     "get_initial_circle_diagnostics": "aorta_localization",
-    # pipeline_steps
-    "detect_and_evaluate_ostia": "pipeline_steps",
-    "get_or_compute_vesselness": "pipeline_steps",
-    "get_or_detect_aorta_circles": "pipeline_steps",
-    "get_or_segment_aorta": "pipeline_steps",
-    "load_and_preprocess_image": "pipeline_steps",
-    "segment_arteries_from_ostia": "pipeline_steps",
+    # pipeline modules
+    "detect_and_evaluate_ostia": "pipeline_detection",
+    "get_or_compute_vesselness": "pipeline_preprocessing",
+    "get_or_detect_aorta_circles": "pipeline_detection",
+    "get_or_segment_aorta": "pipeline_detection",
+    "load_and_preprocess_image": "pipeline_preprocessing",
+    "segment_arteries_from_ostia": "pipeline_arteries",
 }
 
 
 def __getattr__(name):
     if name in _SYMBOL_TO_MODULE:
         submodule = _SYMBOL_TO_MODULE[name]
-        module = import_module(f"utils.segmentation.{submodule}")
+        parent_pkg = __package__.rpartition(".")[0] or __package__
+        module = import_module(f".segmentation.{submodule}", parent_pkg)
         value = getattr(module, name)
         globals()[name] = value
         return value

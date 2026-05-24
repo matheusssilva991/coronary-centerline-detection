@@ -3,9 +3,27 @@
 import json
 import os
 import platform
+import re
 from datetime import datetime
+from pathlib import Path
 
 import pandas as pd
+
+
+def make_json_safe(value):
+    """Converte valores comuns de pandas/numpy/pathlib para JSON nativo."""
+    if isinstance(value, dict):
+        return {str(key): make_json_safe(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [make_json_safe(item) for item in value]
+    if hasattr(value, "as_posix"):
+        return value.as_posix()
+    if hasattr(value, "item"):
+        try:
+            return value.item()
+        except ValueError:
+            pass
+    return value
 
 
 def create_timestamped_output_dir(base_output_dir, experiment_name="segmentation"):
@@ -212,9 +230,63 @@ def save_metadata(
     os.makedirs(output_dir, exist_ok=True)
     metadata_path = os.path.join(output_dir, f"ostios_{split_name}_metadata.json")
     with open(metadata_path, "w", encoding="utf-8") as file_handle:
-        json.dump(metadata, file_handle, indent=2, ensure_ascii=False)
+        json.dump(make_json_safe(metadata), file_handle, indent=2, ensure_ascii=False)
 
     return metadata_path
+
+
+def batch_result_number(path, split_name):
+    """Extrai o número do lote de um arquivo de resultado."""
+    filename = Path(path).name
+    match = re.match(
+        rf"^ostios_{re.escape(split_name)}_lote_(\d+)(?:_summary)?\.csv$",
+        filename,
+    )
+    return int(match.group(1)) if match else None
+
+
+def list_batch_result_files(split_name, output_dir):
+    """Lista CSVs de lote em ordem numérica, preferindo o formato atual."""
+    output_dir = Path(output_dir)
+    batch_files_by_number = {}
+
+    def current_format_first(path):
+        return 0 if path.name.endswith("_summary.csv") else 1
+
+    candidates = [
+        path
+        for path in output_dir.glob(f"ostios_{split_name}_lote_*.csv")
+        if batch_result_number(path, split_name) is not None
+    ]
+    for batch_file in sorted(
+        candidates,
+        key=lambda path: (
+            batch_result_number(path, split_name),
+            current_format_first(path),
+        ),
+    ):
+        batch_files_by_number.setdefault(
+            batch_result_number(batch_file, split_name), batch_file
+        )
+
+    return list(batch_files_by_number.values())
+
+
+def get_batch_result_file(output_dir, split_name, batch_number):
+    """Retorna o CSV exato de um lote, preferindo o formato atual *_summary.csv."""
+    output_dir = Path(output_dir)
+    candidates = (
+        output_dir / f"ostios_{split_name}_lote_{batch_number}_summary.csv",
+        output_dir / f"ostios_{split_name}_lote_{batch_number}.csv",
+    )
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+
+    for batch_file in list_batch_result_files(split_name, output_dir):
+        if batch_result_number(batch_file, split_name) == batch_number:
+            return batch_file
+    return None
 
 
 def merge_batch_results(split_name, output_dir):
@@ -228,11 +300,7 @@ def merge_batch_results(split_name, output_dir):
     Returns:
         str: Caminho do arquivo final mesclado
     """
-    import glob
-
-    # Procurar por arquivos de lotes: ostios_{split_name}_lote_*.csv
-    pattern = os.path.join(output_dir, f"ostios_{split_name}_lote_*.csv")
-    batch_files = sorted(glob.glob(pattern))
+    batch_files = list_batch_result_files(split_name, output_dir)
 
     if not batch_files:
         print(f"⚠️  Nenhum arquivo de lote encontrado em {output_dir}")
@@ -245,7 +313,7 @@ def merge_batch_results(split_name, output_dir):
     for batch_file in batch_files:
         df = pd.read_csv(batch_file)
         dfs.append(df)
-        print(f"   ✓ {os.path.basename(batch_file)} ({len(df)} registros)")
+        print(f"   ✓ {Path(batch_file).name} ({len(df)} registros)")
 
     # Mesclar em um único DataFrame
     merged_df = pd.concat(dfs, ignore_index=True)

@@ -2,7 +2,6 @@
 # IMPORTS
 # ============================================================================
 # Biblioteca padrão
-import argparse
 import os
 import copy
 import logging
@@ -24,11 +23,11 @@ from utils import (
     merge_batch_results,
     save_metadata,
 )
+from utils.segmentation.pipeline_cli import parse_pipeline_args
 from utils.segmentation.pipeline_orchestration import (
-    parse_resume_batches,
-    print_statistics,
     run_pipeline,
 )
+from utils.segmentation.pipeline_reporting import print_split_summary, print_statistics
 
 
 # ============================================================================
@@ -84,163 +83,10 @@ CONFIG_HIGH_RES["DOWNSCALE_FACTORS"] = [1, 1, 1]
 
 def main():
     """Função principal com argumentos de linha de comando."""
-    parser = argparse.ArgumentParser(
-        description="Pipeline de segmentação coronária",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Exemplos de uso:
-  # Processar todos os conjuntos
-  python segmentation_pipeline.py
-
-  # Processar apenas treino
-  python segmentation_pipeline.py --split train
-
-  # Processar validação e teste
-  python segmentation_pipeline.py --split val test
-
-  # Com cache habilitado (carregar caches existentes)
-  python segmentation_pipeline.py --split train --cache
-
-  # Sem salvar cache (não recomendado, apenas para testes rápidos)
-  python segmentation_pipeline.py --split val --no-save-cache
-
-  # Usar OpenCV para downscaling com interpolação AREA
-  python segmentation_pipeline.py --downscale-method opencv
-
-  # Usar OpenCV com interpolação LINEAR
-  python segmentation_pipeline.py --downscale-method opencv --opencv-interpolation linear
-
-  # Combinação: carregar cache, usar OpenCV (cubic) e processar só validação
-  python segmentation_pipeline.py --split val --cache --downscale-method opencv --opencv-interpolation cubic
-
-  # Usar resolução alta (sem downscaling)
-  python segmentation_pipeline.py --resolution high
-
-  # Usar resolução média (downscale 2x)
-  python segmentation_pipeline.py --resolution mid --split val
-
-  # PROCESSAMENTO EM LOTES (salvamento incremental):
-    # Processar em 10 lotes (divide as imagens entre 10 blocos)
-    python segmentation_pipeline.py --num-batches 10
-
-    # Processar teste em 5 lotes
-    python segmentation_pipeline.py --split test --num-batches 5
-
-  # Combinar: teste em lotes com cache
-    python segmentation_pipeline.py --split test --num-batches 10 --cache
-
-  # RETOMADA DE LOTES (em caso de falha):
-  # Primeira execução - cria novo diretório
-    python segmentation_pipeline.py --split test --num-batches 70
-  # Saída: output/segmentation/2026-03-14_10-30-00/
-
-  # Se falhar no lote 3, retomar no MESMO diretório:
-    python segmentation_pipeline.py --split test --num-batches 70 --resume-batch 3 --resume-dir output/segmentation/2026-03-14_10-30-00
-
-    # Retomada explícita por subset:
-    python segmentation_pipeline.py --split all --num-batches 70 --resume-batches train=0,val=3,test=0
-
-  # Versão curta (se no mesmo diretório):
-    python segmentation_pipeline.py --split test --num-batches 70 --resume-batch 3 --resume-dir ./output/segmentation/2026-03-14_10-30-00
-
-Arquivos de saída:
-  - ostios_{split}_summary.csv: Resultados consolidados ao final (ou após merge)
-  - ostios_{split}_lote_1.csv, ostios_{split}_lote_2.csv, etc: Resultados de cada lote (modo batch)
-  - ostios_{split}_metadata.json: Metadados completos (configurações, estatísticas, timestamp)
-        """,
-    )
-
-    parser.add_argument(
-        "--split",
-        nargs="+",
-        choices=["train", "val", "test", "all"],
-        default=["all"],
-        help="Conjunto(s) para processar (padrão: all)",
-    )
-
-    parser.add_argument(
-        "--resolution",
-        type=str,
-        choices=["mid", "high"],
-        default="mid",
-        help="Resolução da imagem: 'mid' (downscale 2x) ou 'high' (sem downscale) (padrão: mid)",
-    )
-
-    parser.add_argument(
-        "--cache", action="store_true", help="Habilitar carregamento de cache"
-    )
-
-    parser.add_argument(
-        "--no-save-cache",
-        action="store_true",
-        help="Desabilitar salvamento de cache (não recomendado)",
-    )
-
-    parser.add_argument(
-        "--downscale-method",
-        type=str,
-        choices=["scipy", "opencv"],
-        default=None,
-        help="Método de downscaling: scipy (ndi.zoom) ou opencv (cv2.resize)",
-    )
-
-    parser.add_argument(
-        "--opencv-interpolation",
-        type=str,
-        choices=["nearest", "linear", "cubic", "area", "lanczos4"],
-        default=None,
-        help="Método de interpolação do OpenCV (usado apenas se --downscale-method=opencv)",
-    )
-
-    parser.add_argument(
-        "--output-dir",
-        type=str,
-        default=OUTPUT_DIR,
-        help=f"Diretório de saída (padrão: {OUTPUT_DIR})",
-    )
-
-    parser.add_argument(
-        "--config-file",
-        type=str,
-        default=None,
-        help="Arquivo JSON com configurações para sobrescrever valores padrão",
-    )
-
-    parser.add_argument(
-        "--verbose",
-        action="store_true",
-        help="Habilitar logging detalhado (DEBUG)",
-    )
-
-    parser.add_argument(
-        "--num-batches",
-        type=int,
-        default=5,
-        help="Número de lotes para dividir o conjunto de imagens (ex: 5 divide as 700 imagens em 5 lotes)",
-    )
-
-    parser.add_argument(
-        "--resume-batch",
-        type=int,
-        default=0,
-        help="Número do lote para retomar (padrão: 0 = começar do início). Use se um processamento foi interrompido.",
-    )
-
-    parser.add_argument(
-        "--resume-batches",
-        type=str,
-        default=None,
-        help="Retomada explícita por subset no formato 'train=1,val=0,test=3'. Se informado, sobrescreve --resume-batch para os splits listados.",
-    )
-
-    parser.add_argument(
-        "--resume-dir",
-        type=str,
-        default=None,
-        help="Diretório anterior para retomar (ex: output/segmentation/2026-03-14_10-30-00). Se não fornecido e --resume-batch > 0, cria novo diretório.",
-    )
-
-    args = parser.parse_args()
+    args = parse_pipeline_args(BASE_PATH, BASE_SAVE_PATH, OUTPUT_DIR)
+    base_path = args.base_path
+    base_save_path = args.base_save_path
+    output_root_dir = args.output_dir
 
     # Ajustar nível de logging se solicitado
     if args.verbose:
@@ -289,6 +135,8 @@ Arquivos de saída:
         )
     else:
         print(f"🔧 Método de downscale: {effective_config['DOWNSCALE_METHOD']}")
+    print(f"🗂️  Dataset: {base_path}")
+    print(f"💽 Cache/artefatos: {base_save_path}")
 
     # Configurar batch processing
     effective_config["NUM_BATCHES"] = args.num_batches
@@ -296,41 +144,39 @@ Arquivos de saída:
     if args.resume_batch > 0:
         print(f"🔄 Retomando a partir do lote {args.resume_batch}")
 
-    try:
-        resume_batches_by_split = parse_resume_batches(args.resume_batches)
-    except ValueError as exc:
-        print(f"❌ Erro: {exc}")
-        exit(1)
-
     if args.resume_batches:
         print(
             "🔄 Retomada por subset: "
-            f"train={resume_batches_by_split['train']}, "
-            f"val={resume_batches_by_split['val']}, "
-            f"test={resume_batches_by_split['test']}"
+            f"train={args.resume_batches_by_split['train']}, "
+            f"val={args.resume_batches_by_split['val']}, "
+            f"test={args.resume_batches_by_split['test']}"
         )
 
     # Criar ou reusar diretório
-    if args.resume_batch > 0 and args.resume_dir:
-        # Modo retomada: usar diretório anterior
-        if os.path.exists(args.resume_dir):
+    if (args.resume_requested or args.merge_only) and args.resume_dir:
+        # Modo retomada/merge: usar diretório anterior
+        if args.resume_dir.exists():
             timestamped_output_dir = args.resume_dir
             print(f"\n📁 Usando diretório anterior: {timestamped_output_dir}\n")
         else:
             print(f"❌ Erro: Diretório não encontrado: {args.resume_dir}")
             print("   Use --resume-dir com o caminho do diretório anterior")
             exit(1)
+    elif args.resume_requested:
+        print("❌ Erro: para retomar a partir de um lote, informe --resume-dir")
+        print(
+            "   Exemplo: --resume-batch 11 "
+            "--resume-dir output/segmentation/2026-05-19_17-08-33"
+        )
+        exit(1)
     else:
         # Modo normal: criar novo diretório com timestamp
         timestamped_output_dir = create_timestamped_output_dir(
-            args.output_dir, experiment_name="segmentation"
+            output_root_dir, experiment_name="segmentation"
         )
-        if args.resume_batch > 0:
-            print("⚠️  Dica: Para retomar no mesmo diretório, use:")
-            print(
-                f"   --resume-batch {args.resume_batch} --resume-dir {timestamped_output_dir}\n"
-            )
         print(f"📁 Diretório de saída: {timestamped_output_dir}\n")
+
+    timestamped_output_dir = Path(timestamped_output_dir)
 
     # Configurar FileHandler de logging no diretório de saída (debug)
     try:
@@ -343,40 +189,67 @@ Arquivos de saída:
     except Exception:
         logger.warning("Não foi possível criar arquivo de log no diretório de saída.")
 
-    # Obter splits de dados
-    train_ids, val_ids, test_ids, all_ids = get_data_splits(BASE_PATH)
-    print_statistics(train_ids, val_ids, test_ids, all_ids)
-
     # Determinar quais conjuntos processar
-    splits_to_run = []
     if "all" in args.split:
-        splits_to_run = [
-            ("train", train_ids),
-            ("val", val_ids),
-            ("test", test_ids),
-        ]
+        split_names_to_run = ["train", "val", "test"]
     else:
+        split_names_to_run = args.split
+
+    if args.merge_only:
+        splits_to_run = [(name, None) for name in split_names_to_run]
+    else:
+        # Obter splits de dados
+        train_ids, val_ids, test_ids, all_ids = get_data_splits(base_path)
+        print_statistics(train_ids, val_ids, test_ids, all_ids)
+
         split_map = {
             "train": train_ids,
             "val": val_ids,
             "test": test_ids,
         }
-        splits_to_run = [(name, split_map[name]) for name in args.split]
+        splits_to_run = [(name, split_map[name]) for name in split_names_to_run]
 
     # Processar cada conjunto
     for split_name, ids in splits_to_run:
         print(f"\n{'=' * 60}")
-        print(f"🔬 Processando conjunto: {split_name.upper()}")
+        action_label = "Consolidando" if args.merge_only else "Processando"
+        print(f"🔬 {action_label} conjunto: {split_name.upper()}")
         print(f"{'=' * 60}")
+
+        if args.merge_only:
+            final_path = merge_batch_results(split_name, timestamped_output_dir)
+            if final_path is None:
+                print(f"❌ Nenhum lote encontrado para o split '{split_name}'")
+                exit(1)
+
+            df = pd.read_csv(final_path)
+            details_for_metadata = df.to_dict("records")
+            metadata_ids = (
+                df["IMG_ID"].dropna().tolist() if "IMG_ID" in df.columns else []
+            )
+            metadata_path = save_metadata(
+                split_name,
+                timestamped_output_dir,
+                effective_config,
+                metadata_ids,
+                details_for_metadata,
+                execution_time=None,
+                base_path=base_path,
+                base_save_path=base_save_path,
+                root_output_dir=output_root_dir,
+            )
+            logger.info(f"Metadados salvos em: {metadata_path}")
+            print_split_summary(df, split_name, effective_config)
+            continue
 
         summary = run_pipeline(
             ids,
             split_name,
             effective_config,
-            BASE_PATH,
-            BASE_SAVE_PATH,
+            base_path,
+            base_save_path,
             timestamped_output_dir,
-            resume_from_batch=resume_batches_by_split.get(
+            resume_from_batch=args.resume_batches_by_split.get(
                 split_name, args.resume_batch
             ),
         )
@@ -401,9 +274,9 @@ Arquivos de saída:
             ids,
             details_for_metadata,
             execution_time,
-            base_path=BASE_PATH,
-            base_save_path=BASE_SAVE_PATH,
-            root_output_dir=OUTPUT_DIR,
+            base_path=base_path,
+            base_save_path=base_save_path,
+            root_output_dir=output_root_dir,
         )
         logger.info(f"Metadados salvos em: {metadata_path}")
 
@@ -412,45 +285,7 @@ Arquivos de saída:
             df = pd.read_csv(output_path)
         else:
             df = make_result_dataframe(summary["details"])
-        if not df.empty:
-            both_correct_series = df["both_correct"].fillna(False)
-            both_tolerable_series = df["both_tolerable"].fillna(False)
-            ostia_found_series = df["ostia_found"].fillna(False)
-            ostia_not_found_series = df["ostia_status"].eq("not_found")
-            segmentation_attempted_series = df["segmentation_attempted"].fillna(False)
-            proceeded_with_bad_ostia_series = df["proceeded_with_bad_ostia"].fillna(
-                False
-            )
-            tolerance_mm = effective_config["OSTIA_VALIDATION"]["distance_threshold_mm"]
-
-            print(f"\n📊 Estatísticas do conjunto {split_name}:")
-            print(
-                f"   - Óstios encontrados:         {ostia_found_series.sum():3d} ({ostia_found_series.mean() * 100:5.1f}%)"
-            )
-            print(
-                f"   - Óstios não encontrados:     {ostia_not_found_series.sum():3d} ({ostia_not_found_series.mean() * 100:5.1f}%)"
-            )
-            print(
-                f"   - Ambos corretos (estrito): {both_correct_series.sum():3d} ({both_correct_series.mean() * 100:5.1f}%)"
-            )
-            print(
-                f"   - Tolerável apenas:         {both_tolerable_series.sum():3d} ({both_tolerable_series.mean() * 100:5.1f}%)"
-            )
-            print(
-                f"   - Segmentação tentada:      {segmentation_attempted_series.sum():3d} ({segmentation_attempted_series.mean() * 100:5.1f}%)"
-            )
-            print(
-                f"   - Prosseguiu com óstio ruim:{proceeded_with_bad_ostia_series.sum():3d} ({proceeded_with_bad_ostia_series.mean() * 100:5.1f}%)"
-            )
-            print(
-                f"   - Total sucesso (<= {tolerance_mm}mm): {(both_correct_series | both_tolerable_series).sum():3d} ({(both_correct_series | both_tolerable_series).mean() * 100:5.1f}%)"
-            )
-            if "dice_artery" in df.columns and df["dice_artery"].notna().any():
-                print(f"   - Dice médio:       {df['dice_artery'].mean():.4f}")
-            if execution_time:
-                print(
-                    f"   - Tempo de execução: {execution_time:.1f}s ({execution_time / 60:.1f}min)"
-                )
+        print_split_summary(df, split_name, effective_config, execution_time)
 
     print(f"\n{'=' * 60}")
     print("✨ Processamento concluído!")

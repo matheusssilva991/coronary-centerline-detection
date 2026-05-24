@@ -1,41 +1,46 @@
-"""Processing domain subpackage.
+"""Processing domain subpackage - public symbols loaded on demand."""
 
-Contains morphology, vesselness, preprocessing and acceleration helpers.
-"""
+from importlib import import_module
 
-from .binary_operations import *
-from .frangi import *
-from .gpu_utils import *
-from .preprocessing import *
+_SYMBOL_TO_MODULE = {
+    # binary_operations
+    "binary_closing": "binary_operations",
+    "binary_dilation": "binary_operations",
+    "binary_erosion": "binary_operations",
+    "binary_opening": "binary_operations",
+    "keep_largest_component": "binary_operations",
+    "label": "binary_operations",
+    # frangi
+    "get_gd": "frangi",
+    "get_gf": "frangi",
+    "get_vesselness": "frangi",
+    "get_vesselness_optimized": "frangi",
+    "load_vesselness_cache": "frangi",
+    "save_vesselness_cache": "frangi",
+    # gpu_utils
+    "ensure_cpu": "gpu_utils",
+    "ensure_gpu": "gpu_utils",
+    "get_array_module": "gpu_utils",
+    "to_cpu": "gpu_utils",
+    "to_gpu": "gpu_utils",
+    "use_gpu": "gpu_utils",
+    # preprocessing
+    "downscale_image": "preprocessing",
+    "downscale_image_ndi": "preprocessing",
+    "downscale_image_opencv": "preprocessing",
+    "largest_connected_component": "preprocessing",
+    "run_core_preprocessing_pipeline": "preprocessing",
+    "threshold_image": "preprocessing",
+    "threshold_image_with_offset": "preprocessing",
+}
 
-__all__ = [
-    # Binary operations
-    "binary_closing",
-    "binary_dilation",
-    "binary_erosion",
-    "binary_opening",
-    "label",
-    "keep_largest_component",
-    # Frangi vesselness
-    "get_gf",
-    "get_gd",
-    "get_vesselness",
-    "get_vesselness_optimized",
-    "save_vesselness_cache",
-    "load_vesselness_cache",
-    # GPU utilities
-    "use_gpu",
-    "to_gpu",
-    "to_cpu",
-    "get_array_module",
-    "ensure_cpu",
-    "ensure_gpu",
-    # Preprocessing
-    "downscale_image_ndi",
-    "downscale_image_opencv",
-    "downscale_image",
-    "threshold_image",
-    "threshold_image_with_offset",
-    "largest_connected_component",
-    "run_core_preprocessing_pipeline",
-]
+__all__ = list(_SYMBOL_TO_MODULE)
+
+
+def __getattr__(name):
+    if name in _SYMBOL_TO_MODULE:
+        module = import_module(f".{_SYMBOL_TO_MODULE[name]}", __name__)
+        value = getattr(module, name)
+        globals()[name] = value
+        return value
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

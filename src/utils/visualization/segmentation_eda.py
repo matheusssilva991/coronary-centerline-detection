@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 import pandas as pd
-from typing import Any, Dict, Optional, Sequence, Tuple
+from typing import Any, Dict, Optional, Sequence
 
 
 def _get_split_df(

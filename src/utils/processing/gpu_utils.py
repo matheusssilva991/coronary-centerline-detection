@@ -7,8 +7,7 @@ entre NumPy e CuPy, usadas em todos os módulos que suportam GPU.
 
 import numpy as np
 import warnings
-from typing import Any, Optional
-from numpy.typing import NDArray
+from typing import Any
 
 # =============================================================================
 # Detecção de GPU e Imports

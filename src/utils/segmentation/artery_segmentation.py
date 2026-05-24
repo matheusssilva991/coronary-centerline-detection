@@ -40,6 +40,8 @@ def _calculate_adaptive_floor(
     smooth_relaxation: bool,
 ) -> float:
     """Calcula o piso adaptativo usado na aceitação de vizinhos."""
+    if switch_at_voxels <= 0:
+        return min_end
     if count >= switch_at_voxels:
         return min_end
 
@@ -123,6 +125,11 @@ def region_growing_segmentation(
     verbose: bool = False,
 ) -> NDArray[Any]:
     """Segmenta vasos por crescimento de região com controle adaptativo."""
+    if vesselness_map.ndim != 3:
+        raise ValueError(
+            f"vesselness_map deve ser 3D, recebido shape={vesselness_map.shape}"
+        )
+
     height, width, depth = vesselness_map.shape
     v_max, v_min = np.max(vesselness_map), np.min(vesselness_map)
 
@@ -139,6 +146,8 @@ def region_growing_segmentation(
         use_running_mean = True
     elif comparison_window > 1:
         value_history = deque(maxlen=comparison_window)
+    else:
+        comparison_window = 1
 
     min_start = float(min_vesselness)
     min_end = min_start * relaxed_floor_factor
@@ -237,6 +246,11 @@ def region_growing_article(
     max_volume: Optional[int] = None,
 ) -> NDArray[Any]:
     """Executa variante de crescimento de região baseada no método do artigo."""
+    if vesselness_map.ndim != 3:
+        raise ValueError(
+            f"vesselness_map deve ser 3D, recebido shape={vesselness_map.shape}"
+        )
+
     if threshold is None:
         threshold = (vesselness_map.max() - vesselness_map.min()) / 10.0
 

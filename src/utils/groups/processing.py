@@ -34,7 +34,8 @@ _SYMBOL_TO_MODULE = {
 def __getattr__(name):
     if name in _SYMBOL_TO_MODULE:
         submodule = _SYMBOL_TO_MODULE[name]
-        module = import_module(f"utils.processing.{submodule}")
+        parent_pkg = __package__.rpartition(".")[0] or __package__
+        module = import_module(f".processing.{submodule}", parent_pkg)
         value = getattr(module, name)
         globals()[name] = value
         return value

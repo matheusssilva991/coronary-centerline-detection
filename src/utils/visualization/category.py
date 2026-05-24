@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
-from typing import Any, Optional, Sequence
+from typing import Any, Optional
 
 
 def plot_category_metric_bar(

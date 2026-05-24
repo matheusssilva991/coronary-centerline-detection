@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from typing import Any, Optional
+from typing import Optional
 
 try:
     import plotly.graph_objects as go

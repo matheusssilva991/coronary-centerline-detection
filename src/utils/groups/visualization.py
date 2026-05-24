@@ -52,10 +52,11 @@ _VISUALIZATION_EXPORTS = {
 
 
 def __getattr__(name):
+    parent_pkg = __package__.rpartition(".")[0] or __package__
     if name in _COMPARISON_EXPORTS:
-        module = import_module("utils.comparison_utils")
+        module = import_module(".comparison_utils", parent_pkg)
     elif name in _VISUALIZATION_EXPORTS:
-        module = import_module("utils.visualization")
+        module = import_module(".visualization", parent_pkg)
     else:
         raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
