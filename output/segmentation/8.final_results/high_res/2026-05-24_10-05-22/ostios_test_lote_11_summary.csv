@@ -1,0 +1,36 @@
+IMG_ID,dice_artery,artery_voxels,ostia_found,ostia_status,segmentation_attempted,proceeded_with_bad_ostia,skip_reason,ostia_error,both_correct,both_tolerable,left_intersects,right_intersects,left_dist_mm,right_dist_mm,ostia_left,ostia_right,error,status,downscale_method,opencv_interpolation,downscale_factors,max_threshold_percentile
+182,0.0,26126,True,found_but_wrong,True,True,,,False,False,False,False,37.32255298644214,54.53721817716692,"(165, 305, 264)","(94, 275, 264)",,nenhum correto,scipy,N/A,"[1, 1, 1]",99.7
+275,0.6785035285019173,151984,True,both_correct,True,False,,,True,False,True,True,0.0,0.0,"(218, 348, 150)","(307, 264, 180)",,ambos corretos,scipy,N/A,"[1, 1, 1]",99.7
+896,0.4767913908651795,68541,True,both_correct,True,False,,,True,False,True,True,0.0,0.0,"(190, 295, 168)","(249, 202, 210)",,ambos corretos,scipy,N/A,"[1, 1, 1]",99.7
+70,0.6189779388732268,287191,True,both_correct,True,False,,,True,False,True,True,0.0,0.0,"(172, 302, 144)","(245, 239, 174)",,ambos corretos,scipy,N/A,"[1, 1, 1]",99.7
+292,0.41291939900264135,76017,True,found_but_wrong,True,True,,,False,False,False,True,22.476311314637464,0.0,"(157, 337, 254)","(230, 270, 217)",,um correto,scipy,N/A,"[1, 1, 1]",99.7
+132,0.0,162420,True,found_but_wrong,True,True,,,False,False,False,False,40.63313620448832,45.02035672372277,"(137, 409, 232)","(253, 368, 240)",,nenhum correto,scipy,N/A,"[1, 1, 1]",99.7
+301,0.6156935344880903,144038,True,both_tolerable,True,False,,,False,True,False,True,1.4921875,0.0,"(201, 340, 190)","(248, 259, 211)",,ambos toleráveis,scipy,N/A,"[1, 1, 1]",99.7
+425,0.5395012854281344,120787,True,both_tolerable,True,False,,,False,True,False,True,0.73046875,0.0,"(187, 358, 174)","(233, 270, 200)",,ambos toleráveis,scipy,N/A,"[1, 1, 1]",99.7
+327,0.43410527119647185,65310,True,both_tolerable,True,False,,,False,True,False,True,5.911526054184878,0.0,"(204, 238, 210)","(272, 178, 233)",,ambos toleráveis,scipy,N/A,"[1, 1, 1]",99.7
+145,0.43715897653228797,56885,True,found_but_wrong,True,True,,,False,False,False,True,10.5,0.0,"(127, 306, 190)","(199, 232, 197)",,um correto,scipy,N/A,"[1, 1, 1]",99.7
+424,0.3859636791748302,84346,True,found_but_wrong,True,True,,,False,False,False,True,11.913991578938504,0.0,"(170, 304, 178)","(236, 224, 217)",,um correto,scipy,N/A,"[1, 1, 1]",99.7
+581,0.4782963065066133,238352,True,both_correct,True,False,,,True,False,True,True,0.0,0.0,"(219, 368, 193)","(270, 300, 217)",,ambos corretos,scipy,N/A,"[1, 1, 1]",99.7
+136,0.5744839792986022,154917,True,both_tolerable,True,False,,,False,True,True,False,0.0,3.0,"(184, 342, 175)","(253, 245, 185)",,ambos toleráveis,scipy,N/A,"[1, 1, 1]",99.7
+451,0.6031782065834279,272039,True,both_correct,True,False,,,True,False,True,True,0.0,0.0,"(202, 334, 165)","(238, 259, 197)",,ambos corretos,scipy,N/A,"[1, 1, 1]",99.7
+165,0.49209568850922303,65984,True,both_correct,True,False,,,True,False,True,True,0.0,0.0,"(178, 310, 191)","(225, 231, 233)",,ambos corretos,scipy,N/A,"[1, 1, 1]",99.7
+29,0.6374543821234069,239464,True,both_correct,True,False,,,True,False,True,True,0.0,0.0,"(210, 331, 127)","(292, 228, 151)",,ambos corretos,scipy,N/A,"[1, 1, 1]",99.7
+774,0.5168336279709291,98014,True,found_but_wrong,True,True,,,False,False,False,True,9.11899693176305,0.0,"(174, 379, 188)","(228, 304, 217)",,um correto,scipy,N/A,"[1, 1, 1]",99.7
+194,0.7070610927611507,196902,True,both_correct,True,False,,,True,False,True,True,0.0,0.0,"(162, 316, 169)","(264, 247, 215)",,ambos corretos,scipy,N/A,"[1, 1, 1]",99.7
+389,0.5393906044047452,213458,True,both_correct,True,False,,,True,False,True,True,0.0,0.0,"(175, 344, 186)","(197, 256, 226)",,ambos corretos,scipy,N/A,"[1, 1, 1]",99.7
+853,0.6767706180276769,130949,True,both_correct,True,False,,,True,False,True,True,0.0,0.0,"(192, 301, 195)","(239, 231, 217)",,ambos corretos,scipy,N/A,"[1, 1, 1]",99.7
+170,0.0,9526,True,found_but_wrong,True,True,,,False,False,False,False,6.052762105656063,36.934820242558345,"(166, 265, 183)","(115, 128, 145)",,nenhum correto,scipy,N/A,"[1, 1, 1]",99.7
+706,0.6427690893172442,222388,True,both_tolerable,True,False,,,False,True,False,True,1.9885555894969422,0.0,"(198, 341, 196)","(262, 281, 235)",,ambos toleráveis,scipy,N/A,"[1, 1, 1]",99.7
+141,0.32352015759449515,37792,True,found_but_wrong,True,True,,,False,False,True,False,0.0,inf,"(201, 356, 208)",,,um correto,scipy,N/A,"[1, 1, 1]",99.7
+174,0.6149422302035485,180700,True,both_correct,True,False,,,True,False,True,True,0.0,0.0,"(187, 331, 158)","(238, 253, 196)",,ambos corretos,scipy,N/A,"[1, 1, 1]",99.7
+7,0.6171048465389154,241415,True,both_correct,True,False,,,True,False,True,True,0.0,0.0,"(172, 311, 135)","(242, 208, 177)",,ambos corretos,scipy,N/A,"[1, 1, 1]",99.7
+746,0.5839099452648973,134586,True,found_but_wrong,True,True,,,False,False,False,True,44.55709365215108,0.0,"(62, 318, 209)","(189, 267, 197)",,um correto,scipy,N/A,"[1, 1, 1]",99.7
+479,0.23402467553664155,33966,True,found_but_wrong,True,True,,,False,False,True,False,0.0,13.590831785367813,"(204, 320, 173)","(256, 192, 213)",,um correto,scipy,N/A,"[1, 1, 1]",99.7
+74,0.6509420557560601,116181,True,both_correct,True,False,,,True,False,True,True,0.0,0.0,"(151, 319, 163)","(248, 235, 192)",,ambos corretos,scipy,N/A,"[1, 1, 1]",99.7
+911,0.6669074672517609,166378,True,both_correct,True,False,,,True,False,True,True,0.0,0.0,"(171, 355, 204)","(222, 277, 238)",,ambos corretos,scipy,N/A,"[1, 1, 1]",99.7
+814,0.5840125631457894,203095,True,both_correct,True,False,,,True,False,True,True,0.0,0.0,"(167, 284, 168)","(208, 220, 233)",,ambos corretos,scipy,N/A,"[1, 1, 1]",99.7
+239,0.5676324982972855,175906,True,found_but_wrong,True,True,,,False,False,False,True,11.353676060334283,0.0,"(212, 334, 169)","(255, 285, 195)",,um correto,scipy,N/A,"[1, 1, 1]",99.7
+146,0.6185858412818834,105694,True,both_correct,True,False,,,True,False,True,True,0.0,0.0,"(206, 428, 142)","(295, 353, 184)",,ambos corretos,scipy,N/A,"[1, 1, 1]",99.7
+793,0.4788665767875305,66936,True,both_tolerable,True,False,,,False,True,False,True,7.035139982976752,0.0,"(162, 290, 155)","(233, 229, 184)",,ambos toleráveis,scipy,N/A,"[1, 1, 1]",99.7
+235,0.5500237693062396,306796,True,both_correct,True,False,,,True,False,True,True,0.0,0.0,"(207, 423, 200)","(232, 335, 227)",,ambos corretos,scipy,N/A,"[1, 1, 1]",99.7
+221,0.4666404935501963,83428,True,found_but_wrong,True,True,,,False,False,False,True,8.978966612626648,0.0,"(140, 295, 171)","(212, 228, 191)",,um correto,scipy,N/A,"[1, 1, 1]",99.7
