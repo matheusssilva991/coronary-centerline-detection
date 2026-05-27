@@ -1,0 +1,55 @@
+IMG_ID,dice_artery,artery_voxels,ostia_found,ostia_status,segmentation_attempted,proceeded_with_bad_ostia,skip_reason,ostia_error,both_correct,both_tolerable,left_intersects,right_intersects,left_dist_mm,right_dist_mm,ostia_left,ostia_right,error,status,downscale_method,opencv_interpolation,downscale_factors,max_threshold_percentile
+15,0.694595566957093,193655.0,True,both_correct,True,False,,,True,False,True,True,0.0,0.0,"(143, 286, 141)","(246, 183, 178)",,ambos corretos,scipy,N/A,"[1, 1, 1]",99.7
+890,0.6995728201513388,148678.0,True,both_correct,True,False,,,True,False,True,True,0.0,0.0,"(204, 282, 176)","(283, 200, 212)",,ambos corretos,scipy,N/A,"[1, 1, 1]",99.7
+848,0.6335813469513519,129009.0,True,both_correct,True,False,,,True,False,True,True,0.0,0.0,"(204, 326, 163)","(275, 254, 181)",,ambos corretos,scipy,N/A,"[1, 1, 1]",99.7
+99,0.6323430980664452,192088.0,True,both_correct,True,False,,,True,False,True,True,0.0,0.0,"(197, 267, 192)","(246, 190, 217)",,ambos corretos,scipy,N/A,"[1, 1, 1]",99.7
+813,0.45975022177384284,168926.0,True,both_correct,True,False,,,True,False,True,True,0.0,0.0,"(203, 393, 155)","(265, 292, 182)",,ambos corretos,scipy,N/A,"[1, 1, 1]",99.7
+241,0.30691916754209136,420498.0,True,found_but_wrong,True,True,,,False,False,False,True,18.5,0.0,"(141, 313, 188)","(259, 161, 156)",,um correto,scipy,N/A,"[1, 1, 1]",99.7
+822,0.0,,False,not_found,False,False,ostia_not_found,Nenhuma superfície de aorta encontrada!,False,False,False,False,,,,,,óstios não encontrados,scipy,N/A,"[1, 1, 1]",99.7
+475,0.6388015922899644,166733.0,True,both_correct,True,False,,,True,False,True,True,0.0,0.0,"(172, 346, 176)","(264, 269, 205)",,ambos corretos,scipy,N/A,"[1, 1, 1]",99.7
+207,0.6433547276142768,191957.0,True,both_correct,True,False,,,True,False,True,True,0.0,0.0,"(208, 340, 181)","(271, 239, 210)",,ambos corretos,scipy,N/A,"[1, 1, 1]",99.7
+411,0.6442574404413086,159686.0,True,both_correct,True,False,,,True,False,True,True,0.0,0.0,"(190, 329, 146)","(235, 265, 177)",,ambos corretos,scipy,N/A,"[1, 1, 1]",99.7
+439,0.6397018964582618,294423.0,True,both_correct,True,False,,,True,False,True,True,0.0,0.0,"(176, 346, 119)","(282, 274, 162)",,ambos corretos,scipy,N/A,"[1, 1, 1]",99.7
+377,0.6081324097508991,199464.0,True,both_tolerable,True,False,,,False,True,False,True,1.0561513279077985,0.0,"(197, 340, 171)","(308, 281, 198)",,ambos toleráveis,scipy,N/A,"[1, 1, 1]",99.7
+277,0.6854517913593257,187188.0,True,both_tolerable,True,False,,,False,True,False,True,1.1953125,0.0,"(185, 249, 180)","(208, 181, 209)",,ambos toleráveis,scipy,N/A,"[1, 1, 1]",99.7
+160,0.22757730825061215,169331.0,True,found_but_wrong,True,True,,,False,False,True,False,0.0,30.72581467444675,"(170, 316, 171)","(194, 193, 140)",,um correto,scipy,N/A,"[1, 1, 1]",99.7
+509,0.6380985405678341,319512.0,True,both_correct,True,False,,,True,False,True,True,0.0,0.0,"(227, 367, 175)","(252, 263, 215)",,ambos corretos,scipy,N/A,"[1, 1, 1]",99.7
+490,0.18692594925854167,1031570.0,True,both_correct,True,False,,,True,False,True,True,0.0,0.0,"(178, 324, 142)","(256, 228, 189)",,ambos corretos,scipy,N/A,"[1, 1, 1]",99.7
+131,0.555129746518385,210827.0,True,both_correct,True,False,,,True,False,True,True,0.0,0.0,"(186, 331, 174)","(237, 225, 218)",,ambos corretos,scipy,N/A,"[1, 1, 1]",99.7
+505,0.6585111989459815,194830.0,True,both_correct,True,False,,,True,False,True,True,0.0,0.0,"(159, 328, 192)","(256, 277, 235)",,ambos corretos,scipy,N/A,"[1, 1, 1]",99.7
+776,0.563174580126809,213982.0,True,both_tolerable,True,False,,,False,True,False,True,2.3710108935790877,0.0,"(191, 278, 144)","(265, 207, 172)",,ambos toleráveis,scipy,N/A,"[1, 1, 1]",99.7
+672,0.6625233773515853,178595.0,True,both_correct,True,False,,,True,False,True,True,0.0,0.0,"(164, 301, 200)","(251, 207, 220)",,ambos corretos,scipy,N/A,"[1, 1, 1]",99.7
+456,0.32275936800894856,32467.0,True,found_but_wrong,True,True,,,False,False,False,True,14.970604258072106,0.0,"(153, 390, 194)","(227, 300, 196)",,um correto,scipy,N/A,"[1, 1, 1]",99.7
+225,0.45635911285006486,99750.0,True,found_but_wrong,True,True,,,False,False,True,False,0.0,21.09652488258628,"(214, 326, 179)","(248, 219, 136)",,um correto,scipy,N/A,"[1, 1, 1]",99.7
+566,0.0,,False,not_found,False,False,ostia_not_found,Nenhuma superfície de aorta encontrada!,False,False,False,False,,,,,,óstios não encontrados,scipy,N/A,"[1, 1, 1]",99.7
+773,0.0025875164849840575,9814.0,True,found_but_wrong,True,True,,,False,False,False,False,25.256722037046703,1.6812855769934654,"(257, 340, 256)","(273, 266, 256)",,nenhum correto,scipy,N/A,"[1, 1, 1]",99.7
+349,0.29968346168907456,28053.0,True,both_tolerable,True,False,,,False,True,False,True,0.955078125,0.0,"(201, 349, 179)","(242, 265, 203)",,ambos toleráveis,scipy,N/A,"[1, 1, 1]",99.7
+836,0.5147911319025704,88074.0,True,both_tolerable,True,False,,,False,True,False,True,6.722322871327808,0.0,"(183, 272, 195)","(261, 209, 211)",,ambos toleráveis,scipy,N/A,"[1, 1, 1]",99.7
+203,0.0,1398.0,True,found_but_wrong,True,True,,,False,False,False,False,20.502441633011397,26.400239700616357,"(172, 297, 206)","(142, 203, 218)",,nenhum correto,scipy,N/A,"[1, 1, 1]",99.7
+684,0.5150436834385562,278165.0,True,both_correct,True,False,,,True,False,True,True,0.0,0.0,"(164, 313, 174)","(246, 240, 211)",,ambos corretos,scipy,N/A,"[1, 1, 1]",99.7
+373,0.331632709039641,99302.0,True,both_tolerable,True,False,,,False,True,True,False,0.0,0.7031738264296967,"(153, 308, 175)","(225, 226, 194)",,ambos toleráveis,scipy,N/A,"[1, 1, 1]",99.7
+783,0.33850375850137215,141863.0,True,found_but_wrong,True,True,,,False,False,True,False,0.0,27.43577872679584,"(182, 292, 148)","(213, 163, 117)",,um correto,scipy,N/A,"[1, 1, 1]",99.7
+648,0.3899493809843264,54392.0,True,both_tolerable,True,False,,,False,True,True,False,0.0,2.615755788434112,"(165, 312, 171)","(249, 197, 200)",,ambos toleráveis,scipy,N/A,"[1, 1, 1]",99.7
+875,0.5273712405027835,316224.0,True,both_tolerable,True,False,,,False,True,False,True,6.421605608039556,0.0,"(142, 302, 182)","(241, 240, 208)",,ambos toleráveis,scipy,N/A,"[1, 1, 1]",99.7
+620,0.5185231489129901,111033.0,True,found_but_wrong,True,True,,,False,False,False,False,0.7817503280712156,14.504005931097671,"(197, 330, 174)","(238, 246, 161)",,nenhum correto,scipy,N/A,"[1, 1, 1]",99.7
+703,0.05041391721655669,6442.0,True,found_but_wrong,True,True,,,False,False,False,True,25.830918139696415,0.0,"(125, 355, 209)","(211, 236, 212)",,um correto,scipy,N/A,"[1, 1, 1]",99.7
+832,0.5118460848016547,137935.0,True,found_but_wrong,True,True,,,False,False,False,True,15.675185031802656,0.0,"(126, 303, 211)","(221, 254, 232)",,um correto,scipy,N/A,"[1, 1, 1]",99.7
+771,0.0,1654.0,True,found_but_wrong,True,True,,,False,False,False,False,57.54436937191277,71.35654992645894,"(116, 274, 268)","(81, 219, 268)",,nenhum correto,scipy,N/A,"[1, 1, 1]",99.7
+348,0.33324363192328504,260210.0,True,both_tolerable,True,False,,,False,True,False,True,1.2520323444125068,0.0,"(191, 240, 235)","(293, 144, 256)",,ambos toleráveis,scipy,N/A,"[1, 1, 1]",99.7
+485,0.6518717020747575,213344.0,True,both_correct,True,False,,,True,False,True,True,0.0,0.0,"(200, 328, 183)","(253, 252, 212)",,ambos corretos,scipy,N/A,"[1, 1, 1]",99.7
+643,0.5413300938451338,114985.0,True,both_correct,True,False,,,True,False,True,True,0.0,0.0,"(236, 324, 162)","(309, 240, 189)",,ambos corretos,scipy,N/A,"[1, 1, 1]",99.7
+123,0.6476251050230462,162559.0,True,both_tolerable,True,False,,,False,True,False,True,0.38671875,0.0,"(203, 333, 201)","(259, 266, 229)",,ambos toleráveis,scipy,N/A,"[1, 1, 1]",99.7
+701,0.07507035402841955,97853.0,True,found_but_wrong,True,True,,,False,False,True,False,0.0,12.76532019411198,"(155, 292, 158)","(251, 200, 160)",,um correto,scipy,N/A,"[1, 1, 1]",99.7
+726,0.2573778206018778,43660.0,True,found_but_wrong,True,True,,,False,False,True,False,0.0,16.645810174587723,"(204, 331, 122)","(250, 217, 117)",,um correto,scipy,N/A,"[1, 1, 1]",99.7
+816,0.41108201132496913,74627.0,True,both_tolerable,True,False,,,False,True,False,False,1.4402598549244616,7.509909885643004,"(223, 341, 169)","(285, 276, 178)",,ambos toleráveis,scipy,N/A,"[1, 1, 1]",99.7
+789,0.6679776880684769,191737.0,True,both_tolerable,True,False,,,False,True,False,True,2.5703125,0.0,"(182, 301, 194)","(259, 246, 220)",,ambos toleráveis,scipy,N/A,"[1, 1, 1]",99.7
+161,0.7053256447180597,197619.0,True,both_correct,True,False,,,True,False,True,True,0.0,0.0,"(156, 353, 185)","(252, 287, 214)",,ambos corretos,scipy,N/A,"[1, 1, 1]",99.7
+386,0.2563951214060186,390486.0,True,found_but_wrong,True,True,,,False,False,True,False,0.0,inf,"(157, 328, 110)",,,um correto,scipy,N/A,"[1, 1, 1]",99.7
+557,0.46381504387527117,66487.0,True,found_but_wrong,True,True,,,False,False,False,True,9.513585064593158,0.0,"(166, 316, 199)","(222, 226, 216)",,um correto,scipy,N/A,"[1, 1, 1]",99.7
+59,0.5889090521386825,267012.0,True,both_correct,True,False,,,True,False,True,True,0.0,0.0,"(227, 331, 168)","(295, 240, 189)",,ambos corretos,scipy,N/A,"[1, 1, 1]",99.7
+700,0.4858716558838958,245929.0,True,both_correct,True,False,,,True,False,True,True,0.0,0.0,"(209, 310, 176)","(276, 204, 179)",,ambos corretos,scipy,N/A,"[1, 1, 1]",99.7
+129,0.6764777325536617,203214.0,True,both_correct,True,False,,,True,False,True,True,0.0,0.0,"(182, 333, 168)","(227, 230, 209)",,ambos corretos,scipy,N/A,"[1, 1, 1]",99.7
+646,0.5064409931762573,108124.0,True,both_correct,True,False,,,True,False,True,True,0.0,0.0,"(162, 373, 167)","(244, 286, 211)",,ambos corretos,scipy,N/A,"[1, 1, 1]",99.7
+888,0.44558252761637923,69780.0,True,both_correct,True,False,,,True,False,True,True,0.0,0.0,"(188, 318, 204)","(260, 232, 214)",,ambos corretos,scipy,N/A,"[1, 1, 1]",99.7
+692,0.6530130654004179,235397.0,True,both_correct,True,False,,,True,False,True,True,0.0,0.0,"(164, 399, 143)","(267, 307, 183)",,ambos corretos,scipy,N/A,"[1, 1, 1]",99.7
+33,0.6691332556978872,174934.0,True,both_tolerable,True,False,,,False,True,False,True,6.742769395243444,0.0,"(197, 325, 174)","(265, 237, 195)",,ambos toleráveis,scipy,N/A,"[1, 1, 1]",99.7
