@@ -189,36 +189,77 @@ def load_math_results_for_comparison(math_paths):
     return pd.DataFrame(columns=columns), missing_math_files
 
 
+def _deduplicate_comparison_rows(comparison_raw: pd.DataFrame) -> pd.DataFrame:
+    """Keep one Dice value per source/method/resolution/image key."""
+    required_cols = {"source", "target_resolution", "method", "img_id", "dice"}
+    if not required_cols.issubset(comparison_raw.columns):
+        return comparison_raw.copy()
+
+    deduped = comparison_raw.dropna(
+        subset=["source", "target_resolution", "method", "img_id", "dice"]
+    ).copy()
+    if deduped.empty:
+        return deduped
+
+    deduped["dice"] = pd.to_numeric(deduped["dice"], errors="coerce")
+    deduped = deduped.dropna(subset=["dice"])
+    deduped = deduped.sort_values(
+        ["source", "target_resolution", "method", "img_id", "dice"],
+        ascending=[True, True, True, True, False],
+    )
+    return deduped.drop_duplicates(
+        ["source", "target_resolution", "method", "img_id"], keep="first"
+    )
+
+
+def get_common_ia_math_keys(comparison_raw: pd.DataFrame) -> pd.DataFrame:
+    """Return target-resolution/image pairs present in both IA and math results."""
+    required_cols = {"source", "target_resolution", "img_id"}
+    if not required_cols.issubset(comparison_raw.columns):
+        return pd.DataFrame(columns=["target_resolution", "img_id"])
+
+    ia_keys = (
+        comparison_raw.loc[comparison_raw["source"] == "ia", ["target_resolution", "img_id"]]
+        .dropna(subset=["target_resolution", "img_id"])
+        .drop_duplicates()
+    )
+    math_keys = (
+        comparison_raw.loc[
+            comparison_raw["source"] == "math", ["target_resolution", "img_id"]
+        ]
+        .dropna(subset=["target_resolution", "img_id"])
+        .drop_duplicates()
+    )
+
+    if ia_keys.empty or math_keys.empty:
+        return pd.DataFrame(columns=["target_resolution", "img_id"])
+
+    return ia_keys.merge(
+        math_keys, on=["target_resolution", "img_id"], how="inner"
+    ).drop_duplicates()
+
+
+def filter_to_common_ia_math_ids(comparison_raw: pd.DataFrame) -> pd.DataFrame:
+    """Keep only images available in both IA and math for each target resolution."""
+    comparison_raw = _deduplicate_comparison_rows(comparison_raw)
+    common_keys = get_common_ia_math_keys(comparison_raw)
+    if common_keys.empty:
+        return comparison_raw.iloc[0:0].copy()
+
+    return comparison_raw.merge(
+        common_keys, on=["target_resolution", "img_id"], how="inner"
+    )
+
+
 def build_comparison_agg_df(comparison_raw):
     """Aggregate Dice metrics by resolution, source and method."""
     if comparison_raw.empty:
         # Mantém contrato de retorno mesmo sem entrada.
         return pd.DataFrame()
 
-    required_cols_for_filter = {"source", "target_resolution", "img_id"}
-    if required_cols_for_filter.issubset(comparison_raw.columns):
-        # Lista chaves de imagem que existem na IA.
-        ia_keys = (
-            comparison_raw[comparison_raw["source"] == "ia"][
-                ["target_resolution", "img_id"]
-            ]
-            .dropna(subset=["target_resolution", "img_id"])
-            .drop_duplicates()
-        )
-
-        if not ia_keys.empty:
-            # Mantém no bloco matemático só imagens presentes na IA.
-            math_mask = comparison_raw["source"] == "math"
-            df_non_math = comparison_raw[~math_mask]
-            df_math = comparison_raw[math_mask]
-
-            ia_index = pd.MultiIndex.from_frame(ia_keys)
-            math_index = pd.MultiIndex.from_frame(
-                df_math[["target_resolution", "img_id"]]
-            )
-            df_math = df_math.loc[math_index.isin(ia_index)]
-
-            comparison_raw = pd.concat([df_non_math, df_math], ignore_index=True)
+    comparison_raw = filter_to_common_ia_math_ids(comparison_raw)
+    if comparison_raw.empty:
+        return pd.DataFrame()
 
     # Agrega métricas de Dice por resolução, origem e método.
     agg = comparison_raw.groupby(

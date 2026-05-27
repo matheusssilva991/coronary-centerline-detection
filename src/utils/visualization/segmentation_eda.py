@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 from typing import Any, Dict, Optional, Sequence
 
@@ -209,6 +210,12 @@ def plot_distance_distribution_by_subset(
             if right_column in df_split.columns
             else pd.Series(dtype=float)
         )
+
+        # Remove valores infinitos que causam erro em np.histogram
+        if not left_dist.empty:
+            left_dist = left_dist[np.isfinite(left_dist)]
+        if not right_dist.empty:
+            right_dist = right_dist[np.isfinite(right_dist)]
         color = high_color if resolution == "high" else mid_color
 
         # Contagem de valores abaixo e acima do limiar

@@ -27,6 +27,8 @@ _SYMBOL_TO_MODULE = {
     "summarize_bad_dice_with_threshold": "bad_cases",
     # ia_math
     "build_comparison_agg_df": "ia_math",
+    "filter_to_common_ia_math_ids": "ia_math",
+    "get_common_ia_math_keys": "ia_math",
     "load_ia_results_for_comparison": "ia_math",
     "load_math_results_for_comparison": "ia_math",
     "map_ia_resolution_to_target": "ia_math",

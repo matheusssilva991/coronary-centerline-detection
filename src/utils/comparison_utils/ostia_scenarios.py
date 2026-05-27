@@ -3,6 +3,7 @@ from pathlib import Path
 import pandas as pd
 
 from .bad_cases import filter_correct_ostia_cases
+from .ia_math import filter_to_common_ia_math_ids, get_common_ia_math_keys
 
 
 def load_math_results_for_ostia_scenario(math_paths, scenario):
@@ -80,8 +81,15 @@ def filter_ia_results_for_math_ids(ia_results_df, math_results_df):
     if math_results_df.empty:
         return ia_results_df.iloc[0:0].copy()
 
-    math_ids = math_results_df["img_id"].dropna().unique()
-    return ia_results_df.loc[ia_results_df["img_id"].isin(math_ids)].copy()
+    common_keys = get_common_ia_math_keys(
+        pd.concat([ia_results_df, math_results_df], ignore_index=True)
+    )
+    if common_keys.empty:
+        return ia_results_df.iloc[0:0].copy()
+
+    return ia_results_df.merge(
+        common_keys, on=["target_resolution", "img_id"], how="inner"
+    )
 
 
 def load_ostia_comparison_scenario(ia_results_df, math_paths, scenario):
@@ -91,10 +99,14 @@ def load_ostia_comparison_scenario(ia_results_df, math_paths, scenario):
         scenario,
     )
 
-    if scenario == "full":
-        scenario_ia_df = ia_results_df.copy()
-    else:
-        scenario_ia_df = filter_ia_results_for_math_ids(ia_results_df, scenario_math_df)
+    scenario_raw_df = pd.concat([ia_results_df, scenario_math_df], ignore_index=True)
+    scenario_common_df = filter_to_common_ia_math_ids(scenario_raw_df)
+    scenario_ia_df = scenario_common_df.loc[
+        scenario_common_df["source"] == "ia"
+    ].copy()
+    scenario_math_df = scenario_common_df.loc[
+        scenario_common_df["source"] == "math"
+    ].copy()
 
     return scenario_ia_df, scenario_math_df, missing_math_files
 

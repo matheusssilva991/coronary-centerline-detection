@@ -80,7 +80,7 @@ def get_default_split_paths(repo_root: Path) -> dict[str, dict[str, Path]]:
         "mid_res": {
             "train": base_dir / "mid_res/2026-04-30_14-33-37",
             "val": base_dir / "mid_res/2026-04-30_13-24-40",
-            "test": base_dir / "mid_res/2026-04-19_09-10-35",
+            "test": base_dir / "mid_res/2026-05-02_10-48-13",
         },
         "high_res": {
             "train": base_dir / "high_res/2026-04-21_08-42-13",
