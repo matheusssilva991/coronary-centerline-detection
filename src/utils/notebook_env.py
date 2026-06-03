@@ -73,33 +73,71 @@ def resolve_processed_imagecas_path() -> Path:
     )
 
 
+def _first_existing_path(*candidates: Path) -> Path:
+    """Return the first existing path, or the first candidate as a stable default."""
+    return next((path for path in candidates if path.exists()), candidates[0])
+
+
+def _numeric_result_dir(path: Path) -> Path:
+    """Return the numeric subdir for new runs, otherwise keep legacy paths."""
+    numeric_dir = path / "numeric"
+    return numeric_dir if numeric_dir.exists() else path
+
+
 def get_default_split_paths(repo_root: Path) -> dict[str, dict[str, Path]]:
     """Return the current canonical final-result folders used by EDA notebooks."""
-    base_dir = repo_root / "output/segmentation/8.final_results"
+    legacy_dir = repo_root / "output/segmentation/8.final_results"
+    canonical_dir = repo_root / "output/segmentation/canonical"
+
+    mid_train = _first_existing_path(
+        canonical_dir / "mid_res/train/numeric",
+        legacy_dir / "mid_res/2026-04-30_14-33-37",
+    )
+    mid_val = _first_existing_path(
+        canonical_dir / "mid_res/val/numeric",
+        legacy_dir / "mid_res/2026-04-30_13-24-40",
+    )
+    mid_test = _first_existing_path(
+        canonical_dir / "mid_res/test/numeric",
+        legacy_dir / "mid_res/2026-05-02_10-48-13",
+    )
+    high_train = _first_existing_path(
+        canonical_dir / "high_res/train/numeric",
+        legacy_dir / "high_res/2026-04-21_08-42-13",
+    )
+    high_val = _first_existing_path(
+        canonical_dir / "high_res/val/numeric",
+        legacy_dir / "high_res/2026-04-21_08-42-13",
+    )
+    high_test = _first_existing_path(
+        canonical_dir / "high_res/test/numeric",
+        legacy_dir / "high_res/2026-04-28_14-28-44",
+    )
+
     return {
         "mid_res": {
-            "train": base_dir / "mid_res/2026-04-30_14-33-37",
-            "val": base_dir / "mid_res/2026-04-30_13-24-40",
-            "test": base_dir / "mid_res/2026-05-02_10-48-13",
+            "train": _numeric_result_dir(mid_train),
+            "val": _numeric_result_dir(mid_val),
+            "test": _numeric_result_dir(mid_test),
         },
         "high_res": {
-            "train": base_dir / "high_res/2026-04-21_08-42-13",
-            "val": base_dir / "high_res/2026-04-21_08-42-13",
-            "test": base_dir / "high_res/2026-04-28_14-28-44",
+            "train": _numeric_result_dir(high_train),
+            "val": _numeric_result_dir(high_val),
+            "test": _numeric_result_dir(high_test),
         },
     }
 
 
 def get_bad_cases_export_dir(repo_root: Path) -> Path:
     """Return the shared bad-cases export directory."""
-    return repo_root / "output/segmentation/8.final_results/bad_cases_exports"
+    return repo_root / "output/segmentation/analysis/bad_cases"
 
 
 def get_cases_analysis_output_dir(repo_root: Path) -> Path:
     """Return the HTML output directory for cases-analysis notebooks."""
-    return repo_root / "output/cases_analysis_3d"
+    return repo_root / "output/segmentation/analysis/cases_analysis/visual"
 
 
 def get_cases_analysis_cache_dir(repo_root: Path) -> Path:
     """Return the cache directory for cases-analysis notebooks."""
-    return repo_root / "output/cases_analysis_cache"
+    return repo_root / "output/segmentation/analysis/cases_analysis/cache"

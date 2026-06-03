@@ -52,9 +52,13 @@ coronary-centerline-detection/
 │       ├── plots.py               # Funções de visualização
 │       └── utils.py               # Utilitários gerais
 └── output/                     # Resultados e visualizações
-    ├── detected_circles/       # Círculos detectados na aorta
-    ├── segmented_ostios/       # Visualizações dos óstios detectados
-    └── *.csv                   # Relatórios de resultados
+    ├── segmentation/
+    │   ├── runs/               # Execuções completas por resolução/timestamp
+    │   ├── canonical/          # Referências estáveis para EDA/comparações
+    │   ├── analysis/           # Comparações, bad cases e exemplos visuais
+    │   └── 8.final_results/    # Resultados legados
+    ├── ia_results/             # Resultados da IA por resolução/fold
+    └── tmp/                    # Experimentos temporários
 ```
 
 ## 🔬 Metodologia
@@ -353,9 +357,11 @@ O sistema avalia a qualidade da detecção de óstios através de:
 
 Os resultados são salvos em:
 
-- `output/detected_circles/`: Visualizações dos círculos detectados
-- `output/segmented_ostios/`: Visualizações 3D dos óstios
-- `output/ostios_train_summary.csv`: Resumo quantitativo dos resultados
+- `output/segmentation/runs/<resolution>_res/<timestamp>/numeric/`: CSVs e metadados do pipeline
+- `output/segmentation/runs/<resolution>_res/<timestamp>/visual/`: exemplos visuais associados ao run
+- `output/segmentation/runs/<resolution>_res/<timestamp>/config/`: config efetiva e IDs usados
+- `output/segmentation/analysis/`: análises derivadas dos notebooks
+- `output/segmentation/8.final_results/`: resultados legados mantidos como referência
 
 ## 🔧 Configuração
 

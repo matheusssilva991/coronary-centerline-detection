@@ -51,27 +51,31 @@ Exemplos de uso:
   # RETOMADA DE LOTES (em caso de falha):
   # Primeira execução - cria novo diretório
     python segmentation_pipeline.py --split test --num-batches 70
-  # Saída: output/segmentation/2026-03-14_10-30-00/
+  # Saída: output/segmentation/runs/mid_res/2026-03-14_10-30-00/
 
   # Se falhar no lote 3, retomar no MESMO diretório:
-    python segmentation_pipeline.py --split test --num-batches 70 --resume-batch 3 --resume-dir output/segmentation/2026-03-14_10-30-00
+    python segmentation_pipeline.py --split test --num-batches 70 --resume-batch 3 --resume-dir output/segmentation/runs/mid_res/2026-03-14_10-30-00
 
     # Retomada explícita por subset:
     python segmentation_pipeline.py --split all --num-batches 70 --resume-batches train=0,val=3,test=0
 
   # Versão curta (se no mesmo diretório):
-    python segmentation_pipeline.py --split test --num-batches 70 --resume-batch 3 --resume-dir ./output/segmentation/2026-03-14_10-30-00
+    python segmentation_pipeline.py --split test --num-batches 70 --resume-batch 3 --resume-dir ./output/segmentation/runs/mid_res/2026-03-14_10-30-00
 
   # Apenas consolidar lotes já processados, sem reprocessar imagens:
-    python segmentation_pipeline.py --merge-only --split test --resume-dir output/segmentation/2026-03-14_10-30-00
+    python segmentation_pipeline.py --merge-only --split test --resume-dir output/segmentation/runs/mid_res/2026-03-14_10-30-00
 
   # Sobrescrever caminhos de dados/cache pela CLI:
     python segmentation_pipeline.py --split test --base-path /dados/ImageCAS/1-1000 --base-save-path /dados/Processed_ImageCAS
 
 Arquivos de saída:
-  - ostios_{split}_summary.csv: Resultados consolidados ao final (ou após merge)
-  - ostios_{split}_lote_1_summary.csv, ostios_{split}_lote_2_summary.csv, etc: Resultados de cada lote (modo batch)
-  - ostios_{split}_metadata.json: Metadados completos (configurações, estatísticas, timestamp)
+  - numeric/ostios_{split}_summary.csv: Resultados consolidados ao final (ou após merge)
+  - numeric/ostios_{split}_lote_1_summary.csv, numeric/ostios_{split}_lote_2_summary.csv, etc: Resultados de cada lote
+  - numeric/ostios_{split}_metadata.json: Metadados completos
+  - config/effective_pipeline_config.json: Config efetiva usada no run
+  - config/split_ids.json: IDs processados por split
+  - logs/pipeline.log: Log da execução
+  - visual/: Exemplos visuais gerados por notebooks/scripts auxiliares
 """
 
 
@@ -214,7 +218,7 @@ def build_parser(default_base_path, default_base_save_path, default_output_dir):
         "--resume-dir",
         type=str,
         default=None,
-        help="Diretório anterior para retomar (ex: output/segmentation/2026-03-14_10-30-00). Obrigatório quando a retomada começa de um lote > 0.",
+        help="Diretório anterior para retomar (ex: output/segmentation/runs/mid_res/2026-03-14_10-30-00). Obrigatório quando a retomada começa de um lote > 0.",
     )
     return parser
 

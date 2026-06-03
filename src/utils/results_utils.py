@@ -34,13 +34,57 @@ RESULT_COLUMNS = [
     "status",
 ]
 
+READABLE_COLUMN_NAMES = {
+    "dice_artery": "artery_dice",
+    "artery_voxels": "artery_voxel_count",
+    "ostia_found": "ostia_detected",
+    "ostia_status": "ostia_detection_status",
+    "segmentation_attempted": "artery_segmentation_run",
+    "proceeded_with_bad_ostia": "segmented_with_incorrect_ostia",
+    "skip_reason": "segmentation_skip_reason",
+    "ostia_error": "ostia_detection_error",
+    "both_correct": "both_ostia_correct",
+    "both_tolerable": "both_ostia_tolerable",
+    "left_intersects": "left_ostium_correct",
+    "right_intersects": "right_ostium_correct",
+    "left_dist_mm": "left_ostium_distance_mm",
+    "right_dist_mm": "right_ostium_distance_mm",
+    "ostia_left": "left_ostium",
+    "ostia_right": "right_ostium",
+    "error": "pipeline_error",
+    "downscale_method": "downscale_method",
+    "opencv_interpolation": "opencv_interpolation",
+    "downscale_factors": "downscale_factors",
+    "max_threshold_percentile": "max_threshold_percentile",
+}
+
+CANONICAL_COLUMN_NAMES = {value: key for key, value in READABLE_COLUMN_NAMES.items()}
+
+READABLE_BOOL_COLUMNS = {
+    "ostia_detected",
+    "artery_segmentation_run",
+    "segmented_with_incorrect_ostia",
+    "both_ostia_correct",
+    "both_ostia_tolerable",
+    "left_ostium_correct",
+    "right_ostium_correct",
+}
+
+OSTIA_STATUS_READABLE_LABELS = {
+    "not_evaluated": "not evaluated",
+    "not_found": "not found",
+    "both_correct": "both correct",
+    "both_tolerable": "both tolerable",
+    "found_but_wrong": "found but incorrect",
+}
+
 STATUS_LABELS = {
-    "not_found": "óstios não encontrados",
-    "both_correct": "ambos corretos",
-    "both_tolerable": "ambos toleráveis",
-    "one_correct": "um correto",
-    "error": "erro",
-    "none_correct": "nenhum correto",
+    "not_found": "ostia not found",
+    "both_correct": "both ostia correct",
+    "both_tolerable": "both ostia tolerable",
+    "one_correct": "one ostium correct",
+    "error": "pipeline error",
+    "none_correct": "no ostium correct",
 }
 
 
@@ -58,6 +102,61 @@ def make_json_safe(value: Any) -> Any:
         except ValueError:
             pass
     return value
+
+
+def _readable_column_name(column: str) -> str:
+    return READABLE_COLUMN_NAMES.get(column, column)
+
+
+def _get_result_value(result: dict[str, Any], column: str, default: Any = None) -> Any:
+    if column in result:
+        return result.get(column)
+
+    readable_column = _readable_column_name(column)
+    if readable_column in result:
+        return result.get(readable_column)
+
+    return default
+
+
+def _as_bool_value(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if value is None or pd.isna(value):
+        return False
+    if isinstance(value, (int, float)):
+        return bool(value)
+
+    normalized = str(value).strip().lower()
+    return normalized in {"true", "1", "sim", "s", "yes", "y"}
+
+
+def _format_bool_readable(value: Any) -> str:
+    return "yes" if _as_bool_value(value) else "no"
+
+
+def make_readable_results_dataframe(df: pd.DataFrame) -> pd.DataFrame:
+    """Converte colunas técnicas do resultado para nomes/valores mais legíveis."""
+    readable_df = df.rename(columns=READABLE_COLUMN_NAMES).copy()
+
+    for column in READABLE_BOOL_COLUMNS.intersection(readable_df.columns):
+        readable_df[column] = readable_df[column].map(_format_bool_readable)
+
+    for column in ("ostia_detection_status", "status_ostios"):
+        if column in readable_df.columns:
+            readable_df[column] = readable_df[column].map(
+                lambda value: OSTIA_STATUS_READABLE_LABELS.get(value, value)
+            )
+
+    return readable_df
+
+
+def _series_from_aliases(df: pd.DataFrame, column: str, dtype=None) -> pd.Series:
+    column_candidates = (column, _readable_column_name(column))
+    for column_candidate in column_candidates:
+        if column_candidate in df.columns:
+            return df[column_candidate]
+    return pd.Series(index=df.index, dtype=dtype)
 
 
 def create_timestamped_output_dir(base_output_dir, experiment_name="segmentation"):
@@ -87,25 +186,37 @@ def build_result_row(result: dict[str, Any]) -> dict[str, Any]:
     """Converte um resultado bruto do pipeline em uma linha CSV padronizada."""
     row = {
         "IMG_ID": result.get("IMG_ID"),
-        "dice_artery": result.get("dice_artery"),
-        "artery_voxels": result.get("artery_voxels"),
-        "ostia_found": result.get("ostia_found", False),
-        "ostia_status": result.get("ostia_status"),
-        "segmentation_attempted": result.get("segmentation_attempted", False),
-        "proceeded_with_bad_ostia": result.get("proceeded_with_bad_ostia", False),
-        "skip_reason": result.get("skip_reason"),
-        "ostia_error": result.get("ostia_error"),
-        "both_correct": result.get("both_correct", False),
-        "both_tolerable": result.get("both_tolerable", False),
-        "left_intersects": result.get("left_intersects", False),
-        "right_intersects": result.get("right_intersects", False),
-        "left_dist_mm": result.get("left_dist_mm"),
-        "right_dist_mm": result.get("right_dist_mm"),
-        "ostia_left": result.get("ostia_left"),
-        "ostia_right": result.get("ostia_right"),
-        "error": result.get("error", None),
+        "dice_artery": _get_result_value(result, "dice_artery"),
+        "artery_voxels": _get_result_value(result, "artery_voxels"),
+        "ostia_found": _as_bool_value(_get_result_value(result, "ostia_found", False)),
+        "ostia_status": _get_result_value(result, "ostia_status"),
+        "segmentation_attempted": _as_bool_value(
+            _get_result_value(result, "segmentation_attempted", False)
+        ),
+        "proceeded_with_bad_ostia": _as_bool_value(
+            _get_result_value(result, "proceeded_with_bad_ostia", False)
+        ),
+        "skip_reason": _get_result_value(result, "skip_reason"),
+        "ostia_error": _get_result_value(result, "ostia_error"),
+        "both_correct": _as_bool_value(
+            _get_result_value(result, "both_correct", False)
+        ),
+        "both_tolerable": _as_bool_value(
+            _get_result_value(result, "both_tolerable", False)
+        ),
+        "left_intersects": _as_bool_value(
+            _get_result_value(result, "left_intersects", False)
+        ),
+        "right_intersects": _as_bool_value(
+            _get_result_value(result, "right_intersects", False)
+        ),
+        "left_dist_mm": _get_result_value(result, "left_dist_mm"),
+        "right_dist_mm": _get_result_value(result, "right_dist_mm"),
+        "ostia_left": _get_result_value(result, "ostia_left"),
+        "ostia_right": _get_result_value(result, "ostia_right"),
+        "error": _get_result_value(result, "error", None),
     }
-    row["status"] = classify_result_status(result)
+    row["status"] = result.get("status") or classify_result_status(row)
     return row
 
 
@@ -134,6 +245,7 @@ def save_results(results, split_name, output_dir, config=None):
     df = make_result_dataframe(results)
     if config is not None:
         df = add_config_columns(df, config)
+    df = make_readable_results_dataframe(df)
 
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -143,7 +255,8 @@ def save_results(results, split_name, output_dir, config=None):
 
 
 def _bool_series(df: pd.DataFrame, column: str) -> pd.Series:
-    return df.get(column, pd.Series(index=df.index, dtype=bool)).fillna(False)
+    series = _series_from_aliases(df, column, dtype=bool)
+    return series.map(_as_bool_value)
 
 
 def summarize_results_df(df: pd.DataFrame) -> dict[str, Any]:
@@ -153,11 +266,15 @@ def summarize_results_df(df: pd.DataFrame) -> dict[str, Any]:
     ostia_found_series = _bool_series(df, "ostia_found")
     segmentation_attempted_series = _bool_series(df, "segmentation_attempted")
     proceeded_with_bad_ostia_series = _bool_series(df, "proceeded_with_bad_ostia")
-    ostia_not_found_series = df.get("ostia_status", pd.Series(index=df.index)).eq(
-        "not_found"
+    ostia_status_series = _series_from_aliases(df, "ostia_status")
+    ostia_status_normalized = ostia_status_series.fillna("").astype(str).str.lower()
+    ostia_not_found_series = ostia_status_normalized.isin(
+        {"not_found", "not found", "não encontrados", "óstios não encontrados"}
     )
-    error_series = df.get("error", pd.Series(index=df.index))
-    dice_series = df.get("dice_artery", pd.Series(index=df.index, dtype=float))
+    error_series = _series_from_aliases(df, "error")
+    dice_series = pd.to_numeric(
+        _series_from_aliases(df, "dice_artery", dtype=float), errors="coerce"
+    )
 
     total_success_series = both_correct_series | both_tolerable_series
     summary = {
@@ -389,6 +506,7 @@ def merge_batch_results(split_name, output_dir):
     dfs = []
     for batch_file in batch_files:
         df = pd.read_csv(batch_file)
+        df = make_readable_results_dataframe(df)
         dfs.append(df)
         print(f"   ✓ {batch_file.name} ({len(df)} registros)")
 

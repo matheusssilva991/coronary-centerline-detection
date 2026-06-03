@@ -2,6 +2,7 @@
 # IMPORTS
 # ============================================================================
 import copy
+import json
 import logging
 import os
 from pathlib import Path
@@ -16,6 +17,7 @@ from utils.dataset_utils import get_data_splits
 from utils.processing.gpu_utils import use_gpu
 from utils.results_utils import (
     create_timestamped_output_dir,
+    make_json_safe,
     make_result_dataframe,
     merge_batch_results,
     save_metadata,
@@ -144,11 +146,11 @@ def print_run_settings(args, config, base_path, base_save_path):
 
 
 def resolve_output_dir(args, output_root_dir):
-    """Cria ou reutiliza o diretório de saída da execução."""
+    """Cria ou reutiliza os diretórios de saída da execução."""
     if (args.resume_requested or args.merge_only) and args.resume_dir:
         if args.resume_dir.exists():
             print(f"\n📁 Usando diretório anterior: {args.resume_dir}\n")
-            return args.resume_dir
+            return resolve_existing_output_dirs(args.resume_dir)
         print(f"❌ Erro: Diretório não encontrado: {args.resume_dir}")
         print("   Use --resume-dir com o caminho do diretório anterior")
         raise SystemExit(1)
@@ -161,17 +163,61 @@ def resolve_output_dir(args, output_root_dir):
         )
         raise SystemExit(1)
 
-    output_dir = create_timestamped_output_dir(
-        output_root_dir, experiment_name="segmentation"
+    run_dir = create_timestamped_output_dir(
+        output_root_dir,
+        experiment_name=f"segmentation/runs/{args.resolution}_res",
     )
-    print(f"📁 Diretório de saída: {output_dir}\n")
-    return Path(output_dir)
+    output_dirs = build_structured_output_dirs(run_dir)
+    print(f"📁 Diretório da execução: {output_dirs['run_dir']}")
+    print(f"📊 Resultados numéricos: {output_dirs['numeric_dir']}")
+    print(f"🖼️  Exemplos visuais: {output_dirs['visual_dir']}\n")
+    return output_dirs
 
 
-def setup_file_logging(output_dir):
+def build_structured_output_dirs(run_dir):
+    """Cria a estrutura padrão de uma execução nova."""
+    run_dir = Path(run_dir)
+    output_dirs = {
+        "run_dir": run_dir,
+        "numeric_dir": run_dir / "numeric",
+        "config_dir": run_dir / "config",
+        "visual_dir": run_dir / "visual",
+        "logs_dir": run_dir / "logs",
+    }
+    for output_path in output_dirs.values():
+        output_path.mkdir(parents=True, exist_ok=True)
+    return output_dirs
+
+
+def resolve_existing_output_dirs(resume_dir):
+    """Resolve diretórios para retomada em layout novo ou legado."""
+    resume_dir = Path(resume_dir)
+    if resume_dir.name == "numeric":
+        run_dir = resume_dir.parent
+        numeric_dir = resume_dir
+    elif (resume_dir / "numeric").exists():
+        run_dir = resume_dir
+        numeric_dir = resume_dir / "numeric"
+    else:
+        run_dir = resume_dir
+        numeric_dir = resume_dir
+
+    output_dirs = {
+        "run_dir": run_dir,
+        "numeric_dir": numeric_dir,
+        "config_dir": run_dir / "config",
+        "visual_dir": run_dir / "visual",
+        "logs_dir": run_dir / "logs",
+    }
+    output_dirs["numeric_dir"].mkdir(parents=True, exist_ok=True)
+    output_dirs["logs_dir"].mkdir(parents=True, exist_ok=True)
+    return output_dirs
+
+
+def setup_file_logging(logs_dir):
     """Adiciona um arquivo de log dentro do diretório da execução."""
     try:
-        fh_path = Path(output_dir) / "pipeline.log"
+        fh_path = Path(logs_dir) / "pipeline.log"
         fh = logging.FileHandler(fh_path, encoding="utf-8")
         fh.setLevel(logging.DEBUG)
         fh.setFormatter(logging.Formatter(LOG_FORMAT))
@@ -179,6 +225,26 @@ def setup_file_logging(output_dir):
         logger.info("Logs também serão gravados em: %s", fh_path)
     except Exception:
         logger.warning("Não foi possível criar arquivo de log no diretório de saída.")
+
+
+def save_run_snapshots(output_dirs, config, splits_to_run):
+    """Salva config efetiva e IDs por split dentro da pasta config da execução."""
+    config_dir = output_dirs["config_dir"]
+    config_dir.mkdir(parents=True, exist_ok=True)
+
+    config_path = config_dir / "effective_pipeline_config.json"
+    with config_path.open("w", encoding="utf-8") as file_handle:
+        json.dump(make_json_safe(config), file_handle, indent=2, ensure_ascii=False)
+
+    split_ids = {
+        split_name: ids
+        for split_name, ids in splits_to_run
+        if ids is not None
+    }
+    if split_ids:
+        split_path = config_dir / "split_ids.json"
+        with split_path.open("w", encoding="utf-8") as file_handle:
+            json.dump(make_json_safe(split_ids), file_handle, indent=2, ensure_ascii=False)
 
 
 def split_names_from_args(args):
@@ -363,13 +429,15 @@ def main():
     effective_config = build_effective_config(args)
 
     print_run_settings(args, effective_config, base_path, base_save_path)
-    output_dir = resolve_output_dir(args, output_root_dir)
-    setup_file_logging(output_dir)
+    output_dirs = resolve_output_dir(args, output_root_dir)
+    setup_file_logging(output_dirs["logs_dir"])
     splits_to_run = build_splits_to_run(args, base_path)
+    if not (args.resume_requested or args.merge_only):
+        save_run_snapshots(output_dirs, effective_config, splits_to_run)
     run_requested_splits(
         args,
         splits_to_run,
-        output_dir,
+        output_dirs["numeric_dir"],
         effective_config,
         base_path,
         base_save_path,
