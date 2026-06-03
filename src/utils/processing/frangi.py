@@ -115,7 +115,7 @@ def get_vesselness(
     # Determina se deve usar GPU
     use_gpu_flag = gpu if gpu is not None else GPU_AVAILABLE
 
-    if use_gpu_flag and GPU_AVAILABLE:
+    if use_gpu_flag and GPU_AVAILABLE and gpu_filters is not None:
         # Converte para GPU se necessário
         image_gpu = to_gpu(image)
 
@@ -202,7 +202,7 @@ def get_vesselness_optimized(
     # Determina se deve usar GPU
     use_gpu_flag = gpu if gpu is not None else GPU_AVAILABLE
 
-    if use_gpu_flag and GPU_AVAILABLE:
+    if use_gpu_flag and GPU_AVAILABLE and gpu_filters is not None:
         # Converte para GPU
         img_gpu = to_gpu(image)
 

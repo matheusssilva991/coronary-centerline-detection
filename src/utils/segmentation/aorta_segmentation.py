@@ -289,7 +289,11 @@ def level_set_segmentation(
     return refined_segmentation
 
 
-def remove_leaks_morphology(mask_3d: NDArray[Any], radius: int = 3) -> NDArray[Any]:
+def remove_leaks_morphology(
+    mask_3d: NDArray[Any],
+    radius: int = 3,
+    use_gpu: bool = False,
+) -> NDArray[Any]:
     """
     Remove vazamentos e ruído da máscara 3D usando abertura morfológica.
 
@@ -333,6 +337,6 @@ def remove_leaks_morphology(mask_3d: NDArray[Any], radius: int = 3) -> NDArray[A
     kernel = ball(radius)
 
     # Aplicar abertura morfológica (erosão → dilatação) com suporte GPU
-    mask_cleaned = binary_opening(mask_3d, structure=kernel)
+    mask_cleaned = binary_opening(mask_3d, structure=kernel, gpu=bool(use_gpu))
 
     return mask_cleaned

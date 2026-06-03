@@ -68,10 +68,14 @@ def process_image(img_id, config, base_path, base_save_path):
         vesselness_ostios = get_or_compute_vesselness(
             img_id,
             lcc_image,
-            cache_dir=f"{base_save_path}/vesselness_ostios_cache",
+            cache_dir=(
+                f"{base_save_path}/vesselness_ostios_cache_"
+                f"{'gpu' if config.get('USE_GPU', False) else 'cpu'}"
+            ),
             vesselness_config=config["VESSELNESS_AORTA"],
             load_cache=config["LOAD_CACHE"],
             save_cache=config["SAVE_CACHE"],
+            use_gpu=config.get("USE_GPU", False),
         )
 
         detected_circles = get_or_detect_aorta_circles(

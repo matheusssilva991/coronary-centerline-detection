@@ -87,9 +87,11 @@ def get_or_segment_aorta(
         use_gpu=bool(use_gpu),
     )
     aorta_mask = remove_leaks_morphology(
-        mask_refined, radius=level_set_config["leak_removal_radius"]
+        mask_refined,
+        radius=level_set_config["leak_removal_radius"],
+        use_gpu=bool(use_gpu),
     )
-    aorta_mask = keep_largest_component(aorta_mask)
+    aorta_mask = keep_largest_component(aorta_mask, gpu=bool(use_gpu))
     aorta_mask = aorta_mask.astype(np.uint8)
 
     save_npy_cache(aorta_mask, mask_path, enabled=save_cache)
@@ -117,6 +119,7 @@ def detect_and_evaluate_ostia(
         min_center_distance_factor=ostia_config["min_center_distance_factor"],
         min_lateral_factor=ostia_config["min_lateral_factor"],
         erosion_radius=ostia_config["erosion_radius"],
+        use_gpu=config.get("USE_GPU", False),
     )
 
     label_artery = (label == 1).astype(np.uint8)

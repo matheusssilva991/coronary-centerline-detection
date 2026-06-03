@@ -73,6 +73,7 @@ def get_or_compute_vesselness(
     vesselness_config: Dict[str, Any],
     load_cache: bool = False,
     save_cache: bool = False,
+    use_gpu: bool = False,
 ) -> Any:
     """Carrega ou calcula vesselness para um volume 3D."""
     if load_cache:
@@ -88,6 +89,7 @@ def get_or_compute_vesselness(
         beta=vesselness_config["beta"],
         gamma=vesselness_config["gamma"],
         normalization="none",
+        gpu=bool(use_gpu),
     )
     if save_cache:
         save_vesselness_cache(vesselness, img_id, cache_dir=cache_dir)

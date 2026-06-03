@@ -120,11 +120,17 @@ def _classify_left_right(
 
 
 def find_aorta_surface(
-    aorta_mask: NDArray[Any], erosion_radius: int = 2
+    aorta_mask: NDArray[Any],
+    erosion_radius: int = 2,
+    use_gpu: bool = False,
 ) -> NDArray[Any]:
     """Extrai a casca da aorta como (máscara - máscara erodida)."""
     struct_elem = ball(erosion_radius)
-    eroded = binary_erosion(aorta_mask.astype(bool), structure=struct_elem)
+    eroded = binary_erosion(
+        aorta_mask.astype(bool),
+        structure=struct_elem,
+        gpu=bool(use_gpu),
+    )
     surface = aorta_mask.astype(bool) & (~eroded)  # pyright: ignore[reportOperatorIssue]
     return surface.astype(np.uint8)
 
@@ -225,6 +231,7 @@ def find_ostia(
     min_center_distance_factor: float = 0.8,
     min_lateral_factor: float = 0.5,
     erosion_radius: int = 2,
+    use_gpu: bool = False,
     verbose: bool = True,
 ) -> Tuple[NDArray[Any], Optional[NDArray[Any]]]:
     """Detecta óstios coronários esquerdo e direito a partir da superfície da aorta e do vesselness."""
@@ -234,7 +241,11 @@ def find_ostia(
             f"{aorta_mask.shape} vs {vesselness_map.shape}"
         )
 
-    aorta_surface = find_aorta_surface(aorta_mask, erosion_radius=erosion_radius)
+    aorta_surface = find_aorta_surface(
+        aorta_mask,
+        erosion_radius=erosion_radius,
+        use_gpu=bool(use_gpu),
+    )
     lower_region_mask, _, _ = _extract_lower_region(aorta_surface, lower_fraction)
     top_candidates = _get_top_candidates(lower_region_mask, vesselness_map, top_n)
 

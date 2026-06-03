@@ -148,6 +148,20 @@ def build_parser(default_base_path, default_base_save_path, default_output_dir):
         action="store_true",
         help="Desabilitar salvamento de cache (não recomendado)",
     )
+    gpu_group = parser.add_mutually_exclusive_group()
+    gpu_group.add_argument(
+        "--gpu",
+        dest="use_gpu",
+        action="store_true",
+        default=None,
+        help="Força uso de GPU nas etapas compatíveis, se disponível.",
+    )
+    gpu_group.add_argument(
+        "--no-gpu",
+        dest="use_gpu",
+        action="store_false",
+        help="Força CPU nas etapas compatíveis, mesmo se houver GPU disponível.",
+    )
     parser.add_argument(
         "--downscale-method",
         type=str,

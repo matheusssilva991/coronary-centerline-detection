@@ -142,6 +142,8 @@ def build_effective_config(args):
         effective_config["DOWNSCALE_METHOD"] = args.downscale_method
     if args.opencv_interpolation is not None:
         effective_config["OPENCV_INTERPOLATION"] = args.opencv_interpolation
+    if args.use_gpu is not None:
+        effective_config["USE_GPU"] = args.use_gpu
 
     effective_config["NUM_BATCHES"] = args.num_batches
     return effective_config
@@ -160,6 +162,10 @@ def print_run_settings(args, config, base_path, base_save_path):
 
     print(f"🗂️  Dataset: {base_path}")
     print(f"💽 Cache/artefatos: {base_save_path}")
+    print(
+        "🖥️  GPU nas etapas compatíveis: "
+        f"{'habilitada' if config.get('USE_GPU', False) else 'desabilitada'}"
+    )
     print(f"📦 Processamento em {args.num_batches} lotes")
 
     if args.resume_batch > 0:

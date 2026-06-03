@@ -24,10 +24,14 @@ def segment_arteries_from_ostia(
     vesselness_artery = get_or_compute_vesselness(
         img_id,
         lcc_image,
-        cache_dir=f"{base_save_path}/vesselness_artery_cache",
+        cache_dir=(
+            f"{base_save_path}/vesselness_artery_cache_"
+            f"{'gpu' if config.get('USE_GPU', False) else 'cpu'}"
+        ),
         vesselness_config=config["VESSELNESS_ARTERY"],
         load_cache=config["LOAD_CACHE"],
         save_cache=config["SAVE_CACHE"],
+        use_gpu=config.get("USE_GPU", False),
     )
 
     rg_config = config["REGION_GROWING"]
@@ -63,10 +67,14 @@ def segment_arteries_from_ostia(
     artery_mask = (left_mask + right_mask).astype(np.uint8)
     post_config = config["POSTPROCESSING"]
     closed_mask = binary_closing(
-        artery_mask > 0, structure=ball(post_config["closing_radius"])
+        artery_mask > 0,
+        structure=ball(post_config["closing_radius"]),
+        gpu=config.get("USE_GPU", False),
     )
     dilated_mask = binary_dilation(
-        closed_mask, structure=ball(post_config["dilation_radius"])
+        closed_mask,
+        structure=ball(post_config["dilation_radius"]),
+        gpu=config.get("USE_GPU", False),
     )
     artery_mask = dilated_mask
 
