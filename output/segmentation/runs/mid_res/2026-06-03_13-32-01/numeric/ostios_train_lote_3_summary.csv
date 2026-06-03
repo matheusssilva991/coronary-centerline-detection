@@ -1,0 +1,19 @@
+IMG_ID,artery_dice,artery_voxel_count,ostia_detected,ostia_detection_status,artery_segmentation_run,segmented_with_incorrect_ostia,segmentation_skip_reason,ostia_detection_error,both_ostia_correct,both_ostia_tolerable,left_ostium_correct,right_ostium_correct,left_ostium_distance_mm,right_ostium_distance_mm,left_ostium,right_ostium,pipeline_error,status,downscale_method,opencv_interpolation,downscale_factors,max_threshold_percentile
+23,0.0,7175.0,yes,found but incorrect,yes,yes,,,no,no,no,no,55.035933113883154,30.65221233006745,"(44, 150, 250)","(87, 131, 250)",,no ostium correct,scipy,N/A,"(2, 2, 1)",99.7
+553,0.5563253071838339,23855.0,yes,both tolerable,yes,no,,,no,yes,no,no,0.8595969173697416,1.1080675614343762,"(104, 153, 140)","(123, 122, 184)",,both ostia tolerable,scipy,N/A,"(2, 2, 1)",99.7
+922,0.6564623417495172,12959.0,yes,both tolerable,yes,no,,,no,yes,yes,no,0.0,1.345667690480501,"(94, 162, 162)","(115, 127, 197)",,both ostia tolerable,scipy,N/A,"(2, 2, 1)",99.7
+682,0.7323633100442279,43803.0,yes,both tolerable,yes,no,,,no,yes,no,no,1.029961908617559,0.5,"(84, 163, 137)","(101, 120, 178)",,both ostia tolerable,scipy,N/A,"(2, 2, 1)",99.7
+934,0.4924634786445874,13591.0,yes,both tolerable,yes,no,,,no,yes,yes,no,0.0,6.192095042521958,"(86, 169, 219)","(131, 107, 226)",,both ostia tolerable,scipy,N/A,"(2, 2, 1)",99.7
+737,0.4979799906368665,18969.0,yes,found but incorrect,yes,yes,,,no,no,yes,no,0.0,31.029019462885465,"(95, 176, 215)","(71, 110, 212)",,one ostium correct,scipy,N/A,"(2, 2, 1)",99.7
+510,0.6861976899413779,38955.0,yes,both tolerable,yes,no,,,no,yes,yes,no,0.0,1.1377451873456221,"(86, 155, 179)","(115, 118, 221)",,both ostia tolerable,scipy,N/A,"(2, 2, 1)",99.7
+2,0.7095806512092995,24909.0,yes,both tolerable,yes,no,,,no,yes,no,no,2.6759950872584297,1.6735717149725762,"(87, 155, 222)","(104, 120, 255)",,both ostia tolerable,scipy,N/A,"(2, 2, 1)",99.7
+420,0.7526150530442376,26206.0,yes,both correct,yes,no,,,yes,no,yes,yes,0.0,0.0,"(99, 158, 188)","(124, 112, 208)",,both ostia correct,scipy,N/A,"(2, 2, 1)",99.7
+881,0.6895832102848818,25234.0,yes,both correct,yes,no,,,yes,no,yes,yes,0.0,0.0,"(106, 167, 186)","(123, 132, 227)",,both ostia correct,scipy,N/A,"(2, 2, 1)",99.7
+11,0.6952152621913895,21756.0,yes,both tolerable,yes,no,,,no,yes,no,no,1.4761542507713454,1.7668085773020588,"(98, 141, 170)","(122, 121, 207)",,both ostia tolerable,scipy,N/A,"(2, 2, 1)",99.7
+906,0.7182998995124493,24025.0,yes,both correct,yes,no,,,yes,no,yes,yes,0.0,0.0,"(95, 157, 124)","(119, 110, 173)",,both ostia correct,scipy,N/A,"(2, 2, 1)",99.7
+251,0.3423026025584473,14867.0,yes,both tolerable,yes,no,,,no,yes,no,no,0.8095744354916121,1.029961908617559,"(95, 147, 154)","(121, 110, 179)",,both ostia tolerable,scipy,N/A,"(2, 2, 1)",99.7
+409,0.5844573943518481,20375.0,yes,both tolerable,yes,no,,,no,yes,no,no,1.703254904736168,0.5,"(94, 152, 185)","(122, 117, 221)",,both ostia tolerable,scipy,N/A,"(2, 2, 1)",99.7
+134,0.5522277594118518,19442.0,yes,both tolerable,yes,no,,,no,yes,no,no,1.4237464075486943,0.8095744354916121,"(83, 187, 141)","(97, 147, 157)",,both ostia tolerable,scipy,N/A,"(2, 2, 1)",99.7
+822,0.0,,no,not found,no,no,ostia_not_found,Nenhuma superfície de aorta encontrada!,no,no,no,no,,,,,,ostia not found,scipy,N/A,"(2, 2, 1)",99.7
+248,0.5132851850864802,12596.0,yes,found but incorrect,yes,yes,,,no,no,yes,no,0.0,21.585732502193434,"(99, 178, 199)","(96, 147, 176)",,one ostium correct,scipy,N/A,"(2, 2, 1)",99.7
+907,0.7422624376518736,31802.0,yes,both tolerable,yes,no,,,no,yes,yes,no,0.0,0.5,"(96, 146, 119)","(118, 98, 154)",,both ostia tolerable,scipy,N/A,"(2, 2, 1)",99.7
