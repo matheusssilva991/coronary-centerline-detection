@@ -1,0 +1,7 @@
+IMG_ID,artery_dice,artery_voxel_count,ostia_detected,ostia_detection_status,artery_segmentation_run,segmented_with_incorrect_ostia,segmentation_skip_reason,ostia_detection_error,both_ostia_correct,both_ostia_tolerable,left_ostium_correct,right_ostium_correct,left_ostium_distance_mm,right_ostium_distance_mm,left_ostium,right_ostium,pipeline_error,status,downscale_method,opencv_interpolation,downscale_factors,max_threshold_percentile
+752,0.0,4870,yes,found but incorrect,yes,yes,,,no,no,no,no,8.321278919813235,14.23387813433725,"(164, 180, 160)","(95, 153, 184)",,no ostium correct,scipy,N/A,"(2, 2, 1)",99.7
+13,0.5712945264986968,24936,yes,both tolerable,yes,no,,,no,yes,no,no,1.390625,0.8564224849081498,"(112, 172, 166)","(131, 145, 202)",,both ostia tolerable,scipy,N/A,"(2, 2, 1)",99.7
+538,0.6657587779027769,25953,yes,both tolerable,yes,no,,,no,yes,no,no,0.63671875,0.5,"(102, 174, 202)","(128, 140, 218)",,both ostia tolerable,scipy,N/A,"(2, 2, 1)",99.7
+965,0.48715557110100655,23799,yes,both tolerable,yes,no,,,no,yes,no,no,1.4820293967437015,5.416547725056293,"(107, 153, 174)","(117, 129, 202)",,both ostia tolerable,scipy,N/A,"(2, 2, 1)",99.7
+447,0.46255843084537596,11824,yes,found but incorrect,yes,yes,,,no,no,yes,no,0.0,41.23956425759431,"(119, 186, 172)","(143, 83, 160)",,one ostium correct,scipy,N/A,"(2, 2, 1)",99.7
+836,0.7512245806738904,26708,yes,both tolerable,yes,no,,,no,yes,no,no,0.9004562916672442,0.5,"(101, 138, 174)","(127, 105, 209)",,both ostia tolerable,scipy,N/A,"(2, 2, 1)",99.7

@@ -37,7 +37,7 @@
     "CIRCLE_DETECTION": {
         "radii_start_px": 18,
         "radii_end_px": 31,
-        "radius_step_px": 2,
+        "radius_step_px": 1,
         "tol_radius_mm": 9.0,
         "tol_distance_mm": 20.0,
         "quadrant_offset": [
@@ -50,7 +50,7 @@
         "total_num_peaks": 15,
         "canny_sigma": 3,
         "use_local_roi": true,
-        "local_roi_padding": 25
+        "local_roi_padding": 30
     },
     "LEVEL_SET": {
         "radius_reduction_factor": 0.15,

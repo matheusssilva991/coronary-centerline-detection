@@ -1,0 +1,31 @@
+IMG_ID,artery_dice,artery_voxel_count,ostia_detected,ostia_detection_status,artery_segmentation_run,segmented_with_incorrect_ostia,segmentation_skip_reason,ostia_detection_error,both_ostia_correct,both_ostia_tolerable,left_ostium_correct,right_ostium_correct,left_ostium_distance_mm,right_ostium_distance_mm,left_ostium,right_ostium,pipeline_error,status,downscale_method,opencv_interpolation,downscale_factors,max_threshold_percentile
+28,0.6720634531256389,24733,yes,both tolerable,yes,no,,,no,yes,no,no,1.0737001589130926,0.8375058302035873,"(103, 144, 181)","(128, 115, 217)",,both ostia tolerable,scipy,,"(2, 2, 1)",99.7
+380,0.543902042042794,44393,yes,both tolerable,yes,no,,,no,yes,no,no,2.504064688825013,1.345667690480501,"(93, 121, 123)","(113, 89, 167)",,both ostia tolerable,scipy,,"(2, 2, 1)",99.7
+854,0.6364847350230415,31176,yes,both tolerable,yes,no,,,no,yes,no,yes,1.2734375,0.0,"(100, 151, 157)","(123, 116, 186)",,both ostia tolerable,scipy,,"(2, 2, 1)",99.7
+937,0.209125108517411,7078,yes,found but incorrect,yes,yes,,,no,no,no,no,1.390625,10.603059262432527,"(106, 170, 210)","(138, 138, 199)",,no ostium correct,scipy,,"(2, 2, 1)",99.7
+315,0.6485881542699724,28865,yes,both correct,yes,no,,,yes,no,yes,yes,0.0,0.0,"(99, 179, 145)","(115, 146, 218)",,both ostia correct,scipy,,"(2, 2, 1)",99.7
+428,0.4942729012539633,25976,yes,both tolerable,yes,no,,,no,yes,no,no,1.4851354959754517,1.2202077119702048,"(98, 165, 111)","(95, 120, 167)",,both ostia tolerable,scipy,,"(2, 2, 1)",99.7
+752,0.0,4870,yes,found but incorrect,yes,yes,,,no,no,no,no,8.321278919813235,14.23387813433725,"(164, 180, 160)","(95, 153, 184)",,no ostium correct,scipy,,"(2, 2, 1)",99.7
+13,0.5712945264986968,24936,yes,both tolerable,yes,no,,,no,yes,no,no,1.390625,0.8564224849081498,"(112, 172, 166)","(131, 145, 202)",,both ostia tolerable,scipy,,"(2, 2, 1)",99.7
+538,0.6657587779027769,25953,yes,both tolerable,yes,no,,,no,yes,no,no,0.63671875,0.5,"(102, 174, 202)","(128, 140, 218)",,both ostia tolerable,scipy,,"(2, 2, 1)",99.7
+965,0.4871555711010065,23799,yes,both tolerable,yes,no,,,no,yes,no,no,1.4820293967437017,5.416547725056293,"(107, 153, 174)","(117, 129, 202)",,both ostia tolerable,scipy,,"(2, 2, 1)",99.7
+447,0.4625584308453759,11824,yes,found but incorrect,yes,yes,,,no,no,yes,no,0.0,41.23956425759431,"(119, 186, 172)","(143, 83, 160)",,one ostium correct,scipy,,"(2, 2, 1)",99.7
+836,0.7512245806738904,26708,yes,both tolerable,yes,no,,,no,yes,no,no,0.9004562916672442,0.5,"(101, 138, 174)","(127, 105, 209)",,both ostia tolerable,scipy,,"(2, 2, 1)",99.7
+603,0.4364136390004942,15582,yes,found but incorrect,yes,yes,,,no,no,yes,no,0.0,29.15314456474113,"(82, 171, 170)","(104, 139, 127)",,one ostium correct,scipy,,"(2, 2, 1)",99.7
+676,0.5001936933446967,8535,yes,both tolerable,yes,no,,,no,yes,no,no,1.5589216838591509,0.5,"(78, 185, 138)","(99, 161, 185)",,both ostia tolerable,scipy,,"(2, 2, 1)",99.7
+44,0.2103382529482381,97579,yes,found but incorrect,yes,yes,,,no,no,yes,no,0.0,10.61189592886578,"(53, 125, 45)","(149, 60, 95)",,one ostium correct,scipy,,"(2, 2, 1)",99.7
+129,0.7165423707479782,30221,yes,both tolerable,yes,no,,,no,yes,no,yes,2.23828125,0.0,"(96, 156, 164)","(109, 118, 202)",,both ostia tolerable,scipy,,"(2, 2, 1)",99.7
+518,0.6991685415240145,29108,yes,both tolerable,yes,no,,,no,yes,no,yes,0.5,0.0,"(108, 161, 165)","(127, 127, 194)",,both ostia tolerable,scipy,,"(2, 2, 1)",99.7
+793,0.5175710594315246,8298,yes,found but incorrect,yes,yes,,,no,no,yes,no,0.0,11.621599910195508,"(85, 156, 145)","(139, 113, 160)",,one ostium correct,scipy,,"(2, 2, 1)",99.7
+550,0.5430394672955539,11390,yes,both tolerable,yes,no,,,no,yes,no,yes,0.6953125,0.0,"(97, 157, 200)","(115, 126, 213)",,both ostia tolerable,scipy,,"(2, 2, 1)",99.7
+631,0.7278096452092628,25082,yes,both tolerable,yes,no,,,no,yes,yes,no,0.0,0.8627773557674077,"(95, 132, 153)","(124, 95, 199)",,both ostia tolerable,scipy,,"(2, 2, 1)",99.7
+330,0.6176966259486977,52779,yes,both tolerable,yes,no,,,no,yes,no,no,3.0179819966380266,2.0746343451354567,"(109, 138, 199)","(119, 113, 221)",,both ostia tolerable,scipy,,"(2, 2, 1)",99.7
+90,0.6946323618414859,36045,yes,both tolerable,yes,no,,,no,yes,no,yes,1.3203125,0.0,"(88, 156, 157)","(114, 121, 187)",,both ostia tolerable,scipy,,"(2, 2, 1)",99.7
+608,0.6697490323823535,34972,yes,both tolerable,yes,no,,,no,yes,no,yes,1.2734375,0.0,"(92, 126, 141)","(97, 80, 174)",,both ostia tolerable,scipy,,"(2, 2, 1)",99.7
+887,0.5510871109847947,16564,yes,both tolerable,yes,no,,,no,yes,no,yes,0.7890625,0.0,"(106, 164, 189)","(128, 128, 208)",,both ostia tolerable,scipy,,"(2, 2, 1)",99.7
+175,0.46006467752761,41674,yes,both tolerable,yes,no,,,no,yes,no,yes,0.9004562916672442,0.0,"(98, 197, 169)","(131, 162, 192)",,both ostia tolerable,scipy,,"(2, 2, 1)",99.7
+760,0.7220672319973482,37153,yes,both tolerable,yes,no,,,no,yes,no,yes,1.3125,0.0,"(88, 162, 195)","(108, 126, 227)",,both ostia tolerable,scipy,,"(2, 2, 1)",99.7
+696,0.4431673701876621,19243,yes,found but incorrect,yes,yes,,,no,no,yes,no,0.0,12.816806869500612,"(79, 94, 68)","(126, 57, 135)",,one ostium correct,scipy,,"(2, 2, 1)",99.7
+194,0.7902734612921866,34126,yes,both tolerable,yes,no,,,no,yes,no,no,0.8095744354916121,0.8095744354916121,"(90, 156, 168)","(123, 122, 212)",,both ostia tolerable,scipy,,"(2, 2, 1)",99.7
+305,0.6878880598350242,29707,yes,both tolerable,yes,no,,,no,yes,no,yes,2.526628207247012,0.0,"(98, 161, 177)","(119, 129, 217)",,both ostia tolerable,scipy,,"(2, 2, 1)",99.7
+344,0.7436628975159455,34847,yes,both tolerable,yes,no,,,no,yes,no,yes,2.4154905767902517,0.0,"(97, 162, 176)","(114, 134, 219)",,both ostia tolerable,scipy,,"(2, 2, 1)",99.7
