@@ -23,9 +23,11 @@ def get_or_detect_aorta_circles(
     save_cache: bool = False,
     use_gpu: bool = False,
 ) -> List[Dict[str, Any]]:
-    """Carrega ou detecta círculos da aorta."""
+    """Carrega ou detecta círculos da aorta sempre na CPU."""
     json_path = (
-        Path(base_save_path) / "detected_circles" / f"{img_id}_detected_circles.json"
+        Path(base_save_path)
+        / "detected_circles_cpu"
+        / f"{img_id}_detected_circles.json"
     )
 
     cached_circles = load_json_cache(json_path, enabled=load_cache)
@@ -53,7 +55,10 @@ def get_or_detect_aorta_circles(
         canny_sigma=circle_config["canny_sigma"],
         use_local_roi=circle_config.get("use_local_roi", True),
         local_roi_padding=circle_config.get("local_roi_padding", 20),
-        use_gpu=bool(use_gpu),
+        # A localização por círculos é muito sensível a pequenas diferenças no
+        # mapa de bordas. Mantemos esta etapa em CPU para resultados estáveis
+        # entre execuções CPU/GPU do restante do pipeline.
+        use_gpu=False,
     )
     save_json_cache(detected_circles, json_path, enabled=save_cache)
 
