@@ -96,6 +96,8 @@ def make_json_safe(value: Any) -> Any:
         return [make_json_safe(item) for item in value]
     if hasattr(value, "as_posix"):
         return value.as_posix()
+    if hasattr(value, "tolist"):
+        return make_json_safe(value.tolist())
     if hasattr(value, "item"):
         try:
             return value.item()

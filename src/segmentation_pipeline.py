@@ -42,10 +42,36 @@ else:
     logger.warning("GPU não disponível. Acelerações CPU usadas.")
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-BASE_PATH = Path("/data04/home/mpmaia/ImageCAS/database/1-1000")
+BASE_PATH = Path("/media/matheus/HD/DatasetsCCTA/ImageCAS/1-1000")
+BASE_PATH_FALLBACK = Path("/data04/home/mpmaia/ImageCAS/database/1-1000")
 BASE_SAVE_PATH = Path("/media/matheus/HD/DatasetsCCTA/Processed_ImageCAS")
 OUTPUT_DIR = REPO_ROOT / "output"
 PIPELINE_CONFIG_PATH = REPO_ROOT / "config" / "pipeline_config.json"
+
+
+def has_imagecas_images(path: Path) -> bool:
+    """Retorna True se o diretório contém imagens ImageCAS."""
+    return path.exists() and any(path.glob("*.img.nii.gz"))
+
+
+def resolve_base_path(base_path: Path) -> Path:
+    """Resolve o caminho do ImageCAS usando fallback só para o default."""
+    if has_imagecas_images(base_path):
+        return base_path
+
+    if base_path == BASE_PATH and has_imagecas_images(BASE_PATH_FALLBACK):
+        print(
+            "⚠️  Dataset não encontrado no caminho padrão local. "
+            f"Usando fallback: {BASE_PATH_FALLBACK}"
+        )
+        logger.info(
+            "Dataset não encontrado em %s; usando fallback %s",
+            base_path,
+            BASE_PATH_FALLBACK,
+        )
+        return BASE_PATH_FALLBACK
+
+    return base_path
 
 
 def load_default_config(config_path=PIPELINE_CONFIG_PATH):
@@ -227,7 +253,7 @@ def setup_file_logging(logs_dir):
         logger.warning("Não foi possível criar arquivo de log no diretório de saída.")
 
 
-def save_run_snapshots(output_dirs, config, splits_to_run):
+def save_run_snapshots(output_dirs, config, splits_to_run, split_config_path=None):
     """Salva config efetiva e IDs por split dentro da pasta config da execução."""
     config_dir = output_dirs["config_dir"]
     config_dir.mkdir(parents=True, exist_ok=True)
@@ -242,9 +268,18 @@ def save_run_snapshots(output_dirs, config, splits_to_run):
         if ids is not None
     }
     if split_ids:
+        split_payload = {
+            "source": split_config_path,
+            "splits": split_ids,
+        }
         split_path = config_dir / "split_ids.json"
         with split_path.open("w", encoding="utf-8") as file_handle:
-            json.dump(make_json_safe(split_ids), file_handle, indent=2, ensure_ascii=False)
+            json.dump(
+                make_json_safe(split_payload),
+                file_handle,
+                indent=2,
+                ensure_ascii=False,
+            )
 
 
 def split_names_from_args(args):
@@ -260,7 +295,10 @@ def build_splits_to_run(args, base_path):
     if args.merge_only:
         return [(name, None) for name in split_names_to_run]
 
-    train_ids, val_ids, test_ids, all_ids = get_data_splits(base_path)
+    train_ids, val_ids, test_ids, all_ids = get_data_splits(
+        base_path,
+        split_config_path=args.split_config,
+    )
     print_statistics(train_ids, val_ids, test_ids, all_ids)
     split_map = {
         "train": train_ids,
@@ -423,7 +461,7 @@ def main():
         logging.getLogger().setLevel(logging.DEBUG)
         logger.debug("Logging verbose habilitado (DEBUG)")
 
-    base_path = args.base_path
+    base_path = resolve_base_path(args.base_path)
     base_save_path = args.base_save_path
     output_root_dir = args.output_dir
     effective_config = build_effective_config(args)
@@ -433,7 +471,12 @@ def main():
     setup_file_logging(output_dirs["logs_dir"])
     splits_to_run = build_splits_to_run(args, base_path)
     if not (args.resume_requested or args.merge_only):
-        save_run_snapshots(output_dirs, effective_config, splits_to_run)
+        save_run_snapshots(
+            output_dirs,
+            effective_config,
+            splits_to_run,
+            split_config_path=args.split_config,
+        )
     run_requested_splits(
         args,
         splits_to_run,

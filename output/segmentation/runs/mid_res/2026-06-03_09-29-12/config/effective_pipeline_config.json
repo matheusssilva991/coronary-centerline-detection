@@ -1,0 +1,14 @@
+{
+  "USE_GPU": true,
+  "LOAD_CACHE": false,
+  "SAVE_CACHE": false,
+  "DOWNSCALE_METHOD": "scipy",
+  "OPENCV_INTERPOLATION": "area",
+  "DOWNSCALE_FACTORS": [
+    2,
+    2,
+    1
+  ],
+  "MAX_THRESHOLD_PERCENTILE": 99.7,
+  "VESSELNESS_AORTA": {
+    "sigmas": 

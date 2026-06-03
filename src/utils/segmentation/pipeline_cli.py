@@ -172,7 +172,10 @@ def build_parser(default_base_path, default_base_save_path, default_output_dir):
         "--base-path",
         type=str,
         default=str(default_base_path),
-        help=f"Diretório base do dataset ImageCAS (padrão: {default_base_path})",
+        help=(
+            "Diretório base do dataset ImageCAS "
+            f"(padrão: {default_base_path}; se indisponível, o pipeline tenta o fallback configurado)"
+        ),
     )
     parser.add_argument(
         "--base-save-path",
@@ -190,6 +193,15 @@ def build_parser(default_base_path, default_base_save_path, default_output_dir):
         type=str,
         default=None,
         help="Arquivo JSON com configurações para sobrescrever valores padrão",
+    )
+    parser.add_argument(
+        "--split-config",
+        type=str,
+        default=None,
+        help=(
+            "Arquivo JSON alternativo com splits train/val/test. "
+            "Útil para testar tamanhos diferentes de treino sem alterar config/imagecas_splits.json."
+        ),
     )
     parser.add_argument(
         "--verbose",
@@ -244,6 +256,9 @@ def parse_pipeline_args(default_base_path, default_base_save_path, default_outpu
     args.base_save_path = Path(args.base_save_path).expanduser()
     args.output_dir = Path(args.output_dir).expanduser()
     args.resume_dir = Path(args.resume_dir).expanduser() if args.resume_dir else None
+    args.split_config = (
+        Path(args.split_config).expanduser() if args.split_config else None
+    )
     args.resume_batches_by_split = {
         "train": args.resume_batch,
         "val": args.resume_batch,
