@@ -1,0 +1,698 @@
+"""Comparação etapa a etapa entre execução CPU e GPU do pipeline."""
+
+from __future__ import annotations
+
+import argparse
+import copy
+import json
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
+
+import numpy as np
+import pandas as pd
+from skimage.morphology import ball
+
+from ..config_utils import load_config_json, scale_config_to_resolution
+from ..processing.binary_operations import binary_closing, binary_dilation
+from ..processing.gpu_utils import GPU_AVAILABLE
+from ..utils.metrics import dice_score
+from .artery_segmentation import region_growing_segmentation
+from .ostia_detection import (
+    check_ostium_intersection,
+    find_aorta_surface,
+    find_ostia,
+)
+from .pipeline_detection import (
+    get_or_detect_aorta_circles,
+    get_or_segment_aorta,
+)
+from .pipeline_preprocessing import get_or_compute_vesselness, load_and_preprocess_image
+
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+DEFAULT_CONFIG_PATH = REPO_ROOT / "config" / "pipeline_config.json"
+DEFAULT_BASE_PATH = Path("/media/matheus/HD/DatasetsCCTA/ImageCAS/1-1000")
+DEFAULT_BASE_PATH_FALLBACK = Path("/data04/home/mpmaia/ImageCAS/database/1-1000")
+DEFAULT_BASE_SAVE_PATH = Path("/media/matheus/HD/DatasetsCCTA/Processed_ImageCAS")
+DEFAULT_OUTPUT_ROOT = REPO_ROOT / "output" / "segmentation" / "backend_comparison"
+
+
+def has_imagecas_images(path: Path) -> bool:
+    """Retorna True se o diretório contém arquivos ImageCAS."""
+    return path.exists() and any(path.glob("*.img.nii.gz"))
+
+
+def resolve_base_path(base_path: Path) -> Path:
+    """Resolve o caminho do dataset usando fallback para o caminho padrão."""
+    if has_imagecas_images(base_path):
+        return base_path
+    if base_path == DEFAULT_BASE_PATH and has_imagecas_images(DEFAULT_BASE_PATH_FALLBACK):
+        return DEFAULT_BASE_PATH_FALLBACK
+    return base_path
+
+
+def load_comparison_config(config_path: Path, resolution: str) -> Dict[str, Any]:
+    """Carrega e escala a configuração do pipeline para a resolução escolhida."""
+    config = load_config_json(str(config_path), {})
+    if resolution == "high":
+        config = copy.deepcopy(config)
+        config["DOWNSCALE_FACTORS"] = (1, 1, 1)
+    config = scale_config_to_resolution(config)
+    config["LOAD_CACHE"] = False
+    config["SAVE_CACHE"] = False
+    return config
+
+
+def _coord_tuple(value: Optional[Sequence[int]]) -> Optional[Tuple[int, int, int]]:
+    if value is None:
+        return None
+    return tuple(map(int, value))
+
+
+def _coord_distance(
+    cpu_coord: Optional[Sequence[int]],
+    gpu_coord: Optional[Sequence[int]],
+    spacing_yxz: Sequence[float],
+) -> Tuple[Optional[float], Optional[float]]:
+    if cpu_coord is None or gpu_coord is None:
+        return None, None
+
+    cpu_arr = np.asarray(cpu_coord, dtype=float)
+    gpu_arr = np.asarray(gpu_coord, dtype=float)
+    diff = cpu_arr - gpu_arr
+    dist_voxels = float(np.linalg.norm(diff))
+    dist_mm = float(np.linalg.norm(diff * np.asarray(spacing_yxz, dtype=float)))
+    return dist_voxels, dist_mm
+
+
+def _binary_metrics(
+    img_id: int,
+    stage: str,
+    cpu_array: Any,
+    gpu_array: Any,
+) -> Dict[str, Any]:
+    cpu_mask = np.asarray(cpu_array) > 0
+    gpu_mask = np.asarray(gpu_array) > 0
+    cpu_voxels = int(cpu_mask.sum())
+    gpu_voxels = int(gpu_mask.sum())
+    intersection = int(np.logical_and(cpu_mask, gpu_mask).sum())
+    union = int(np.logical_or(cpu_mask, gpu_mask).sum())
+    xor_voxels = int(np.logical_xor(cpu_mask, gpu_mask).sum())
+
+    if cpu_voxels + gpu_voxels == 0:
+        dice = 1.0
+    else:
+        dice = float((2.0 * intersection) / (cpu_voxels + gpu_voxels))
+
+    return {
+        "IMG_ID": img_id,
+        "stage": stage,
+        "kind": "binary",
+        "shape_equal": cpu_mask.shape == gpu_mask.shape,
+        "cpu_voxels": cpu_voxels,
+        "gpu_voxels": gpu_voxels,
+        "voxel_delta": gpu_voxels - cpu_voxels,
+        "abs_voxel_delta": abs(gpu_voxels - cpu_voxels),
+        "dice_cpu_gpu": dice,
+        "iou_cpu_gpu": float(intersection / union) if union else 1.0,
+        "xor_voxels": xor_voxels,
+        "xor_fraction": float(xor_voxels / cpu_mask.size) if cpu_mask.size else 0.0,
+    }
+
+
+def _float_metrics(
+    img_id: int,
+    stage: str,
+    cpu_array: Any,
+    gpu_array: Any,
+    tolerance: float,
+) -> Dict[str, Any]:
+    cpu = np.asarray(cpu_array, dtype=np.float64)
+    gpu = np.asarray(gpu_array, dtype=np.float64)
+    if cpu.shape != gpu.shape:
+        return {
+            "IMG_ID": img_id,
+            "stage": stage,
+            "kind": "float",
+            "shape_equal": False,
+            "cpu_shape": tuple(cpu.shape),
+            "gpu_shape": tuple(gpu.shape),
+        }
+
+    diff = gpu - cpu
+    abs_diff = np.abs(diff)
+    return {
+        "IMG_ID": img_id,
+        "stage": stage,
+        "kind": "float",
+        "shape_equal": True,
+        "cpu_min": float(np.min(cpu)),
+        "gpu_min": float(np.min(gpu)),
+        "cpu_max": float(np.max(cpu)),
+        "gpu_max": float(np.max(gpu)),
+        "cpu_mean": float(np.mean(cpu)),
+        "gpu_mean": float(np.mean(gpu)),
+        "mean_abs_error": float(np.mean(abs_diff)),
+        "max_abs_error": float(np.max(abs_diff)),
+        "rmse": float(np.sqrt(np.mean(diff**2))),
+        "p95_abs_error": float(np.percentile(abs_diff, 95)),
+        "p99_abs_error": float(np.percentile(abs_diff, 99)),
+        "voxels_abs_gt_tolerance": int(np.sum(abs_diff > tolerance)),
+        "fraction_abs_gt_tolerance": float(np.mean(abs_diff > tolerance)),
+    }
+
+
+def _circle_metrics(
+    img_id: int,
+    cpu_circles: List[Dict[str, Any]],
+    gpu_circles: List[Dict[str, Any]],
+) -> Dict[str, Any]:
+    cpu_by_slice = {int(item["slice_index"]): item for item in cpu_circles}
+    gpu_by_slice = {int(item["slice_index"]): item for item in gpu_circles}
+    common_slices = sorted(set(cpu_by_slice) & set(gpu_by_slice))
+
+    center_distances = []
+    radius_diffs = []
+    for slice_idx in common_slices:
+        cpu_circle = cpu_by_slice[slice_idx]
+        gpu_circle = gpu_by_slice[slice_idx]
+        center_distances.append(
+            float(
+                np.linalg.norm(
+                    [
+                        gpu_circle["center_x"] - cpu_circle["center_x"],
+                        gpu_circle["center_y"] - cpu_circle["center_y"],
+                    ]
+                )
+            )
+        )
+        radius_diffs.append(float(abs(gpu_circle["radius"] - cpu_circle["radius"])))
+
+    return {
+        "IMG_ID": img_id,
+        "stage": "aorta_circles",
+        "kind": "circles",
+        "cpu_count": len(cpu_circles),
+        "gpu_count": len(gpu_circles),
+        "common_slices": len(common_slices),
+        "cpu_only_slices": len(set(cpu_by_slice) - set(gpu_by_slice)),
+        "gpu_only_slices": len(set(gpu_by_slice) - set(cpu_by_slice)),
+        "mean_center_distance_px": (
+            float(np.mean(center_distances)) if center_distances else None
+        ),
+        "max_center_distance_px": (
+            float(np.max(center_distances)) if center_distances else None
+        ),
+        "mean_radius_abs_diff_px": (
+            float(np.mean(radius_diffs)) if radius_diffs else None
+        ),
+        "max_radius_abs_diff_px": (
+            float(np.max(radius_diffs)) if radius_diffs else None
+        ),
+    }
+
+
+def _evaluate_ostia(
+    aorta_mask: Any,
+    vesselness_ostios: Any,
+    label: Any,
+    scaled_spacing: Sequence[float],
+    config: Dict[str, Any],
+    use_gpu: bool,
+) -> Dict[str, Any]:
+    dx, dy, dz = scaled_spacing
+    spacing_yxz = (dy, dx, dz)
+    ostia_config = config["OSTIA_DETECTION"]
+
+    ostia_left, ostia_right = find_ostia(
+        aorta_mask,
+        vesselness_ostios,
+        spacing=spacing_yxz,
+        top_n=ostia_config["top_n"],
+        max_z_diff_mm=ostia_config["max_z_diff_mm"],
+        lower_fraction=ostia_config["lower_fraction"],
+        min_center_distance_factor=ostia_config["min_center_distance_factor"],
+        min_lateral_factor=ostia_config["min_lateral_factor"],
+        erosion_radius=ostia_config["erosion_radius"],
+        use_gpu=use_gpu,
+        verbose=False,
+    )
+
+    label_artery = (label == 1).astype(np.uint8)
+    left_info = check_ostium_intersection(
+        ostia_left,
+        label_artery,
+        spacing=spacing_yxz,
+        ostium_name="Óstio esquerdo",
+    )
+    right_info = check_ostium_intersection(
+        ostia_right,
+        label_artery,
+        spacing=spacing_yxz,
+        ostium_name="Óstio direito",
+    )
+
+    tolerable = config["OSTIA_VALIDATION"]["distance_threshold_mm"]
+    both_correct = left_info["intersects"] and right_info["intersects"]
+    both_tolerable = (
+        left_info["intersects"] or left_info["physical_dist"] <= tolerable
+    ) and (right_info["intersects"] or right_info["physical_dist"] <= tolerable)
+
+    if both_correct:
+        status = "both_correct"
+    elif both_tolerable:
+        status = "both_tolerable"
+    else:
+        status = "found_but_wrong"
+
+    return {
+        "ostia_left": ostia_left,
+        "ostia_right": ostia_right,
+        "label_artery": label_artery,
+        "left_info": left_info,
+        "right_info": right_info,
+        "both_correct": both_correct,
+        "both_tolerable": both_tolerable and not both_correct,
+        "status": status,
+    }
+
+
+def _artery_steps(
+    img_id: int,
+    lcc_image: Any,
+    label_artery: Any,
+    ostia_left: Optional[Sequence[int]],
+    ostia_right: Optional[Sequence[int]],
+    config: Dict[str, Any],
+    base_save_path: Path,
+    use_gpu: bool,
+) -> Dict[str, Any]:
+    config = copy.deepcopy(config)
+    config["USE_GPU"] = use_gpu
+
+    vesselness_artery = get_or_compute_vesselness(
+        img_id,
+        lcc_image,
+        cache_dir=str(
+            base_save_path / f"debug_vesselness_artery_cache_{'gpu' if use_gpu else 'cpu'}"
+        ),
+        vesselness_config=config["VESSELNESS_ARTERY"],
+        load_cache=False,
+        save_cache=False,
+        use_gpu=use_gpu,
+    )
+
+    rg_config = config["REGION_GROWING"]
+    region_growing_params = {
+        "threshold": (vesselness_artery.max() - vesselness_artery.min())
+        / rg_config["threshold_divisor"],
+        "max_volume": rg_config["max_volume"],
+        "min_vesselness": vesselness_artery.max()
+        * rg_config["min_vesselness_fraction"],
+        "relaxed_floor_factor": rg_config["relaxed_floor_factor"],
+        "switch_at_voxels": rg_config["switch_at_voxels"],
+        "comparison_window": rg_config["comparison_window"],
+        "smooth_relaxation": rg_config["smooth_relaxation"],
+        "verbose": False,
+    }
+
+    left_mask = (
+        region_growing_segmentation(
+            vesselness_artery, seed_point=ostia_left, **region_growing_params
+        )
+        if ostia_left is not None
+        else np.zeros_like(vesselness_artery, dtype=np.uint8)
+    )
+    right_mask = (
+        region_growing_segmentation(
+            vesselness_artery, seed_point=ostia_right, **region_growing_params
+        )
+        if ostia_right is not None
+        else np.zeros_like(vesselness_artery, dtype=np.uint8)
+    )
+
+    raw_mask = (left_mask + right_mask).astype(np.uint8)
+    post_config = config["POSTPROCESSING"]
+    closed_mask = binary_closing(
+        raw_mask > 0,
+        structure=ball(post_config["closing_radius"]),
+        gpu=use_gpu,
+    )
+    final_mask = binary_dilation(
+        closed_mask,
+        structure=ball(post_config["dilation_radius"]),
+        gpu=use_gpu,
+    )
+
+    return {
+        "vesselness_artery": vesselness_artery,
+        "artery_raw_mask": raw_mask,
+        "artery_closed_mask": closed_mask,
+        "artery_final_mask": final_mask,
+        "artery_voxels": int(np.sum(final_mask)),
+        "dice_artery": float(dice_score(final_mask, label_artery)),
+    }
+
+
+def _run_steps_for_backend(
+    img_id: int,
+    image_data: Dict[str, Any],
+    config: Dict[str, Any],
+    base_save_path: Path,
+    use_gpu: bool,
+) -> Dict[str, Any]:
+    lcc_image = image_data["lcc_image"]
+    label = image_data["label"]
+    scaled_spacing = image_data["scaled_spacing"]
+    downscale_factors = image_data["downscale_factors"]
+
+    backend_config = copy.deepcopy(config)
+    backend_config["USE_GPU"] = use_gpu
+
+    vesselness_ostios = get_or_compute_vesselness(
+        img_id,
+        lcc_image,
+        cache_dir=str(
+            base_save_path / f"debug_vesselness_ostios_cache_{'gpu' if use_gpu else 'cpu'}"
+        ),
+        vesselness_config=backend_config["VESSELNESS_AORTA"],
+        load_cache=False,
+        save_cache=False,
+        use_gpu=use_gpu,
+    )
+    detected_circles = get_or_detect_aorta_circles(
+        img_id,
+        lcc_image,
+        downscale_factors,
+        scaled_spacing,
+        backend_config["CIRCLE_DETECTION"],
+        str(base_save_path),
+        load_cache=False,
+        save_cache=False,
+        use_gpu=use_gpu,
+    )
+    aorta_mask = get_or_segment_aorta(
+        img_id,
+        lcc_image,
+        detected_circles,
+        backend_config["LEVEL_SET"],
+        str(base_save_path),
+        load_cache=False,
+        save_cache=False,
+        use_gpu=use_gpu,
+    )
+    aorta_surface = find_aorta_surface(
+        aorta_mask,
+        erosion_radius=backend_config["OSTIA_DETECTION"]["erosion_radius"],
+        use_gpu=use_gpu,
+    )
+    ostia_eval = _evaluate_ostia(
+        aorta_mask,
+        vesselness_ostios,
+        label,
+        scaled_spacing,
+        backend_config,
+        use_gpu=use_gpu,
+    )
+    artery = _artery_steps(
+        img_id,
+        lcc_image,
+        ostia_eval["label_artery"],
+        ostia_eval["ostia_left"],
+        ostia_eval["ostia_right"],
+        backend_config,
+        base_save_path,
+        use_gpu=use_gpu,
+    )
+
+    return {
+        "vesselness_ostios": vesselness_ostios,
+        "aorta_circles": detected_circles,
+        "aorta_mask": aorta_mask,
+        "aorta_surface": aorta_surface,
+        "ostia_eval": ostia_eval,
+        **artery,
+    }
+
+
+def _ostia_row(
+    img_id: int,
+    cpu_eval: Dict[str, Any],
+    gpu_eval: Dict[str, Any],
+    spacing_yxz: Sequence[float],
+) -> Dict[str, Any]:
+    left_dist_voxels, left_dist_mm = _coord_distance(
+        cpu_eval["ostia_left"], gpu_eval["ostia_left"], spacing_yxz
+    )
+    right_dist_voxels, right_dist_mm = _coord_distance(
+        cpu_eval["ostia_right"], gpu_eval["ostia_right"], spacing_yxz
+    )
+
+    return {
+        "IMG_ID": img_id,
+        "cpu_status": cpu_eval["status"],
+        "gpu_status": gpu_eval["status"],
+        "status_equal": cpu_eval["status"] == gpu_eval["status"],
+        "cpu_left_ostium": _coord_tuple(cpu_eval["ostia_left"]),
+        "gpu_left_ostium": _coord_tuple(gpu_eval["ostia_left"]),
+        "left_distance_voxels_cpu_gpu": left_dist_voxels,
+        "left_distance_mm_cpu_gpu": left_dist_mm,
+        "cpu_right_ostium": _coord_tuple(cpu_eval["ostia_right"]),
+        "gpu_right_ostium": _coord_tuple(gpu_eval["ostia_right"]),
+        "right_distance_voxels_cpu_gpu": right_dist_voxels,
+        "right_distance_mm_cpu_gpu": right_dist_mm,
+        "cpu_left_dist_to_label_mm": cpu_eval["left_info"]["physical_dist"],
+        "gpu_left_dist_to_label_mm": gpu_eval["left_info"]["physical_dist"],
+        "cpu_right_dist_to_label_mm": cpu_eval["right_info"]["physical_dist"],
+        "gpu_right_dist_to_label_mm": gpu_eval["right_info"]["physical_dist"],
+        "cpu_both_correct": cpu_eval["both_correct"],
+        "gpu_both_correct": gpu_eval["both_correct"],
+        "cpu_both_tolerable": cpu_eval["both_tolerable"],
+        "gpu_both_tolerable": gpu_eval["both_tolerable"],
+    }
+
+
+def compare_image_cpu_gpu(
+    img_id: int,
+    config: Dict[str, Any],
+    base_path: Path,
+    base_save_path: Path,
+    float_tolerance: float = 1e-6,
+) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+    """Compara uma imagem nas execuções CPU e GPU."""
+    image_data = load_and_preprocess_image(img_id, str(base_path), config)
+    cpu = _run_steps_for_backend(
+        img_id, image_data, config, base_save_path, use_gpu=False
+    )
+    gpu = _run_steps_for_backend(
+        img_id, image_data, config, base_save_path, use_gpu=True
+    )
+
+    rows = [
+        _float_metrics(
+            img_id,
+            "vesselness_ostios",
+            cpu["vesselness_ostios"],
+            gpu["vesselness_ostios"],
+            float_tolerance,
+        ),
+        _circle_metrics(img_id, cpu["aorta_circles"], gpu["aorta_circles"]),
+        _binary_metrics(img_id, "aorta_mask", cpu["aorta_mask"], gpu["aorta_mask"]),
+        _binary_metrics(
+            img_id, "aorta_surface", cpu["aorta_surface"], gpu["aorta_surface"]
+        ),
+        _float_metrics(
+            img_id,
+            "vesselness_artery",
+            cpu["vesselness_artery"],
+            gpu["vesselness_artery"],
+            float_tolerance,
+        ),
+        _binary_metrics(
+            img_id, "artery_raw_mask", cpu["artery_raw_mask"], gpu["artery_raw_mask"]
+        ),
+        _binary_metrics(
+            img_id,
+            "artery_closed_mask",
+            cpu["artery_closed_mask"],
+            gpu["artery_closed_mask"],
+        ),
+        _binary_metrics(
+            img_id,
+            "artery_final_mask",
+            cpu["artery_final_mask"],
+            gpu["artery_final_mask"],
+        ),
+    ]
+
+    dx, dy, dz = image_data["scaled_spacing"]
+    ostia_row = _ostia_row(
+        img_id, cpu["ostia_eval"], gpu["ostia_eval"], spacing_yxz=(dy, dx, dz)
+    )
+    ostia_row.update(
+        {
+            "cpu_artery_dice": cpu["dice_artery"],
+            "gpu_artery_dice": gpu["dice_artery"],
+            "artery_dice_delta_gpu_minus_cpu": (
+                gpu["dice_artery"] - cpu["dice_artery"]
+            ),
+            "cpu_artery_voxels": cpu["artery_voxels"],
+            "gpu_artery_voxels": gpu["artery_voxels"],
+            "artery_voxel_delta_gpu_minus_cpu": (
+                gpu["artery_voxels"] - cpu["artery_voxels"]
+            ),
+        }
+    )
+
+    return rows, ostia_row
+
+
+def compare_images_cpu_gpu(
+    img_ids: Iterable[int],
+    config: Dict[str, Any],
+    base_path: Path,
+    base_save_path: Path,
+    output_dir: Path,
+    float_tolerance: float = 1e-6,
+) -> Dict[str, Path]:
+    """Executa a comparação e salva CSVs com os resultados."""
+    output_dir.mkdir(parents=True, exist_ok=True)
+    stage_rows = []
+    ostia_rows = []
+
+    for img_id in img_ids:
+        print(f"Comparando IMG_ID {img_id}...")
+        rows, ostia_row = compare_image_cpu_gpu(
+            int(img_id),
+            config,
+            base_path,
+            base_save_path,
+            float_tolerance=float_tolerance,
+        )
+        stage_rows.extend(rows)
+        ostia_rows.append(ostia_row)
+
+    stage_path = output_dir / "stage_comparison.csv"
+    ostia_path = output_dir / "ostia_comparison.csv"
+    pd.DataFrame(stage_rows).to_csv(stage_path, index=False)
+    pd.DataFrame(ostia_rows).to_csv(ostia_path, index=False)
+
+    config_path = output_dir / "run_config.json"
+    with config_path.open("w", encoding="utf-8") as file_handle:
+        json.dump(
+            {
+                "gpu_available": GPU_AVAILABLE,
+                "base_path": str(base_path),
+                "base_save_path": str(base_save_path),
+                "float_tolerance": float_tolerance,
+                "config": _json_safe(config),
+            },
+            file_handle,
+            indent=2,
+            ensure_ascii=False,
+        )
+
+    return {
+        "stage_comparison": stage_path,
+        "ostia_comparison": ostia_path,
+        "run_config": config_path,
+    }
+
+
+def _json_safe(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {str(key): _json_safe(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_json_safe(item) for item in value]
+    if hasattr(value, "tolist"):
+        return _json_safe(value.tolist())
+    if hasattr(value, "item"):
+        try:
+            return value.item()
+        except ValueError:
+            pass
+    if hasattr(value, "as_posix"):
+        return value.as_posix()
+    return value
+
+
+def build_parser() -> argparse.ArgumentParser:
+    """Cria parser da comparação CPU vs GPU."""
+    parser = argparse.ArgumentParser(
+        description="Compara etapas do pipeline executadas em CPU e GPU."
+    )
+    parser.add_argument(
+        "--img-id",
+        type=int,
+        nargs="+",
+        required=True,
+        help="Um ou mais IDs ImageCAS para comparar.",
+    )
+    parser.add_argument(
+        "--resolution",
+        choices=["mid", "high"],
+        default="mid",
+        help="Resolução usada no pipeline.",
+    )
+    parser.add_argument(
+        "--config-file",
+        type=Path,
+        default=DEFAULT_CONFIG_PATH,
+        help=f"Config do pipeline. Padrão: {DEFAULT_CONFIG_PATH}",
+    )
+    parser.add_argument(
+        "--base-path",
+        type=Path,
+        default=DEFAULT_BASE_PATH,
+        help=f"Caminho do dataset ImageCAS. Padrão: {DEFAULT_BASE_PATH}",
+    )
+    parser.add_argument(
+        "--base-save-path",
+        type=Path,
+        default=DEFAULT_BASE_SAVE_PATH,
+        help=f"Caminho base de artefatos/cache. Padrão: {DEFAULT_BASE_SAVE_PATH}",
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=None,
+        help="Diretório de saída. Padrão: output/segmentation/backend_comparison/<timestamp>",
+    )
+    parser.add_argument(
+        "--float-tolerance",
+        type=float,
+        default=1e-6,
+        help="Tolerância para contar diferenças em arrays float.",
+    )
+    return parser
+
+
+def main(argv: Optional[Sequence[str]] = None) -> None:
+    """Entrada CLI da comparação CPU vs GPU."""
+    parser = build_parser()
+    args = parser.parse_args(argv)
+
+    base_path = resolve_base_path(args.base_path)
+    output_dir = args.output_dir
+    if output_dir is None:
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        output_dir = DEFAULT_OUTPUT_ROOT / f"{args.resolution}_res" / timestamp
+
+    config = load_comparison_config(args.config_file, args.resolution)
+    paths = compare_images_cpu_gpu(
+        args.img_id,
+        config,
+        base_path,
+        args.base_save_path,
+        output_dir,
+        float_tolerance=args.float_tolerance,
+    )
+
+    print("\nComparação salva em:")
+    for label, path in paths.items():
+        print(f"- {label}: {path}")
+
+
+if __name__ == "__main__":
+    main()
