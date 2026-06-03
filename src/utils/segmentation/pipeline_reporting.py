@@ -36,7 +36,20 @@ def print_statistics(train_ids, val_ids, test_ids, all_ids):
     print("=" * 50 + "\n")
 
 
-def print_split_summary(df, split_name, config, execution_time=None):
+def _format_duration(seconds):
+    if seconds is None or pd.isna(seconds):
+        return "N/A"
+    return f"{seconds:.1f}s ({seconds / 60:.2f}min, {seconds / 3600:.3f}h)"
+
+
+def print_split_summary(
+    df,
+    split_name,
+    config,
+    execution_time=None,
+    timing_summary=None,
+    current_run_execution_time=None,
+):
     """Imprime estatísticas consolidadas de um split."""
     if df.empty:
         return
@@ -80,4 +93,13 @@ def print_split_summary(df, split_name, config, execution_time=None):
     if dice_series.notna().any():
         print(f"   - Dice médio:       {dice_series.mean():.4f}")
     if execution_time:
-        print(f"   - Tempo de execução: {execution_time:.1f}s ({execution_time / 60:.1f}min)")
+        print(f"   - Tempo total conhecido: {_format_duration(execution_time)}")
+    if current_run_execution_time and current_run_execution_time != execution_time:
+        print(
+            f"   - Tempo desta execução: {_format_duration(current_run_execution_time)}"
+        )
+    if timing_summary:
+        missing_batches = timing_summary.get("missing_timing_batches") or []
+        if missing_batches:
+            missing_text = ", ".join(str(batch) for batch in missing_batches)
+            print(f"   - Lotes sem tempo salvo: {missing_text}")

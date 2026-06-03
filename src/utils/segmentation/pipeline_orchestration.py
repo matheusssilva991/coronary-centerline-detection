@@ -5,13 +5,21 @@ from __future__ import annotations
 import logging
 import math
 import time
+from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
 from tqdm import tqdm
 
 from ..config_utils import scale_config_to_resolution
-from ..results_utils import get_batch_result_file, save_results
+from ..results_utils import (
+    duration_breakdown,
+    get_batch_result_file,
+    load_batch_timing_records,
+    save_batch_timing_record,
+    save_results,
+    summarize_batch_timing_records,
+)
 from .pipeline_arteries import segment_arteries_from_ostia
 from .pipeline_detection import (
     detect_and_evaluate_ostia,
@@ -221,35 +229,76 @@ def run_pipeline(
         start_idx = batch_num * batch_size
         end_idx = min((batch_num + 1) * batch_size, len(ids))
         batch_ids = ids[start_idx:end_idx]
+        batch_number = batch_num + 1
+        batch_started_at = datetime.now().isoformat(timespec="seconds")
+        batch_start_time = time.time()
 
         logger.info(
-            f"Processando lote {batch_num + 1}/{num_batches} ({len(batch_ids)} imagens)"
+            f"Processando lote {batch_number}/{num_batches} ({len(batch_ids)} imagens)"
         )
         batch_results = []
 
         for img_id in tqdm(
-            batch_ids, desc=f"Lote {batch_num + 1}/{num_batches}", leave=False
+            batch_ids, desc=f"Lote {batch_number}/{num_batches}", leave=False
         ):
             batch_results.append(
                 process_image(img_id, scaled_config, base_path, base_save_path)
             )
 
         all_results.extend(batch_results)
-        batches_processed.append(batch_num + 1)
+        batches_processed.append(batch_number)
 
         batch_output_path = save_results(
             batch_results,
-            f"{split_name}_lote_{batch_num + 1}",
+            f"{split_name}_lote_{batch_number}",
             output_dir,
             config=scaled_config,
         )
-        logger.info(f"Lote {batch_num + 1} salvo: {batch_output_path}")
+        batch_duration = time.time() - batch_start_time
+        batch_finished_at = datetime.now().isoformat(timespec="seconds")
+        duration = duration_breakdown(batch_duration)
+        timing_record = {
+            "split_name": split_name,
+            "batch_number": batch_number,
+            "total_batches": num_batches,
+            "num_images": len(batch_ids),
+            "first_img_id": batch_ids[0] if batch_ids else None,
+            "last_img_id": batch_ids[-1] if batch_ids else None,
+            "result_file": Path(batch_output_path).name,
+            "started_at": batch_started_at,
+            "finished_at": batch_finished_at,
+            "duration_seconds": duration["seconds"],
+            "duration_minutes": duration["minutes"],
+            "duration_hours": duration["hours"],
+        }
+        manifest_path = save_batch_timing_record(
+            output_dir,
+            split_name,
+            timing_record,
+        )
+        logger.info(f"Lote {batch_number} salvo: {batch_output_path}")
+        logger.info(
+            "Tempo do lote %s: %.1fs (%.2fmin, %.3fh). Manifest: %s",
+            batch_number,
+            duration["seconds"],
+            duration["minutes"],
+            duration["hours"],
+            manifest_path,
+        )
 
     execution_time = time.time() - start_time
+    batch_timings = load_batch_timing_records(output_dir, split_name)
+    batch_timing_summary = summarize_batch_timing_records(
+        batch_timings,
+        expected_batches=list(range(1, num_batches + 1)),
+    )
     result = {
         "details": all_results,
         "execution_time": execution_time,
+        "execution_time_breakdown": duration_breakdown(execution_time),
         "batches_processed": batches_processed,
+        "batch_timings": batch_timings,
+        "batch_timing_summary": batch_timing_summary,
         "is_batched": True,
     }
 

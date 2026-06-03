@@ -1,0 +1,13 @@
+IMG_ID,artery_dice,artery_voxel_count,ostia_detected,ostia_detection_status,artery_segmentation_run,segmented_with_incorrect_ostia,segmentation_skip_reason,ostia_detection_error,both_ostia_correct,both_ostia_tolerable,left_ostium_correct,right_ostium_correct,left_ostium_distance_mm,right_ostium_distance_mm,left_ostium,right_ostium,pipeline_error,status,downscale_method,opencv_interpolation,downscale_factors,max_threshold_percentile
+175,0.46006467752761,41674,yes,both tolerable,yes,no,,,no,yes,no,no,0.9004562916672442,0.5,"(98, 197, 169)","(131, 162, 191)",,both ostia tolerable,scipy,N/A,"(2, 2, 1)",99.7
+760,0.7220396099770737,37153,yes,both tolerable,yes,no,,,no,yes,yes,no,0.0,1.0541954870895625,"(88, 165, 197)","(107, 127, 225)",,both ostia tolerable,scipy,N/A,"(2, 2, 1)",99.7
+696,0.1741459611809623,79971,yes,found but incorrect,yes,yes,,,no,no,yes,no,0.0,29.660088084753095,"(99, 137, 163)","(130, 53, 171)",,one ostium correct,scipy,N/A,"(2, 2, 1)",99.7
+194,0.7902734612921866,34126,yes,both tolerable,yes,no,,,no,yes,no,no,0.8095744354916121,1.739843048383334,"(89, 155, 168)","(122, 122, 210)",,both ostia tolerable,scipy,N/A,"(2, 2, 1)",99.7
+305,0.6878880598350242,29707,yes,both tolerable,yes,no,,,no,yes,no,yes,2.526628207247012,0.0,"(98, 161, 177)","(119, 129, 217)",,both ostia tolerable,scipy,N/A,"(2, 2, 1)",99.7
+344,0.7436628975159455,34847,yes,both tolerable,yes,no,,,no,yes,no,yes,2.4154905767902513,0.0,"(97, 162, 176)","(115, 134, 218)",,both ostia tolerable,scipy,N/A,"(2, 2, 1)",99.7
+867,0.6960711249199635,42587,yes,both tolerable,yes,no,,,no,yes,no,no,0.72265625,1.8150658696940243,"(95, 155, 168)","(111, 129, 213)",,both ostia tolerable,scipy,N/A,"(2, 2, 1)",99.7
+450,0.0,279,yes,found but incorrect,yes,yes,,,no,no,no,no,62.03515674194005,59.29594886669707,"(46, 120, 269)","(51, 86, 257)",,no ostium correct,scipy,N/A,"(2, 2, 1)",99.7
+788,0.39859774987771074,23166,yes,found but incorrect,yes,yes,,,no,no,no,no,0.9004562916672442,14.581558264831097,"(86, 176, 214)","(92, 120, 164)",,no ostium correct,scipy,N/A,"(2, 2, 1)",99.7
+362,0.6376581311495447,27257,yes,both tolerable,yes,no,,,no,yes,no,no,0.7734375,1.2026683386588757,"(101, 165, 185)","(116, 128, 222)",,both ostia tolerable,scipy,N/A,"(2, 2, 1)",99.7
+10,0.6508685577036925,33872,yes,both tolerable,yes,no,,,no,yes,no,yes,0.9943689110435825,0.0,"(91, 161, 178)","(118, 126, 211)",,both ostia tolerable,scipy,N/A,"(2, 2, 1)",99.7
+605,0.7458484843407007,32024,yes,both tolerable,yes,no,,,no,yes,no,no,1.4219715798243384,0.5,"(93, 166, 149)","(104, 131, 183)",,both ostia tolerable,scipy,N/A,"(2, 2, 1)",99.7

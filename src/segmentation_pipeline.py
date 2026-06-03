@@ -17,10 +17,12 @@ from utils.dataset_utils import get_data_splits
 from utils.processing.gpu_utils import use_gpu
 from utils.results_utils import (
     create_timestamped_output_dir,
+    load_batch_timing_records,
     make_json_safe,
     make_result_dataframe,
     merge_batch_results,
     save_metadata,
+    summarize_batch_timing_records,
 )
 from utils.segmentation.pipeline_cli import parse_pipeline_args
 from utils.segmentation.pipeline_orchestration import run_pipeline
@@ -196,7 +198,7 @@ def resolve_output_dir(args, output_root_dir):
     output_dirs = build_structured_output_dirs(run_dir)
     print(f"📁 Diretório da execução: {output_dirs['run_dir']}")
     print(f"📊 Resultados numéricos: {output_dirs['numeric_dir']}")
-    print(f"🖼️  Exemplos visuais: {output_dirs['visual_dir']}\n")
+    print(f"🖼️  Exemplos visuais: {output_dirs['visual_dir']} (criada sob demanda)\n")
     return output_dirs
 
 
@@ -210,7 +212,12 @@ def build_structured_output_dirs(run_dir):
         "visual_dir": run_dir / "visual",
         "logs_dir": run_dir / "logs",
     }
-    for output_path in output_dirs.values():
+    for output_path in (
+        output_dirs["run_dir"],
+        output_dirs["numeric_dir"],
+        output_dirs["config_dir"],
+        output_dirs["logs_dir"],
+    ):
         output_path.mkdir(parents=True, exist_ok=True)
     return output_dirs
 
@@ -318,6 +325,9 @@ def save_split_metadata(
     base_path,
     base_save_path,
     output_root_dir,
+    current_run_execution_time=None,
+    batch_timings=None,
+    batch_timing_summary=None,
 ):
     """Salva metadados e registra o caminho no logger."""
     metadata_path = save_metadata(
@@ -327,6 +337,9 @@ def save_split_metadata(
         ids,
         details,
         execution_time,
+        current_run_execution_time=current_run_execution_time,
+        batch_timings=batch_timings,
+        batch_timing_summary=batch_timing_summary,
         base_path=base_path,
         base_save_path=base_save_path,
         root_output_dir=output_root_dir,
@@ -352,18 +365,30 @@ def run_merge_only_split(
     df = pd.read_csv(final_path)
     details = df.to_dict("records")
     metadata_ids = df["IMG_ID"].dropna().tolist() if "IMG_ID" in df.columns else []
+    batch_timings = load_batch_timing_records(output_dir, split_name)
+    batch_timing_summary = summarize_batch_timing_records(batch_timings)
+    execution_time = batch_timing_summary.get("total_known_duration_seconds")
     save_split_metadata(
         split_name,
         output_dir,
         config,
         metadata_ids,
         details,
-        execution_time=None,
+        execution_time=execution_time,
+        current_run_execution_time=None,
+        batch_timings=batch_timings,
+        batch_timing_summary=batch_timing_summary,
         base_path=base_path,
         base_save_path=base_save_path,
         output_root_dir=output_root_dir,
     )
-    print_split_summary(df, split_name, config)
+    print_split_summary(
+        df,
+        split_name,
+        config,
+        execution_time,
+        timing_summary=batch_timing_summary,
+    )
 
 
 def run_processing_split(
@@ -388,7 +413,12 @@ def run_processing_split(
             split_name, args.resume_batch
         ),
     )
-    execution_time = summary.get("execution_time")
+    current_run_execution_time = summary.get("execution_time")
+    batch_timing_summary = summary.get("batch_timing_summary") or {}
+    execution_time = (
+        batch_timing_summary.get("total_known_duration_seconds")
+        or current_run_execution_time
+    )
 
     logger.info("Finalizando processamento em lotes...")
     merge_batch_results(split_name, output_dir)
@@ -406,14 +436,24 @@ def run_processing_split(
         config,
         ids,
         details,
-        execution_time,
-        base_path,
-        base_save_path,
-        output_root_dir,
+        execution_time=execution_time,
+        base_path=base_path,
+        base_save_path=base_save_path,
+        output_root_dir=output_root_dir,
+        current_run_execution_time=current_run_execution_time,
+        batch_timings=summary.get("batch_timings"),
+        batch_timing_summary=batch_timing_summary,
     )
 
     df = pd.read_csv(output_path) if summary.get("details") is None else make_result_dataframe(details)
-    print_split_summary(df, split_name, config, execution_time)
+    print_split_summary(
+        df,
+        split_name,
+        config,
+        execution_time,
+        timing_summary=batch_timing_summary,
+        current_run_execution_time=current_run_execution_time,
+    )
 
 
 def run_requested_splits(

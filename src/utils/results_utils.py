@@ -34,6 +34,21 @@ RESULT_COLUMNS = [
     "status",
 ]
 
+BATCH_TIMING_COLUMNS = [
+    "split_name",
+    "batch_number",
+    "total_batches",
+    "num_images",
+    "first_img_id",
+    "last_img_id",
+    "result_file",
+    "started_at",
+    "finished_at",
+    "duration_seconds",
+    "duration_minutes",
+    "duration_hours",
+]
+
 READABLE_COLUMN_NAMES = {
     "dice_artery": "artery_dice",
     "artery_voxels": "artery_voxel_count",
@@ -104,6 +119,108 @@ def make_json_safe(value: Any) -> Any:
         except ValueError:
             pass
     return value
+
+
+def duration_breakdown(duration_seconds: Any) -> dict[str, Any]:
+    """Retorna duração em segundos, minutos e horas."""
+    if duration_seconds is None or pd.isna(duration_seconds):
+        return {
+            "seconds": None,
+            "minutes": None,
+            "hours": None,
+        }
+
+    seconds = float(duration_seconds)
+    return {
+        "seconds": seconds,
+        "minutes": seconds / 60,
+        "hours": seconds / 3600,
+    }
+
+
+def batch_timing_manifest_path(output_dir, split_name) -> Path:
+    """Retorna o caminho do CSV com tempos por lote."""
+    return Path(output_dir) / f"ostios_{split_name}_batch_timings.csv"
+
+
+def load_batch_timing_records(output_dir, split_name) -> list[dict[str, Any]]:
+    """Carrega tempos por lote já salvos."""
+    manifest_path = batch_timing_manifest_path(output_dir, split_name)
+    if not manifest_path.exists():
+        return []
+
+    df = pd.read_csv(manifest_path)
+    if df.empty:
+        return []
+    return df.to_dict("records")
+
+
+def save_batch_timing_record(
+    output_dir,
+    split_name,
+    record: dict[str, Any],
+) -> str:
+    """Insere ou atualiza o tempo de um lote no manifest incremental."""
+    manifest_path = batch_timing_manifest_path(output_dir, split_name)
+    records = load_batch_timing_records(output_dir, split_name)
+    batch_number = int(record["batch_number"])
+
+    records = [
+        item
+        for item in records
+        if int(item.get("batch_number", -1)) != batch_number
+    ]
+    records.append(record)
+    records = sorted(records, key=lambda item: int(item["batch_number"]))
+
+    df = pd.DataFrame(records)
+    df = df.reindex(columns=BATCH_TIMING_COLUMNS)
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    df.to_csv(manifest_path, index=False)
+    return str(manifest_path)
+
+
+def summarize_batch_timing_records(
+    records: list[dict[str, Any]],
+    expected_batches: list[int] | None = None,
+) -> dict[str, Any]:
+    """Soma tempos conhecidos dos lotes e marca lotes sem tempo salvo."""
+    if not records:
+        return {
+            "total_known_batches": 0,
+            "total_known_duration_seconds": None,
+            "total_known_duration_minutes": None,
+            "total_known_duration_hours": None,
+            "missing_timing_batches": expected_batches or [],
+        }
+
+    durations_by_batch = {}
+    for record in records:
+        batch_number = int(record["batch_number"])
+        duration = pd.to_numeric(record.get("duration_seconds"), errors="coerce")
+        if not pd.isna(duration):
+            durations_by_batch[batch_number] = float(duration)
+
+    known_batches = sorted(durations_by_batch)
+    total_seconds = sum(durations_by_batch.values()) if durations_by_batch else None
+
+    missing_timing_batches = []
+    if expected_batches is not None:
+        missing_timing_batches = [
+            batch_number
+            for batch_number in expected_batches
+            if batch_number not in durations_by_batch
+        ]
+
+    total = duration_breakdown(total_seconds)
+    return {
+        "total_known_batches": len(known_batches),
+        "known_batches": known_batches,
+        "total_known_duration_seconds": total["seconds"],
+        "total_known_duration_minutes": total["minutes"],
+        "total_known_duration_hours": total["hours"],
+        "missing_timing_batches": missing_timing_batches,
+    }
 
 
 def _readable_column_name(column: str) -> str:
@@ -340,6 +457,9 @@ def build_metadata(
     ids,
     results,
     execution_time=None,
+    current_run_execution_time=None,
+    batch_timings=None,
+    batch_timing_summary=None,
     base_path=None,
     base_save_path=None,
     root_output_dir=None,
@@ -355,6 +475,17 @@ def build_metadata(
             "num_images": len(ids),
             "image_ids": ids,
             "execution_time_seconds": execution_time,
+            "execution_time_minutes": duration_breakdown(execution_time)["minutes"],
+            "execution_time_hours": duration_breakdown(execution_time)["hours"],
+            "current_run_execution_time_seconds": current_run_execution_time,
+            "current_run_execution_time_minutes": duration_breakdown(
+                current_run_execution_time
+            )["minutes"],
+            "current_run_execution_time_hours": duration_breakdown(
+                current_run_execution_time
+            )["hours"],
+            "batch_timing_summary": batch_timing_summary,
+            "batch_timings": batch_timings or [],
             "python_version": platform.python_version(),
             "platform": platform.platform(),
             "state_counters": {
@@ -416,6 +547,9 @@ def save_metadata(
     ids,
     results,
     execution_time=None,
+    current_run_execution_time=None,
+    batch_timings=None,
+    batch_timing_summary=None,
     base_path=None,
     base_save_path=None,
     root_output_dir=None,
@@ -427,6 +561,9 @@ def save_metadata(
         ids,
         results,
         execution_time=execution_time,
+        current_run_execution_time=current_run_execution_time,
+        batch_timings=batch_timings,
+        batch_timing_summary=batch_timing_summary,
         base_path=base_path,
         base_save_path=base_save_path,
         root_output_dir=root_output_dir,
