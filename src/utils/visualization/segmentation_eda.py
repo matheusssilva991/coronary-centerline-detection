@@ -158,6 +158,69 @@ def plot_success_error_by_subset(
     plt.show()
 
 
+def build_success_status_summary_by_subset(
+    data_by_resolution: Optional[Dict[str, Any]],
+    split_name: str,
+    success_status: Sequence[str],
+    status_column: str = "status",
+) -> pd.DataFrame:
+    """Resume os acertos por status usando o total do split como denominador."""
+    rows = []
+
+    for resolution in ["high", "mid"]:
+        df_split = _get_split_df(data_by_resolution, resolution, split_name)
+        if df_split is None or df_split.empty or status_column not in df_split.columns:
+            rows.append(
+                {
+                    "split": split_name,
+                    "resolution": resolution,
+                    "status": "sem dados",
+                    "quantidade": 0,
+                    "percentual_do_total": 0.0,
+                    "total_acertos": 0,
+                    "total_imagens": 0,
+                }
+            )
+            continue
+
+        total_images = len(df_split)
+        success_df = df_split[df_split[status_column].isin(success_status)]
+        status_counts = success_df[status_column].value_counts()
+        total_success = int(status_counts.sum())
+
+        for status in success_status:
+            count = int(status_counts.get(status, 0))
+            percentage = 100 * count / total_images if total_images > 0 else 0.0
+            rows.append(
+                {
+                    "split": split_name,
+                    "resolution": resolution,
+                    "status": status,
+                    "quantidade": count,
+                    "percentual_do_total": round(percentage, 2),
+                    "total_acertos": total_success,
+                    "total_imagens": total_images,
+                }
+            )
+
+        success_percentage = (
+            100 * total_success / total_images if total_images > 0 else 0.0
+        )
+        rows.append(
+            {
+                "split": split_name,
+                "resolution": resolution,
+                "status": "total acertos",
+                "quantidade": total_success,
+                "percentual_do_total": round(success_percentage, 2),
+                "total_acertos": total_success,
+                "total_imagens": total_images,
+            }
+        )
+
+    return pd.DataFrame(rows)
+
+
 def plot_distance_distribution_by_subset(
     data_by_resolution: Optional[Dict[str, Any]],
     split_name: str,

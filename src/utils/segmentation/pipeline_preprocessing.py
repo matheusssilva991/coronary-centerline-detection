@@ -14,7 +14,7 @@ from ..processing.preprocessing import (
     downscale_image_ndi,
     run_core_preprocessing_pipeline,
 )
-from ..utils import load_raw_img_and_label
+from ..utils.nifti_io import load_raw_img_and_label
 
 
 def load_and_preprocess_image(
@@ -92,4 +92,3 @@ def get_or_compute_vesselness(
     if save_cache:
         save_vesselness_cache(vesselness, img_id, cache_dir=cache_dir)
     return vesselness
-

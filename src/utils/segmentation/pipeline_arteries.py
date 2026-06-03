@@ -8,7 +8,7 @@ from skimage.morphology import ball
 from .artery_segmentation import region_growing_segmentation
 from .pipeline_preprocessing import get_or_compute_vesselness
 from ..processing.binary_operations import binary_closing, binary_dilation
-from ..utils import dice_score
+from ..utils.metrics import dice_score
 
 
 def segment_arteries_from_ostia(
@@ -75,4 +75,3 @@ def segment_arteries_from_ostia(
         "artery_voxels": int(np.sum(artery_mask)),
         "dice_artery": float(dice_score(artery_mask, label_artery)),
     }
-

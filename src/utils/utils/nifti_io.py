@@ -1,9 +1,13 @@
 """Funções auxiliares de I/O NIfTI e NumPy para volumes de imagem médica."""
 
+import logging
+
 import nibabel as nib
 import numpy as np
 from typing import Any, Optional, Tuple
 from numpy.typing import NDArray
+
+logger = logging.getLogger(__name__)
 
 
 def load_img_and_label(
@@ -61,18 +65,18 @@ def save_nii_image(
 
     try:
         nib.save(nifti_img, path_to_save)
-        print("Imagem salva em:", path_to_save, ".")
-    except Exception as e:
-        print("Erro ao salvar a imagem:", e)
+        logger.info("Imagem salva em: %s", path_to_save)
+    except Exception:
+        logger.exception("Erro ao salvar a imagem em: %s", path_to_save)
 
 
 def save_npy_array(array: NDArray[Any], path: str) -> None:
     """Salva um array em arquivo .npy."""
     try:
         np.save(path, array)
-        print(f"Array salvo em: {path}")
-    except Exception as e:
-        print(f"Erro ao salvar o array: {e}")
+        logger.info("Array salvo em: %s", path)
+    except Exception:
+        logger.exception("Erro ao salvar o array em: %s", path)
 
 
 __all__ = [

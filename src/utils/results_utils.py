@@ -1,16 +1,50 @@
 """Utilities para criação de relatórios e persistência de resultados."""
 
+from __future__ import annotations
+
 import json
-import os
 import platform
 import re
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 
 
-def make_json_safe(value):
+RESULT_COLUMNS = [
+    "IMG_ID",
+    "dice_artery",
+    "artery_voxels",
+    "ostia_found",
+    "ostia_status",
+    "segmentation_attempted",
+    "proceeded_with_bad_ostia",
+    "skip_reason",
+    "ostia_error",
+    "both_correct",
+    "both_tolerable",
+    "left_intersects",
+    "right_intersects",
+    "left_dist_mm",
+    "right_dist_mm",
+    "ostia_left",
+    "ostia_right",
+    "error",
+    "status",
+]
+
+STATUS_LABELS = {
+    "not_found": "óstios não encontrados",
+    "both_correct": "ambos corretos",
+    "both_tolerable": "ambos toleráveis",
+    "one_correct": "um correto",
+    "error": "erro",
+    "none_correct": "nenhum correto",
+}
+
+
+def make_json_safe(value: Any) -> Any:
     """Converte valores comuns de pandas/numpy/pathlib para JSON nativo."""
     if isinstance(value, dict):
         return {str(key): make_json_safe(item) for key, item in value.items()}
@@ -29,79 +63,160 @@ def make_json_safe(value):
 def create_timestamped_output_dir(base_output_dir, experiment_name="segmentation"):
     """Cria diretório de saída com timestamp."""
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    output_path = os.path.join(base_output_dir, experiment_name, timestamp)
-    os.makedirs(output_path, exist_ok=True)
-    return output_path
+    output_path = Path(base_output_dir) / experiment_name / timestamp
+    output_path.mkdir(parents=True, exist_ok=True)
+    return str(output_path)
+
+
+def classify_result_status(result: dict[str, Any]) -> str:
+    """Classifica uma linha de resultado no rótulo textual usado nos CSVs."""
+    if result.get("ostia_status") == "not_found":
+        return STATUS_LABELS["not_found"]
+    if result.get("both_correct", False):
+        return STATUS_LABELS["both_correct"]
+    if result.get("both_tolerable", False):
+        return STATUS_LABELS["both_tolerable"]
+    if result.get("left_intersects", False) or result.get("right_intersects", False):
+        return STATUS_LABELS["one_correct"]
+    if result.get("error"):
+        return STATUS_LABELS["error"]
+    return STATUS_LABELS["none_correct"]
+
+
+def build_result_row(result: dict[str, Any]) -> dict[str, Any]:
+    """Converte um resultado bruto do pipeline em uma linha CSV padronizada."""
+    row = {
+        "IMG_ID": result.get("IMG_ID"),
+        "dice_artery": result.get("dice_artery"),
+        "artery_voxels": result.get("artery_voxels"),
+        "ostia_found": result.get("ostia_found", False),
+        "ostia_status": result.get("ostia_status"),
+        "segmentation_attempted": result.get("segmentation_attempted", False),
+        "proceeded_with_bad_ostia": result.get("proceeded_with_bad_ostia", False),
+        "skip_reason": result.get("skip_reason"),
+        "ostia_error": result.get("ostia_error"),
+        "both_correct": result.get("both_correct", False),
+        "both_tolerable": result.get("both_tolerable", False),
+        "left_intersects": result.get("left_intersects", False),
+        "right_intersects": result.get("right_intersects", False),
+        "left_dist_mm": result.get("left_dist_mm"),
+        "right_dist_mm": result.get("right_dist_mm"),
+        "ostia_left": result.get("ostia_left"),
+        "ostia_right": result.get("ostia_right"),
+        "error": result.get("error", None),
+    }
+    row["status"] = classify_result_status(result)
+    return row
 
 
 def make_result_dataframe(results):
     """Converte lista de resultados em DataFrame formatado."""
-    rows = []
-    for result in results:
-        row = {
-            "IMG_ID": result.get("IMG_ID"),
-            "dice_artery": result.get("dice_artery"),
-            "artery_voxels": result.get("artery_voxels"),
-            "ostia_found": result.get("ostia_found", False),
-            "ostia_status": result.get("ostia_status"),
-            "segmentation_attempted": result.get("segmentation_attempted", False),
-            "proceeded_with_bad_ostia": result.get("proceeded_with_bad_ostia", False),
-            "skip_reason": result.get("skip_reason"),
-            "ostia_error": result.get("ostia_error"),
-            "both_correct": result.get("both_correct", False),
-            "both_tolerable": result.get("both_tolerable", False),
-            "left_intersects": result.get("left_intersects", False),
-            "right_intersects": result.get("right_intersects", False),
-            "left_dist_mm": result.get("left_dist_mm"),
-            "right_dist_mm": result.get("right_dist_mm"),
-            "ostia_left": result.get("ostia_left"),
-            "ostia_right": result.get("ostia_right"),
-            "error": result.get("error", None),
-        }
+    rows = [build_result_row(result) for result in results]
+    return pd.DataFrame(rows, columns=RESULT_COLUMNS)
 
-        if result.get("ostia_status") == "not_found":
-            row["status"] = "óstios não encontrados"
-        elif result.get("both_correct", False):
-            row["status"] = "ambos corretos"
-        elif result.get("both_tolerable", False):
-            row["status"] = "ambos toleráveis"
-        elif result.get("left_intersects", False) or result.get(
-            "right_intersects", False
-        ):
-            row["status"] = "um correto"
-        elif result.get("error"):
-            row["status"] = "erro"
-        else:
-            row["status"] = "nenhum correto"
 
-        rows.append(row)
-
-    return pd.DataFrame(rows)
+def add_config_columns(df: pd.DataFrame, config: dict[str, Any]) -> pd.DataFrame:
+    """Adiciona ao DataFrame as colunas de configuração salvas no CSV."""
+    df = df.copy()
+    df["downscale_method"] = config.get("DOWNSCALE_METHOD", "N/A")
+    df["opencv_interpolation"] = (
+        config.get("OPENCV_INTERPOLATION", "N/A")
+        if config.get("DOWNSCALE_METHOD") == "opencv"
+        else "N/A"
+    )
+    df["downscale_factors"] = str(config.get("DOWNSCALE_FACTORS", "N/A"))
+    df["max_threshold_percentile"] = config.get("MAX_THRESHOLD_PERCENTILE", "N/A")
+    return df
 
 
 def save_results(results, split_name, output_dir, config=None):
     """Salva resultados em CSV."""
     df = make_result_dataframe(results)
-
     if config is not None:
-        df["downscale_method"] = config.get("DOWNSCALE_METHOD", "N/A")
-        df["opencv_interpolation"] = (
-            config.get("OPENCV_INTERPOLATION", "N/A")
-            if config.get("DOWNSCALE_METHOD") == "opencv"
-            else "N/A"
-        )
-        df["downscale_factors"] = str(config.get("DOWNSCALE_FACTORS", "N/A"))
-        df["max_threshold_percentile"] = config.get("MAX_THRESHOLD_PERCENTILE", "N/A")
+        df = add_config_columns(df, config)
 
-    os.makedirs(output_dir, exist_ok=True)
-    output_path = os.path.join(output_dir, f"ostios_{split_name}_summary.csv")
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output_path = output_dir / f"ostios_{split_name}_summary.csv"
     df.to_csv(output_path, index=False)
-    return output_path
+    return str(output_path)
 
 
-def save_metadata(
+def _bool_series(df: pd.DataFrame, column: str) -> pd.Series:
+    return df.get(column, pd.Series(index=df.index, dtype=bool)).fillna(False)
+
+
+def summarize_results_df(df: pd.DataFrame) -> dict[str, Any]:
+    """Calcula contagens e métricas agregadas de um DataFrame de resultados."""
+    both_correct_series = _bool_series(df, "both_correct")
+    both_tolerable_series = _bool_series(df, "both_tolerable")
+    ostia_found_series = _bool_series(df, "ostia_found")
+    segmentation_attempted_series = _bool_series(df, "segmentation_attempted")
+    proceeded_with_bad_ostia_series = _bool_series(df, "proceeded_with_bad_ostia")
+    ostia_not_found_series = df.get("ostia_status", pd.Series(index=df.index)).eq(
+        "not_found"
+    )
+    error_series = df.get("error", pd.Series(index=df.index))
+    dice_series = df.get("dice_artery", pd.Series(index=df.index, dtype=float))
+
+    total_success_series = both_correct_series | both_tolerable_series
+    summary = {
+        "total_processed": len(df),
+        "ostia_found": int(ostia_found_series.sum()),
+        "ostia_found_percent": float(ostia_found_series.mean() * 100),
+        "ostia_status_not_found": int(ostia_not_found_series.sum()),
+        "ostia_status_not_found_percent": float(ostia_not_found_series.mean() * 100),
+        "both_correct": int(both_correct_series.sum()),
+        "both_correct_percent": float(both_correct_series.mean() * 100),
+        "both_tolerable": int(both_tolerable_series.sum()),
+        "both_tolerable_percent": float(both_tolerable_series.mean() * 100),
+        "segmentation_attempted": int(segmentation_attempted_series.sum()),
+        "segmentation_attempted_percent": float(
+            segmentation_attempted_series.mean() * 100
+        ),
+        "proceeded_with_bad_ostia": int(proceeded_with_bad_ostia_series.sum()),
+        "proceeded_with_bad_ostia_percent": float(
+            proceeded_with_bad_ostia_series.mean() * 100
+        ),
+        "total_success": int(total_success_series.sum()),
+        "total_success_percent": float(total_success_series.mean() * 100),
+        "left_correct": int(_bool_series(df, "left_intersects").sum()),
+        "right_correct": int(_bool_series(df, "right_intersects").sum()),
+        "error_not_null": int(error_series.notna().sum()),
+    }
+
+    if dice_series.notna().any():
+        summary.update(
+            {
+                "dice_artery_mean": float(dice_series.mean()),
+                "dice_artery_std": float(dice_series.std()),
+                "dice_artery_median": float(dice_series.median()),
+            }
+        )
+    else:
+        summary.update(
+            {
+                "dice_artery_mean": None,
+                "dice_artery_std": None,
+                "dice_artery_median": None,
+            }
+        )
+    return summary
+
+
+def _vesselness_metadata(config: dict[str, Any], key: str) -> dict[str, Any]:
+    vesselness_config = config[key]
+    sigmas = vesselness_config["sigmas"]
+    return {
+        "sigmas": sigmas.tolist() if hasattr(sigmas, "tolist") else list(sigmas),
+        "alpha": vesselness_config["alpha"],
+        "beta": vesselness_config["beta"],
+        "gamma": vesselness_config["gamma"],
+    }
+
+
+def build_metadata(
     split_name,
-    output_dir,
     config,
     ids,
     results,
@@ -110,15 +225,9 @@ def save_metadata(
     base_save_path=None,
     root_output_dir=None,
 ):
-    """Salva metadados da execução em arquivo JSON."""
+    """Monta a estrutura JSON de metadados sem gravar arquivo."""
     df = make_result_dataframe(results)
-
-    both_correct_series = df["both_correct"].fillna(False)
-    both_tolerable_series = df["both_tolerable"].fillna(False)
-    ostia_found_series = df["ostia_found"].fillna(False)
-    segmentation_attempted_series = df["segmentation_attempted"].fillna(False)
-    proceeded_with_bad_ostia_series = df["proceeded_with_bad_ostia"].fillna(False)
-    ostia_not_found_series = df["ostia_status"].eq("not_found")
+    results_summary = summarize_results_df(df)
 
     metadata = {
         "execution_info": {
@@ -130,11 +239,13 @@ def save_metadata(
             "python_version": platform.python_version(),
             "platform": platform.platform(),
             "state_counters": {
-                "ostia_found": int(ostia_found_series.sum()),
-                "ostia_status_not_found": int(ostia_not_found_series.sum()),
-                "segmentation_attempted": int(segmentation_attempted_series.sum()),
-                "proceeded_with_bad_ostia": int(proceeded_with_bad_ostia_series.sum()),
-                "error_not_null": int(df["error"].notna().sum()),
+                "ostia_found": results_summary["ostia_found"],
+                "ostia_status_not_found": results_summary["ostia_status_not_found"],
+                "segmentation_attempted": results_summary["segmentation_attempted"],
+                "proceeded_with_bad_ostia": results_summary[
+                    "proceeded_with_bad_ostia"
+                ],
+                "error_not_null": results_summary["error_not_null"],
             },
         },
         "preprocessing_config": {
@@ -146,22 +257,8 @@ def save_metadata(
             "max_threshold_percentile": config.get("MAX_THRESHOLD_PERCENTILE"),
         },
         "vesselness_config": {
-            "ostios": {
-                "sigmas": config["VESSELNESS_AORTA"]["sigmas"].tolist()
-                if hasattr(config["VESSELNESS_AORTA"]["sigmas"], "tolist")
-                else list(config["VESSELNESS_AORTA"]["sigmas"]),
-                "alpha": config["VESSELNESS_AORTA"]["alpha"],
-                "beta": config["VESSELNESS_AORTA"]["beta"],
-                "gamma": config["VESSELNESS_AORTA"]["gamma"],
-            },
-            "artery": {
-                "sigmas": config["VESSELNESS_ARTERY"]["sigmas"].tolist()
-                if hasattr(config["VESSELNESS_ARTERY"]["sigmas"], "tolist")
-                else list(config["VESSELNESS_ARTERY"]["sigmas"]),
-                "alpha": config["VESSELNESS_ARTERY"]["alpha"],
-                "beta": config["VESSELNESS_ARTERY"]["beta"],
-                "gamma": config["VESSELNESS_ARTERY"]["gamma"],
-            },
+            "ostios": _vesselness_metadata(config, "VESSELNESS_AORTA"),
+            "artery": _vesselness_metadata(config, "VESSELNESS_ARTERY"),
         },
         "circle_detection_config": config.get("CIRCLE_DETECTION"),
         "level_set_config": config.get("LEVEL_SET"),
@@ -177,43 +274,7 @@ def save_metadata(
                 "distance_threshold_mm"
             ],
         },
-        "results_summary": {
-            "total_processed": len(df),
-            "ostia_found": int(ostia_found_series.sum()),
-            "ostia_found_percent": float(ostia_found_series.mean() * 100),
-            "ostia_status_not_found": int(ostia_not_found_series.sum()),
-            "ostia_status_not_found_percent": float(
-                ostia_not_found_series.mean() * 100
-            ),
-            "both_correct": int(both_correct_series.sum()),
-            "both_correct_percent": float(both_correct_series.mean() * 100),
-            "both_tolerable": int(both_tolerable_series.sum()),
-            "both_tolerable_percent": float(both_tolerable_series.mean() * 100),
-            "segmentation_attempted": int(segmentation_attempted_series.sum()),
-            "segmentation_attempted_percent": float(
-                segmentation_attempted_series.mean() * 100
-            ),
-            "proceeded_with_bad_ostia": int(proceeded_with_bad_ostia_series.sum()),
-            "proceeded_with_bad_ostia_percent": float(
-                proceeded_with_bad_ostia_series.mean() * 100
-            ),
-            "total_success": int((both_correct_series | both_tolerable_series).sum()),
-            "total_success_percent": float(
-                (both_correct_series | both_tolerable_series).mean() * 100
-            ),
-            "left_correct": int(df["left_intersects"].sum()),
-            "right_correct": int(df["right_intersects"].sum()),
-            "error_not_null": int(df["error"].notna().sum()),
-            "dice_artery_mean": float(df["dice_artery"].mean())
-            if df["dice_artery"].notna().any()
-            else None,
-            "dice_artery_std": float(df["dice_artery"].std())
-            if df["dice_artery"].notna().any()
-            else None,
-            "dice_artery_median": float(df["dice_artery"].median())
-            if df["dice_artery"].notna().any()
-            else None,
-        },
+        "results_summary": results_summary,
     }
 
     if (
@@ -226,13 +287,39 @@ def save_metadata(
             "base_save_path": base_save_path,
             "output_dir": root_output_dir,
         }
+    return metadata
 
-    os.makedirs(output_dir, exist_ok=True)
-    metadata_path = os.path.join(output_dir, f"ostios_{split_name}_metadata.json")
-    with open(metadata_path, "w", encoding="utf-8") as file_handle:
+
+def save_metadata(
+    split_name,
+    output_dir,
+    config,
+    ids,
+    results,
+    execution_time=None,
+    base_path=None,
+    base_save_path=None,
+    root_output_dir=None,
+):
+    """Salva metadados da execução em arquivo JSON."""
+    metadata = build_metadata(
+        split_name,
+        config,
+        ids,
+        results,
+        execution_time=execution_time,
+        base_path=base_path,
+        base_save_path=base_save_path,
+        root_output_dir=root_output_dir,
+    )
+
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    metadata_path = output_dir / f"ostios_{split_name}_metadata.json"
+    with metadata_path.open("w", encoding="utf-8") as file_handle:
         json.dump(make_json_safe(metadata), file_handle, indent=2, ensure_ascii=False)
 
-    return metadata_path
+    return str(metadata_path)
 
 
 def batch_result_number(path, split_name):
@@ -290,16 +377,8 @@ def get_batch_result_file(output_dir, split_name, batch_number):
 
 
 def merge_batch_results(split_name, output_dir):
-    """
-    Mescla todos os CSVs de lotes em um único arquivo final.
-
-    Args:
-        split_name: Nome do split (train, val, test)
-        output_dir: Diretório contendo os CSVs dos lotes
-
-    Returns:
-        str: Caminho do arquivo final mesclado
-    """
+    """Mescla todos os CSVs de lotes em um único arquivo final."""
+    output_dir = Path(output_dir)
     batch_files = list_batch_result_files(split_name, output_dir)
 
     if not batch_files:
@@ -307,22 +386,17 @@ def merge_batch_results(split_name, output_dir):
         return None
 
     print(f"\n🔄 Mesclando {len(batch_files)} arquivo(s) de lote...")
-
-    # Ler e concatenar todos os CSVs
     dfs = []
     for batch_file in batch_files:
         df = pd.read_csv(batch_file)
         dfs.append(df)
-        print(f"   ✓ {Path(batch_file).name} ({len(df)} registros)")
+        print(f"   ✓ {batch_file.name} ({len(df)} registros)")
 
-    # Mesclar em um único DataFrame
     merged_df = pd.concat(dfs, ignore_index=True)
-
-    # Salvar arquivo final
-    final_path = os.path.join(output_dir, f"ostios_{split_name}_summary.csv")
+    final_path = output_dir / f"ostios_{split_name}_summary.csv"
     merged_df.to_csv(final_path, index=False)
 
     print(
         f"✅ Arquivo final mesclado: {final_path} ({len(merged_df)} registros totais)\n"
     )
-    return final_path
+    return str(final_path)

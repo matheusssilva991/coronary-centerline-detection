@@ -1,4 +1,10 @@
-"""Compatibilidade para etapas reutilizáveis do pipeline de segmentação."""
+"""Compatibilidade legada para etapas reutilizáveis do pipeline.
+
+Código novo deve importar diretamente de:
+- ``pipeline_preprocessing``
+- ``pipeline_detection``
+- ``pipeline_arteries``
+"""
 
 from .pipeline_arteries import segment_arteries_from_ostia
 from .pipeline_detection import (

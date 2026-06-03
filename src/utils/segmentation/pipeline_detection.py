@@ -1,16 +1,15 @@
 """Etapas de detecção/segmentação da aorta e avaliação dos óstios."""
 
-import json
-import os
 from typing import Any, Dict, List, Sequence
+from pathlib import Path
 
 import numpy as np
 
 from .aorta_localization import detect_aorta_circles
 from .aorta_segmentation import level_set_segmentation, remove_leaks_morphology
 from .ostia_detection import check_ostium_intersection, find_ostia
+from ..cache_utils import load_json_cache, load_npy_cache, save_json_cache, save_npy_cache
 from ..processing.binary_operations import keep_largest_component
-from ..utils import save_npy_array
 
 
 def get_or_detect_aorta_circles(
@@ -25,12 +24,13 @@ def get_or_detect_aorta_circles(
     use_gpu: bool = False,
 ) -> List[Dict[str, Any]]:
     """Carrega ou detecta círculos da aorta."""
-    saved_dir_circles = f"{base_save_path}/detected_circles"
-    json_path = os.path.join(saved_dir_circles, f"{img_id}_detected_circles.json")
+    json_path = (
+        Path(base_save_path) / "detected_circles" / f"{img_id}_detected_circles.json"
+    )
 
-    if os.path.exists(json_path) and load_cache:
-        with open(json_path, "r", encoding="utf-8") as file_handle:
-            return json.load(file_handle)
+    cached_circles = load_json_cache(json_path, enabled=load_cache)
+    if cached_circles is not None:
+        return cached_circles
 
     dx, dy, _ = scaled_spacing
     radii_start = circle_config["radii_start_px"]
@@ -55,10 +55,7 @@ def get_or_detect_aorta_circles(
         local_roi_padding=circle_config.get("local_roi_padding", 20),
         use_gpu=bool(use_gpu),
     )
-    if save_cache:
-        os.makedirs(saved_dir_circles, exist_ok=True)
-        with open(json_path, "w", encoding="utf-8") as file_handle:
-            json.dump(detected_circles, file_handle, indent=4)
+    save_json_cache(detected_circles, json_path, enabled=save_cache)
 
     return detected_circles
 
@@ -74,11 +71,11 @@ def get_or_segment_aorta(
     use_gpu: bool = False,
 ) -> Any:
     """Carrega ou segmenta a aorta com level set + pós-processamento."""
-    saved_dir_aorta = f"{base_save_path}/segmented_aorta"
-    mask_path = os.path.join(saved_dir_aorta, f"{img_id}_mask_aorta.npy")
+    mask_path = Path(base_save_path) / "segmented_aorta" / f"{img_id}_mask_aorta.npy"
 
-    if os.path.exists(mask_path) and load_cache:
-        return np.load(mask_path)
+    cached_mask = load_npy_cache(mask_path, enabled=load_cache)
+    if cached_mask is not None:
+        return cached_mask
 
     mask_refined = level_set_segmentation(
         lcc_image,
@@ -95,9 +92,7 @@ def get_or_segment_aorta(
     aorta_mask = keep_largest_component(aorta_mask)
     aorta_mask = aorta_mask.astype(np.uint8)
 
-    if save_cache:
-        os.makedirs(saved_dir_aorta, exist_ok=True)
-        save_npy_array(aorta_mask, mask_path)
+    save_npy_cache(aorta_mask, mask_path, enabled=save_cache)
 
     return aorta_mask
 
@@ -147,4 +142,3 @@ def detect_and_evaluate_ostia(
         "both_correct": both_correct,
         "both_tolerable": both_tolerable_inclusive and (not both_correct),
     }
-

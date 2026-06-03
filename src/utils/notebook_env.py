@@ -93,3 +93,13 @@ def get_default_split_paths(repo_root: Path) -> dict[str, dict[str, Path]]:
 def get_bad_cases_export_dir(repo_root: Path) -> Path:
     """Return the shared bad-cases export directory."""
     return repo_root / "output/segmentation/8.final_results/bad_cases_exports"
+
+
+def get_cases_analysis_output_dir(repo_root: Path) -> Path:
+    """Return the HTML output directory for cases-analysis notebooks."""
+    return repo_root / "output/cases_analysis_3d"
+
+
+def get_cases_analysis_cache_dir(repo_root: Path) -> Path:
+    """Return the cache directory for cases-analysis notebooks."""
+    return repo_root / "output/cases_analysis_cache"

@@ -10,7 +10,8 @@ from pathlib import Path
 import pandas as pd
 from tqdm import tqdm
 
-from ..groups.io import get_batch_result_file, save_results, scale_config_to_resolution
+from ..config_utils import scale_config_to_resolution
+from ..results_utils import get_batch_result_file, save_results
 from .pipeline_arteries import segment_arteries_from_ostia
 from .pipeline_detection import (
     detect_and_evaluate_ostia,

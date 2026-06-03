@@ -68,7 +68,7 @@
         "erosion_radius": 4
     },
     "OSTIA_VALIDATION": {
-        "distance_threshold_mm": 8.0
+        "distance_threshold_mm": 7.0
     },
     "REGION_GROWING": {
         "max_volume": 100000,

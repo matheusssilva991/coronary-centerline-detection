@@ -1,32 +1,27 @@
 # ============================================================================
 # IMPORTS
 # ============================================================================
-# Biblioteca padrão
-import os
 import copy
 import logging
+import os
 from pathlib import Path
 
-# Terceiros - Machine Learning
 import pandas as pd
 
 # Usa GPU 1 por padrão quando a variável não for definida externamente.
 os.environ.setdefault("CUDA_VISIBLE_DEVICES", "1")
 
-# Locais
-from utils import (
-    use_gpu,
-    load_config_json,
-    get_data_splits,
+from utils.config_utils import load_config_json
+from utils.dataset_utils import get_data_splits
+from utils.processing.gpu_utils import use_gpu
+from utils.results_utils import (
     create_timestamped_output_dir,
     make_result_dataframe,
     merge_batch_results,
     save_metadata,
 )
 from utils.segmentation.pipeline_cli import parse_pipeline_args
-from utils.segmentation.pipeline_orchestration import (
-    run_pipeline,
-)
+from utils.segmentation.pipeline_orchestration import run_pipeline
 from utils.segmentation.pipeline_reporting import print_split_summary, print_statistics
 
 
@@ -34,9 +29,7 @@ from utils.segmentation.pipeline_reporting import print_split_summary, print_sta
 # CONFIGURAÇÕES GLOBAIS
 # ============================================================================
 
-# Informações sobre aceleração GPU
 logger = logging.getLogger(__name__)
-# Formato de logging mais rico: timestamp, nível, logger, arquivo:linha
 LOG_FORMAT = "%(asctime)s %(levelname)s %(name)s [%(filename)s:%(lineno)d] %(message)s"
 logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
 
@@ -46,104 +39,101 @@ if GPU_ENABLED:
 else:
     logger.warning("GPU não disponível. Acelerações CPU usadas.")
 
-# Caminhos padrão (usar pathlib)
-# BASE_PATH = Path("/media/matheus/HD/DatasetsCCTA/ImageCAS/1-1000")
+REPO_ROOT = Path(__file__).resolve().parent.parent
 BASE_PATH = Path("/data04/home/mpmaia/ImageCAS/database/1-1000")
 BASE_SAVE_PATH = Path("/media/matheus/HD/DatasetsCCTA/Processed_ImageCAS")
-OUTPUT_DIR = Path(__file__).resolve().parent.parent / "output"
+OUTPUT_DIR = REPO_ROOT / "output"
+PIPELINE_CONFIG_PATH = REPO_ROOT / "config" / "pipeline_config.json"
 
-# Carregar apenas pipeline_config.json (usuário)
-pipeline_config_path = (
-    Path(__file__).resolve().parent.parent / "config" / "pipeline_config.json"
-)
-try:
-    CONFIG = load_config_json(str(pipeline_config_path), {})
-    logger.info(f"Config carregada de pipeline_config.json: {pipeline_config_path}")
-except Exception as e:
-    logger.warning(
-        f"Falha ao carregar {pipeline_config_path}: {e}. Usando defaults mínimos."
-    )
-    CONFIG = {
-        "USE_GPU": GPU_ENABLED,
-        "NUM_BATCHES": 5,
-    }
 
-# ============================================================================
-# CONFIGURAÇÕES POR RESOLUÇÃO
-# ============================================================================
-# MID/HIGH configs: permitir sobreposição via deepcopy
+def load_default_config(config_path=PIPELINE_CONFIG_PATH):
+    """Carrega a configuração base do pipeline."""
+    try:
+        config = load_config_json(str(config_path), {})
+        logger.info("Config carregada de pipeline_config.json: %s", config_path)
+        return config
+    except Exception as exc:
+        logger.warning(
+            "Falha ao carregar %s: %s. Usando defaults mínimos.",
+            config_path,
+            exc,
+        )
+        return {
+            "USE_GPU": GPU_ENABLED,
+            "NUM_BATCHES": 5,
+        }
+
+
+CONFIG = load_default_config()
 CONFIG_MID_RES = copy.deepcopy(CONFIG)
 CONFIG_HIGH_RES = copy.deepcopy(CONFIG)
 CONFIG_HIGH_RES["DOWNSCALE_FACTORS"] = [1, 1, 1]
 
-# ============================================================================
-# FUNÇÃO PRINCIPAL
-# ============================================================================
 
-
-def main():
-    """Função principal com argumentos de linha de comando."""
-    args = parse_pipeline_args(BASE_PATH, BASE_SAVE_PATH, OUTPUT_DIR)
-    base_path = args.base_path
-    base_save_path = args.base_save_path
-    output_root_dir = args.output_dir
-
-    # Ajustar nível de logging se solicitado
-    if args.verbose:
-        logging.getLogger().setLevel(logging.DEBUG)
-        logger.debug("Logging verbose habilitado (DEBUG)")
-
-    # Selecionar configuração baseada na resolução escolhida
+def select_resolution_config(args):
+    """Seleciona a configuração base para mid/high resolution."""
     if args.resolution == "high":
-        base_config = CONFIG_HIGH_RES
         print(
-            f"🔍 Resolução: HIGH (sem downscaling, DOWNSCALE_FACTORS = {base_config['DOWNSCALE_FACTORS']})"
+            "🔍 Resolução: HIGH "
+            f"(sem downscaling, DOWNSCALE_FACTORS = {CONFIG_HIGH_RES['DOWNSCALE_FACTORS']})"
         )
-    else:
-        base_config = CONFIG_MID_RES
-        print(
-            f"🔍 Resolução: MID (downscale 2x, DOWNSCALE_FACTORS = {base_config['DOWNSCALE_FACTORS']})"
-        )
+        return CONFIG_HIGH_RES
 
-    effective_config = copy.deepcopy(base_config)
+    print(
+        "🔍 Resolução: MID "
+        f"(downscale 2x, DOWNSCALE_FACTORS = {CONFIG_MID_RES['DOWNSCALE_FACTORS']})"
+    )
+    return CONFIG_MID_RES
+
+
+def build_effective_config(args):
+    """Aplica resolução, arquivo extra e flags CLI sobre a configuração base."""
+    effective_config = copy.deepcopy(select_resolution_config(args))
 
     if args.config_file:
         effective_config = load_config_json(args.config_file, effective_config)
         print(f"⚙️  Configuração carregada de: {args.config_file}")
 
-    # Atualizar configurações via CLI
     if args.cache:
         effective_config["LOAD_CACHE"] = True
         print("⚙️  Carregamento de cache habilitado")
 
     if args.no_save_cache:
         effective_config["SAVE_CACHE"] = False
-        print("⚠️  Salvamento de cache desabilitado")
-    else:
-        if "SAVE_CACHE" not in effective_config:
-            effective_config["SAVE_CACHE"] = True
+    elif "SAVE_CACHE" not in effective_config:
+        effective_config["SAVE_CACHE"] = True
+
+    if effective_config.get("SAVE_CACHE"):
         print("💾 Salvamento de cache habilitado")
+    else:
+        print("⚠️  Salvamento de cache desabilitado")
 
     if args.downscale_method is not None:
         effective_config["DOWNSCALE_METHOD"] = args.downscale_method
     if args.opencv_interpolation is not None:
         effective_config["OPENCV_INTERPOLATION"] = args.opencv_interpolation
 
-    if effective_config["DOWNSCALE_METHOD"] == "opencv":
+    effective_config["NUM_BATCHES"] = args.num_batches
+    return effective_config
+
+
+def print_run_settings(args, config, base_path, base_save_path):
+    """Mostra as configurações operacionais principais da execução."""
+    if config["DOWNSCALE_METHOD"] == "opencv":
         print(
-            f"🔧 Método de downscale: {effective_config['DOWNSCALE_METHOD']} (interpolação: {effective_config['OPENCV_INTERPOLATION']})"
+            "🔧 Método de downscale: "
+            f"{config['DOWNSCALE_METHOD']} "
+            f"(interpolação: {config['OPENCV_INTERPOLATION']})"
         )
     else:
-        print(f"🔧 Método de downscale: {effective_config['DOWNSCALE_METHOD']}")
+        print(f"🔧 Método de downscale: {config['DOWNSCALE_METHOD']}")
+
     print(f"🗂️  Dataset: {base_path}")
     print(f"💽 Cache/artefatos: {base_save_path}")
-
-    # Configurar batch processing
-    effective_config["NUM_BATCHES"] = args.num_batches
     print(f"📦 Processamento em {args.num_batches} lotes")
+
     if args.resume_batch > 0:
         print(f"🔄 Retomando a partir do lote {args.resume_batch}")
-
     if args.resume_batches:
         print(
             "🔄 Retomada por subset: "
@@ -152,64 +142,186 @@ def main():
             f"test={args.resume_batches_by_split['test']}"
         )
 
-    # Criar ou reusar diretório
+
+def resolve_output_dir(args, output_root_dir):
+    """Cria ou reutiliza o diretório de saída da execução."""
     if (args.resume_requested or args.merge_only) and args.resume_dir:
-        # Modo retomada/merge: usar diretório anterior
         if args.resume_dir.exists():
-            timestamped_output_dir = args.resume_dir
-            print(f"\n📁 Usando diretório anterior: {timestamped_output_dir}\n")
-        else:
-            print(f"❌ Erro: Diretório não encontrado: {args.resume_dir}")
-            print("   Use --resume-dir com o caminho do diretório anterior")
-            exit(1)
-    elif args.resume_requested:
+            print(f"\n📁 Usando diretório anterior: {args.resume_dir}\n")
+            return args.resume_dir
+        print(f"❌ Erro: Diretório não encontrado: {args.resume_dir}")
+        print("   Use --resume-dir com o caminho do diretório anterior")
+        raise SystemExit(1)
+
+    if args.resume_requested:
         print("❌ Erro: para retomar a partir de um lote, informe --resume-dir")
         print(
             "   Exemplo: --resume-batch 11 "
             "--resume-dir output/segmentation/2026-05-19_17-08-33"
         )
-        exit(1)
-    else:
-        # Modo normal: criar novo diretório com timestamp
-        timestamped_output_dir = create_timestamped_output_dir(
-            output_root_dir, experiment_name="segmentation"
-        )
-        print(f"📁 Diretório de saída: {timestamped_output_dir}\n")
+        raise SystemExit(1)
 
-    timestamped_output_dir = Path(timestamped_output_dir)
+    output_dir = create_timestamped_output_dir(
+        output_root_dir, experiment_name="segmentation"
+    )
+    print(f"📁 Diretório de saída: {output_dir}\n")
+    return Path(output_dir)
 
-    # Configurar FileHandler de logging no diretório de saída (debug)
+
+def setup_file_logging(output_dir):
+    """Adiciona um arquivo de log dentro do diretório da execução."""
     try:
-        fh_path = Path(timestamped_output_dir) / "pipeline.log"
+        fh_path = Path(output_dir) / "pipeline.log"
         fh = logging.FileHandler(fh_path, encoding="utf-8")
         fh.setLevel(logging.DEBUG)
         fh.setFormatter(logging.Formatter(LOG_FORMAT))
         logging.getLogger().addHandler(fh)
-        logger.info(f"Logs também serão gravados em: {fh_path}")
+        logger.info("Logs também serão gravados em: %s", fh_path)
     except Exception:
         logger.warning("Não foi possível criar arquivo de log no diretório de saída.")
 
-    # Determinar quais conjuntos processar
+
+def split_names_from_args(args):
+    """Resolve a lista de splits solicitada pela CLI."""
     if "all" in args.split:
-        split_names_to_run = ["train", "val", "test"]
-    else:
-        split_names_to_run = args.split
+        return ["train", "val", "test"]
+    return args.split
 
+
+def build_splits_to_run(args, base_path):
+    """Retorna pares (split_name, ids), ou ids=None no modo merge-only."""
+    split_names_to_run = split_names_from_args(args)
     if args.merge_only:
-        splits_to_run = [(name, None) for name in split_names_to_run]
+        return [(name, None) for name in split_names_to_run]
+
+    train_ids, val_ids, test_ids, all_ids = get_data_splits(base_path)
+    print_statistics(train_ids, val_ids, test_ids, all_ids)
+    split_map = {
+        "train": train_ids,
+        "val": val_ids,
+        "test": test_ids,
+    }
+    return [(name, split_map[name]) for name in split_names_to_run]
+
+
+def save_split_metadata(
+    split_name,
+    output_dir,
+    config,
+    ids,
+    details,
+    execution_time,
+    base_path,
+    base_save_path,
+    output_root_dir,
+):
+    """Salva metadados e registra o caminho no logger."""
+    metadata_path = save_metadata(
+        split_name,
+        output_dir,
+        config,
+        ids,
+        details,
+        execution_time,
+        base_path=base_path,
+        base_save_path=base_save_path,
+        root_output_dir=output_root_dir,
+    )
+    logger.info("Metadados salvos em: %s", metadata_path)
+    return metadata_path
+
+
+def run_merge_only_split(
+    split_name,
+    output_dir,
+    config,
+    base_path,
+    base_save_path,
+    output_root_dir,
+):
+    """Consolida lotes já existentes e recria metadata/summary."""
+    final_path = merge_batch_results(split_name, output_dir)
+    if final_path is None:
+        print(f"❌ Nenhum lote encontrado para o split '{split_name}'")
+        raise SystemExit(1)
+
+    df = pd.read_csv(final_path)
+    details = df.to_dict("records")
+    metadata_ids = df["IMG_ID"].dropna().tolist() if "IMG_ID" in df.columns else []
+    save_split_metadata(
+        split_name,
+        output_dir,
+        config,
+        metadata_ids,
+        details,
+        execution_time=None,
+        base_path=base_path,
+        base_save_path=base_save_path,
+        output_root_dir=output_root_dir,
+    )
+    print_split_summary(df, split_name, config)
+
+
+def run_processing_split(
+    split_name,
+    ids,
+    output_dir,
+    config,
+    args,
+    base_path,
+    base_save_path,
+    output_root_dir,
+):
+    """Processa um split e salva CSV final + metadata."""
+    summary = run_pipeline(
+        ids,
+        split_name,
+        config,
+        base_path,
+        base_save_path,
+        output_dir,
+        resume_from_batch=args.resume_batches_by_split.get(
+            split_name, args.resume_batch
+        ),
+    )
+    execution_time = summary.get("execution_time")
+
+    logger.info("Finalizando processamento em lotes...")
+    merge_batch_results(split_name, output_dir)
+    output_path = Path(output_dir) / f"ostios_{split_name}_summary.csv"
+    logger.info("Resumo final salvo em: %s", output_path)
+
+    if summary.get("details") is None:
+        details = pd.read_csv(output_path).to_dict("records")
     else:
-        # Obter splits de dados
-        train_ids, val_ids, test_ids, all_ids = get_data_splits(base_path)
-        print_statistics(train_ids, val_ids, test_ids, all_ids)
+        details = summary["details"]
 
-        split_map = {
-            "train": train_ids,
-            "val": val_ids,
-            "test": test_ids,
-        }
-        splits_to_run = [(name, split_map[name]) for name in split_names_to_run]
+    save_split_metadata(
+        split_name,
+        output_dir,
+        config,
+        ids,
+        details,
+        execution_time,
+        base_path,
+        base_save_path,
+        output_root_dir,
+    )
 
-    # Processar cada conjunto
+    df = pd.read_csv(output_path) if summary.get("details") is None else make_result_dataframe(details)
+    print_split_summary(df, split_name, config, execution_time)
+
+
+def run_requested_splits(
+    args,
+    splits_to_run,
+    output_dir,
+    config,
+    base_path,
+    base_save_path,
+    output_root_dir,
+):
+    """Executa ou consolida todos os splits solicitados."""
     for split_name, ids in splits_to_run:
         print(f"\n{'=' * 60}")
         action_label = "Consolidando" if args.merge_only else "Processando"
@@ -217,84 +329,56 @@ def main():
         print(f"{'=' * 60}")
 
         if args.merge_only:
-            final_path = merge_batch_results(split_name, timestamped_output_dir)
-            if final_path is None:
-                print(f"❌ Nenhum lote encontrado para o split '{split_name}'")
-                exit(1)
-
-            df = pd.read_csv(final_path)
-            details_for_metadata = df.to_dict("records")
-            metadata_ids = (
-                df["IMG_ID"].dropna().tolist() if "IMG_ID" in df.columns else []
-            )
-            metadata_path = save_metadata(
+            run_merge_only_split(
                 split_name,
-                timestamped_output_dir,
-                effective_config,
-                metadata_ids,
-                details_for_metadata,
-                execution_time=None,
-                base_path=base_path,
-                base_save_path=base_save_path,
-                root_output_dir=output_root_dir,
+                output_dir,
+                config,
+                base_path,
+                base_save_path,
+                output_root_dir,
             )
-            logger.info(f"Metadados salvos em: {metadata_path}")
-            print_split_summary(df, split_name, effective_config)
-            continue
-
-        summary = run_pipeline(
-            ids,
-            split_name,
-            effective_config,
-            base_path,
-            base_save_path,
-            timestamped_output_dir,
-            resume_from_batch=args.resume_batches_by_split.get(
-                split_name, args.resume_batch
-            ),
-        )
-        execution_time = summary.get("execution_time")
-
-        # Salvar/conciliar resultados CSV
-        logger.info("Finalizando processamento em lotes...")
-        merge_batch_results(split_name, timestamped_output_dir)
-        output_path = Path(timestamped_output_dir) / f"ostios_{split_name}_summary.csv"
-        logger.info(f"Resumo final salvo em: {output_path}")
-
-        # Salvar metadados JSON (carregar detalhes do CSV se necessário)
-        if summary.get("details") is None:
-            details_for_metadata = pd.read_csv(output_path).to_dict("records")
         else:
-            details_for_metadata = summary["details"]
+            run_processing_split(
+                split_name,
+                ids,
+                output_dir,
+                config,
+                args,
+                base_path,
+                base_save_path,
+                output_root_dir,
+            )
 
-        metadata_path = save_metadata(
-            split_name,
-            timestamped_output_dir,
-            effective_config,
-            ids,
-            details_for_metadata,
-            execution_time,
-            base_path=base_path,
-            base_save_path=base_save_path,
-            root_output_dir=output_root_dir,
-        )
-        logger.info(f"Metadados salvos em: {metadata_path}")
 
-        # Estatísticas do conjunto
-        if summary.get("details") is None:
-            df = pd.read_csv(output_path)
-        else:
-            df = make_result_dataframe(summary["details"])
-        print_split_summary(df, split_name, effective_config, execution_time)
+def main():
+    """Função principal com argumentos de linha de comando."""
+    args = parse_pipeline_args(BASE_PATH, BASE_SAVE_PATH, OUTPUT_DIR)
+    if args.verbose:
+        logging.getLogger().setLevel(logging.DEBUG)
+        logger.debug("Logging verbose habilitado (DEBUG)")
+
+    base_path = args.base_path
+    base_save_path = args.base_save_path
+    output_root_dir = args.output_dir
+    effective_config = build_effective_config(args)
+
+    print_run_settings(args, effective_config, base_path, base_save_path)
+    output_dir = resolve_output_dir(args, output_root_dir)
+    setup_file_logging(output_dir)
+    splits_to_run = build_splits_to_run(args, base_path)
+    run_requested_splits(
+        args,
+        splits_to_run,
+        output_dir,
+        effective_config,
+        base_path,
+        base_save_path,
+        output_root_dir,
+    )
 
     print(f"\n{'=' * 60}")
     print("✨ Processamento concluído!")
     print(f"{'=' * 60}\n")
-
-
-# ============================================================================
-# EXECUÇÃO
-# ============================================================================
 
 
 if __name__ == "__main__":

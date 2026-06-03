@@ -517,7 +517,7 @@
   },
   {
     "image_id": 436,
-    "bad_case_status": "ostia_not_found",
+    "bad_case_status": "none_correct",
     "subset": "test",
     "resolution": "mid_res"
   },
@@ -607,7 +607,7 @@
   },
   {
     "image_id": 281,
-    "bad_case_status": "ostia_not_found",
+    "bad_case_status": "none_correct",
     "subset": "test",
     "resolution": "mid_res"
   },
