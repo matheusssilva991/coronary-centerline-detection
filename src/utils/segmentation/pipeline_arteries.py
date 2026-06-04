@@ -69,12 +69,12 @@ def segment_arteries_from_ostia(
     closed_mask = binary_closing(
         artery_mask > 0,
         structure=ball(post_config["closing_radius"]),
-        gpu=config.get("USE_GPU", False),
+        gpu=False,
     )
     dilated_mask = binary_dilation(
         closed_mask,
         structure=ball(post_config["dilation_radius"]),
-        gpu=config.get("USE_GPU", False),
+        gpu=False,
     )
     artery_mask = dilated_mask
 

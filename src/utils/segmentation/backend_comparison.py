@@ -5,9 +5,10 @@ from __future__ import annotations
 import argparse
 import copy
 import json
+import time
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
+from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Tuple, TypeVar
 
 import numpy as np
 import pandas as pd
@@ -15,7 +16,7 @@ from skimage.morphology import ball
 
 from ..config_utils import load_config_json, scale_config_to_resolution
 from ..processing.binary_operations import binary_closing, binary_dilation
-from ..processing.gpu_utils import GPU_AVAILABLE
+from ..processing.gpu_utils import GPU_AVAILABLE, cp
 from ..utils.metrics import dice_score
 from .artery_segmentation import region_growing_segmentation
 from .ostia_detection import (
@@ -32,10 +33,31 @@ from .pipeline_preprocessing import get_or_compute_vesselness, load_and_preproce
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_CONFIG_PATH = REPO_ROOT / "config" / "pipeline_config.json"
+DEFAULT_SPLIT_CONFIG_PATH = REPO_ROOT / "config" / "imagecas_splits.json"
 DEFAULT_BASE_PATH = Path("/media/matheus/HD/DatasetsCCTA/ImageCAS/1-1000")
 DEFAULT_BASE_PATH_FALLBACK = Path("/data04/home/mpmaia/ImageCAS/database/1-1000")
 DEFAULT_BASE_SAVE_PATH = Path("/media/matheus/HD/DatasetsCCTA/Processed_ImageCAS")
 DEFAULT_OUTPUT_ROOT = REPO_ROOT / "output" / "segmentation" / "backend_comparison"
+T = TypeVar("T")
+
+
+def _sync_gpu_if_needed(use_gpu: bool) -> None:
+    if use_gpu and GPU_AVAILABLE and cp is not None:
+        cp.cuda.Stream.null.synchronize()
+
+
+def _time_call(
+    timings: Dict[str, float],
+    stage: str,
+    use_gpu: bool,
+    func: Callable[[], T],
+) -> T:
+    _sync_gpu_if_needed(use_gpu)
+    start = time.perf_counter()
+    result = func()
+    _sync_gpu_if_needed(use_gpu)
+    timings[stage] = time.perf_counter() - start
+    return result
 
 
 def has_imagecas_images(path: Path) -> bool:
@@ -62,6 +84,19 @@ def load_comparison_config(config_path: Path, resolution: str) -> Dict[str, Any]
     config["LOAD_CACHE"] = False
     config["SAVE_CACHE"] = False
     return config
+
+
+def load_split_img_ids(split_config_path: Path, split_name: str) -> List[int]:
+    """Carrega IDs de um split do arquivo JSON de splits."""
+    data = json.loads(split_config_path.read_text(encoding="utf-8"))
+    splits = data.get("splits", {})
+    if split_name not in splits:
+        available = ", ".join(sorted(splits)) or "nenhum"
+        raise ValueError(
+            f"Split '{split_name}' não encontrado em {split_config_path}. "
+            f"Disponíveis: {available}."
+        )
+    return [int(img_id) for img_id in splits[split_name]]
 
 
 def _coord_tuple(value: Optional[Sequence[int]]) -> Optional[Tuple[int, int, int]]:
@@ -288,17 +323,24 @@ def _artery_steps(
 ) -> Dict[str, Any]:
     config = copy.deepcopy(config)
     config["USE_GPU"] = use_gpu
+    timings: Dict[str, float] = {}
 
-    vesselness_artery = get_or_compute_vesselness(
-        img_id,
-        lcc_image,
-        cache_dir=str(
-            base_save_path / f"debug_vesselness_artery_cache_{'gpu' if use_gpu else 'cpu'}"
+    vesselness_artery = _time_call(
+        timings,
+        "vesselness_artery",
+        use_gpu,
+        lambda: get_or_compute_vesselness(
+            img_id,
+            lcc_image,
+            cache_dir=str(
+                base_save_path
+                / f"debug_vesselness_artery_cache_{'gpu' if use_gpu else 'cpu'}"
+            ),
+            vesselness_config=config["VESSELNESS_ARTERY"],
+            load_cache=False,
+            save_cache=False,
+            use_gpu=use_gpu,
         ),
-        vesselness_config=config["VESSELNESS_ARTERY"],
-        load_cache=False,
-        save_cache=False,
-        use_gpu=use_gpu,
     )
 
     rg_config = config["REGION_GROWING"]
@@ -315,33 +357,53 @@ def _artery_steps(
         "verbose": False,
     }
 
-    left_mask = (
-        region_growing_segmentation(
-            vesselness_artery, seed_point=ostia_left, **region_growing_params
+    def run_region_growing() -> Tuple[Any, Any]:
+        left = (
+            region_growing_segmentation(
+                vesselness_artery, seed_point=ostia_left, **region_growing_params
+            )
+            if ostia_left is not None
+            else np.zeros_like(vesselness_artery, dtype=np.uint8)
         )
-        if ostia_left is not None
-        else np.zeros_like(vesselness_artery, dtype=np.uint8)
-    )
-    right_mask = (
-        region_growing_segmentation(
-            vesselness_artery, seed_point=ostia_right, **region_growing_params
+        right = (
+            region_growing_segmentation(
+                vesselness_artery, seed_point=ostia_right, **region_growing_params
+            )
+            if ostia_right is not None
+            else np.zeros_like(vesselness_artery, dtype=np.uint8)
         )
-        if ostia_right is not None
-        else np.zeros_like(vesselness_artery, dtype=np.uint8)
+        return left, right
+
+    left_mask, right_mask = _time_call(
+        timings,
+        "artery_region_growing",
+        use_gpu,
+        run_region_growing,
     )
 
     raw_mask = ((left_mask > 0) | (right_mask > 0)).astype(np.uint8)
     post_config = config["POSTPROCESSING"]
-    closed_mask = binary_closing(
-        raw_mask > 0,
-        structure=ball(post_config["closing_radius"]),
-        gpu=use_gpu,
+
+    def run_postprocessing() -> Tuple[Any, Any]:
+        closed = binary_closing(
+            raw_mask > 0,
+            structure=ball(post_config["closing_radius"]),
+            gpu=False,
+        )
+        final = binary_dilation(
+            closed,
+            structure=ball(post_config["dilation_radius"]),
+            gpu=False,
+        )
+        return closed, final
+
+    closed_mask, final_mask = _time_call(
+        timings,
+        "artery_postprocessing",
+        use_gpu,
+        run_postprocessing,
     )
-    final_mask = binary_dilation(
-        closed_mask,
-        structure=ball(post_config["dilation_radius"]),
-        gpu=use_gpu,
-    )
+    timings["artery_total"] = sum(timings.values())
 
     return {
         "vesselness_artery": vesselness_artery,
@@ -350,6 +412,7 @@ def _artery_steps(
         "artery_final_mask": final_mask,
         "artery_voxels": int(np.sum(final_mask)),
         "dice_artery": float(dice_score(final_mask, label_artery)),
+        "__timings__": timings,
     }
 
 
@@ -367,48 +430,76 @@ def _run_steps_for_backend(
 
     backend_config = copy.deepcopy(config)
     backend_config["USE_GPU"] = use_gpu
+    timings: Dict[str, float] = {}
+    total_start = time.perf_counter()
 
-    vesselness_ostios = get_or_compute_vesselness(
-        img_id,
-        lcc_image,
-        cache_dir=str(
-            base_save_path / f"debug_vesselness_ostios_cache_{'gpu' if use_gpu else 'cpu'}"
+    vesselness_ostios = _time_call(
+        timings,
+        "vesselness_ostios",
+        use_gpu,
+        lambda: get_or_compute_vesselness(
+            img_id,
+            lcc_image,
+            cache_dir=str(
+                base_save_path
+                / f"debug_vesselness_ostios_cache_{'gpu' if use_gpu else 'cpu'}"
+            ),
+            vesselness_config=backend_config["VESSELNESS_AORTA"],
+            load_cache=False,
+            save_cache=False,
+            use_gpu=use_gpu,
         ),
-        vesselness_config=backend_config["VESSELNESS_AORTA"],
-        load_cache=False,
-        save_cache=False,
-        use_gpu=use_gpu,
     )
-    detected_circles = get_or_detect_aorta_circles(
-        img_id,
-        lcc_image,
-        downscale_factors,
-        scaled_spacing,
-        backend_config["CIRCLE_DETECTION"],
-        str(base_save_path),
-        load_cache=False,
-        save_cache=False,
+    detected_circles = _time_call(
+        timings,
+        "aorta_circles",
+        use_gpu,
+        lambda: get_or_detect_aorta_circles(
+            img_id,
+            lcc_image,
+            downscale_factors,
+            scaled_spacing,
+            backend_config["CIRCLE_DETECTION"],
+            str(base_save_path),
+            load_cache=False,
+            save_cache=False,
+        ),
     )
-    aorta_mask = get_or_segment_aorta(
-        img_id,
-        lcc_image,
-        detected_circles,
-        backend_config["LEVEL_SET"],
-        str(base_save_path),
-        load_cache=False,
-        save_cache=False,
-        use_gpu=use_gpu,
+    aorta_mask = _time_call(
+        timings,
+        "aorta_mask",
+        use_gpu,
+        lambda: get_or_segment_aorta(
+            img_id,
+            lcc_image,
+            detected_circles,
+            backend_config["LEVEL_SET"],
+            str(base_save_path),
+            load_cache=False,
+            save_cache=False,
+            use_gpu=use_gpu,
+        ),
     )
-    aorta_surface = find_aorta_surface(
-        aorta_mask,
-        erosion_radius=backend_config["OSTIA_DETECTION"]["erosion_radius"],
+    aorta_surface = _time_call(
+        timings,
+        "aorta_surface",
+        use_gpu,
+        lambda: find_aorta_surface(
+            aorta_mask,
+            erosion_radius=backend_config["OSTIA_DETECTION"]["erosion_radius"],
+        ),
     )
-    ostia_eval = _evaluate_ostia(
-        aorta_mask,
-        vesselness_ostios,
-        label,
-        scaled_spacing,
-        backend_config,
+    ostia_eval = _time_call(
+        timings,
+        "ostia_detection",
+        use_gpu,
+        lambda: _evaluate_ostia(
+            aorta_mask,
+            vesselness_ostios,
+            label,
+            scaled_spacing,
+            backend_config,
+        ),
     )
     artery = _artery_steps(
         img_id,
@@ -420,6 +511,10 @@ def _run_steps_for_backend(
         base_save_path,
         use_gpu=use_gpu,
     )
+    artery_timings = artery.pop("__timings__")
+    timings.update(artery_timings)
+    _sync_gpu_if_needed(use_gpu)
+    timings["backend_total"] = time.perf_counter() - total_start
 
     return {
         "vesselness_ostios": vesselness_ostios,
@@ -428,6 +523,7 @@ def _run_steps_for_backend(
         "aorta_surface": aorta_surface,
         "ostia_eval": ostia_eval,
         **artery,
+        "__timings__": timings,
     }
 
 
@@ -468,15 +564,40 @@ def _ostia_row(
     }
 
 
+def _timing_row(
+    img_id: int,
+    preprocess_seconds: float,
+    cpu_timings: Dict[str, float],
+    gpu_timings: Dict[str, float],
+) -> Dict[str, Any]:
+    row: Dict[str, Any] = {
+        "IMG_ID": img_id,
+        "preprocess_seconds": preprocess_seconds,
+    }
+    for stage in sorted(set(cpu_timings) | set(gpu_timings)):
+        cpu_seconds = cpu_timings.get(stage)
+        gpu_seconds = gpu_timings.get(stage)
+        row[f"cpu_{stage}_seconds"] = cpu_seconds
+        row[f"gpu_{stage}_seconds"] = gpu_seconds
+        if cpu_seconds is not None and gpu_seconds is not None:
+            row[f"{stage}_delta_gpu_minus_cpu_seconds"] = gpu_seconds - cpu_seconds
+            row[f"{stage}_speedup_cpu_over_gpu"] = (
+                cpu_seconds / gpu_seconds if gpu_seconds > 0 else None
+            )
+    return row
+
+
 def compare_image_cpu_gpu(
     img_id: int,
     config: Dict[str, Any],
     base_path: Path,
     base_save_path: Path,
     float_tolerance: float = 1e-6,
-) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+) -> Tuple[List[Dict[str, Any]], Dict[str, Any], Dict[str, Any]]:
     """Compara uma imagem nas execuções CPU e GPU."""
+    preprocess_start = time.perf_counter()
     image_data = load_and_preprocess_image(img_id, str(base_path), config)
+    preprocess_seconds = time.perf_counter() - preprocess_start
     cpu = _run_steps_for_backend(
         img_id, image_data, config, base_save_path, use_gpu=False
     )
@@ -539,8 +660,14 @@ def compare_image_cpu_gpu(
             ),
         }
     )
+    timing_row = _timing_row(
+        img_id,
+        preprocess_seconds,
+        cpu["__timings__"],
+        gpu["__timings__"],
+    )
 
-    return rows, ostia_row
+    return rows, ostia_row, timing_row
 
 
 def compare_images_cpu_gpu(
@@ -555,10 +682,11 @@ def compare_images_cpu_gpu(
     output_dir.mkdir(parents=True, exist_ok=True)
     stage_rows = []
     ostia_rows = []
+    timing_rows = []
 
     for img_id in img_ids:
         print(f"Comparando IMG_ID {img_id}...")
-        rows, ostia_row = compare_image_cpu_gpu(
+        rows, ostia_row, timing_row = compare_image_cpu_gpu(
             int(img_id),
             config,
             base_path,
@@ -567,11 +695,14 @@ def compare_images_cpu_gpu(
         )
         stage_rows.extend(rows)
         ostia_rows.append(ostia_row)
+        timing_rows.append(timing_row)
 
     stage_path = output_dir / "stage_comparison.csv"
     ostia_path = output_dir / "ostia_comparison.csv"
+    timing_path = output_dir / "timing_comparison.csv"
     pd.DataFrame(stage_rows).to_csv(stage_path, index=False)
     pd.DataFrame(ostia_rows).to_csv(ostia_path, index=False)
+    pd.DataFrame(timing_rows).to_csv(timing_path, index=False)
 
     config_path = output_dir / "run_config.json"
     with config_path.open("w", encoding="utf-8") as file_handle:
@@ -591,6 +722,7 @@ def compare_images_cpu_gpu(
     return {
         "stage_comparison": stage_path,
         "ostia_comparison": ostia_path,
+        "timing_comparison": timing_path,
         "run_config": config_path,
     }
 
@@ -621,8 +753,23 @@ def build_parser() -> argparse.ArgumentParser:
         "--img-id",
         type=int,
         nargs="+",
-        required=True,
-        help="Um ou mais IDs ImageCAS para comparar.",
+        default=None,
+        help=(
+            "Um ou mais IDs ImageCAS para comparar. "
+            "Se omitido, usa os IDs do split selecionado."
+        ),
+    )
+    parser.add_argument(
+        "--split",
+        choices=["train", "val", "test"],
+        default="train",
+        help="Split usado quando --img-id não é informado. Padrão: train.",
+    )
+    parser.add_argument(
+        "--split-config",
+        type=Path,
+        default=DEFAULT_SPLIT_CONFIG_PATH,
+        help=f"Arquivo JSON com splits. Padrão: {DEFAULT_SPLIT_CONFIG_PATH}",
     )
     parser.add_argument(
         "--resolution",
@@ -675,8 +822,16 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
         output_dir = DEFAULT_OUTPUT_ROOT / f"{args.resolution}_res" / timestamp
 
     config = load_comparison_config(args.config_file, args.resolution)
+    img_ids = args.img_id
+    if img_ids is None:
+        img_ids = load_split_img_ids(args.split_config, args.split)
+        print(
+            f"Usando {len(img_ids)} imagens do split '{args.split}' "
+            f"em {args.split_config}."
+        )
+
     paths = compare_images_cpu_gpu(
-        args.img_id,
+        img_ids,
         config,
         base_path,
         args.base_save_path,

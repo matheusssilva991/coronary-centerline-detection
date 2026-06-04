@@ -84,14 +84,14 @@ def get_or_segment_aorta(
         num_iter=level_set_config["num_iter"],
         balloon=level_set_config["balloon"],
         smoothing=level_set_config["smoothing"],
-        use_gpu=bool(use_gpu),
+        use_gpu=False,
     )
     aorta_mask = remove_leaks_morphology(
         mask_refined,
         radius=level_set_config["leak_removal_radius"],
-        use_gpu=bool(use_gpu),
+        use_gpu=False,
     )
-    aorta_mask = keep_largest_component(aorta_mask, gpu=bool(use_gpu))
+    aorta_mask = keep_largest_component(aorta_mask, gpu=False)
     aorta_mask = aorta_mask.astype(np.uint8)
 
     save_npy_cache(aorta_mask, mask_path, enabled=save_cache)
