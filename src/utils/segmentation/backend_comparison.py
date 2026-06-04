@@ -219,7 +219,6 @@ def _evaluate_ostia(
     label: Any,
     scaled_spacing: Sequence[float],
     config: Dict[str, Any],
-    use_gpu: bool,
 ) -> Dict[str, Any]:
     dx, dy, dz = scaled_spacing
     spacing_yxz = (dy, dx, dz)
@@ -235,7 +234,6 @@ def _evaluate_ostia(
         min_center_distance_factor=ostia_config["min_center_distance_factor"],
         min_lateral_factor=ostia_config["min_lateral_factor"],
         erosion_radius=ostia_config["erosion_radius"],
-        use_gpu=use_gpu,
         verbose=False,
     )
 
@@ -390,7 +388,6 @@ def _run_steps_for_backend(
         str(base_save_path),
         load_cache=False,
         save_cache=False,
-        use_gpu=use_gpu,
     )
     aorta_mask = get_or_segment_aorta(
         img_id,
@@ -405,7 +402,6 @@ def _run_steps_for_backend(
     aorta_surface = find_aorta_surface(
         aorta_mask,
         erosion_radius=backend_config["OSTIA_DETECTION"]["erosion_radius"],
-        use_gpu=use_gpu,
     )
     ostia_eval = _evaluate_ostia(
         aorta_mask,
@@ -413,7 +409,6 @@ def _run_steps_for_backend(
         label,
         scaled_spacing,
         backend_config,
-        use_gpu=use_gpu,
     )
     artery = _artery_steps(
         img_id,

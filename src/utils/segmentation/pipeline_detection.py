@@ -21,7 +21,6 @@ def get_or_detect_aorta_circles(
     base_save_path: str,
     load_cache: bool = False,
     save_cache: bool = False,
-    use_gpu: bool = False,
 ) -> List[Dict[str, Any]]:
     """Carrega ou detecta círculos da aorta sempre na CPU."""
     json_path = (
@@ -55,10 +54,6 @@ def get_or_detect_aorta_circles(
         canny_sigma=circle_config["canny_sigma"],
         use_local_roi=circle_config.get("use_local_roi", True),
         local_roi_padding=circle_config.get("local_roi_padding", 20),
-        # A localização por círculos é muito sensível a pequenas diferenças no
-        # mapa de bordas. Mantemos esta etapa em CPU para resultados estáveis
-        # entre execuções CPU/GPU do restante do pipeline.
-        use_gpu=False,
     )
     save_json_cache(detected_circles, json_path, enabled=save_cache)
 
@@ -124,7 +119,6 @@ def detect_and_evaluate_ostia(
         min_center_distance_factor=ostia_config["min_center_distance_factor"],
         min_lateral_factor=ostia_config["min_lateral_factor"],
         erosion_radius=ostia_config["erosion_radius"],
-        use_gpu=config.get("USE_GPU", False),
     )
 
     label_artery = (label == 1).astype(np.uint8)
