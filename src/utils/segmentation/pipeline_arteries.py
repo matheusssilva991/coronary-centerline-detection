@@ -64,7 +64,7 @@ def segment_arteries_from_ostia(
         else np.zeros_like(vesselness_artery, dtype=np.uint8)
     )
 
-    artery_mask = (left_mask + right_mask).astype(np.uint8)
+    artery_mask = ((left_mask > 0) | (right_mask > 0)).astype(np.uint8)
     post_config = config["POSTPROCESSING"]
     closed_mask = binary_closing(
         artery_mask > 0,

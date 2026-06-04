@@ -332,7 +332,7 @@ def _artery_steps(
         else np.zeros_like(vesselness_artery, dtype=np.uint8)
     )
 
-    raw_mask = (left_mask + right_mask).astype(np.uint8)
+    raw_mask = ((left_mask > 0) | (right_mask > 0)).astype(np.uint8)
     post_config = config["POSTPROCESSING"]
     closed_mask = binary_closing(
         raw_mask > 0,
