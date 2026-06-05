@@ -1,0 +1,9 @@
+variant,threshold_label,uses_fuzzy_threshold,segmentation_case,uses_level_set,uses_morphology,dice_artery,artery_voxels,segmentation_attempted,proceeded_with_bad_ostia,segmentation_error
+baseline_original_threshold,crisp,False,region_growing_raw,False,False,0.41456792769620976,11851,True,False,
+baseline_original_threshold,crisp,False,region_growing_with_morphology,False,True,0.7765936520058782,42286,True,False,
+baseline_original_threshold,crisp,False,level_set_raw,True,False,0.0802105308945388,1844,True,False,
+baseline_original_threshold,crisp,False,level_set_with_morphology,True,True,0.2372894883869423,5981,True,False,
+fuzzy_threshold_only,fuzzy,True,region_growing_raw,False,False,0.4074020892414833,11579,True,False,
+fuzzy_threshold_only,fuzzy,True,region_growing_with_morphology,False,True,0.7805088199336322,41750,True,False,
+fuzzy_threshold_only,fuzzy,True,level_set_raw,True,False,0.06688274714204372,1527,True,False,
+fuzzy_threshold_only,fuzzy,True,level_set_with_morphology,True,True,0.1905776757720445,4664,True,False,
