@@ -2,8 +2,8 @@
     "USE_GPU": true,
     "LOAD_CACHE": false,
     "SAVE_CACHE": false,
-    "DOWNSCALE_METHOD": "scipy",
-    "OPENCV_INTERPOLATION": "area",
+    "DOWNSCALE_METHOD": "opencv",
+    "OPENCV_INTERPOLATION": "linear",
     "DOWNSCALE_FACTORS": [
         2,
         2,

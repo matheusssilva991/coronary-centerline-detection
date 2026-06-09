@@ -94,7 +94,7 @@ def downscale_image(
     """Downscale otimizado com suporte opcional a OpenCV e GPU."""
     if use_opencv:
         if opencv_interpolation is None:
-            opencv_interpolation = cv2.INTER_AREA
+            opencv_interpolation = cv2.INTER_LINEAR
         return downscale_image_opencv(
             image, factors, interpolation=opencv_interpolation
         )
@@ -171,7 +171,7 @@ def run_core_preprocessing_pipeline(
     """Executa pipeline com downscale, threshold adaptativo e maior componente conectado."""
     if use_opencv:
         if opencv_interpolation is None:
-            opencv_interpolation = cv2.INTER_AREA
+            opencv_interpolation = cv2.INTER_LINEAR
         down_image = downscale_image_opencv(
             image, downscale_factors, interpolation=opencv_interpolation
         )

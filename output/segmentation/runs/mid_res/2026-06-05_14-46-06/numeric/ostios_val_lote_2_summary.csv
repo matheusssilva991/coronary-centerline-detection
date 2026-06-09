@@ -1,0 +1,55 @@
+IMG_ID,artery_dice,artery_voxel_count,ostia_detected,ostia_detection_status,artery_segmentation_run,segmented_with_incorrect_ostia,segmentation_skip_reason,ostia_detection_error,both_ostia_correct,both_ostia_tolerable,left_ostium_correct,right_ostium_correct,left_ostium_distance_mm,right_ostium_distance_mm,left_ostium,right_ostium,pipeline_error,status,downscale_method,opencv_interpolation,downscale_factors,max_threshold_percentile
+769,0.7138101402943274,38034,yes,both tolerable,yes,no,,,no,yes,no,no,0.63671875,1.029961908617559,"(101, 149, 121)","(118, 113, 143)",,both ostia tolerable,opencv,linear,"(2, 2, 1)",99.7
+870,0.6641897417922654,22619,yes,both tolerable,yes,no,,,no,yes,no,no,0.8564224849081498,1.6331862610496237,"(102, 156, 136)","(127, 126, 166)",,both ostia tolerable,opencv,linear,"(2, 2, 1)",99.7
+184,0.6902841831345168,19084,yes,both tolerable,yes,no,,,no,yes,no,no,0.73828125,1.4457241812334485,"(90, 150, 162)","(110, 125, 192)",,both ostia tolerable,opencv,linear,"(2, 2, 1)",99.7
+384,0.7437848578589654,23009,yes,both tolerable,yes,no,,,no,yes,yes,no,0.0,0.8852031375489823,"(97, 160, 224)","(108, 117, 244)",,both ostia tolerable,opencv,linear,"(2, 2, 1)",99.7
+266,0.7139732685297692,21276,yes,both tolerable,yes,no,,,no,yes,no,no,1.91015625,1.345667690480501,"(99, 170, 173)","(117, 133, 193)",,both ostia tolerable,opencv,linear,"(2, 2, 1)",99.7
+764,0.7582193006413456,53444,yes,both tolerable,yes,no,,,no,yes,yes,no,0.0,1.6191488709832242,"(100, 185, 117)","(112, 134, 152)",,both ostia tolerable,opencv,linear,"(2, 2, 1)",99.7
+73,0.7093365821242662,43454,yes,both tolerable,yes,no,,,no,yes,yes,no,0.0,0.5,"(91, 155, 159)","(119, 126, 195)",,both ostia tolerable,opencv,linear,"(2, 2, 1)",99.7
+960,0.7154850569484715,26638,yes,both tolerable,yes,no,,,no,yes,yes,no,0.0,0.5,"(91, 148, 174)","(111, 116, 212)",,both ostia tolerable,opencv,linear,"(2, 2, 1)",99.7
+857,0.6819448259624064,40548,yes,both tolerable,yes,no,,,no,yes,no,yes,0.69921875,0.0,"(85, 152, 143)","(103, 111, 182)",,both ostia tolerable,opencv,linear,"(2, 2, 1)",99.7
+483,0.5683363003722285,29898,yes,both tolerable,yes,no,,,no,yes,yes,no,0.0,1.029961908617559,"(114, 169, 185)","(131, 132, 216)",,both ostia tolerable,opencv,linear,"(2, 2, 1)",99.7
+214,0.7440940962296084,35853,yes,both tolerable,yes,no,,,no,yes,yes,no,0.0,0.5,"(92, 175, 214)","(121, 141, 243)",,both ostia tolerable,opencv,linear,"(2, 2, 1)",99.7
+209,0.487815050944408,13378,yes,found but incorrect,yes,yes,,,no,no,yes,no,0.0,11.44706751156198,"(97, 172, 157)","(146, 87, 153)",,one ostium correct,opencv,linear,"(2, 2, 1)",99.7
+239,0.7169332234130256,30949,yes,both correct,yes,no,,,yes,no,yes,yes,0.0,0.0,"(98, 179, 165)","(121, 146, 191)",,both ostia correct,opencv,linear,"(2, 2, 1)",99.7
+464,0.2729704837507127,47125,yes,found but incorrect,yes,yes,,,no,no,no,no,1.0,55.044200683910965,"(126, 133, 191)","(60, 82, 139)",,no ostium correct,opencv,linear,"(2, 2, 1)",99.7
+470,0.2789017847750622,6310,yes,both tolerable,yes,no,,,no,yes,no,no,1.276244270692943,1.8728584775559325,"(84, 150, 150)","(98, 132, 193)",,both ostia tolerable,opencv,linear,"(2, 2, 1)",99.7
+982,0.47077418410654176,14313,yes,found but incorrect,yes,yes,,,no,no,yes,no,0.0,26.50474218007462,"(94, 143, 110)","(89, 103, 89)",,one ostium correct,opencv,linear,"(2, 2, 1)",99.7
+403,0.6307692307692307,21666,yes,both tolerable,yes,no,,,no,yes,no,no,1.2531211034852139,3.395769426801531,"(100, 144, 181)","(113, 111, 203)",,both ostia tolerable,opencv,linear,"(2, 2, 1)",99.7
+308,0.680992484610446,23920,yes,both tolerable,yes,no,,,no,yes,yes,no,0.0,0.8564224849081498,"(99, 178, 190)","(116, 131, 225)",,both ostia tolerable,opencv,linear,"(2, 2, 1)",99.7
+472,0.7064866369710467,35465,yes,both tolerable,yes,no,,,no,yes,no,no,1.0385630848677416,1.7768586219786875,"(101, 159, 202)","(117, 131, 231)",,both ostia tolerable,opencv,linear,"(2, 2, 1)",99.7
+267,0.6941027334892607,27896,yes,both tolerable,yes,no,,,no,yes,no,yes,0.907898554441106,0.0,"(92, 135, 152)","(104, 102, 200)",,both ostia tolerable,opencv,linear,"(2, 2, 1)",99.7
+117,0.644619831036016,45113,yes,both correct,yes,no,,,yes,no,yes,yes,0.0,0.0,"(101, 156, 175)","(112, 116, 205)",,both ostia correct,opencv,linear,"(2, 2, 1)",99.7
+507,0.6064355914725256,23466,yes,both tolerable,yes,no,,,no,yes,no,no,2.1796875,0.7265625,"(97, 145, 197)","(108, 107, 227)",,both ostia tolerable,opencv,linear,"(2, 2, 1)",99.7
+590,0.5497256587319801,23600,yes,both tolerable,yes,no,,,no,yes,yes,no,0.0,0.907898554441106,"(111, 137, 141)","(120, 100, 180)",,both ostia tolerable,opencv,linear,"(2, 2, 1)",99.7
+646,0.6162917575961054,21584,yes,both tolerable,yes,no,,,no,yes,yes,no,0.0,0.8981402361485997,"(94, 175, 168)","(113, 144, 207)",,both ostia tolerable,opencv,linear,"(2, 2, 1)",99.7
+541,0.6608217699920756,29940,yes,both tolerable,yes,no,,,no,yes,no,yes,0.77734375,0.0,"(96, 174, 174)","(114, 144, 214)",,both ostia tolerable,opencv,linear,"(2, 2, 1)",99.7
+869,0.6033251567184519,33522,yes,both tolerable,yes,no,,,no,yes,no,no,0.72265625,1.0,"(93, 188, 162)","(104, 155, 188)",,both ostia tolerable,opencv,linear,"(2, 2, 1)",99.7
+862,0.6536515498264133,30814,yes,both tolerable,yes,no,,,no,yes,no,yes,0.796875,0.0,"(85, 127, 193)","(98, 85, 225)",,both ostia tolerable,opencv,linear,"(2, 2, 1)",99.7
+87,0.6918347665354014,26106,yes,both tolerable,yes,no,,,no,yes,yes,no,0.0,1.345667690480501,"(101, 162, 191)","(111, 122, 218)",,both ostia tolerable,opencv,linear,"(2, 2, 1)",99.7
+957,0.6152780418896525,39809,yes,both tolerable,yes,no,,,no,yes,no,no,1.3671875,1.0,"(101, 161, 136)","(111, 116, 178)",,both ostia tolerable,opencv,linear,"(2, 2, 1)",99.7
+317,0.6312931115203346,34711,yes,both tolerable,yes,no,,,no,yes,no,no,0.63671875,2.672448882995999,"(95, 157, 214)","(119, 113, 243)",,both ostia tolerable,opencv,linear,"(2, 2, 1)",99.7
+981,0.6036644951140065,11198,yes,both tolerable,yes,no,,,no,yes,yes,no,0.0,1.666701252896346,"(85, 140, 160)","(108, 103, 197)",,both ostia tolerable,opencv,linear,"(2, 2, 1)",99.7
+949,0.6876019917151345,25347,yes,both tolerable,yes,no,,,no,yes,no,yes,0.73046875,0.0,"(101, 152, 174)","(125, 126, 209)",,both ostia tolerable,opencv,linear,"(2, 2, 1)",99.7
+614,0.7171692652413407,26575,yes,both tolerable,yes,no,,,no,yes,no,no,1.6508470615135167,1.8275990830056588,"(92, 134, 191)","(110, 100, 206)",,both ostia tolerable,opencv,linear,"(2, 2, 1)",99.7
+116,0.35212381624233097,15970,yes,found but incorrect,yes,yes,,,no,no,no,no,1.811961126790528,22.734584406252075,"(121, 137, 183)","(106, 127, 123)",,no ostium correct,opencv,linear,"(2, 2, 1)",99.7
+513,0.7368498168498169,27966,yes,both tolerable,yes,no,,,no,yes,yes,no,0.0,1.4617623841028764,"(97, 155, 163)","(123, 117, 210)",,both ostia tolerable,opencv,linear,"(2, 2, 1)",99.7
+755,0.6315283495997827,26932,yes,both tolerable,yes,no,,,no,yes,no,yes,2.015625,0.0,"(107, 142, 149)","(113, 113, 184)",,both ostia tolerable,opencv,linear,"(2, 2, 1)",99.7
+557,0.47232584235586694,11208,yes,both tolerable,yes,no,,,no,yes,no,no,0.5,1.231503780952377,"(95, 149, 161)","(103, 111, 201)",,both ostia tolerable,opencv,linear,"(2, 2, 1)",99.7
+978,0.525143192170658,19192,yes,both tolerable,yes,no,,,no,yes,yes,no,0.0,0.8787673501354397,"(93, 155, 187)","(103, 109, 202)",,both ostia tolerable,opencv,linear,"(2, 2, 1)",99.7
+786,0.7308184034229412,31468,yes,both tolerable,yes,no,,,no,yes,yes,no,0.0,0.5,"(103, 170, 175)","(116, 116, 188)",,both ostia tolerable,opencv,linear,"(2, 2, 1)",99.7
+222,0.3405505647744515,10815,yes,both tolerable,yes,no,,,no,yes,no,no,2.4079520410976967,1.8662638274981715,"(105, 152, 193)","(112, 113, 224)",,both ostia tolerable,opencv,linear,"(2, 2, 1)",99.7
+763,0.6286250101921561,46637,yes,both tolerable,yes,no,,,no,yes,no,no,0.9833203675875426,1.2179735106545833,"(100, 193, 174)","(112, 155, 198)",,both ostia tolerable,opencv,linear,"(2, 2, 1)",99.7
+269,0.4377113050198023,9001,yes,both tolerable,yes,no,,,no,yes,yes,no,0.0,3.4258324718234543,"(107, 178, 185)","(128, 136, 218)",,both ostia tolerable,opencv,linear,"(2, 2, 1)",99.7
+672,0.6988969725416568,30012,yes,both tolerable,yes,no,,,no,yes,no,no,0.63671875,1.345667690480501,"(86, 146, 200)","(110, 108, 222)",,both ostia tolerable,opencv,linear,"(2, 2, 1)",99.7
+597,0.20686634711306845,48364,yes,found but incorrect,yes,yes,,,no,no,no,no,0.63671875,48.82403545374226,"(87, 141, 179)","(42, 70, 149)",,no ostium correct,opencv,linear,"(2, 2, 1)",99.7
+324,0.7465142295833447,36726,yes,both tolerable,yes,no,,,no,yes,no,no,1.5145977511062962,0.5,"(76, 177, 195)","(91, 137, 216)",,both ostia tolerable,opencv,linear,"(2, 2, 1)",99.7
+188,0.6277169031794503,21691,yes,both tolerable,yes,no,,,no,yes,no,no,2.830368585206704,1.4417396718027842,"(101, 174, 201)","(119, 152, 219)",,both ostia tolerable,opencv,linear,"(2, 2, 1)",99.7
+935,0.5242830142164516,12947,yes,both tolerable,yes,no,,,no,yes,no,no,2.296875,0.5,"(108, 155, 184)","(108, 119, 204)",,both ostia tolerable,opencv,linear,"(2, 2, 1)",99.7
+688,0.6902082524899754,47641,yes,both tolerable,yes,no,,,no,yes,no,no,0.5,0.5,"(101, 178, 136)","(105, 137, 171)",,both ostia tolerable,opencv,linear,"(2, 2, 1)",99.7
+154,0.7106381170872631,24572,yes,both tolerable,yes,no,,,no,yes,no,no,0.8375058302035873,1.0737001589130926,"(94, 165, 135)","(108, 129, 162)",,both ostia tolerable,opencv,linear,"(2, 2, 1)",99.7
+759,0.41502534696251975,12057,yes,found but incorrect,yes,yes,,,no,no,no,no,0.63671875,11.664570720048287,"(107, 159, 193)","(145, 82, 197)",,no ostium correct,opencv,linear,"(2, 2, 1)",99.7
+791,0.27403126604542427,56814,yes,found but incorrect,yes,yes,,,no,no,yes,no,0.0,36.47646963336861,"(84, 161, 152)","(68, 64, 140)",,one ostium correct,opencv,linear,"(2, 2, 1)",99.7
+270,0.6647359913793104,28715,yes,both correct,yes,no,,,yes,no,yes,yes,0.0,0.0,"(104, 162, 165)","(114, 119, 189)",,both ostia correct,opencv,linear,"(2, 2, 1)",99.7
+122,0.5420555901265298,14134,yes,both tolerable,yes,no,,,no,yes,no,no,0.74609375,5.912360688517981,"(74, 161, 170)","(75, 134, 211)",,both ostia tolerable,opencv,linear,"(2, 2, 1)",99.7
+156,0.6223604787705239,21102,yes,both correct,yes,no,,,yes,no,yes,yes,0.0,0.0,"(100, 148, 157)","(109, 95, 178)",,both ostia correct,opencv,linear,"(2, 2, 1)",99.7

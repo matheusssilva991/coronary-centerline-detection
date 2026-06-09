@@ -38,7 +38,7 @@ def load_and_preprocess_image(
         "lanczos4": cv2.INTER_LANCZOS4,
     }
     opencv_interpolation = interpolation_map.get(
-        config["OPENCV_INTERPOLATION"], cv2.INTER_AREA
+        config["OPENCV_INTERPOLATION"], cv2.INTER_LINEAR
     )
 
     _, _, lcc_image, _ = run_core_preprocessing_pipeline(

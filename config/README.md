@@ -57,7 +57,7 @@ Impacto:
 
 ### `DOWNSCALE_METHOD` (string)
 
-- Valor atual: `"scipy"`
+- Valor atual: `"opencv"`
 - Metodo usado para reduzir resolucao volumetrica.
 - Valores possiveis: `"scipy"`, `"opencv"`
 
@@ -68,13 +68,13 @@ Impacto:
 
 ### `OPENCV_INTERPOLATION` (string)
 
-- Valor atual: `"area"`
+- Valor atual: `"linear"`
 - Interpolacao usada quando o metodo de downscale envolve OpenCV.
 - Valores possiveis: `"nearest"`, `"linear"`, `"cubic"`, `"area"`, `"lanczos4"`
 
 Notas:
 
-- `area` costuma funcionar bem para reducao, preservando media local e reduzindo aliasing.
+- `linear` e o padrão atual usado pelo pipeline quando `DOWNSCALE_METHOD` e `opencv`.
 
 ### `DOWNSCALE_FACTORS` (array[int])
 

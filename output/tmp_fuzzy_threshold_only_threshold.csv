@@ -1,3 +1,0 @@
-variant,threshold_mode,core_min_hu,core_max_hu,effective_min_hu,effective_max_hu,fuzzy_margin_hu,fuzzy_alpha_cut,threshold_voxels,lcc_voxels
-baseline_original_threshold,crisp,-300,629.0,-300.0,629.0,,,11153120,10843087
-fuzzy_threshold_only,fuzzy_alpha_cut,-300,629.0,-340.0,669.0,80.0,0.5,11233157,10918972

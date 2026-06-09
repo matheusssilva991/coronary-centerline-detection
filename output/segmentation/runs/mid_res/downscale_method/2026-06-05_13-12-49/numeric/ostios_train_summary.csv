@@ -1,0 +1,31 @@
+IMG_ID,artery_dice,artery_voxel_count,ostia_detected,ostia_detection_status,artery_segmentation_run,segmented_with_incorrect_ostia,segmentation_skip_reason,ostia_detection_error,both_ostia_correct,both_ostia_tolerable,left_ostium_correct,right_ostium_correct,left_ostium_distance_mm,right_ostium_distance_mm,left_ostium,right_ostium,pipeline_error,status,downscale_method,opencv_interpolation,downscale_factors,max_threshold_percentile
+28,0.6715150033612418,24904,yes,both tolerable,yes,no,,,no,yes,no,no,1.0737001589130926,0.8375058302035873,"(103, 144, 181)","(128, 115, 217)",,both ostia tolerable,opencv,cubic,"(2, 2, 1)",99.7
+380,0.5381996832799232,44719,yes,both tolerable,yes,no,,,no,yes,no,no,2.504064688825013,2.193358505398314,"(93, 121, 123)","(112, 90, 166)",,both ostia tolerable,opencv,cubic,"(2, 2, 1)",99.7
+854,0.629921541933866,31450,yes,both tolerable,yes,no,,,no,yes,no,no,1.2734375,0.63671875,"(99, 151, 157)","(124, 117, 185)",,both ostia tolerable,opencv,cubic,"(2, 2, 1)",99.7
+937,0.671663193315871,28280,yes,both tolerable,yes,no,,,no,yes,no,no,1.390625,2.160392872438078,"(106, 170, 209)","(115, 129, 227)",,both ostia tolerable,opencv,cubic,"(2, 2, 1)",99.7
+315,0.647417091289653,29072,yes,both tolerable,yes,no,,,no,yes,yes,no,0.0,0.5,"(100, 179, 144)","(115, 146, 217)",,both ostia tolerable,opencv,cubic,"(2, 2, 1)",99.7
+428,0.6169436970352302,35492,yes,both tolerable,yes,no,,,no,yes,yes,no,0.0,1.2202077119702048,"(95, 167, 103)","(95, 120, 167)",,both ostia tolerable,opencv,cubic,"(2, 2, 1)",99.7
+752,0.5275214407434653,73170,yes,both tolerable,yes,no,,,no,yes,yes,no,0.0,0.5,"(94, 176, 209)","(117, 132, 234)",,both ostia tolerable,opencv,cubic,"(2, 2, 1)",99.7
+13,0.5703718994048234,25520,yes,both tolerable,yes,no,,,no,yes,no,no,2.0859375,1.1031404921008474,"(114, 173, 173)","(130, 145, 202)",,both ostia tolerable,opencv,cubic,"(2, 2, 1)",99.7
+538,0.6809275295826882,27597,yes,both tolerable,yes,no,,,no,yes,yes,no,0.0,0.8095744354916121,"(101, 174, 203)","(128, 138, 217)",,both ostia tolerable,opencv,cubic,"(2, 2, 1)",99.7
+965,0.4858827179646292,23905,yes,both tolerable,yes,no,,,no,yes,no,no,1.4820293967437017,5.416547725056293,"(107, 153, 174)","(117, 129, 202)",,both ostia tolerable,opencv,cubic,"(2, 2, 1)",99.7
+447,0.4843894210878075,10514,yes,found but incorrect,yes,yes,,,no,no,no,no,0.6953125,inf,"(119, 184, 169)",,,no ostium correct,opencv,cubic,"(2, 2, 1)",99.7
+836,0.7470602307649841,27153,yes,both tolerable,yes,no,,,no,yes,no,no,0.9004562916672442,0.5,"(101, 138, 174)","(126, 105, 209)",,both ostia tolerable,opencv,cubic,"(2, 2, 1)",99.7
+603,0.4352467098212372,15693,yes,found but incorrect,yes,yes,,,no,no,yes,no,0.0,29.15314456474113,"(81, 171, 169)","(104, 139, 127)",,one ostium correct,opencv,cubic,"(2, 2, 1)",99.7
+676,0.4988790104367994,8591,yes,both tolerable,yes,no,,,no,yes,no,no,1.1576348337032387,0.8916609243998318,"(77, 185, 138)","(98, 161, 185)",,both ostia tolerable,opencv,cubic,"(2, 2, 1)",99.7
+44,0.2800871969575433,167903,yes,both tolerable,yes,no,,,no,yes,no,yes,0.58984375,0.0,"(96, 131, 150)","(110, 91, 177)",,both ostia tolerable,opencv,cubic,"(2, 2, 1)",99.7
+129,0.7124408160697151,30236,yes,both tolerable,yes,no,,,no,yes,no,no,2.23828125,0.5,"(96, 156, 163)","(109, 118, 201)",,both ostia tolerable,opencv,cubic,"(2, 2, 1)",99.7
+518,0.6942296483388382,29463,yes,both tolerable,yes,no,,,no,yes,yes,no,0.0,0.8532541254157887,"(108, 162, 163)","(126, 128, 193)",,both ostia tolerable,opencv,cubic,"(2, 2, 1)",99.7
+793,0.7016992877572766,20740,yes,both tolerable,yes,no,,,no,yes,no,no,0.8437861682062879,2.7741306352170945,"(97, 148, 141)","(109, 116, 181)",,both ostia tolerable,opencv,cubic,"(2, 2, 1)",99.7
+550,0.5414028167064604,11455,yes,both tolerable,yes,no,,,no,yes,yes,no,0.0,1.6331862610496235,"(97, 158, 200)","(113, 127, 211)",,both ostia tolerable,opencv,cubic,"(2, 2, 1)",99.7
+631,0.5033997446480002,11691,yes,both tolerable,yes,no,,,no,yes,no,yes,5.659098039882327,0.0,"(143, 192, 145)","(88, 134, 155)",,both ostia tolerable,opencv,cubic,"(2, 2, 1)",99.7
+330,0.5234245275559422,67916,yes,both tolerable,yes,no,,,no,yes,yes,no,0.0,1.974511812933532,"(104, 141, 195)","(119, 113, 222)",,both ostia tolerable,opencv,cubic,"(2, 2, 1)",99.7
+90,0.6927097221481521,36696,yes,both tolerable,yes,no,,,no,yes,no,no,0.66015625,0.8281342128025279,"(88, 157, 157)","(113, 121, 186)",,both ostia tolerable,opencv,cubic,"(2, 2, 1)",99.7
+608,0.6635249764373233,35167,yes,both tolerable,yes,no,,,no,yes,no,no,1.3680800657879093,0.5,"(92, 126, 142)","(97, 80, 173)",,both ostia tolerable,opencv,cubic,"(2, 2, 1)",99.7
+887,0.5505344995140914,16697,yes,both tolerable,yes,no,,,no,yes,no,yes,0.7890625,0.0,"(106, 164, 190)","(128, 128, 208)",,both ostia tolerable,opencv,cubic,"(2, 2, 1)",99.7
+175,0.4563884673748103,42018,yes,both tolerable,yes,no,,,no,yes,no,no,0.9004562916672442,0.5,"(98, 197, 169)","(131, 162, 191)",,both ostia tolerable,opencv,cubic,"(2, 2, 1)",99.7
+760,0.7240738717080101,37955,yes,both tolerable,yes,no,,,no,yes,yes,no,0.0,0.8250236739027553,"(88, 165, 197)","(107, 126, 225)",,both ostia tolerable,opencv,cubic,"(2, 2, 1)",99.7
+696,0.6293843635905829,19632,yes,both tolerable,yes,no,,,no,yes,yes,no,0.0,1.739843048383334,"(99, 137, 163)","(122, 103, 195)",,both ostia tolerable,opencv,cubic,"(2, 2, 1)",99.7
+194,0.785247155410573,34164,yes,both tolerable,yes,no,,,no,yes,no,no,0.8095744354916121,1.345667690480501,"(89, 155, 168)","(122, 122, 211)",,both ostia tolerable,opencv,cubic,"(2, 2, 1)",99.7
+305,0.6841100825797707,29887,yes,both tolerable,yes,no,,,no,yes,no,yes,1.8419615266408251,0.0,"(98, 162, 177)","(118, 129, 217)",,both ostia tolerable,opencv,cubic,"(2, 2, 1)",99.7
+344,0.7392807127320402,35022,yes,both tolerable,yes,no,,,no,yes,no,yes,2.3132520947588597,0.0,"(96, 162, 175)","(115, 134, 218)",,both ostia tolerable,opencv,cubic,"(2, 2, 1)",99.7
