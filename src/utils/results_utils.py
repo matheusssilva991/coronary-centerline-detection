@@ -444,10 +444,15 @@ def _vesselness_metadata(config: dict[str, Any], key: str) -> dict[str, Any]:
     vesselness_config = config[key]
     sigmas = vesselness_config["sigmas"]
     return {
+        "method": vesselness_config.get("method", "normal"),
         "sigmas": sigmas.tolist() if hasattr(sigmas, "tolist") else list(sigmas),
+        "black_ridges": vesselness_config.get("black_ridges", False),
         "alpha": vesselness_config["alpha"],
         "beta": vesselness_config["beta"],
         "gamma": vesselness_config["gamma"],
+        "normalization": vesselness_config.get("normalization", "none"),
+        "smooth_sigma": vesselness_config.get("smooth_sigma", 0.0),
+        "modified": vesselness_config.get("modified"),
     }
 
 

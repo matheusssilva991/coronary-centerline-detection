@@ -320,10 +320,16 @@ def _artery_steps(
     config: Dict[str, Any],
     base_save_path: Path,
     use_gpu: bool,
+    scaled_spacing: Optional[Sequence[float]] = None,
 ) -> Dict[str, Any]:
     config = copy.deepcopy(config)
     config["USE_GPU"] = use_gpu
     timings: Dict[str, float] = {}
+    vesselness_spacing = (
+        (scaled_spacing[1], scaled_spacing[0], scaled_spacing[2])
+        if scaled_spacing is not None
+        else None
+    )
 
     vesselness_artery = _time_call(
         timings,
@@ -340,6 +346,7 @@ def _artery_steps(
             load_cache=False,
             save_cache=False,
             use_gpu=use_gpu,
+            spacing=vesselness_spacing,
         ),
     )
 
@@ -426,6 +433,7 @@ def _run_steps_for_backend(
     lcc_image = image_data["lcc_image"]
     label = image_data["label"]
     scaled_spacing = image_data["scaled_spacing"]
+    vesselness_spacing = (scaled_spacing[1], scaled_spacing[0], scaled_spacing[2])
     downscale_factors = image_data["downscale_factors"]
 
     backend_config = copy.deepcopy(config)
@@ -448,6 +456,7 @@ def _run_steps_for_backend(
             load_cache=False,
             save_cache=False,
             use_gpu=use_gpu,
+            spacing=vesselness_spacing,
         ),
     )
     detected_circles = _time_call(
@@ -510,6 +519,7 @@ def _run_steps_for_backend(
         backend_config,
         base_save_path,
         use_gpu=use_gpu,
+        scaled_spacing=scaled_spacing,
     )
     artery_timings = artery.pop("__timings__")
     timings.update(artery_timings)

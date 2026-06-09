@@ -2,7 +2,7 @@ import numpy as np
 from skimage.filters import ridges, gaussian
 import os
 import pickle
-from typing import Any, Optional, Sequence
+from typing import Any, Optional, Sequence, Tuple
 from numpy.typing import NDArray
 
 # Importa utilitários de GPU centralizados
@@ -25,7 +25,12 @@ if GPU_AVAILABLE:
         gpu_filters = None
 
 
-def get_gf(image_volume: NDArray[Any]) -> NDArray[Any]:
+def get_gf(
+    image_volume: NDArray[Any],
+    center_percentile: float = 50.0,
+    scale_percentile: float = 99.5,
+    scale_epsilon: float = 1e-6,
+) -> NDArray[Any]:
     """
     Calcula a medida de grayness (Gf) baseada na Equação (7) do artigo.
     Funciona com NumPy ou CuPy arrays.
@@ -39,21 +44,23 @@ def get_gf(image_volume: NDArray[Any]) -> NDArray[Any]:
     is_gpu = GPU_AVAILABLE and isinstance(image_volume, cp.ndarray)
     xp = cp if is_gpu else np
 
-    # t é o valor médio da intensidade dos pixels da imagem 3D
-    t = xp.mean(image_volume)
-    # I_max é o valor máximo de escala de cinza da imagem 3D
-    i_max = xp.max(image_volume)
+    center = xp.percentile(image_volume, center_percentile)
+    abs_deviation = xp.abs(image_volume - center)
+    scale = xp.percentile(abs_deviation, scale_percentile)
 
-    # Evita divisão por zero se i_max for 0
-    if i_max == 0:
+    if float(scale) <= scale_epsilon:
         return xp.zeros_like(image_volume, dtype=float)
 
-    gf = xp.abs(image_volume - t) / i_max
+    gf = abs_deviation / scale
 
     return gf
 
 
-def get_gd(image_volume: NDArray[Any]) -> NDArray[Any]:
+def get_gd(
+    image_volume: NDArray[Any],
+    spacing: Optional[Sequence[float]] = None,
+    clip_percentiles: Tuple[float, float] = (1.0, 99.0),
+) -> NDArray[Any]:
     """
     Calcula a medida de gradiente (Gd).
     Funciona com NumPy ou CuPy arrays.
@@ -67,19 +74,51 @@ def get_gd(image_volume: NDArray[Any]) -> NDArray[Any]:
     is_gpu = GPU_AVAILABLE and isinstance(image_volume, cp.ndarray)
     xp = cp if is_gpu else np
 
-    gz, gy, gx = xp.gradient(image_volume)
-    g_mag = xp.sqrt(gx**2 + gy**2 + gz**2)  # Magnitude euclidiana correta
-    i_max = xp.max(image_volume)
-
-    if i_max == 0:
-        return xp.zeros_like(image_volume)
-
-    gd = (g_mag - image_volume) / i_max
+    if spacing is None:
+        gradients = xp.gradient(image_volume)
+    else:
+        gradients = xp.gradient(image_volume, *spacing)
+    g_mag = xp.sqrt(sum(axis_grad**2 for axis_grad in gradients))
 
     # Clipar outliers de gradiente (ex: stents metálicos)
-    gd = xp.clip(gd, xp.percentile(gd, 1), xp.percentile(gd, 99))
+    gd = xp.clip(
+        g_mag,
+        xp.percentile(g_mag, clip_percentiles[0]),
+        xp.percentile(g_mag, clip_percentiles[1]),
+    )
 
     return gd  # Retorna sem normalizar novamente
+
+
+def _as_sigma_sequence(sigmas: Sequence[float]) -> list[float]:
+    if np.isscalar(sigmas):
+        sigma_values = [float(sigmas)]
+    else:
+        sigma_values = [float(sigma) for sigma in sigmas]
+
+    if not sigma_values:
+        raise ValueError("sigmas deve conter pelo menos um valor.")
+    if any(sigma <= 0 for sigma in sigma_values):
+        raise ValueError("Todos os valores de sigmas devem ser maiores que zero.")
+
+    return sigma_values
+
+
+def _validate_normalization_method(normalization: str) -> None:
+    if normalization not in {"none", "robust", "minmax"}:
+        raise ValueError(
+            f"Método de normalização '{normalization}' inválido. "
+            "Use 'robust', 'minmax' ou 'none'."
+        )
+
+
+def _apply_normalization(array: Any, normalization: str) -> Any:
+    _validate_normalization_method(normalization)
+    if normalization == "robust":
+        return robust_normalize(array)
+    if normalization == "minmax":
+        return normalize_image(array)
+    return array
 
 
 def get_vesselness(
@@ -90,7 +129,9 @@ def get_vesselness(
     gamma: Optional[float] = None,
     black_ridges: bool = False,
     normalization: str = "none",
+    smooth_sigma: float = 0.0,
     gpu: Optional[bool] = None,
+    return_cpu: bool = True,
 ) -> NDArray[Any]:
     """
     Calcula o mapa de vesselness usando o filtro de Frangi.
@@ -107,84 +148,76 @@ def get_vesselness(
             - 'robust': Ignora outliers usando percentis (padrão)
             - 'minmax': Normalização simples [0, 1]
             - 'none': Sem normalização
+        smooth_sigma: Sigma opcional para suavização gaussiana antes do Frangi.
+            Use 0 para desativar.
         gpu: Se None (padrão), detecta automaticamente. Se True, força GPU. Se False, força CPU.
+        return_cpu: Se True, converte resultado GPU para NumPy antes de retornar.
 
     Returns:
         vesselness_norm: Mapa de vesselness normalizado (ou não), como NumPy array
     """
-    # Determina se deve usar GPU
+    sigma_values = _as_sigma_sequence(sigmas)
+    _validate_normalization_method(normalization)
     use_gpu_flag = gpu if gpu is not None else GPU_AVAILABLE
 
     if use_gpu_flag and GPU_AVAILABLE and gpu_filters is not None:
-        # Converte para GPU se necessário
         image_gpu = to_gpu(image)
-
-        # IMPORTANTE: sigmas deve ser lista Python, não array CuPy
-        # Evita problemas com driver NVIDIA em algumas versões do cuCIM
-        sigmas_list = list(sigmas) if hasattr(sigmas, "__iter__") else [sigmas]
-
-        # Usa cuCIM para Frangi na GPU
+        frangi_input = (
+            gpu_filters.gaussian(
+                image_gpu,
+                sigma=smooth_sigma,
+                preserve_range=True,
+            )
+            if smooth_sigma > 0
+            else image_gpu
+        )
         vesselness = gpu_filters.frangi(
-            image_gpu,
-            sigmas=sigmas_list,
+            frangi_input,
+            sigmas=sigma_values,
             alpha=alpha,
             beta=beta,
             gamma=gamma,
             black_ridges=black_ridges,
         )
+        vesselness = _apply_normalization(vesselness, normalization)
+        return to_cpu(vesselness) if return_cpu else vesselness
 
-        # Mantém na GPU durante normalização para eficiência
-        if normalization == "robust":
-            vesselness = robust_normalize(vesselness)
-        elif normalization == "minmax":
-            vesselness = normalize_image(vesselness)
-        elif normalization != "none":
-            raise ValueError(
-                f"Método de normalização '{normalization}' inválido. Use 'robust', 'minmax' ou 'none'."
-            )
-
-        # Só converte para CPU no final
-        return to_cpu(vesselness)
-    else:
-        # Usa skimage na CPU
-        if isinstance(image, np.ndarray):
-            img_cpu = image
-        else:
-            img_cpu = to_cpu(image)
-
-        vesselness = ridges.frangi(
-            img_cpu,
-            sigmas=sigmas,
-            alpha=alpha,
-            beta=beta,
-            gamma=gamma,
-            black_ridges=black_ridges,
-        )
-
-        # Normalização na CPU
-        if normalization == "robust":
-            vesselness = robust_normalize(vesselness)
-        elif normalization == "minmax":
-            vesselness = normalize_image(vesselness)
-        elif normalization != "none":
-            raise ValueError(
-                f"Método de normalização '{normalization}' inválido. Use 'robust', 'minmax' ou 'none'."
-            )
-
-        return vesselness
+    img_cpu = image if isinstance(image, np.ndarray) else to_cpu(image)
+    frangi_input = (
+        gaussian(img_cpu, sigma=smooth_sigma, preserve_range=True)
+        if smooth_sigma > 0
+        else img_cpu
+    )
+    vesselness = ridges.frangi(
+        frangi_input,
+        sigmas=sigma_values,
+        alpha=alpha,
+        beta=beta,
+        gamma=gamma,
+        black_ridges=black_ridges,
+    )
+    return _apply_normalization(vesselness, normalization)
 
 
-def get_vesselness_optimized(
+def get_modified_vesselness(
     image: Any,
     sigmas: Sequence[float] = np.arange(1.0, 4.0, 0.5),
     alpha: float = 0.5,
     beta: float = 0.5,
+    gamma: Optional[float] = None,
+    black_ridges: bool = False,
     normalization: str = "none",
     smooth_sigma: float = 1.0,
+    gd_epsilon: float = 1e-6,
+    gf_center_percentile: float = 50.0,
+    gf_scale_percentile: float = 99.5,
+    gd_clip_percentiles: Tuple[float, float] = (1.0, 99.0),
+    ratio_clip: Optional[Tuple[float, float]] = (0.0, 10.0),
+    spacing: Optional[Sequence[float]] = None,
     gpu: Optional[bool] = None,
 ) -> NDArray[Any]:
     """
-    Pipeline otimizado com pré-processamento e medidas auxiliares.
+    Vesselness modificada com pré-suavização e ponderação por grayness/gradient.
     Usa GPU se disponível, caso contrário usa CPU.
 
     Args:
@@ -192,8 +225,16 @@ def get_vesselness_optimized(
         sigmas: Range de sigmas para multi-escala
         alpha: Sensibilidade a estruturas blob (0.1-1.0, padrão 0.5)
         beta: Sensibilidade ao ruído de fundo (0.1-1.0, padrão 0.5)
+        gamma: Sensibilidade ao contraste (padrão None)
+        black_ridges: Se True, detecta estruturas escuras
         normalization: Método de normalização ('robust', 'minmax', 'none')
         smooth_sigma: Sigma para suavização Gaussiana
+        gd_epsilon: Piso numérico para evitar divisão por zero em Gf/Gd
+        gf_center_percentile: Percentil usado como centro robusto da intensidade
+        gf_scale_percentile: Percentil usado como escala robusta da grayness
+        gd_clip_percentiles: Percentis usados para limitar outliers do gradiente
+        ratio_clip: Intervalo opcional para limitar a razão Gf/Gd
+        spacing: Espaçamento físico por eixo do array, na ordem (y, x, z)
         gpu: Se None (padrão), detecta automaticamente. Se True, força GPU. Se False, força CPU.
 
     Returns:
@@ -206,35 +247,46 @@ def get_vesselness_optimized(
         # Converte para GPU
         img_gpu = to_gpu(image)
 
-        # IMPORTANTE: sigmas deve ser lista Python, não array CuPy
-        sigmas_list = list(sigmas) if hasattr(sigmas, "__iter__") else [sigmas]
-
         # Suavização leve para remover ruído na GPU
         img_smooth = gpu_filters.gaussian(
             img_gpu, sigma=smooth_sigma, preserve_range=True
         )
 
-        # Frangi tunado na GPU
-        vesselness = gpu_filters.frangi(
+        vesselness = get_vesselness(
             img_smooth,
-            sigmas=sigmas_list,
+            sigmas=sigmas,
             alpha=alpha,
             beta=beta,
-            black_ridges=False,  # Vasos são brancos no CCTA
+            gamma=gamma,
+            black_ridges=black_ridges,
+            normalization="none",
+            smooth_sigma=0.0,
+            gpu=True,
+            return_cpu=False,
         )
 
         # Medidas auxiliares na GPU (mantém na GPU para eficiência)
-        gf = get_gf(img_smooth)
-        gd = get_gd(img_smooth)
+        gf = get_gf(
+            img_smooth,
+            center_percentile=gf_center_percentile,
+            scale_percentile=gf_scale_percentile,
+            scale_epsilon=gd_epsilon,
+        )
+        gd = get_gd(
+            img_smooth,
+            spacing=spacing,
+            clip_percentiles=gd_clip_percentiles,
+        )
+
+        xp = cp
+        gd_safe = xp.maximum(xp.abs(gd), gd_epsilon)
+        ratio = gf / gd_safe
+        if ratio_clip is not None:
+            ratio = xp.clip(ratio, ratio_clip[0], ratio_clip[1])
 
         # Combinação na GPU
-        modified_vesselness = vesselness * (gf / gd)
-
-        # Normalização na GPU se necessário
-        if normalization == "robust":
-            modified_vesselness = robust_normalize(modified_vesselness)
-        elif normalization == "minmax":
-            modified_vesselness = normalize_image(modified_vesselness)
+        modified_vesselness = vesselness * ratio
+        modified_vesselness = _apply_normalization(modified_vesselness, normalization)
 
         # Só converte para CPU no final
         return to_cpu(modified_vesselness)
@@ -246,27 +298,38 @@ def get_vesselness_optimized(
         # Suavização leve para remover ruído
         img_smooth = gaussian(image, sigma=smooth_sigma, preserve_range=True)
 
-        # Frangi tunado
-        vesselness = ridges.frangi(
+        vesselness = get_vesselness(
             img_smooth,
             sigmas=sigmas,
             alpha=alpha,
             beta=beta,
-            black_ridges=False,  # Vasos são brancos no CCTA
+            gamma=gamma,
+            black_ridges=black_ridges,
+            normalization="none",
+            smooth_sigma=0.0,
+            gpu=False,
         )
 
         # Medidas auxiliares
-        gf = get_gf(img_smooth)
-        gd = get_gd(img_smooth)
+        gf = get_gf(
+            img_smooth,
+            center_percentile=gf_center_percentile,
+            scale_percentile=gf_scale_percentile,
+            scale_epsilon=gd_epsilon,
+        )
+        gd = get_gd(
+            img_smooth,
+            spacing=spacing,
+            clip_percentiles=gd_clip_percentiles,
+        )
+        gd_safe = np.maximum(np.abs(gd), gd_epsilon)
+        ratio = gf / gd_safe
+        if ratio_clip is not None:
+            ratio = np.clip(ratio, ratio_clip[0], ratio_clip[1])
 
         # Combinação
-        modified_vesselness = vesselness * (gf / gd)
-
-        # Normalização na CPU
-        if normalization == "robust":
-            modified_vesselness = robust_normalize(modified_vesselness)
-        elif normalization == "minmax":
-            modified_vesselness = normalize_image(modified_vesselness)
+        modified_vesselness = vesselness * ratio
+        modified_vesselness = _apply_normalization(modified_vesselness, normalization)
 
         return modified_vesselness
 

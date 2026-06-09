@@ -61,6 +61,7 @@ def process_image(img_id, config, base_path, base_save_path):
         lcc_image = image_data["lcc_image"]
         label = image_data["label"]
         scaled_spacing = image_data["scaled_spacing"]
+        vesselness_spacing = (scaled_spacing[1], scaled_spacing[0], scaled_spacing[2])
         downscale_factors = image_data["downscale_factors"]
 
         image_data = None
@@ -76,6 +77,7 @@ def process_image(img_id, config, base_path, base_save_path):
             load_cache=config["LOAD_CACHE"],
             save_cache=config["SAVE_CACHE"],
             use_gpu=config.get("USE_GPU", False),
+            spacing=vesselness_spacing,
         )
 
         detected_circles = get_or_detect_aorta_circles(
@@ -156,6 +158,7 @@ def process_image(img_id, config, base_path, base_save_path):
             ostia_eval["ostia_right"],
             config,
             base_save_path,
+            scaled_spacing=scaled_spacing,
         )
         artery_metrics.pop("artery_mask", None)
         result.update(artery_metrics)

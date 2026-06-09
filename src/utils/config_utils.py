@@ -141,6 +141,20 @@ def scale_config_to_resolution(config, reference_downscale_xy=2):
         cfg["CIRCLE_DETECTION"].get("radius_step_px", 1) * scale
     )
 
+    # Suavização do Canny: parâmetro em pixels.
+    # Para HIGH RESOLUTION, pode ser escalado se quiser manter a mesma escala física.
+    # cfg["CIRCLE_DETECTION"]["canny_sigma"] *= scale
+
+    # Refinamento por vizinhos: distância em pixels entre candidatos próximos.
+    # Para HIGH RESOLUTION, pode ser escalada junto da resolução.
+    # cfg["CIRCLE_DETECTION"]["neighbor_distance_threshold"] *= scale
+
+    # Padding da ROI local: margem em pixels ao redor do círculo rastreado.
+    # Para HIGH RESOLUTION, pode ser escalado junto da resolução.
+    # cfg["CIRCLE_DETECTION"]["local_roi_padding"] = round(
+    #     cfg["CIRCLE_DETECTION"]["local_roi_padding"] * scale
+    # )
+
     # Tolerância de distância entre detecções
     # Para HIGH RESOLUTION: aumenta a tolerância (multiplica)
     # cfg["CIRCLE_DETECTION"]["tol_distance_mm"] *= scale
@@ -151,6 +165,16 @@ def scale_config_to_resolution(config, reference_downscale_xy=2):
         int(round(qx * scale)),
         int(round(qy * scale)),
     )
+
+    # =========================================================================
+    # PARÂMETROS DE VESSELNESS
+    # =========================================================================
+    # Sigmas do Frangi: parâmetros em voxels/pixels.
+    # Para HIGH RESOLUTION, podem ser escalados se quiser manter a mesma escala física.
+    # cfg["VESSELNESS_AORTA"]["sigmas"] = cfg["VESSELNESS_AORTA"]["sigmas"] * scale
+    # cfg["VESSELNESS_ARTERY"]["sigmas"] = (
+    #     cfg["VESSELNESS_ARTERY"]["sigmas"] * scale
+    # )
 
     # =========================================================================
     # PARÂMETROS DE SEGMENTAÇÃO DA AORTA (Level Set)

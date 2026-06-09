@@ -59,6 +59,7 @@ _LAZY_EXPORTS = {
     "to_cpu": ".processing.gpu_utils",
     "to_gpu": ".processing.gpu_utils",
     "use_gpu": ".processing.gpu_utils",
+    "get_modified_vesselness": ".processing.frangi",
     "get_vesselness": ".processing.frangi",
     "get_vesselness_optimized": ".processing.frangi",
     "load_vesselness_cache": ".processing.frangi",

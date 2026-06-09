@@ -4,13 +4,16 @@
     "SAVE_CACHE": false,
     "DOWNSCALE_METHOD": "opencv",
     "OPENCV_INTERPOLATION": "linear",
+    "LCC_PER_SLICE": true,
     "DOWNSCALE_FACTORS": [
         2,
         2,
         1
     ],
+    "MIN_THRESHOLD": -300,
     "MAX_THRESHOLD_PERCENTILE": 99.7,
     "VESSELNESS_AORTA": {
+        "method": "normal",
         "sigmas": [
             2.5,
             3.0
@@ -19,9 +22,26 @@
         "alpha": 0.5,
         "beta": 1.0,
         "gamma": 30,
-        "normalization": "none"
+        "normalization": "none",
+        "smooth_sigma": 0.0,
+        "modified": {
+            "smooth_sigma": 1.0,
+            "gd_epsilon": 1e-6,
+            "gf_center_percentile": 50.0,
+            "gf_scale_percentile": 99.5,
+            "gd_clip_percentiles": [
+                1.0,
+                99.0
+            ],
+            "ratio_clip": [
+                0.0,
+                10.0
+            ],
+            "use_spacing": true
+        }
     },
     "VESSELNESS_ARTERY": {
+        "method": "normal",
         "sigmas": [
             1.5,
             2.0,
@@ -32,7 +52,23 @@
         "alpha": 0.5,
         "beta": 0.5,
         "gamma": 55,
-        "normalization": "none"
+        "normalization": "none",
+        "smooth_sigma": 0.0,
+        "modified": {
+            "smooth_sigma": 1.0,
+            "gd_epsilon": 1e-6,
+            "gf_center_percentile": 50.0,
+            "gf_scale_percentile": 99.5,
+            "gd_clip_percentiles": [
+                1.0,
+                99.0
+            ],
+            "ratio_clip": [
+                0.0,
+                10.0
+            ],
+            "use_spacing": true
+        }
     },
     "CIRCLE_DETECTION": {
         "radii_start_px": 18,

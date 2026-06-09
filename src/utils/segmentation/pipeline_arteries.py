@@ -19,8 +19,14 @@ def segment_arteries_from_ostia(
     ostia_right: Optional[Sequence[int]],
     config: Dict[str, Any],
     base_save_path: str,
+    scaled_spacing: Optional[Sequence[float]] = None,
 ) -> Dict[str, Any]:
     """Calcula vesselness arterial, executa region growing e avalia Dice."""
+    vesselness_spacing = (
+        (scaled_spacing[1], scaled_spacing[0], scaled_spacing[2])
+        if scaled_spacing is not None
+        else None
+    )
     vesselness_artery = get_or_compute_vesselness(
         img_id,
         lcc_image,
@@ -32,6 +38,7 @@ def segment_arteries_from_ostia(
         load_cache=config["LOAD_CACHE"],
         save_cache=config["SAVE_CACHE"],
         use_gpu=config.get("USE_GPU", False),
+        spacing=vesselness_spacing,
     )
 
     rg_config = config["REGION_GROWING"]

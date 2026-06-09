@@ -91,6 +91,30 @@ Trade-off:
 - Fatores maiores: pipeline mais rapido, menor detalhe.
 - Fatores menores: melhor detalhe, maior custo computacional.
 
+### `LCC_PER_SLICE` (bool)
+
+- Valor atual: `true`
+- Define como o maior componente conectado (LCC) e extraido no pre-processamento.
+- `true`: calcula o LCC separadamente em cada slice 2D.
+- `false`: calcula um unico LCC no volume 3D completo.
+
+Impacto:
+
+- Por slice tende a preservar continuidade slice-a-slice mesmo quando o volume 3D esta fragmentado.
+- Por volume completo tende a ser mais restritivo globalmente e pode remover componentes desconectados pequenos.
+
+### `MIN_THRESHOLD` (int/float)
+
+- Valor atual: `-300`
+- Limiar minimo de intensidade usado antes do LCC no pre-processamento.
+- Voxels abaixo desse valor sao removidos da mascara de threshold.
+
+Interpretacao:
+
+- Em CCTA, valores muito baixos tendem a representar ar/fundo e tecidos fora da faixa de interesse.
+- Valores menos negativos tornam a mascara mais restritiva.
+- Valores mais negativos preservam mais estruturas, mas tambem podem incluir mais ruido/fundo.
+
 ### `MAX_THRESHOLD_PERCENTILE` (float)
 
 - Valor atual: `99.7`
@@ -107,9 +131,31 @@ Efeito pratico:
 
 Realca estruturas tubulares para facilitar segmentacao/deteccao.
 
+### `method` (string)
+
+- Valor atual: `"normal"`
+- Seleciona a variante de vesselness.
+- Valores possiveis: `"normal"`, `"modified"`
+
+Interpretacao:
+
+- `normal`: usa diretamente o filtro Frangi.
+- `modified`: aplica suavizacao previa, calcula Frangi e pondera a resposta por medidas auxiliares de grayness/gradient.
+
+### `modified` (object)
+
+- Configura a variante `"modified"` de vesselness.
+- `smooth_sigma`: suavizacao gaussiana antes do Frangi.
+- `gd_epsilon`: piso numerico para evitar divisao por zero em `Gf/Gd`.
+- `gf_center_percentile`: centro robusto usado na medida de grayness.
+- `gf_scale_percentile`: escala robusta usada na medida de grayness.
+- `gd_clip_percentiles`: percentis usados para limitar outliers do gradiente.
+- `ratio_clip`: intervalo usado para limitar a ponderacao `Gf/Gd`.
+- `use_spacing`: usa espacamento fisico no calculo do gradiente.
+
 ### `sigmas` (array[float])
 
-- Valor atual: `[2.5]`
+- Valor atual: `[2.5, 3.0]`
 - Escalas gaussianas para analise multiescala.
 
 Interpretacao:
@@ -149,11 +195,32 @@ Dica:
 
 - Se a resposta ficar muito dependente de escala, considere testar normalizacao apropriada.
 
+### `smooth_sigma` (float)
+
+- Valor atual: `0.0`
+- Suavizacao gaussiana opcional aplicada antes do Frangi no metodo `"normal"`.
+- `0.0` desativa a suavizacao e preserva o comportamento baseline.
+
+Trade-off:
+
+- Valores pequenos podem reduzir ruido antes do Frangi.
+- Valores altos podem borrar arterias finas e reduzir resposta em vasos pequenos.
+
 ---
 
 ## 3) Vesselness das Arterias - `VESSELNESS_ARTERY`
 
 Mesmo conceito da aorta, com foco em arterias coronarias (mais finas e ramificadas).
+
+### `method` (string)
+
+- Valor atual: `"normal"`
+- Seleciona a variante de vesselness.
+- Valores possiveis: `"normal"`, `"modified"`
+
+### `modified` (object)
+
+- Mesmos campos descritos em `VESSELNESS_AORTA.modified`.
 
 ### `sigmas` (array[float])
 
@@ -182,6 +249,11 @@ Mesmo conceito da aorta, com foco em arterias coronarias (mais finas e ramificad
 
 - Valor atual: `"none"`
 - Valores possiveis: `"none"`, `"minmax"`, `"robust"`
+
+### `smooth_sigma` (float)
+
+- Valor atual: `0.0`
+- Mesma interpretacao de `VESSELNESS_AORTA.smooth_sigma`.
 
 ---
 

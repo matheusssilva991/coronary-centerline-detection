@@ -6,6 +6,7 @@ import cv2
 import numpy as np
 
 from ..processing.frangi import (
+    get_modified_vesselness,
     get_vesselness,
     load_vesselness_cache,
     save_vesselness_cache,
@@ -44,7 +45,8 @@ def load_and_preprocess_image(
     _, _, lcc_image, _ = run_core_preprocessing_pipeline(
         img,
         downscale_factors=downscale_factors,
-        lcc_per_slice=True,
+        lcc_per_slice=config.get("LCC_PER_SLICE", True),
+        min_threshold=config.get("MIN_THRESHOLD", -300),
         max_threshold_percentile=config["MAX_THRESHOLD_PERCENTILE"],
         use_opencv=use_opencv,
         opencv_interpolation=opencv_interpolation,
@@ -74,23 +76,45 @@ def get_or_compute_vesselness(
     load_cache: bool = False,
     save_cache: bool = False,
     use_gpu: bool = False,
+    spacing: Any = None,
 ) -> Any:
     """Carrega ou calcula vesselness para um volume 3D."""
+    method = vesselness_config.get("method", "normal")
+    vesselness_fn = {
+        "normal": get_vesselness,
+        "modified": get_modified_vesselness,
+    }.get(method)
+    if vesselness_fn is None:
+        raise ValueError(
+            f"Método de vesselness inválido: {method}. Use 'normal' ou 'modified'."
+        )
+
+    if method != "normal":
+        cache_dir = f"{cache_dir}_{method}"
+
     if load_cache:
         cache = load_vesselness_cache(img_id, cache_dir=cache_dir)
         if cache is not None:
             return cache
 
-    vesselness = get_vesselness(
-        image,
-        sigmas=vesselness_config["sigmas"],
-        black_ridges=False,
-        alpha=vesselness_config["alpha"],
-        beta=vesselness_config["beta"],
-        gamma=vesselness_config["gamma"],
-        normalization="none",
-        gpu=bool(use_gpu),
-    )
+    vesselness_kwargs = {
+        "sigmas": vesselness_config["sigmas"],
+        "black_ridges": vesselness_config.get("black_ridges", False),
+        "alpha": vesselness_config["alpha"],
+        "beta": vesselness_config["beta"],
+        "gamma": vesselness_config["gamma"],
+        "normalization": vesselness_config.get("normalization", "none"),
+        "smooth_sigma": vesselness_config.get("smooth_sigma", 0.0),
+        "gpu": bool(use_gpu),
+    }
+    if method == "modified":
+        modified_config = dict(vesselness_config.get("modified", {}))
+        if not modified_config.pop("use_spacing", True):
+            spacing = None
+        vesselness_kwargs.update(modified_config)
+        vesselness_kwargs["spacing"] = spacing
+
+    vesselness = vesselness_fn(image, **vesselness_kwargs)
     if save_cache:
         save_vesselness_cache(vesselness, img_id, cache_dir=cache_dir)
     return vesselness

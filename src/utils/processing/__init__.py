@@ -13,6 +13,7 @@ _SYMBOL_TO_MODULE = {
     # frangi
     "get_gd": "frangi",
     "get_gf": "frangi",
+    "get_modified_vesselness": "frangi",
     "get_vesselness": "frangi",
     "get_vesselness_optimized": "frangi",
     "load_vesselness_cache": "frangi",
