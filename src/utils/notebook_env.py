@@ -56,6 +56,7 @@ def resolve_imagecas_base_path() -> Path:
         [
             Path("/media/matheus/HD/DatasetsCCTA/ImageCAS/1-1000"),
             Path("/data04/home/mpmaia/ImageCAS/database/1-1000"),
+            Path("/home/matheus/DatasetsCCTA/ImageCAS/1-1000")
         ],
         "ImageCAS",
     )
