@@ -167,17 +167,17 @@ def scale_config_to_resolution(config, reference_downscale_xy=2):
     # =========================================================================
     # PARÂMETROS DE SEGMENTAÇÃO DA AORTA (Level Set)
     # =========================================================================
-    """ cfg["LEVEL_SET"]["leak_removal_radius"] = max(
+    cfg["LEVEL_SET"]["leak_removal_radius"] = max(
         1, round(cfg["LEVEL_SET"]["leak_removal_radius"] * scale)
-    ) """
+    )
 
     # =========================================================================
     # PARÂMETROS DE DETECÇÃO DE ÓSTIOS
     # =========================================================================
     # Raio de erosão para extração de superfície
-    """ cfg["OSTIA_DETECTION"]["erosion_radius"] = max(
+    cfg["OSTIA_DETECTION"]["erosion_radius"] = max(
         1, round(cfg["OSTIA_DETECTION"]["erosion_radius"] * scale)
-    ) """
+    )
 
     # Número de candidatos (escala com área)
     cfg["OSTIA_DETECTION"]["top_n"] = round(
@@ -201,11 +201,11 @@ def scale_config_to_resolution(config, reference_downscale_xy=2):
     # PARÂMETROS DE PÓS-PROCESSAMENTO
     # =========================================================================
     # Operações morfológicas de fechamento e dilatação
-    """ cfg["POSTPROCESSING"]["closing_radius"] = max(
+    cfg["POSTPROCESSING"]["closing_radius"] = max(
         1, round(cfg["POSTPROCESSING"]["closing_radius"] * scale)
     )
     cfg["POSTPROCESSING"]["dilation_radius"] = max(
         1, round(cfg["POSTPROCESSING"]["dilation_radius"] * scale)
-    ) """
+    )
 
     return cfg
