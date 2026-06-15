@@ -1,0 +1,292 @@
+{
+  "execution_info": {
+    "timestamp": "2026-06-11T11:20:40.859329",
+    "split_name": "train",
+    "num_images": 30,
+    "image_ids": [
+      28,
+      380,
+      854,
+      937,
+      315,
+      428,
+      752,
+      13,
+      538,
+      965,
+      447,
+      836,
+      603,
+      676,
+      44,
+      129,
+      518,
+      793,
+      550,
+      631,
+      330,
+      90,
+      608,
+      887,
+      175,
+      760,
+      696,
+      194,
+      305,
+      344
+    ],
+    "execution_time_seconds": 75903.20957970619,
+    "execution_time_minutes": 1265.0534929951032,
+    "execution_time_hours": 21.08422488325172,
+    "current_run_execution_time_seconds": 75903.22920393944,
+    "current_run_execution_time_minutes": 1265.0538200656572,
+    "current_run_execution_time_hours": 21.084230334427623,
+    "batch_timing_summary": {
+      "total_known_batches": 5,
+      "known_batches": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "total_known_duration_seconds": 75903.20957970619,
+      "total_known_duration_minutes": 1265.0534929951032,
+      "total_known_duration_hours": 21.08422488325172,
+      "missing_timing_batches": []
+    },
+    "batch_timings": [
+      {
+        "split_name": "train",
+        "batch_number": 1,
+        "total_batches": 5,
+        "num_images": 6,
+        "first_img_id": 28,
+        "last_img_id": 428,
+        "result_file": "ostios_train_lote_1_summary.csv",
+        "started_at": "2026-06-10T14:15:37",
+        "finished_at": "2026-06-10T19:11:15",
+        "duration_seconds": 17737.481303453445,
+        "duration_minutes": 295.62468839089075,
+        "duration_hours": 4.927078139848179
+      },
+      {
+        "split_name": "train",
+        "batch_number": 2,
+        "total_batches": 5,
+        "num_images": 6,
+        "first_img_id": 752,
+        "last_img_id": 836,
+        "result_file": "ostios_train_lote_2_summary.csv",
+        "started_at": "2026-06-10T19:11:15",
+        "finished_at": "2026-06-10T23:10:11",
+        "duration_seconds": 14336.412818908691,
+        "duration_minutes": 238.9402136484782,
+        "duration_hours": 3.9823368941413033
+      },
+      {
+        "split_name": "train",
+        "batch_number": 3,
+        "total_batches": 5,
+        "num_images": 6,
+        "first_img_id": 603,
+        "last_img_id": 793,
+        "result_file": "ostios_train_lote_3_summary.csv",
+        "started_at": "2026-06-10T23:10:11",
+        "finished_at": "2026-06-11T03:23:53",
+        "duration_seconds": 15221.875991106032,
+        "duration_minutes": 253.69793318510057,
+        "duration_hours": 4.228298886418343
+      },
+      {
+        "split_name": "train",
+        "batch_number": 4,
+        "total_batches": 5,
+        "num_images": 6,
+        "first_img_id": 550,
+        "last_img_id": 887,
+        "result_file": "ostios_train_lote_4_summary.csv",
+        "started_at": "2026-06-11T03:23:53",
+        "finished_at": "2026-06-11T07:06:27",
+        "duration_seconds": 13354.23643398285,
+        "duration_minutes": 222.5706072330475,
+        "duration_hours": 3.709510120550792
+      },
+      {
+        "split_name": "train",
+        "batch_number": 5,
+        "total_batches": 5,
+        "num_images": 6,
+        "first_img_id": 175,
+        "last_img_id": 344,
+        "result_file": "ostios_train_lote_5_summary.csv",
+        "started_at": "2026-06-11T07:06:27",
+        "finished_at": "2026-06-11T11:20:40",
+        "duration_seconds": 15253.203032255173,
+        "duration_minutes": 254.22005053758625,
+        "duration_hours": 4.237000842293104
+      }
+    ],
+    "python_version": "3.12.0",
+    "platform": "Linux-5.15.0-179-generic-x86_64-with-glibc2.35",
+    "state_counters": {
+      "ostia_found": 30,
+      "ostia_status_not_found": 0,
+      "segmentation_attempted": 30,
+      "proceeded_with_bad_ostia": 25,
+      "error_not_null": 0
+    }
+  },
+  "preprocessing_config": {
+    "downscale_method": "opencv",
+    "opencv_interpolation": "linear",
+    "downscale_factors": [
+      1,
+      1,
+      1
+    ],
+    "max_threshold_percentile": 99.7
+  },
+  "vesselness_config": {
+    "ostios": {
+      "method": "normal",
+      "sigmas": [
+        2.5,
+        3.0
+      ],
+      "black_ridges": false,
+      "alpha": 0.5,
+      "beta": 1.0,
+      "gamma": 30,
+      "normalization": "none",
+      "smooth_sigma": 0.0,
+      "modified": {
+        "smooth_sigma": 1.0,
+        "gd_epsilon": 1e-06,
+        "gf_center_percentile": 50.0,
+        "gf_scale_percentile": 99.5,
+        "gd_clip_percentiles": [
+          1.0,
+          99.0
+        ],
+        "ratio_clip": [
+          0.0,
+          10.0
+        ],
+        "use_spacing": true
+      }
+    },
+    "artery": {
+      "method": "normal",
+      "sigmas": [
+        1.5,
+        2.0,
+        2.5,
+        3.0
+      ],
+      "black_ridges": false,
+      "alpha": 0.5,
+      "beta": 0.5,
+      "gamma": 55,
+      "normalization": "none",
+      "smooth_sigma": 0.0,
+      "modified": {
+        "smooth_sigma": 1.0,
+        "gd_epsilon": 1e-06,
+        "gf_center_percentile": 50.0,
+        "gf_scale_percentile": 99.5,
+        "gd_clip_percentiles": [
+          1.0,
+          99.0
+        ],
+        "ratio_clip": [
+          0.0,
+          10.0
+        ],
+        "use_spacing": true
+      }
+    }
+  },
+  "circle_detection_config": {
+    "radii_start_px": 18,
+    "radii_end_px": 31,
+    "radius_step_px": 1,
+    "tol_radius_mm": 9.0,
+    "tol_distance_mm": 20.0,
+    "quadrant_offset": [
+      30,
+      30
+    ],
+    "max_slice_miss_threshold": 5,
+    "neighbor_distance_threshold": 5,
+    "total_num_peaks_initial": 15,
+    "total_num_peaks": 15,
+    "canny_sigma": 3,
+    "use_local_roi": true,
+    "local_roi_padding": 30
+  },
+  "level_set_config": {
+    "radius_reduction_factor": 0.15,
+    "num_iter": 31,
+    "balloon": 0.8,
+    "smoothing": 2,
+    "leak_removal_radius": 2
+  },
+  "ostia_detection_config": {
+    "top_n": 2000,
+    "max_z_diff_mm": 40.0,
+    "lower_fraction": 0.8,
+    "min_center_distance_factor": 0.85,
+    "min_lateral_factor": 0.4,
+    "erosion_radius": 4
+  },
+  "region_growing_config": {
+    "max_volume": 100000,
+    "switch_at_voxels": 2000,
+    "min_vesselness_fraction": 0.078,
+    "threshold_divisor": 7,
+    "relaxed_floor_factor": 0.98,
+    "comparison_window": 1,
+    "smooth_relaxation": true,
+    "verbose": false
+  },
+  "postprocessing_config": {
+    "closing_radius": 3,
+    "dilation_radius": 2
+  },
+  "cache_config": {
+    "load_cache": false,
+    "save_cache": false
+  },
+  "evaluation_config": {
+    "tolerable_distance_mm": 7.0
+  },
+  "results_summary": {
+    "total_processed": 30,
+    "ostia_found": 30,
+    "ostia_found_percent": 100.0,
+    "ostia_status_not_found": 0,
+    "ostia_status_not_found_percent": 0.0,
+    "both_correct": 4,
+    "both_correct_percent": 13.333333333333334,
+    "both_tolerable": 1,
+    "both_tolerable_percent": 3.3333333333333335,
+    "segmentation_attempted": 30,
+    "segmentation_attempted_percent": 100.0,
+    "proceeded_with_bad_ostia": 25,
+    "proceeded_with_bad_ostia_percent": 83.33333333333334,
+    "total_success": 5,
+    "total_success_percent": 16.666666666666664,
+    "left_correct": 18,
+    "right_correct": 9,
+    "error_not_null": 0,
+    "dice_artery_mean": 0.3150312332598168,
+    "dice_artery_std": 0.18558662973230786,
+    "dice_artery_median": 0.33824817333572793
+  },
+  "paths": {
+    "base_path": "/data04/home/mpmaia/ImageCAS/database/1-1000",
+    "base_save_path": "/media/matheus/HD/DatasetsCCTA/Processed_ImageCAS",
+    "output_dir": "/data04/home/projetos/dac_seg_dlag/mssilva.ppgmc/matheus_codes/coronary-centerline-detection/output"
+  }
+}
