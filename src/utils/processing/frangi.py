@@ -2,6 +2,7 @@ import numpy as np
 from skimage.filters import ridges, gaussian
 import os
 import pickle
+import warnings
 from typing import Any, Optional, Sequence, Tuple
 from numpy.typing import NDArray
 
@@ -21,7 +22,12 @@ gpu_filters = None
 if GPU_AVAILABLE:
     try:
         import cucim.skimage.filters as gpu_filters
-    except ImportError:
+    except Exception as e:
+        warnings.warn(
+            f"cuCIM indisponível para Frangi GPU ({type(e).__name__}: {e}). "
+            "Frangi usará CPU.",
+            UserWarning,
+        )
         gpu_filters = None
 
 
@@ -161,26 +167,32 @@ def get_vesselness(
     use_gpu_flag = gpu if gpu is not None else GPU_AVAILABLE
 
     if use_gpu_flag and GPU_AVAILABLE and gpu_filters is not None:
-        image_gpu = to_gpu(image)
-        frangi_input = (
-            gpu_filters.gaussian(
-                image_gpu,
-                sigma=smooth_sigma,
-                preserve_range=True,
+        try:
+            image_gpu = to_gpu(image)
+            frangi_input = (
+                gpu_filters.gaussian(
+                    image_gpu,
+                    sigma=smooth_sigma,
+                    preserve_range=True,
+                )
+                if smooth_sigma > 0
+                else image_gpu
             )
-            if smooth_sigma > 0
-            else image_gpu
-        )
-        vesselness = gpu_filters.frangi(
-            frangi_input,
-            sigmas=sigma_values,
-            alpha=alpha,
-            beta=beta,
-            gamma=gamma,
-            black_ridges=black_ridges,
-        )
-        vesselness = _apply_normalization(vesselness, normalization)
-        return to_cpu(vesselness) if return_cpu else vesselness
+            vesselness = gpu_filters.frangi(
+                frangi_input,
+                sigmas=sigma_values,
+                alpha=alpha,
+                beta=beta,
+                gamma=gamma,
+                black_ridges=black_ridges,
+            )
+            vesselness = _apply_normalization(vesselness, normalization)
+            return to_cpu(vesselness) if return_cpu else vesselness
+        except Exception as e:
+            warnings.warn(
+                f"Frangi GPU falhou ({type(e).__name__}: {e}). Usando CPU.",
+                UserWarning,
+            )
 
     img_cpu = image if isinstance(image, np.ndarray) else to_cpu(image)
     frangi_input = (
@@ -244,94 +256,101 @@ def get_modified_vesselness(
     use_gpu_flag = gpu if gpu is not None else GPU_AVAILABLE
 
     if use_gpu_flag and GPU_AVAILABLE and gpu_filters is not None:
-        # Converte para GPU
-        img_gpu = to_gpu(image)
+        try:
+            # Converte para GPU
+            img_gpu = to_gpu(image)
 
-        # Suavização leve para remover ruído na GPU
-        img_smooth = gpu_filters.gaussian(
-            img_gpu, sigma=smooth_sigma, preserve_range=True
-        )
+            # Suavização leve para remover ruído na GPU
+            img_smooth = gpu_filters.gaussian(
+                img_gpu, sigma=smooth_sigma, preserve_range=True
+            )
 
-        vesselness = get_vesselness(
-            img_smooth,
-            sigmas=sigmas,
-            alpha=alpha,
-            beta=beta,
-            gamma=gamma,
-            black_ridges=black_ridges,
-            normalization="none",
-            smooth_sigma=0.0,
-            gpu=True,
-            return_cpu=False,
-        )
+            vesselness = get_vesselness(
+                img_smooth,
+                sigmas=sigmas,
+                alpha=alpha,
+                beta=beta,
+                gamma=gamma,
+                black_ridges=black_ridges,
+                normalization="none",
+                smooth_sigma=0.0,
+                gpu=True,
+                return_cpu=False,
+            )
 
-        # Medidas auxiliares na GPU (mantém na GPU para eficiência)
-        gf = get_gf(
-            img_smooth,
-            center_percentile=gf_center_percentile,
-            scale_percentile=gf_scale_percentile,
-            scale_epsilon=gd_epsilon,
-        )
-        gd = get_gd(
-            img_smooth,
-            spacing=spacing,
-            clip_percentiles=gd_clip_percentiles,
-        )
+            # Medidas auxiliares na GPU (mantém na GPU para eficiência)
+            gf = get_gf(
+                img_smooth,
+                center_percentile=gf_center_percentile,
+                scale_percentile=gf_scale_percentile,
+                scale_epsilon=gd_epsilon,
+            )
+            gd = get_gd(
+                img_smooth,
+                spacing=spacing,
+                clip_percentiles=gd_clip_percentiles,
+            )
 
-        xp = cp
-        gd_safe = xp.maximum(xp.abs(gd), gd_epsilon)
-        ratio = gf / gd_safe
-        if ratio_clip is not None:
-            ratio = xp.clip(ratio, ratio_clip[0], ratio_clip[1])
+            xp = cp
+            gd_safe = xp.maximum(xp.abs(gd), gd_epsilon)
+            ratio = gf / gd_safe
+            if ratio_clip is not None:
+                ratio = xp.clip(ratio, ratio_clip[0], ratio_clip[1])
 
-        # Combinação na GPU
-        modified_vesselness = vesselness * ratio
-        modified_vesselness = _apply_normalization(modified_vesselness, normalization)
+            # Combinação na GPU
+            modified_vesselness = vesselness * ratio
+            modified_vesselness = _apply_normalization(modified_vesselness, normalization)
 
-        # Só converte para CPU no final
-        return to_cpu(modified_vesselness)
-    else:
-        # Pipeline na CPU
-        if not isinstance(image, np.ndarray):
-            image = to_cpu(image)
+            # Só converte para CPU no final
+            return to_cpu(modified_vesselness)
+        except Exception as e:
+            warnings.warn(
+                f"Vesselness modificada na GPU falhou ({type(e).__name__}: {e}). "
+                "Usando CPU.",
+                UserWarning,
+            )
 
-        # Suavização leve para remover ruído
-        img_smooth = gaussian(image, sigma=smooth_sigma, preserve_range=True)
+    # Pipeline na CPU
+    if not isinstance(image, np.ndarray):
+        image = to_cpu(image)
 
-        vesselness = get_vesselness(
-            img_smooth,
-            sigmas=sigmas,
-            alpha=alpha,
-            beta=beta,
-            gamma=gamma,
-            black_ridges=black_ridges,
-            normalization="none",
-            smooth_sigma=0.0,
-            gpu=False,
-        )
+    # Suavização leve para remover ruído
+    img_smooth = gaussian(image, sigma=smooth_sigma, preserve_range=True)
 
-        # Medidas auxiliares
-        gf = get_gf(
-            img_smooth,
-            center_percentile=gf_center_percentile,
-            scale_percentile=gf_scale_percentile,
-            scale_epsilon=gd_epsilon,
-        )
-        gd = get_gd(
-            img_smooth,
-            spacing=spacing,
-            clip_percentiles=gd_clip_percentiles,
-        )
-        gd_safe = np.maximum(np.abs(gd), gd_epsilon)
-        ratio = gf / gd_safe
-        if ratio_clip is not None:
-            ratio = np.clip(ratio, ratio_clip[0], ratio_clip[1])
+    vesselness = get_vesselness(
+        img_smooth,
+        sigmas=sigmas,
+        alpha=alpha,
+        beta=beta,
+        gamma=gamma,
+        black_ridges=black_ridges,
+        normalization="none",
+        smooth_sigma=0.0,
+        gpu=False,
+    )
 
-        # Combinação
-        modified_vesselness = vesselness * ratio
-        modified_vesselness = _apply_normalization(modified_vesselness, normalization)
+    # Medidas auxiliares
+    gf = get_gf(
+        img_smooth,
+        center_percentile=gf_center_percentile,
+        scale_percentile=gf_scale_percentile,
+        scale_epsilon=gd_epsilon,
+    )
+    gd = get_gd(
+        img_smooth,
+        spacing=spacing,
+        clip_percentiles=gd_clip_percentiles,
+    )
+    gd_safe = np.maximum(np.abs(gd), gd_epsilon)
+    ratio = gf / gd_safe
+    if ratio_clip is not None:
+        ratio = np.clip(ratio, ratio_clip[0], ratio_clip[1])
 
-        return modified_vesselness
+    # Combinação
+    modified_vesselness = vesselness * ratio
+    modified_vesselness = _apply_normalization(modified_vesselness, normalization)
+
+    return modified_vesselness
 
 
 def save_vesselness_cache(

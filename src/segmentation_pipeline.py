@@ -9,8 +9,8 @@ from pathlib import Path
 
 import pandas as pd
 
-# Usa GPU 1 por padrão quando a variável não for definida externamente.
-os.environ.setdefault("CUDA_VISIBLE_DEVICES", "1")
+# Usa GPU 0 por padrão quando a variável não for definida externamente.
+os.environ.setdefault("CUDA_VISIBLE_DEVICES", "0")
 
 from utils.config_utils import load_config_json
 from utils.dataset_utils import get_data_splits
