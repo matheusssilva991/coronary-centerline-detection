@@ -41,6 +41,7 @@ def _extract_lower_region(
     if len(z_indices) == 0:
         raise ValueError("Nenhuma superfície de aorta encontrada!")
 
+    # Os óstios são buscados na porção inicial/inferior da aorta segmentada.
     z_min, z_max = z_indices.min(), z_indices.max()
     z_stop = z_min + int((z_max - z_min) * lower_fraction)
     z_stop = min(z_max + 1, max(z_min + 1, z_stop))
@@ -62,6 +63,7 @@ def _get_top_candidates(
     if len(surface_coords) == 0:
         raise ValueError("Nenhum voxel encontrado na superfície!")
 
+    # Quanto maior o vesselness na superfície, mais provável o ponto de óstio.
     surface_values = vesselness_map[surface_mask > 0]
     sorted_indices = np.argsort(surface_values)[::-1][:top_n]
     return surface_coords[sorted_indices]
@@ -98,6 +100,7 @@ def _find_second_ostium(
 ) -> Optional[NDArray[Any]]:
     """Busca o segundo óstio entre candidatos com base em restrições anatômicas."""
     for candidate in candidates[1:]:
+        # O segundo óstio precisa estar separado e em fatia anatomicamente plausível.
         if _validate_ostium_pair(
             first_ostium,
             candidate,
@@ -234,25 +237,34 @@ def find_ostia(
     erosion_radius: int = 2,
     verbose: bool = True,
 ) -> Tuple[NDArray[Any], Optional[NDArray[Any]]]:
-    """Detecta óstios coronários esquerdo e direito a partir da superfície da aorta e do vesselness."""
+    """Detecta óstios coronários esquerdo/direito na superfície da aorta.
+
+    O primeiro óstio é o candidato de maior vesselness na região inferior da
+    superfície. O segundo é escolhido entre os próximos candidatos respeitando
+    distância mínima, separação lateral e diferença máxima em z.
+    """
     if aorta_mask.shape != vesselness_map.shape:
         raise ValueError(
             f"aorta_mask e vesselness_map devem ter o mesmo shape: "
             f"{aorta_mask.shape} vs {vesselness_map.shape}"
         )
 
+    # Extrai a casca da aorta e mantém apenas a região onde os óstios são esperados.
     aorta_surface = find_aorta_surface(
         aorta_mask,
         erosion_radius=erosion_radius,
     )
     lower_region_mask, _, _ = _extract_lower_region(aorta_surface, lower_fraction)
+    # Seleciona candidatos de superfície ordenados pelo mapa de vasos.
     top_candidates = _get_top_candidates(lower_region_mask, vesselness_map, top_n)
 
+    # Primeiro óstio: maior vesselness na região candidata.
     ostium_1 = top_candidates[0]
     diameter_ref = calculate_robust_diameter(aorta_mask[:, :, ostium_1[2]])
     min_center_dist = diameter_ref * min_center_distance_factor
     min_lateral_sep = min_center_dist * min_lateral_factor
 
+    # Segundo óstio: próximo candidato que respeita restrições anatômicas.
     ostium_2 = _find_second_ostium(
         ostium_1,
         top_candidates,
@@ -269,6 +281,7 @@ def find_ostia(
             )
         return ostium_1.copy(), None
 
+    # Classifica esquerda/direita pela convenção de coordenada x usada no projeto.
     ostia_left, ostia_right = _classify_left_right(ostium_1, ostium_2)
     return ostia_left, ostia_right
 

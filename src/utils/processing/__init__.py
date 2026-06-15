@@ -15,7 +15,6 @@ _SYMBOL_TO_MODULE = {
     "get_gf": "frangi",
     "get_modified_vesselness": "frangi",
     "get_vesselness": "frangi",
-    "get_vesselness_optimized": "frangi",
     "load_vesselness_cache": "frangi",
     "save_vesselness_cache": "frangi",
     # gpu_utils

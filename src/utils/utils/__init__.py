@@ -11,12 +11,13 @@ from .nifti_io import (
     save_nii_image,
     save_npy_array,
 )
-from .normalization import normalize_image, robust_normalize
+from .normalization import normalize_image, normalize_vesselness, robust_normalize
 from .roi import extract_circular_region, extract_square_region
 from .segmentation import segment_by_hu
 
 __all__ = [
     "normalize_image",
+    "normalize_vesselness",
     "robust_normalize",
     "load_json_file",
     "save_json_file",

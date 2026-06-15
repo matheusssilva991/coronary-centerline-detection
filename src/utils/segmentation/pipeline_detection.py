@@ -8,8 +8,8 @@ import numpy as np
 from .aorta_localization import detect_aorta_circles
 from .aorta_segmentation import level_set_segmentation, remove_leaks_morphology
 from .ostia_detection import check_ostium_intersection, find_ostia
-from ..cache_utils import load_json_cache, load_npy_cache, save_json_cache, save_npy_cache
 from ..processing.binary_operations import keep_largest_component
+from ..project.cache import load_json_cache, load_npy_cache, save_json_cache, save_npy_cache
 
 
 def get_or_detect_aorta_circles(
@@ -29,10 +29,12 @@ def get_or_detect_aorta_circles(
         / f"{img_id}_detected_circles.json"
     )
 
+    # Reutiliza círculos salvos quando a execução está com cache habilitado.
     cached_circles = load_json_cache(json_path, enabled=load_cache)
     if cached_circles is not None:
         return cached_circles
 
+    # Constrói os raios da Hough em pixels já compatíveis com a resolução atual.
     dx, dy, _ = scaled_spacing
     radii_start = circle_config["radii_start_px"]
     radii_end = circle_config["radii_end_px"]
@@ -40,6 +42,7 @@ def get_or_detect_aorta_circles(
     hough_radii = np.arange(radii_start, radii_end, radius_step)
     pixel_spacing = (dx + dy) / 2.0
 
+    # Localiza a aorta fatia a fatia por candidatos circulares.
     detected_circles = detect_aorta_circles(
         lcc_image,
         hough_radii,
@@ -54,6 +57,21 @@ def get_or_detect_aorta_circles(
         canny_sigma=circle_config["canny_sigma"],
         use_local_roi=circle_config.get("use_local_roi", True),
         local_roi_padding=circle_config.get("local_roi_padding", 20),
+        out_of_tolerance_as_miss=circle_config.get(
+            "out_of_tolerance_as_miss", False
+        ),
+        candidate_selection_strategy=circle_config.get(
+            "candidate_selection_strategy", "closest"
+        ),
+        candidate_score_accum_weight=circle_config.get(
+            "candidate_score_accum_weight", 1.0
+        ),
+        candidate_score_distance_weight=circle_config.get(
+            "candidate_score_distance_weight", 1.0
+        ),
+        candidate_score_radius_weight=circle_config.get(
+            "candidate_score_radius_weight", 1.0
+        ),
     )
     save_json_cache(detected_circles, json_path, enabled=save_cache)
 
@@ -73,10 +91,12 @@ def get_or_segment_aorta(
     """Carrega ou segmenta a aorta com level set + pós-processamento."""
     mask_path = Path(base_save_path) / "segmented_aorta" / f"{img_id}_mask_aorta.npy"
 
+    # Reutiliza a máscara da aorta quando disponível.
     cached_mask = load_npy_cache(mask_path, enabled=load_cache)
     if cached_mask is not None:
         return cached_mask
 
+    # Segmenta a aorta usando os círculos como inicialização do level set.
     mask_refined = level_set_segmentation(
         lcc_image,
         detected_circles,
@@ -86,6 +106,7 @@ def get_or_segment_aorta(
         smoothing=level_set_config["smoothing"],
         use_gpu=False,
     )
+    # Remove vazamentos e mantém apenas o maior componente da aorta.
     aorta_mask = remove_leaks_morphology(
         mask_refined,
         radius=level_set_config["leak_removal_radius"],
@@ -106,9 +127,10 @@ def detect_and_evaluate_ostia(
     scaled_spacing: Sequence[float],
     config: Dict[str, Any],
 ) -> Dict[str, Any]:
-    """Detecta os óstios e avalia correção/tolerância."""
+    """Detecta os óstios e avalia correção/tolerância contra o label."""
     dx, dy, dz = scaled_spacing
     ostia_config = config["OSTIA_DETECTION"]
+    # Seleciona os dois óstios na superfície inferior da aorta usando vesselness.
     ostia_left, ostia_right = find_ostia(
         aorta_mask,
         vesselness_ostios,
@@ -121,7 +143,9 @@ def detect_and_evaluate_ostia(
         erosion_radius=ostia_config["erosion_radius"],
     )
 
+    # Extrai apenas a classe arterial do label para validar os óstios.
     label_artery = (label == 1).astype(np.uint8)
+    # Mede se cada óstio intersecta a artéria ou fica dentro da tolerância em mm.
     left_info = check_ostium_intersection(
         ostia_left, label_artery, spacing=(dy, dx, dz), ostium_name="Óstio esquerdo"
     )
@@ -129,6 +153,7 @@ def detect_and_evaluate_ostia(
         ostia_right, label_artery, spacing=(dy, dx, dz), ostium_name="Óstio direito"
     )
 
+    # Consolida o status dos óstios em critérios estrito e tolerável.
     tolerable = config["OSTIA_VALIDATION"]["distance_threshold_mm"]
     both_correct = left_info["intersects"] and right_info["intersects"]
     both_tolerable_inclusive = (

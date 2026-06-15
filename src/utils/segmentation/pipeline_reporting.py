@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import pandas as pd
 
-from ..results_utils import _as_bool_value, _readable_column_name
+from ..project.results import _as_bool_value, _readable_column_name
 
 
 def _series_from_aliases(df, column, dtype=None):
+    """Busca uma coluna pelo nome interno ou pelo nome legível exportado."""
     for column_candidate in (column, _readable_column_name(column)):
         if column_candidate in df.columns:
             return df[column_candidate]
@@ -15,6 +16,7 @@ def _series_from_aliases(df, column, dtype=None):
 
 
 def _bool_series(df, column):
+    """Lê uma coluna booleana aceitando valores textuais/númericos comuns."""
     return _series_from_aliases(df, column, dtype=bool).map(_as_bool_value)
 
 
@@ -37,6 +39,7 @@ def print_statistics(train_ids, val_ids, test_ids, all_ids):
 
 
 def _format_duration(seconds):
+    """Formata uma duração em segundos, minutos e horas."""
     if seconds is None or pd.isna(seconds):
         return "N/A"
     return f"{seconds:.1f}s ({seconds / 60:.2f}min, {seconds / 3600:.3f}h)"

@@ -3,7 +3,7 @@
 Prefira imports diretos dos submódulos em código novo, por exemplo:
 
 ```
-from utils.config_utils import load_config_json
+from utils.project.config import load_config_json
 from utils.processing.preprocessing import downscale_image_ndi
 ```
 
@@ -14,20 +14,20 @@ from importlib import import_module
 
 _LAZY_EXPORTS = {
     # Config / dataset / results
-    "deep_update_dict": ".config_utils",
-    "load_config_json": ".config_utils",
-    "normalize_runtime_config": ".config_utils",
-    "save_config_json": ".config_utils",
-    "scale_config_to_resolution": ".config_utils",
-    "serialize_config_for_json": ".config_utils",
-    "get_data_splits": ".dataset_utils",
-    "create_timestamped_output_dir": ".results_utils",
-    "get_batch_result_file": ".results_utils",
-    "list_batch_result_files": ".results_utils",
-    "make_result_dataframe": ".results_utils",
-    "merge_batch_results": ".results_utils",
-    "save_metadata": ".results_utils",
-    "save_results": ".results_utils",
+    "deep_update_dict": ".project.config",
+    "load_config_json": ".project.config",
+    "normalize_runtime_config": ".project.config",
+    "save_config_json": ".project.config",
+    "scale_config_to_resolution": ".project.config",
+    "serialize_config_for_json": ".project.config",
+    "get_data_splits": ".project.dataset",
+    "create_timestamped_output_dir": ".project.results",
+    "get_batch_result_file": ".project.results",
+    "list_batch_result_files": ".project.results",
+    "make_result_dataframe": ".project.results",
+    "merge_batch_results": ".project.results",
+    "save_metadata": ".project.results",
+    "save_results": ".project.results",
     # General utils
     "dice_score": ".utils.metrics",
     "extract_circular_region": ".utils.roi",
@@ -36,6 +36,7 @@ _LAZY_EXPORTS = {
     "load_json_file": ".utils.json_io",
     "load_raw_img_and_label": ".utils.nifti_io",
     "normalize_image": ".utils.normalization",
+    "normalize_vesselness": ".utils.normalization",
     "robust_normalize": ".utils.normalization",
     "save_json_file": ".utils.json_io",
     "save_nii_image": ".utils.nifti_io",
@@ -61,7 +62,6 @@ _LAZY_EXPORTS = {
     "use_gpu": ".processing.gpu_utils",
     "get_modified_vesselness": ".processing.frangi",
     "get_vesselness": ".processing.frangi",
-    "get_vesselness_optimized": ".processing.frangi",
     "load_vesselness_cache": ".processing.frangi",
     "save_vesselness_cache": ".processing.frangi",
     # Segmentation

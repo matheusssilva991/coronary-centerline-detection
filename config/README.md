@@ -341,6 +341,31 @@ Trade-off:
 - Padding maior: menos risco de cortar estrutura valida, mais custo/falso positivo.
 - Padding menor: mais foco, risco de truncar alvo.
 
+### `candidate_selection_strategy` (str)
+
+- Valor atual: `"closest"`
+- Estrategia para escolher o candidato circular em cada slice.
+- Opcoes:
+  - `"closest"`: comportamento original, seleciona o centro mais proximo do
+    circulo anterior e depois valida raio/distancia.
+  - `"score"`: pontua candidatos usando acumulador Hough, distancia ao centro
+    anterior e diferenca de raio.
+
+### `out_of_tolerance_as_miss` (bool)
+
+- Valor atual: `false`
+- Quando `false`, um candidato fora da tolerancia interrompe o rastreamento.
+- Quando `true`, esse caso conta como slice sem deteccao e o algoritmo so para
+  depois de `max_slice_miss_threshold` misses consecutivos.
+
+### Pesos do score de candidato
+
+- `candidate_score_accum_weight`: peso do acumulador Hough.
+- `candidate_score_distance_weight`: penalidade para salto de centro.
+- `candidate_score_radius_weight`: penalidade para mudanca de raio.
+
+Esses pesos so sao usados quando `candidate_selection_strategy = "score"`.
+
 ---
 
 ## 5) Level Set - `LEVEL_SET`

@@ -11,7 +11,7 @@ from pathlib import Path
 import pandas as pd
 from tqdm import tqdm
 
-from ..results_utils import (
+from ..project.results import (
     duration_breakdown,
     get_batch_result_file,
     load_batch_timing_records,
@@ -32,7 +32,15 @@ logger = logging.getLogger(__name__)
 
 
 def process_image(img_id, config, base_path, base_save_path):
-    """Processa uma imagem completa e retorna o dicionário de resultados."""
+    """Processa uma imagem completa e retorna o dicionário de resultados.
+
+    Fluxo por imagem:
+    1. carrega e pré-processa o volume;
+    2. calcula vesselness para detecção dos óstios;
+    3. detecta círculos e segmenta a aorta;
+    4. seleciona/avalia os óstios;
+    5. segmenta as artérias a partir dos óstios.
+    """
     result = {
         "IMG_ID": img_id,
         "ostia_left": None,
@@ -56,6 +64,7 @@ def process_image(img_id, config, base_path, base_save_path):
     }
 
     try:
+        # Carrega imagem/label e gera o volume pré-processado (LCC).
         image_data = load_and_preprocess_image(img_id, base_path, config)
         lcc_image = image_data["lcc_image"]
         label = image_data["label"]
@@ -65,6 +74,7 @@ def process_image(img_id, config, base_path, base_save_path):
 
         image_data = None
 
+        # Calcula o mapa de vasos usado para selecionar candidatos de óstios.
         vesselness_ostios = get_or_compute_vesselness(
             img_id,
             lcc_image,
@@ -79,6 +89,7 @@ def process_image(img_id, config, base_path, base_save_path):
             spacing=vesselness_spacing,
         )
 
+        # Localiza a aorta por círculos em fatias consecutivas.
         detected_circles = get_or_detect_aorta_circles(
             img_id,
             lcc_image,
@@ -90,6 +101,7 @@ def process_image(img_id, config, base_path, base_save_path):
             save_cache=config["SAVE_CACHE"],
         )
 
+        # Segmenta a aorta a partir dos círculos detectados.
         aorta_mask = get_or_segment_aorta(
             img_id,
             lcc_image,
@@ -102,6 +114,7 @@ def process_image(img_id, config, base_path, base_save_path):
         )
 
         try:
+            # Seleciona os óstios e valida contra o label arterial.
             ostia_eval = detect_and_evaluate_ostia(
                 aorta_mask,
                 vesselness_ostios,
@@ -138,6 +151,7 @@ def process_image(img_id, config, base_path, base_save_path):
         result["both_correct"] = ostia_eval["both_correct"]
         result["both_tolerable"] = ostia_eval["both_tolerable"]
 
+        # Classifica o resultado dos óstios para facilitar análise posterior.
         if result["both_correct"]:
             result["ostia_status"] = "both_correct"
         elif result["both_tolerable"]:
@@ -148,6 +162,7 @@ def process_image(img_id, config, base_path, base_save_path):
         if not (result["both_correct"] or result["both_tolerable"]):
             result["proceeded_with_bad_ostia"] = True
 
+        # Segmenta as artérias mesmo quando os óstios são apenas toleráveis.
         result["segmentation_attempted"] = True
         artery_metrics = segment_arteries_from_ostia(
             img_id,
@@ -207,6 +222,7 @@ def run_pipeline(
     if resume_from_batch > 0:
         logger.info(f"Retomando a partir do lote {resume_from_batch}...")
         missing_batches = []
+        # Carrega os lotes anteriores para preservar a consolidação final.
         for batch_num in range(0, start_batch_index):
             found_path = get_batch_result_file(
                 output_dir, split_name, batch_num + 1
@@ -230,6 +246,7 @@ def run_pipeline(
             )
 
     for batch_num in range(start_batch_index, num_batches):
+        # Define o intervalo de IDs pertencente ao lote atual.
         start_idx = batch_num * batch_size
         end_idx = min((batch_num + 1) * batch_size, len(ids))
         batch_ids = ids[start_idx:end_idx]
@@ -242,6 +259,7 @@ def run_pipeline(
         )
         batch_results = []
 
+        # Processa cada imagem do lote e salva o lote logo em seguida.
         for img_id in tqdm(
             batch_ids, desc=f"Lote {batch_number}/{num_batches}", leave=False
         ):

@@ -1,25 +1,25 @@
-"""Grouped exports for dataset/config/results/general I/O utilities - lazy loaded."""
+"""Exports agrupados para config, dataset, resultados e I/O geral."""
 
 from importlib import import_module
 
 _SYMBOL_TO_MODULE = {
-    # config_utils
-    "deep_update_dict": "config_utils",
-    "load_config_json": "config_utils",
-    "normalize_runtime_config": "config_utils",
-    "save_config_json": "config_utils",
-    "scale_config_to_resolution": "config_utils",
-    "serialize_config_for_json": "config_utils",
-    # dataset_utils
-    "get_data_splits": "dataset_utils",
-    # results_utils
-    "create_timestamped_output_dir": "results_utils",
-    "get_batch_result_file": "results_utils",
-    "list_batch_result_files": "results_utils",
-    "make_result_dataframe": "results_utils",
-    "merge_batch_results": "results_utils",
-    "save_metadata": "results_utils",
-    "save_results": "results_utils",
+    # project.config
+    "deep_update_dict": "project.config",
+    "load_config_json": "project.config",
+    "normalize_runtime_config": "project.config",
+    "save_config_json": "project.config",
+    "scale_config_to_resolution": "project.config",
+    "serialize_config_for_json": "project.config",
+    # project.dataset
+    "get_data_splits": "project.dataset",
+    # project.results
+    "create_timestamped_output_dir": "project.results",
+    "get_batch_result_file": "project.results",
+    "list_batch_result_files": "project.results",
+    "make_result_dataframe": "project.results",
+    "merge_batch_results": "project.results",
+    "save_metadata": "project.results",
+    "save_results": "project.results",
     # utils
     "dice_score": "utils",
     "extract_circular_region": "utils",

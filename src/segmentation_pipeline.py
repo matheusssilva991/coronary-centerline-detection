@@ -12,10 +12,10 @@ import pandas as pd
 # Usa GPU 0 por padrão quando a variável não for definida externamente.
 os.environ.setdefault("CUDA_VISIBLE_DEVICES", "0")
 
-from utils.config_utils import load_config_json, scale_config_to_resolution
-from utils.dataset_utils import get_data_splits
 from utils.processing.gpu_utils import use_gpu
-from utils.results_utils import (
+from utils.project.config import load_config_json, scale_config_to_resolution
+from utils.project.dataset import get_data_splits
+from utils.project.results import (
     create_timestamped_output_dir,
     load_batch_timing_records,
     make_json_safe,

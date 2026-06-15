@@ -86,7 +86,12 @@
         "total_num_peaks": 15,
         "canny_sigma": 3,
         "use_local_roi": true,
-        "local_roi_padding": 30
+        "local_roi_padding": 30,
+        "out_of_tolerance_as_miss": false,
+        "candidate_selection_strategy": "closest",
+        "candidate_score_accum_weight": 1.0,
+        "candidate_score_distance_weight": 1.0,
+        "candidate_score_radius_weight": 1.0
     },
     "LEVEL_SET": {
         "radius_reduction_factor": 0.15,

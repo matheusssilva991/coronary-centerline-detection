@@ -124,7 +124,12 @@ def region_growing_segmentation(
     smooth_relaxation: bool = False,
     verbose: bool = False,
 ) -> NDArray[Any]:
-    """Segmenta vasos por crescimento de região com controle adaptativo."""
+    """Segmenta vasos por crescimento de região com controle adaptativo.
+
+    A região cresce a partir de uma semente no mapa de vesselness. Um vizinho é
+    aceito quando mantém vesselness acima de um piso mínimo e é suficientemente
+    parecido com o voxel/região de referência.
+    """
     if vesselness_map.ndim != 3:
         raise ValueError(
             f"vesselness_map deve ser 3D, recebido shape={vesselness_map.shape}"
@@ -149,9 +154,12 @@ def region_growing_segmentation(
     else:
         comparison_window = 1
 
+    # O piso de vesselness pode relaxar ao longo do crescimento para evitar
+    # parar cedo demais em trechos arteriais mais fracos.
     min_start = float(min_vesselness)
     min_end = min_start * relaxed_floor_factor
 
+    # Seleciona e valida a semente inicial.
     validated_seed = _validate_seed(seed_point, vesselness_map.shape)
     if validated_seed is None:
         if verbose:
@@ -166,6 +174,7 @@ def region_growing_segmentation(
             print(f"Semente abaixo do piso: {seed_val:.4f} < {min_start:.4f}")
         return np.zeros_like(vesselness_map, dtype=np.uint8)
 
+    # Inicializa a fila de crescimento com a semente aceita.
     mask = np.zeros_like(vesselness_map, dtype=np.uint8)
     visited = np.zeros_like(vesselness_map, dtype=bool)
     queue = deque([(sy, sx, sz)])
@@ -196,6 +205,7 @@ def region_growing_segmentation(
         cy, cx, cz = queue.popleft()
         current_val = vesselness_map[cy, cx, cz]
 
+        # Calcula a referência local usada para comparar o próximo vizinho.
         comparison_mean = _calculate_comparison_mean(
             comparison_window,
             use_running_mean,
@@ -205,6 +215,7 @@ def region_growing_segmentation(
             value_history,
         )
 
+        # Atualiza o piso mínimo de vesselness de acordo com o estágio do crescimento.
         current_floor = _calculate_adaptive_floor(
             count, min_start, min_end, switch_at_voxels, smooth_relaxation
         )
@@ -218,6 +229,7 @@ def region_growing_segmentation(
                 continue
 
             neighbor_val = vesselness_map[ny, nx, nz]
+            # Aceita o vizinho se ele respeita piso mínimo e similaridade local.
             if _is_neighbor_acceptable(
                 neighbor_val, comparison_mean, current_floor, threshold
             ):
@@ -310,8 +322,50 @@ def region_growing_article(
     return mask
 
 
+def normal_region_growing_from_ostia(
+    vesselness_artery: NDArray[Any],
+    ostia_left: Optional[Sequence[int]],
+    ostia_right: Optional[Sequence[int]],
+    config: dict[str, Any],
+) -> NDArray[np.uint8]:
+    """Executa o crescimento de região padrão separadamente por óstio.
+
+    Cada óstio gera uma máscara independente; a máscara arterial final é a união
+    binária das duas, evitando que uma falha em um lado apague o outro.
+    """
+    rg_config = config["REGION_GROWING"]
+    params = {
+        "threshold": (
+            float(np.max(vesselness_artery)) - float(np.min(vesselness_artery))
+        )
+        / rg_config["threshold_divisor"],
+        "max_volume": rg_config["max_volume"],
+        "min_vesselness": float(np.max(vesselness_artery))
+        * rg_config["min_vesselness_fraction"],
+        "relaxed_floor_factor": rg_config["relaxed_floor_factor"],
+        "switch_at_voxels": rg_config["switch_at_voxels"],
+        "comparison_window": rg_config["comparison_window"],
+        "smooth_relaxation": rg_config["smooth_relaxation"],
+        "verbose": False,
+    }
+    # Cresce a artéria esquerda a partir do óstio esquerdo detectado.
+    left_mask = (
+        region_growing_segmentation(vesselness_artery, seed_point=ostia_left, **params)
+        if ostia_left is not None
+        else np.zeros_like(vesselness_artery, dtype=np.uint8)
+    )
+    # Cresce a artéria direita a partir do óstio direito detectado.
+    right_mask = (
+        region_growing_segmentation(vesselness_artery, seed_point=ostia_right, **params)
+        if ostia_right is not None
+        else np.zeros_like(vesselness_artery, dtype=np.uint8)
+    )
+    return ((left_mask > 0) | (right_mask > 0)).astype(np.uint8)
+
+
 __all__ = [
     "NEIGHBORS_26",
+    "normal_region_growing_from_ostia",
     "region_growing_article",
     "region_growing_segmentation",
 ]

@@ -1,4 +1,8 @@
-"""Comparação etapa a etapa entre execução CPU e GPU do pipeline."""
+"""Comparação etapa a etapa entre execuções CPU e GPU do pipeline.
+
+Este módulo roda a mesma imagem nos dois backends, coleta métricas por etapa
+e salva diferenças numéricas/binárias para identificar onde CPU e GPU divergem.
+"""
 
 from __future__ import annotations
 
@@ -14,9 +18,9 @@ import numpy as np
 import pandas as pd
 from skimage.morphology import ball
 
-from ..config_utils import load_config_json, scale_config_to_resolution
 from ..processing.binary_operations import binary_closing, binary_dilation
 from ..processing.gpu_utils import GPU_AVAILABLE, cp
+from ..project.config import load_config_json, scale_config_to_resolution
 from ..utils.metrics import dice_score
 from .artery_segmentation import region_growing_segmentation
 from .ostia_detection import (
@@ -42,6 +46,7 @@ T = TypeVar("T")
 
 
 def _sync_gpu_if_needed(use_gpu: bool) -> None:
+    """Sincroniza a GPU antes/depois de medir tempo de uma etapa."""
     if use_gpu and GPU_AVAILABLE and cp is not None:
         cp.cuda.Stream.null.synchronize()
 
@@ -52,6 +57,7 @@ def _time_call(
     use_gpu: bool,
     func: Callable[[], T],
 ) -> T:
+    """Executa uma etapa cronometrada, sincronizando GPU quando necessário."""
     _sync_gpu_if_needed(use_gpu)
     start = time.perf_counter()
     result = func()
@@ -100,6 +106,7 @@ def load_split_img_ids(split_config_path: Path, split_name: str) -> List[int]:
 
 
 def _coord_tuple(value: Optional[Sequence[int]]) -> Optional[Tuple[int, int, int]]:
+    """Converte coordenadas para tupla inteira ou mantém None."""
     if value is None:
         return None
     return tuple(map(int, value))
@@ -110,6 +117,7 @@ def _coord_distance(
     gpu_coord: Optional[Sequence[int]],
     spacing_yxz: Sequence[float],
 ) -> Tuple[Optional[float], Optional[float]]:
+    """Calcula distância CPU/GPU de uma coordenada em voxels e milímetros."""
     if cpu_coord is None or gpu_coord is None:
         return None, None
 
@@ -127,6 +135,7 @@ def _binary_metrics(
     cpu_array: Any,
     gpu_array: Any,
 ) -> Dict[str, Any]:
+    """Calcula métricas de diferença para máscaras binárias."""
     cpu_mask = np.asarray(cpu_array) > 0
     gpu_mask = np.asarray(gpu_array) > 0
     cpu_voxels = int(cpu_mask.sum())
@@ -163,6 +172,7 @@ def _float_metrics(
     gpu_array: Any,
     tolerance: float,
 ) -> Dict[str, Any]:
+    """Calcula métricas de erro absoluto para mapas contínuos."""
     cpu = np.asarray(cpu_array, dtype=np.float64)
     gpu = np.asarray(gpu_array, dtype=np.float64)
     if cpu.shape != gpu.shape:
@@ -203,6 +213,7 @@ def _circle_metrics(
     cpu_circles: List[Dict[str, Any]],
     gpu_circles: List[Dict[str, Any]],
 ) -> Dict[str, Any]:
+    """Compara círculos detectados por fatia entre CPU e GPU."""
     cpu_by_slice = {int(item["slice_index"]): item for item in cpu_circles}
     gpu_by_slice = {int(item["slice_index"]): item for item in gpu_circles}
     common_slices = sorted(set(cpu_by_slice) & set(gpu_by_slice))
@@ -210,6 +221,7 @@ def _circle_metrics(
     center_distances = []
     radius_diffs = []
     for slice_idx in common_slices:
+        # Compara apenas fatias detectadas nos dois backends.
         cpu_circle = cpu_by_slice[slice_idx]
         gpu_circle = gpu_by_slice[slice_idx]
         center_distances.append(
@@ -255,10 +267,12 @@ def _evaluate_ostia(
     scaled_spacing: Sequence[float],
     config: Dict[str, Any],
 ) -> Dict[str, Any]:
+    """Seleciona os óstios e calcula status para uma execução específica."""
     dx, dy, dz = scaled_spacing
     spacing_yxz = (dy, dx, dz)
     ostia_config = config["OSTIA_DETECTION"]
 
+    # Seleciona os óstios na superfície da aorta usando o mapa de vesselness.
     ostia_left, ostia_right = find_ostia(
         aorta_mask,
         vesselness_ostios,
@@ -272,6 +286,7 @@ def _evaluate_ostia(
         verbose=False,
     )
 
+    # Avalia se os óstios encontrados estão no label arterial ou próximos dele.
     label_artery = (label == 1).astype(np.uint8)
     left_info = check_ostium_intersection(
         ostia_left,
@@ -322,6 +337,7 @@ def _artery_steps(
     use_gpu: bool,
     scaled_spacing: Optional[Sequence[float]] = None,
 ) -> Dict[str, Any]:
+    """Executa as etapas arteriais para um backend e retorna máscaras/tempos."""
     config = copy.deepcopy(config)
     config["USE_GPU"] = use_gpu
     timings: Dict[str, float] = {}
@@ -331,6 +347,7 @@ def _artery_steps(
         else None
     )
 
+    # Calcula o mapa de vasos arterial no backend em teste.
     vesselness_artery = _time_call(
         timings,
         "vesselness_artery",
@@ -365,6 +382,7 @@ def _artery_steps(
     }
 
     def run_region_growing() -> Tuple[Any, Any]:
+        """Segmenta artéria esquerda/direita separadamente por óstio."""
         left = (
             region_growing_segmentation(
                 vesselness_artery, seed_point=ostia_left, **region_growing_params
@@ -388,10 +406,12 @@ def _artery_steps(
         run_region_growing,
     )
 
+    # Une as máscaras esquerda/direita antes do pós-processamento.
     raw_mask = ((left_mask > 0) | (right_mask > 0)).astype(np.uint8)
     post_config = config["POSTPROCESSING"]
 
     def run_postprocessing() -> Tuple[Any, Any]:
+        """Aplica fechamento e dilatação finais, sempre na CPU."""
         closed = binary_closing(
             raw_mask > 0,
             structure=ball(post_config["closing_radius"]),
@@ -430,6 +450,7 @@ def _run_steps_for_backend(
     base_save_path: Path,
     use_gpu: bool,
 ) -> Dict[str, Any]:
+    """Roda todas as etapas do pipeline para um backend específico."""
     lcc_image = image_data["lcc_image"]
     label = image_data["label"]
     scaled_spacing = image_data["scaled_spacing"]
@@ -441,6 +462,7 @@ def _run_steps_for_backend(
     timings: Dict[str, float] = {}
     total_start = time.perf_counter()
 
+    # Calcula o mapa de vasos usado na seleção dos óstios.
     vesselness_ostios = _time_call(
         timings,
         "vesselness_ostios",
@@ -459,6 +481,7 @@ def _run_steps_for_backend(
             spacing=vesselness_spacing,
         ),
     )
+    # Detecta os círculos usados para localizar/segmentar a aorta.
     detected_circles = _time_call(
         timings,
         "aorta_circles",
@@ -474,6 +497,7 @@ def _run_steps_for_backend(
             save_cache=False,
         ),
     )
+    # Segmenta a aorta a partir dos círculos detectados.
     aorta_mask = _time_call(
         timings,
         "aorta_mask",
@@ -489,6 +513,7 @@ def _run_steps_for_backend(
             use_gpu=use_gpu,
         ),
     )
+    # Extrai a superfície da aorta para comparação direta entre backends.
     aorta_surface = _time_call(
         timings,
         "aorta_surface",
@@ -498,6 +523,7 @@ def _run_steps_for_backend(
             erosion_radius=backend_config["OSTIA_DETECTION"]["erosion_radius"],
         ),
     )
+    # Seleciona os óstios e mede o status em relação ao label.
     ostia_eval = _time_call(
         timings,
         "ostia_detection",
@@ -510,6 +536,7 @@ def _run_steps_for_backend(
             backend_config,
         ),
     )
+    # Segmenta as artérias a partir dos óstios selecionados.
     artery = _artery_steps(
         img_id,
         lcc_image,
@@ -543,6 +570,7 @@ def _ostia_row(
     gpu_eval: Dict[str, Any],
     spacing_yxz: Sequence[float],
 ) -> Dict[str, Any]:
+    """Monta a linha comparativa dos óstios CPU/GPU."""
     left_dist_voxels, left_dist_mm = _coord_distance(
         cpu_eval["ostia_left"], gpu_eval["ostia_left"], spacing_yxz
     )
@@ -580,6 +608,7 @@ def _timing_row(
     cpu_timings: Dict[str, float],
     gpu_timings: Dict[str, float],
 ) -> Dict[str, Any]:
+    """Monta a linha com tempos CPU/GPU por etapa."""
     row: Dict[str, Any] = {
         "IMG_ID": img_id,
         "preprocess_seconds": preprocess_seconds,
@@ -590,6 +619,7 @@ def _timing_row(
         row[f"cpu_{stage}_seconds"] = cpu_seconds
         row[f"gpu_{stage}_seconds"] = gpu_seconds
         if cpu_seconds is not None and gpu_seconds is not None:
+            # Speedup > 1 indica CPU mais lenta que GPU naquela etapa.
             row[f"{stage}_delta_gpu_minus_cpu_seconds"] = gpu_seconds - cpu_seconds
             row[f"{stage}_speedup_cpu_over_gpu"] = (
                 cpu_seconds / gpu_seconds if gpu_seconds > 0 else None
@@ -605,6 +635,7 @@ def compare_image_cpu_gpu(
     float_tolerance: float = 1e-6,
 ) -> Tuple[List[Dict[str, Any]], Dict[str, Any], Dict[str, Any]]:
     """Compara uma imagem nas execuções CPU e GPU."""
+    # O pré-processamento é compartilhado para isolar diferenças do backend.
     preprocess_start = time.perf_counter()
     image_data = load_and_preprocess_image(img_id, str(base_path), config)
     preprocess_seconds = time.perf_counter() - preprocess_start
@@ -615,6 +646,7 @@ def compare_image_cpu_gpu(
         img_id, image_data, config, base_save_path, use_gpu=True
     )
 
+    # Compara mapas contínuos, máscaras binárias, círculos e segmentação final.
     rows = [
         _float_metrics(
             img_id,

@@ -10,7 +10,7 @@ DEFAULT_TEST_SIZE = 0.7
 DEFAULT_VAL_SIZE = 0.1
 DEFAULT_RANDOM_STATE = 42
 DEFAULT_SPLIT_CONFIG_PATH = (
-    Path(__file__).resolve().parents[2] / "config" / "imagecas_splits.json"
+    Path(__file__).resolve().parents[3] / "config" / "imagecas_splits.json"
 )
 
 

@@ -13,7 +13,7 @@ def configure_notebook_environment(chdir_to_src: bool = True) -> Path:
     Returns:
         Path to the repository root.
     """
-    repo_root = Path(__file__).resolve().parents[2]
+    repo_root = Path(__file__).resolve().parents[3]
     src_dir = repo_root / "src"
 
     src_dir_str = str(src_dir)

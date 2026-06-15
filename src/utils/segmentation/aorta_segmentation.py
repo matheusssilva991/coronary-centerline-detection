@@ -1,5 +1,4 @@
-"""
-Módulo para segmentação da aorta em volumes 3D usando Level Set.
+"""Segmentação da aorta em volumes 3D usando Level Set.
 
 Este módulo implementa segmentação baseada em contornos ativos geodésicos
 morfológicos (Morphological Geodesic Active Contour - MGAC) usando círculos
@@ -16,10 +15,10 @@ from skimage.morphology import ball
 from typing import Any, Dict, Sequence
 from numpy.typing import NDArray
 
-# Importa operação morfológica com suporte GPU
+# Operação morfológica reutilizada do pacote de processamento.
 from ..processing.binary_operations import binary_opening
 
-# GPU utilities (consistent style with binary_operations)
+# Utilitários de GPU usados em trechos pontuais do level set/morfologia.
 from ..processing.gpu_utils import GPU_AVAILABLE, to_gpu, to_cpu, cu_ndi, cp
 
 
@@ -47,11 +46,12 @@ def _calculate_roi_bounds(
             - 'y_min', 'y_max': Limites no eixo y
             - 'z_min', 'z_max': Limites no eixo z
     """
+    # A ROI acompanha as fatias onde os círculos foram detectados.
     slice_indices = [int(c["slice_index"]) for c in detected_circles]
     z_min = max(0, min(slice_indices) - roi_margin)
     z_max = min(volume_shape[2], max(slice_indices) + roi_margin + 1)
 
-    # Encontrar limites x, y baseados nos círculos
+    # Expande x/y pelo maior raio detectado e pela margem configurada.
     x_coords = [c["center_x"] for c in detected_circles]
     y_coords = [c["center_y"] for c in detected_circles]
     radii = [c["radius"] for c in detected_circles]
@@ -93,6 +93,7 @@ def _adjust_circles_to_roi(
 
     for c in detected_circles:
         if z_min <= c["slice_index"] < z_max:
+            # Desloca centro/fatia para o sistema local da ROI.
             roi_c = {
                 "slice_index": int(c["slice_index"]) - z_min,
                 "center_x": c["center_x"] - x_min,
@@ -130,6 +131,7 @@ def _initialize_level_set_from_circles(
     height, width = volume_shape[:2]
 
     for circle in circles:
+        # Cada círculo vira uma semente circular na fatia correspondente.
         slice_idx = int(circle["slice_index"])
         cx = circle["center_x"]
         cy = circle["center_y"]
@@ -233,14 +235,14 @@ def level_set_segmentation(
             detected_circles, volume_ccta.shape, roi_margin
         )
 
-        # Extrair ROI do volume
+        # Recorta a ROI ao redor dos círculos para reduzir custo do level set.
         roi_volume = volume_ccta[
             roi_bounds["y_min"] : roi_bounds["y_max"],
             roi_bounds["x_min"] : roi_bounds["x_max"],
             roi_bounds["z_min"] : roi_bounds["z_max"],
         ]
 
-        # Ajustar círculos para coordenadas da ROI
+        # Converte os círculos globais para coordenadas locais da ROI.
         work_circles = _adjust_circles_to_roi(detected_circles, roi_bounds)
         work_volume = roi_volume
     else:
@@ -248,14 +250,14 @@ def level_set_segmentation(
         work_circles = detected_circles
         roi_bounds = {"x_min": 0, "y_min": 0, "z_min": 0}
 
-    # Inicializar level set a partir dos círculos
+    # Inicializa o contorno ativo com discos nas fatias onde a aorta foi localizada.
     init_level_set = _initialize_level_set_from_circles(
         work_volume.shape, work_circles, radius_reduction_factor
     )
 
-    # Calcular gradiente inverso para guiar a evolução do contorno
+    # Calcula o mapa de bordas que guia a evolução do contorno.
     if use_gpu and GPU_AVAILABLE:
-        # compute inverse gaussian gradient on GPU and transfer once to CPU
+        # Acelera blur + Sobel na GPU e transfere uma única vez para CPU.
         vol_gpu = to_gpu(work_volume.astype(np.float32))
         blurred = cu_ndi.gaussian_filter(vol_gpu, sigma=sigma)
         gx = cu_ndi.sobel(blurred, axis=1)
@@ -266,7 +268,7 @@ def level_set_segmentation(
     else:
         gimage = inverse_gaussian_gradient(work_volume, alpha=alpha, sigma=sigma)
 
-    # Aplicar segmentação por contorno ativo geodésico morfológico
+    # Evolui o contorno ativo até a máscara refinada da aorta.
     refined_segmentation = morphological_geodesic_active_contour(
         gimage,
         num_iter=num_iter,
@@ -276,7 +278,7 @@ def level_set_segmentation(
         threshold=threshold,
     )
 
-    # Se usou ROI, recolocar segmentação no volume completo
+    # Reinsere a máscara da ROI no volume completo.
     if use_roi and len(detected_circles) > 0:
         full_mask = np.zeros_like(volume_ccta, dtype=np.int8)
         full_mask[
@@ -336,7 +338,7 @@ def remove_leaks_morphology(
 
     kernel = ball(radius)
 
-    # Aplicar abertura morfológica (erosão → dilatação) com suporte GPU
+    # Remove conexões finas/vazamentos com abertura morfológica.
     mask_cleaned = binary_opening(mask_3d, structure=kernel, gpu=bool(use_gpu))
 
     return mask_cleaned

@@ -10,7 +10,8 @@ from skimage.transform import hough_circle, hough_circle_peaks
 from typing import Any, Optional, Sequence, Tuple
 from numpy.typing import NDArray
 
-# GPU utilities (consistent style with binary_operations)
+# Utilitários de GPU usados apenas no pré-processamento da fatia.
+# A transformada de Hough continua na CPU para manter o mesmo backend do skimage.
 from ..processing.gpu_utils import GPU_AVAILABLE, to_gpu, to_cpu, cu_ndi, cp
 
 
@@ -35,10 +36,12 @@ def _detect_circles_in_slice(
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """Detecta círculos em uma fatia usando Canny (ou GPU-preproc) + Hough.
 
-    If `use_gpu` and CuPy available, do blur+Sobel magnitude on GPU and
-    transfer a boolean edge map to CPU for the existing Hough implementation.
+    Quando `use_gpu=True`, suavização e magnitude do gradiente são calculadas
+    na GPU. O mapa binário de bordas volta para CPU porque `hough_circle` é do
+    scikit-image.
     """
     if use_gpu and GPU_AVAILABLE:
+        # Calcula bordas por blur + Sobel na GPU antes da etapa Hough.
         img_gpu = to_gpu(img_slice.astype(np.float32))
         blurred = cu_ndi.gaussian_filter(img_gpu, sigma=canny_sigma)
         gx = cu_ndi.sobel(blurred, axis=1)
@@ -50,6 +53,7 @@ def _detect_circles_in_slice(
             thr = float(gmag.mean())
         edges = to_cpu(gmag > thr)
     else:
+        # Caminho CPU padrão: Canny do scikit-image.
         edges = feature.canny(img_slice.astype(float), sigma=canny_sigma)
 
     hough_res = hough_circle(edges, hough_radii)
@@ -67,6 +71,63 @@ def _find_closest_circle(
     distances = _calculate_distances_vectorized(cx, cy, ref_x, ref_y)
     min_idx = int(np.argmin(distances))
     return min_idx, float(distances[min_idx])
+
+
+def _select_circle_candidate(
+    accums: Sequence[float],
+    cx: Sequence[float],
+    cy: Sequence[float],
+    radii: Sequence[float],
+    ref_x: float,
+    ref_y: float,
+    ref_radius: float,
+    radius_tolerance: float,
+    distance_tolerance: float,
+    strategy: str = "closest",
+    accum_weight: float = 1.0,
+    distance_weight: float = 1.0,
+    radius_weight: float = 1.0,
+) -> Tuple[int, float]:
+    """Seleciona o melhor círculo candidato na fatia atual.
+
+    `closest` preserva o comportamento original: escolhe o centro mais próximo
+    do círculo anterior e só depois valida o raio. `score` usa acumulador Hough,
+    distância ao centro anterior e variação de raio para escolher o candidato
+    mais consistente; quando há candidatos dentro das tolerâncias, pontua apenas
+    esse subconjunto.
+    """
+    if strategy == "closest":
+        return _find_closest_circle(cx, cy, radii, ref_x, ref_y)
+
+    if strategy != "score":
+        raise ValueError("candidate_selection_strategy must be 'closest' or 'score'")
+
+    distances = _calculate_distances_vectorized(cx, cy, ref_x, ref_y)
+    accums_arr = np.asarray(accums, dtype=float)
+    radii_arr = np.asarray(radii, dtype=float)
+    radius_diff = np.abs(radii_arr - ref_radius)
+    tolerance_mask = (distances <= distance_tolerance) & (
+        radius_diff <= radius_tolerance
+    )
+
+    candidate_indices = np.where(tolerance_mask)[0]
+    if len(candidate_indices) == 0:
+        candidate_indices = np.arange(len(radii_arr))
+
+    max_accum = float(np.max(accums_arr[candidate_indices]))
+    accum_norm = accums_arr / max(max_accum, np.finfo(float).eps)
+    distance_norm = distances / max(distance_tolerance, np.finfo(float).eps)
+    radius_norm = radius_diff / max(radius_tolerance, np.finfo(float).eps)
+
+    # Maior acumulador favorece bordas circulares fortes; penalidades evitam
+    # saltos abruptos e mudanças grandes de raio entre fatias consecutivas.
+    scores = (
+        float(accum_weight) * accum_norm
+        - float(distance_weight) * distance_norm
+        - float(radius_weight) * radius_norm
+    )
+    best_idx = int(candidate_indices[np.argmax(scores[candidate_indices])])
+    return best_idx, float(distances[best_idx])
 
 
 def _is_circle_within_tolerance(
@@ -154,6 +215,10 @@ def _process_slice(
     canny_sigma: float,
     use_local_roi: bool = True,
     local_roi_padding: int = 20,
+    candidate_selection_strategy: str = "closest",
+    candidate_score_accum_weight: float = 1.0,
+    candidate_score_distance_weight: float = 1.0,
+    candidate_score_radius_weight: float = 1.0,
     use_gpu: bool = False,
     verbose: bool = True,
 ) -> Optional[dict]:
@@ -213,7 +278,21 @@ def _process_slice(
     if len(radii) == 0:
         return None
 
-    min_idx, min_dist = _find_closest_circle(cx, cy, radii, ref_x, ref_y)
+    min_idx, min_dist = _select_circle_candidate(
+        accums,
+        cx,
+        cy,
+        radii,
+        ref_x,
+        ref_y,
+        ref_radius,
+        radius_tolerance,
+        distance_tolerance,
+        strategy=candidate_selection_strategy,
+        accum_weight=candidate_score_accum_weight,
+        distance_weight=candidate_score_distance_weight,
+        radius_weight=candidate_score_radius_weight,
+    )
 
     if not _is_circle_within_tolerance(
         radii[min_idx], min_dist, ref_radius, radius_tolerance, distance_tolerance
@@ -420,10 +499,25 @@ def detect_aorta_circles(
     canny_sigma: float = 3,
     use_local_roi: bool = True,
     local_roi_padding: int = 20,
+    out_of_tolerance_as_miss: bool = False,
+    candidate_selection_strategy: str = "closest",
+    candidate_score_accum_weight: float = 1.0,
+    candidate_score_distance_weight: float = 1.0,
+    candidate_score_radius_weight: float = 1.0,
     use_gpu: bool = False,
     verbose: bool = True,
 ) -> list:
-    """Detecta círculos da aorta ao longo do volume 3D fatia a fatia."""
+    """Detecta círculos da aorta ao longo do volume 3D fatia a fatia.
+
+    Args:
+        out_of_tolerance_as_miss: Se `False`, preserva o comportamento antigo e
+            para ao encontrar um candidato fora das tolerâncias. Se `True`, trata
+            esse caso como uma fatia sem detecção e só para após
+            `max_slice_miss_threshold` misses consecutivos.
+        candidate_selection_strategy: `closest` mantém a seleção por menor
+            distância ao círculo anterior. `score` escolhe por acumulador Hough,
+            distância e diferença de raio.
+    """
     if img_volume.ndim != 3:
         raise ValueError(f"img_volume deve ser 3D, recebido shape={img_volume.shape}")
     if len(hough_radii) == 0:
@@ -476,6 +570,10 @@ def detect_aorta_circles(
             canny_sigma,
             use_local_roi,
             local_roi_padding,
+            candidate_selection_strategy,
+            candidate_score_accum_weight,
+            candidate_score_distance_weight,
+            candidate_score_radius_weight,
             use_gpu=use_gpu,
             verbose=verbose,
         )
@@ -491,7 +589,18 @@ def detect_aorta_circles(
             continue
 
         if result == OUT_OF_TOLERANCE:
-            break
+            if not out_of_tolerance_as_miss:
+                break
+            miss_counter += 1
+            if miss_counter >= max_slice_miss_threshold:
+                if verbose:
+                    print(
+                        "Parada: "
+                        f"{max_slice_miss_threshold} fatias consecutivas "
+                        "sem detecção dentro da tolerância."
+                    )
+                break
+            continue
 
         detected_circles.append({"slice_index": slice_idx, **result})
         miss_counter = 0
