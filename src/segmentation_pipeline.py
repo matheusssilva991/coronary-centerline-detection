@@ -12,7 +12,7 @@ import pandas as pd
 # Usa GPU 0 por padrão quando a variável não for definida externamente.
 os.environ.setdefault("CUDA_VISIBLE_DEVICES", "0")
 
-from utils.config_utils import load_config_json
+from utils.config_utils import load_config_json, scale_config_to_resolution
 from utils.dataset_utils import get_data_splits
 from utils.processing.gpu_utils import use_gpu
 from utils.results_utils import (
@@ -117,7 +117,7 @@ def select_resolution_config(args):
 
 
 def build_effective_config(args):
-    """Aplica resolução, arquivo extra e flags CLI sobre a configuração base."""
+    """Aplica resolução, arquivo extra, flags CLI e escala espacial da configuração."""
     effective_config = copy.deepcopy(select_resolution_config(args))
 
     if args.config_file:
@@ -146,7 +146,7 @@ def build_effective_config(args):
         effective_config["USE_GPU"] = args.use_gpu
 
     effective_config["NUM_BATCHES"] = args.num_batches
-    return effective_config
+    return scale_config_to_resolution(effective_config)
 
 
 def print_run_settings(args, config, base_path, base_save_path):

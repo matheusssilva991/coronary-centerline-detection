@@ -11,7 +11,6 @@ from pathlib import Path
 import pandas as pd
 from tqdm import tqdm
 
-from ..config_utils import scale_config_to_resolution
 from ..results_utils import (
     duration_breakdown,
     get_batch_result_file,
@@ -178,9 +177,8 @@ def run_pipeline(
     output_dir=None,
     resume_from_batch=0,
 ):
-    """Processa um conjunto de imagens em lotes e salva cada lote separadamente."""
+    """Processa imagens em lotes com uma config runtime já escalada para a resolução."""
     start_time = time.time()
-    scaled_config = scale_config_to_resolution(config)
 
     if not ids:
         raise ValueError(f"Nenhuma imagem encontrada para o split '{split_name}'.")
@@ -248,7 +246,7 @@ def run_pipeline(
             batch_ids, desc=f"Lote {batch_number}/{num_batches}", leave=False
         ):
             batch_results.append(
-                process_image(img_id, scaled_config, base_path, base_save_path)
+                process_image(img_id, config, base_path, base_save_path)
             )
 
         all_results.extend(batch_results)
@@ -258,7 +256,7 @@ def run_pipeline(
             batch_results,
             f"{split_name}_lote_{batch_number}",
             output_dir,
-            config=scaled_config,
+            config=config,
         )
         batch_duration = time.time() - batch_start_time
         batch_finished_at = datetime.now().isoformat(timespec="seconds")
