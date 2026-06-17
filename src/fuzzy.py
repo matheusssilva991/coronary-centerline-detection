@@ -1892,6 +1892,7 @@ if morphology_dice_df.empty:
             "approach",
             "threshold_mode",
             "pipeline_stage",
+            "lcc_mode",
             "mean_dice",
             "std_dice",
             "min_dice",
@@ -1906,7 +1907,10 @@ if morphology_dice_df.empty:
     )
 else:
     dice_summary_df = (
-        morphology_dice_df.groupby(["approach", "threshold_mode", "pipeline_stage"], as_index=False)
+        morphology_dice_df.groupby(
+            ["approach", "threshold_mode", "pipeline_stage", "lcc_mode"],
+            as_index=False,
+        )
         .agg(
             mean_dice=("dice_artery", "mean"),
             std_dice=("dice_artery", "std"),
@@ -1942,7 +1946,10 @@ for distance_col in ["left_dist_mm", "right_dist_mm"]:
     ostia_eval_df[distance_col] = ostia_eval_df[distance_col].replace(np.inf, np.nan)
 
 ostia_summary_df = (
-    ostia_eval_df.groupby(["approach", "threshold_mode", "pipeline_stage"], as_index=False)
+    ostia_eval_df.groupby(
+        ["approach", "threshold_mode", "pipeline_stage", "lcc_mode"],
+        as_index=False,
+    )
     .agg(
         ostia_evaluated_images=("img_id", "nunique"),
         ostia_found_rate=("ostia_found", "mean"),
@@ -1981,9 +1988,13 @@ if dice_summary_df.empty:
 else:
     pipeline_summary_df = dice_summary_df.merge(
         ostia_summary_df,
-        on=["approach", "threshold_mode", "pipeline_stage"],
+        on=["approach", "threshold_mode", "pipeline_stage", "lcc_mode"],
         how="left",
     )
+
+for col in ranking_columns:
+    if col not in pipeline_summary_df.columns:
+        pipeline_summary_df[col] = np.nan
 
 pipeline_summary_df["ostia_priority_score"] = (
     0.70 * pipeline_summary_df["ostia_acceptable_rate"].fillna(0)
