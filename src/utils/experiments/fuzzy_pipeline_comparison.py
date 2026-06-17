@@ -1,8 +1,9 @@
 """Helpers para comparar variantes fuzzy no pipeline coronário.
 
 Este módulo concentra a lógica que o notebook de comparação usa para alternar
-entre threshold normal, threshold fuzzy alpha-cut, ponderação contextual fuzzy
-do vesselness arterial, region growing e fuzzy connectedness.
+entre threshold normal, threshold fuzzy por pertinência contextual de objeto,
+ponderação contextual fuzzy do vesselness arterial, region growing e fuzzy
+connectedness.
 """
 
 from __future__ import annotations
@@ -28,10 +29,7 @@ from utils.project.config import load_config_json
 from utils.processing.preprocessing import downscale_image
 from utils.segmentation.artery_segmentation import normal_region_growing_from_ostia
 from utils.segmentation.fuzzy_connectedness import segment_artery_fuzzy_connectedness
-from utils.segmentation.fuzzy_threshold import (
-    build_lcc_image_from_mask,
-    fuzzy_trapezoid_threshold,
-)
+from utils.segmentation.fuzzy_threshold import build_lcc_image_from_mask
 from utils.segmentation.pipeline_arteries import postprocess_artery_mask
 from utils.segmentation.pipeline_detection import (
     detect_and_evaluate_ostia,
@@ -74,8 +72,6 @@ PARAMETER_COLUMNS = [
     "variant",
     "overrides_json",
     "threshold_mode",
-    "threshold_alpha",
-    "threshold_margin_hu",
     "contextual_apply_to",
     "contextual.weight_floor",
     "contextual.dense_power",
@@ -103,8 +99,6 @@ PARAMETER_COLUMNS = [
 
 EXPERIMENT_KEYS = {
     "threshold_mode",
-    "threshold_alpha",
-    "threshold_margin_hu",
     "contextual_apply_to",
     "artery_method",
     "max_candidate_voxels",
@@ -286,15 +280,9 @@ def build_preprocessed_inputs(
         weight_mode=str(contextual_cfg.get("weight_mode", "dense_only")),
     )
 
-    if threshold_mode == "fuzzy_alpha":
-        membership = fuzzy_trapezoid_threshold(
-            down_image,
-            min_hu=min_hu,
-            max_hu=max_hu,
-            margin_hu=float(experiment.get("threshold_margin_hu", 160)),
-        )
-        mask = membership >= float(experiment.get("threshold_alpha", 0.5))
-    elif threshold_mode == "contextual_3class":
+    if threshold_mode in {"contextual_3class", "contextual_object"}:
+        # Usa o mesmo mapa fuzzy contextual, mas como threshold: mantém apenas
+        # voxels cuja maior pertinência local é a classe "objeto".
         mask = contextual_mask
     else:
         mask = (down_image >= min_hu) & (down_image <= max_hu)
