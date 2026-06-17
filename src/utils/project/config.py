@@ -197,6 +197,26 @@ def scale_config_to_resolution(config, reference_downscale_xy=2):
         cfg["REGION_GROWING"]["switch_at_voxels"] * scale_area
     )
 
+    # Busca local das sementes: raios em pixels ao redor dos óstios.
+    for key in ("seed_search_radius", "seed_candidate_radius"):
+        if key in cfg["REGION_GROWING"]:
+            cfg["REGION_GROWING"][key] = max(
+                1, round(cfg["REGION_GROWING"][key] * scale)
+            )
+
+    # =========================================================================
+    # PARÂMETROS DE FUZZY CONNECTEDNESS
+    # =========================================================================
+    if "FUZZY_CONNECTEDNESS" in cfg:
+        fc_config = cfg["FUZZY_CONNECTEDNESS"]
+        if "seed_search_radius" in fc_config:
+            fc_config["seed_search_radius"] = max(
+                1, round(fc_config["seed_search_radius"] * scale)
+            )
+        for key in ("max_candidate_voxels", "max_processed_voxels"):
+            if fc_config.get(key) is not None:
+                fc_config[key] = round(fc_config[key] * scale_area)
+
     # =========================================================================
     # PARÂMETROS DE PÓS-PROCESSAMENTO
     # =========================================================================

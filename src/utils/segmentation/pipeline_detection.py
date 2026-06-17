@@ -9,7 +9,7 @@ from .aorta_localization import detect_aorta_circles
 from .aorta_segmentation import level_set_segmentation, remove_leaks_morphology
 from .ostia_detection import check_ostium_intersection, find_ostia
 from ..processing.binary_operations import keep_largest_component
-from ..project.cache import load_json_cache, load_npy_cache, save_json_cache, save_npy_cache
+from ..project.cache import load_json_cache, load_npy_cache
 
 
 def get_or_detect_aorta_circles(
@@ -60,6 +60,9 @@ def get_or_detect_aorta_circles(
         out_of_tolerance_as_miss=circle_config.get(
             "out_of_tolerance_as_miss", False
         ),
+        interpolate_missed_circles=circle_config.get(
+            "interpolate_missed_circles", True
+        ),
         candidate_selection_strategy=circle_config.get(
             "candidate_selection_strategy", "closest"
         ),
@@ -73,8 +76,8 @@ def get_or_detect_aorta_circles(
             "candidate_score_radius_weight", 1.0
         ),
     )
-    save_json_cache(detected_circles, json_path, enabled=save_cache)
-
+    # Não salva cache novo dessa etapa: o cache persistente fica restrito ao
+    # vesselness, que é a parte cara e reutilizável do pipeline.
     return detected_circles
 
 
@@ -115,8 +118,7 @@ def get_or_segment_aorta(
     aorta_mask = keep_largest_component(aorta_mask, gpu=False)
     aorta_mask = aorta_mask.astype(np.uint8)
 
-    save_npy_cache(aorta_mask, mask_path, enabled=save_cache)
-
+    # Não salva cache novo dessa etapa para evitar acúmulo de máscaras 3D.
     return aorta_mask
 
 

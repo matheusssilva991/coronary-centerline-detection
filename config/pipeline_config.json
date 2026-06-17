@@ -88,6 +88,7 @@
         "use_local_roi": true,
         "local_roi_padding": 30,
         "out_of_tolerance_as_miss": false,
+        "interpolate_missed_circles": true,
         "candidate_selection_strategy": "closest",
         "candidate_score_accum_weight": 1.0,
         "candidate_score_distance_weight": 1.0,
@@ -103,13 +104,16 @@
     "OSTIA_DETECTION": {
         "top_n": 2000,
         "max_z_diff_mm": 40.0,
-        "lower_fraction": 0.8,
+        "lower_fraction": 0.85,
         "min_center_distance_factor": 0.85,
         "min_lateral_factor": 0.4,
         "erosion_radius": 4
     },
     "OSTIA_VALIDATION": {
         "distance_threshold_mm": 7.0
+    },
+    "ARTERY_SEGMENTATION": {
+        "method": "region_growing"
     },
     "REGION_GROWING": {
         "max_volume": 100000,
@@ -119,7 +123,35 @@
         "relaxed_floor_factor": 0.98,
         "comparison_window": 1,
         "smooth_relaxation": true,
+        "use_seed_refinement": true,
+        "use_multi_seed": true,
+        "grow_each_ostium_separately": true,
+        "seed_search_radius": 2,
+        "seed_candidate_radius": 1,
+        "max_seed_candidates": 6,
+        "seed_min_vesselness_fraction": 0.02,
         "verbose": false
+    },
+    "FUZZY_CONNECTEDNESS": {
+        "alpha": 0.18,
+        "sigma_hu": 80,
+        "neighborhood": 26,
+        "candidate_min_vesselness": 0.02,
+        "max_candidate_voxels": 500000,
+        "max_processed_voxels": 500000,
+        "seed_search_radius": 2,
+        "max_seeds_per_ostium": 4,
+        "seed_min_vesselness": 0.02,
+        "min_seed_distance_voxels": 1.0,
+        "vesselness_affinity_mode": "geometric_mean",
+        "vesselness_power": 1.0,
+        "vesselness_floor": 0.02,
+        "edge_affinity_mode": "weighted_product",
+        "vesselness_weight": 0.9,
+        "mask_strategy": "alpha",
+        "connectivity_percentile": null,
+        "postprocess_closing_radius": null,
+        "postprocess_dilation_radius": null
     },
     "POSTPROCESSING": {
         "closing_radius": 3,

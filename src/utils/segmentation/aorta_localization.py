@@ -18,6 +18,46 @@ from ..processing.gpu_utils import GPU_AVAILABLE, to_gpu, to_cpu, cu_ndi, cp
 OUT_OF_TOLERANCE = "out_of_tolerance"
 
 
+def _interpolate_missing_circles(
+    previous_circle: dict,
+    next_circle: dict,
+    missing_slice_indices: Sequence[int],
+) -> list[dict]:
+    """Interpola círculos para fatias puladas entre duas detecções válidas."""
+    previous_slice = int(previous_circle["slice_index"])
+    next_slice = int(next_circle["slice_index"])
+    denominator = next_slice - previous_slice
+    if denominator == 0:
+        return []
+
+    interpolated = []
+    for slice_index in missing_slice_indices:
+        fraction = (int(slice_index) - previous_slice) / denominator
+        circle = {
+            "slice_index": int(slice_index),
+            "center_x": float(
+                previous_circle["center_x"]
+                + fraction * (next_circle["center_x"] - previous_circle["center_x"])
+            ),
+            "center_y": float(
+                previous_circle["center_y"]
+                + fraction * (next_circle["center_y"] - previous_circle["center_y"])
+            ),
+            "radius": float(
+                previous_circle["radius"]
+                + fraction * (next_circle["radius"] - previous_circle["radius"])
+            ),
+            "accum": float(
+                previous_circle.get("accum", 0.0)
+                + fraction
+                * (next_circle.get("accum", 0.0) - previous_circle.get("accum", 0.0))
+            ),
+            "interpolated": True,
+        }
+        interpolated.append(circle)
+    return interpolated
+
+
 def _calculate_distances_vectorized(
     cx: NDArray[Any], cy: NDArray[Any], ref_x: float, ref_y: float
 ) -> NDArray[Any]:
@@ -500,6 +540,7 @@ def detect_aorta_circles(
     use_local_roi: bool = True,
     local_roi_padding: int = 20,
     out_of_tolerance_as_miss: bool = False,
+    interpolate_missed_circles: bool = True,
     candidate_selection_strategy: str = "closest",
     candidate_score_accum_weight: float = 1.0,
     candidate_score_distance_weight: float = 1.0,
@@ -514,6 +555,9 @@ def detect_aorta_circles(
             para ao encontrar um candidato fora das tolerâncias. Se `True`, trata
             esse caso como uma fatia sem detecção e só para após
             `max_slice_miss_threshold` misses consecutivos.
+        interpolate_missed_circles: Preenche por interpolação linear as fatias
+            sem detecção quando uma nova detecção válida aparece antes do limite
+            de misses consecutivos.
         candidate_selection_strategy: `closest` mantém a seleção por menor
             distância ao círculo anterior. `score` escolhe por acumulador Hough,
             distância e diferença de raio.
@@ -557,6 +601,7 @@ def detect_aorta_circles(
 
     detected_circles = [{"slice_index": first_slice_idx, **refined_initial}]
     miss_counter = 0
+    pending_missed_slices: list[int] = []
 
     for slice_idx in range(first_slice_idx - 1, -1, -1):
         result = _process_slice(
@@ -580,6 +625,7 @@ def detect_aorta_circles(
 
         if result is None:
             miss_counter += 1
+            pending_missed_slices.append(slice_idx)
             if miss_counter >= max_slice_miss_threshold:
                 if verbose:
                     print(
@@ -592,6 +638,7 @@ def detect_aorta_circles(
             if not out_of_tolerance_as_miss:
                 break
             miss_counter += 1
+            pending_missed_slices.append(slice_idx)
             if miss_counter >= max_slice_miss_threshold:
                 if verbose:
                     print(
@@ -602,8 +649,18 @@ def detect_aorta_circles(
                 break
             continue
 
-        detected_circles.append({"slice_index": slice_idx, **result})
+        next_circle = {"slice_index": slice_idx, **result, "interpolated": False}
+        if pending_missed_slices and interpolate_missed_circles:
+            detected_circles.extend(
+                _interpolate_missing_circles(
+                    detected_circles[-1],
+                    next_circle,
+                    pending_missed_slices,
+                )
+            )
+        detected_circles.append(next_circle)
         miss_counter = 0
+        pending_missed_slices = []
 
     return detected_circles
 

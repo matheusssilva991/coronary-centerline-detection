@@ -10,7 +10,6 @@ _SYMBOL_TO_MODULE = {
     "find_ostia": "ostia_detection",
     # artery_segmentation
     "region_growing_article": "artery_segmentation",
-    "region_growing_segmentation": "artery_segmentation",
     # aorta_segmentation
     "level_set_segmentation": "aorta_segmentation",
     "remove_leaks_morphology": "aorta_segmentation",

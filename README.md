@@ -374,7 +374,9 @@ Os ajustes mais importantes agora são:
 
 - `NUM_BATCHES`: número de lotes em que o conjunto é dividido; o padrão é `5`
 - `USE_GPU`: ativa/desativa uso de GPU
-- `LOAD_CACHE` e `SAVE_CACHE`: controle de cache dos intermediários
+- `LOAD_CACHE` e `SAVE_CACHE`: controle de cache; quando `SAVE_CACHE=true`, o
+  pipeline salva apenas caches de vesselness em `.npz` comprimido e separado por
+  hash de configuração
 - `DOWNSCALE_METHOD` e `DOWNSCALE_FACTORS`: controle do pré-processamento
 - `CIRCLE_DETECTION`, `LEVEL_SET`, `OSTIA_DETECTION`, `REGION_GROWING`: hiperparâmetros das etapas do pipeline
 - `POSTPROCESSING`: refinamento final da máscara

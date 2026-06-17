@@ -15,7 +15,6 @@ _SYMBOL_TO_MODULE = {
     "find_ostia": "ostia_detection",
     # artery_segmentation
     "region_growing_article": "artery_segmentation",
-    "region_growing_segmentation": "artery_segmentation",
     # fuzzy_connectedness
     "build_background_seeds": "fuzzy_connectedness",
     "collect_local_object_seeds": "fuzzy_connectedness",

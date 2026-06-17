@@ -98,7 +98,7 @@ def process_image(img_id, config, base_path, base_save_path):
             config["CIRCLE_DETECTION"],
             base_save_path,
             load_cache=config["LOAD_CACHE"],
-            save_cache=config["SAVE_CACHE"],
+            save_cache=False,
         )
 
         # Segmenta a aorta a partir dos círculos detectados.
@@ -109,7 +109,7 @@ def process_image(img_id, config, base_path, base_save_path):
             config["LEVEL_SET"],
             base_save_path,
             load_cache=config["LOAD_CACHE"],
-            save_cache=config["SAVE_CACHE"],
+            save_cache=False,
             use_gpu=config.get("USE_GPU", False),
         )
 

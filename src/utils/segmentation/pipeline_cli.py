@@ -38,6 +38,12 @@ Exemplos de uso:
   # Usar resolução média (downscale 2x)
   python segmentation_pipeline.py --resolution mid --split val
 
+  # Usar LCC por volume, permitir misses por tolerância e parar após 3 misses
+  python segmentation_pipeline.py --split val --lcc-per-volume --out-of-tolerance-as-miss --aorta-miss-count 3
+
+  # Escolher método de segmentação arterial
+  python segmentation_pipeline.py --split val --artery-method fc
+
   # PROCESSAMENTO EM LOTES (salvamento incremental):
     # Processar em 10 lotes (divide as imagens entre 10 blocos)
     python segmentation_pipeline.py --num-batches 10
@@ -162,6 +168,54 @@ def build_parser(default_base_path, default_base_save_path, default_output_dir):
         action="store_false",
         help="Força CPU nas etapas compatíveis, mesmo se houver GPU disponível.",
     )
+    lcc_group = parser.add_mutually_exclusive_group()
+    lcc_group.add_argument(
+        "--lcc-per-slice",
+        dest="lcc_per_slice",
+        action="store_true",
+        default=None,
+        help="Calcula a maior componente conectada separadamente por fatia.",
+    )
+    lcc_group.add_argument(
+        "--lcc-per-volume",
+        "--no-lcc-per-slice",
+        dest="lcc_per_slice",
+        action="store_false",
+        help="Calcula a maior componente conectada no volume 3D inteiro.",
+    )
+    tolerance_group = parser.add_mutually_exclusive_group()
+    tolerance_group.add_argument(
+        "--out-of-tolerance-as-miss",
+        "--tolerance-as-miss",
+        dest="out_of_tolerance_as_miss",
+        action="store_true",
+        default=None,
+        help="Conta círculo fora da tolerância como miss, em vez de parar imediatamente.",
+    )
+    tolerance_group.add_argument(
+        "--stop-on-out-of-tolerance",
+        "--no-out-of-tolerance-as-miss",
+        "--no-tolerance-as-miss",
+        dest="out_of_tolerance_as_miss",
+        action="store_false",
+        help="Para a localização da aorta no primeiro círculo fora da tolerância.",
+    )
+    parser.add_argument(
+        "--aorta-miss-count",
+        type=int,
+        default=None,
+        help="Número de misses consecutivos permitidos na localização da aorta.",
+    )
+    parser.add_argument(
+        "--artery-segmentation-method",
+        "--artery-method",
+        choices=["rg", "fc", "region_growing", "fuzzy_connectedness"],
+        default=None,
+        help=(
+            "Método de segmentação arterial: 'rg'/'region_growing' ou "
+            "'fc'/'fuzzy_connectedness'."
+        ),
+    )
     parser.add_argument(
         "--downscale-method",
         type=str,
@@ -258,6 +312,8 @@ def parse_pipeline_args(default_base_path, default_base_save_path, default_outpu
         parser.error("--resume-batch deve ser 0 ou maior")
     if args.num_batches <= 0:
         parser.error("--num-batches deve ser maior que 0")
+    if args.aorta_miss_count is not None and args.aorta_miss_count <= 0:
+        parser.error("--aorta-miss-count deve ser maior que 0")
     if args.merge_only and not args.resume_dir:
         parser.error("--merge-only requer --resume-dir com a pasta de saída existente")
 

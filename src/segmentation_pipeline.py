@@ -144,6 +144,19 @@ def build_effective_config(args):
         effective_config["OPENCV_INTERPOLATION"] = args.opencv_interpolation
     if args.use_gpu is not None:
         effective_config["USE_GPU"] = args.use_gpu
+    if args.lcc_per_slice is not None:
+        effective_config["LCC_PER_SLICE"] = args.lcc_per_slice
+
+    circle_config = effective_config.setdefault("CIRCLE_DETECTION", {})
+    if args.out_of_tolerance_as_miss is not None:
+        circle_config["out_of_tolerance_as_miss"] = args.out_of_tolerance_as_miss
+    if args.aorta_miss_count is not None:
+        circle_config["max_slice_miss_threshold"] = args.aorta_miss_count
+
+    if args.artery_segmentation_method is not None:
+        effective_config.setdefault("ARTERY_SEGMENTATION", {})["method"] = (
+            args.artery_segmentation_method
+        )
 
     effective_config["NUM_BATCHES"] = args.num_batches
     return scale_config_to_resolution(effective_config)
@@ -165,6 +178,22 @@ def print_run_settings(args, config, base_path, base_save_path):
     print(
         "🖥️  GPU nas etapas compatíveis: "
         f"{'habilitada' if config.get('USE_GPU', False) else 'desabilitada'}"
+    )
+    circle_config = config.get("CIRCLE_DETECTION", {})
+    print(
+        "🔎 LCC: "
+        f"{'por fatia' if config.get('LCC_PER_SLICE', True) else 'por volume'}"
+    )
+    print(
+        "⭕ Localização da aorta: "
+        f"miss_count={circle_config.get('max_slice_miss_threshold')}, "
+        "fora da tolerância conta como miss="
+        f"{circle_config.get('out_of_tolerance_as_miss', False)}"
+    )
+    artery_config = config.get("ARTERY_SEGMENTATION", {})
+    print(
+        "🫀 Segmentação arterial: "
+        f"{artery_config.get('method', 'region_growing')}"
     )
     print(f"📦 Processamento em {args.num_batches} lotes")
 

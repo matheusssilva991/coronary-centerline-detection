@@ -70,7 +70,6 @@ _LAZY_EXPORTS = {
     "find_aorta_surface": ".segmentation.ostia_detection",
     "find_ostia": ".segmentation.ostia_detection",
     "region_growing_article": ".segmentation.artery_segmentation",
-    "region_growing_segmentation": ".segmentation.artery_segmentation",
     "level_set_segmentation": ".segmentation.aorta_segmentation",
     "remove_leaks_morphology": ".segmentation.aorta_segmentation",
     "detect_aorta_circles": ".segmentation.aorta_localization",

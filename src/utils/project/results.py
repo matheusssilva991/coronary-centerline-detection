@@ -16,6 +16,11 @@ RESULT_COLUMNS = [
     "IMG_ID",
     "dice_artery",
     "artery_voxels",
+    "artery_segmentation_method",
+    "fc_processed_voxels",
+    "fc_effective_alpha",
+    "fc_object_seed_count",
+    "fc_candidate_voxels_final",
     "ostia_found",
     "ostia_status",
     "segmentation_attempted",
@@ -52,6 +57,11 @@ BATCH_TIMING_COLUMNS = [
 READABLE_COLUMN_NAMES = {
     "dice_artery": "artery_dice",
     "artery_voxels": "artery_voxel_count",
+    "artery_segmentation_method": "artery_segmentation_method",
+    "fc_processed_voxels": "fc_processed_voxels",
+    "fc_effective_alpha": "fc_effective_alpha",
+    "fc_object_seed_count": "fc_object_seed_count",
+    "fc_candidate_voxels_final": "fc_candidate_voxels_final",
     "ostia_found": "ostia_detected",
     "ostia_status": "ostia_detection_status",
     "segmentation_attempted": "artery_segmentation_run",
@@ -71,6 +81,12 @@ READABLE_COLUMN_NAMES = {
     "opencv_interpolation": "opencv_interpolation",
     "downscale_factors": "downscale_factors",
     "max_threshold_percentile": "max_threshold_percentile",
+    "lcc_per_slice": "lcc_per_slice",
+    "lcc_mode": "lcc_mode",
+    "configured_artery_segmentation_method": "configured_artery_segmentation_method",
+    "aorta_miss_count": "aorta_miss_count",
+    "aorta_out_of_tolerance_as_miss": "aorta_out_of_tolerance_as_miss",
+    "aorta_interpolate_missed_circles": "aorta_interpolate_missed_circles",
 }
 
 CANONICAL_COLUMN_NAMES = {value: key for key, value in READABLE_COLUMN_NAMES.items()}
@@ -83,6 +99,9 @@ READABLE_BOOL_COLUMNS = {
     "both_ostia_tolerable",
     "left_ostium_correct",
     "right_ostium_correct",
+    "lcc_per_slice",
+    "aorta_out_of_tolerance_as_miss",
+    "aorta_interpolate_missed_circles",
 }
 
 OSTIA_STATUS_READABLE_LABELS = {
@@ -254,6 +273,18 @@ def _format_bool_readable(value: Any) -> str:
     return "yes" if _as_bool_value(value) else "no"
 
 
+def _lcc_mode(config: dict[str, Any]) -> str:
+    """Retorna o modo textual da maior componente conectada usada no threshold."""
+    return "per_slice" if bool(config.get("LCC_PER_SLICE", True)) else "per_volume"
+
+
+def _configured_artery_segmentation_method(config: dict[str, Any]) -> str:
+    """Retorna o método arterial selecionado na configuração efetiva."""
+    return str(
+        config.get("ARTERY_SEGMENTATION", {}).get("method", "region_growing")
+    )
+
+
 def make_readable_results_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     """Converte colunas técnicas do resultado para nomes/valores mais legíveis."""
     readable_df = df.rename(columns=READABLE_COLUMN_NAMES).copy()
@@ -307,6 +338,15 @@ def build_result_row(result: dict[str, Any]) -> dict[str, Any]:
         "IMG_ID": result.get("IMG_ID"),
         "dice_artery": _get_result_value(result, "dice_artery"),
         "artery_voxels": _get_result_value(result, "artery_voxels"),
+        "artery_segmentation_method": _get_result_value(
+            result, "artery_segmentation_method", "region_growing"
+        ),
+        "fc_processed_voxels": _get_result_value(result, "fc_processed_voxels"),
+        "fc_effective_alpha": _get_result_value(result, "fc_effective_alpha"),
+        "fc_object_seed_count": _get_result_value(result, "fc_object_seed_count"),
+        "fc_candidate_voxels_final": _get_result_value(
+            result, "fc_candidate_voxels_final"
+        ),
         "ostia_found": _as_bool_value(_get_result_value(result, "ostia_found", False)),
         "ostia_status": _get_result_value(result, "ostia_status"),
         "segmentation_attempted": _as_bool_value(
@@ -348,6 +388,7 @@ def make_result_dataframe(results):
 def add_config_columns(df: pd.DataFrame, config: dict[str, Any]) -> pd.DataFrame:
     """Adiciona ao DataFrame as colunas de configuração salvas no CSV."""
     df = df.copy()
+    circle_config = config.get("CIRCLE_DETECTION", {})
     df["downscale_method"] = config.get("DOWNSCALE_METHOD", "N/A")
     df["opencv_interpolation"] = (
         config.get("OPENCV_INTERPOLATION", "N/A")
@@ -356,6 +397,18 @@ def add_config_columns(df: pd.DataFrame, config: dict[str, Any]) -> pd.DataFrame
     )
     df["downscale_factors"] = str(config.get("DOWNSCALE_FACTORS", "N/A"))
     df["max_threshold_percentile"] = config.get("MAX_THRESHOLD_PERCENTILE", "N/A")
+    df["lcc_per_slice"] = bool(config.get("LCC_PER_SLICE", True))
+    df["lcc_mode"] = _lcc_mode(config)
+    df["configured_artery_segmentation_method"] = (
+        _configured_artery_segmentation_method(config)
+    )
+    df["aorta_miss_count"] = circle_config.get("max_slice_miss_threshold", "N/A")
+    df["aorta_out_of_tolerance_as_miss"] = circle_config.get(
+        "out_of_tolerance_as_miss", "N/A"
+    )
+    df["aorta_interpolate_missed_circles"] = circle_config.get(
+        "interpolate_missed_circles", "N/A"
+    )
     return df
 
 
@@ -456,6 +509,36 @@ def _vesselness_metadata(config: dict[str, Any], key: str) -> dict[str, Any]:
     }
 
 
+def _runtime_config_metadata(config: dict[str, Any]) -> dict[str, Any]:
+    """Resume os parâmetros efetivos que diferenciam runs completos."""
+    circle_config = config.get("CIRCLE_DETECTION", {})
+    return {
+        "use_gpu": config.get("USE_GPU"),
+        "load_cache": config.get("LOAD_CACHE"),
+        "save_cache": config.get("SAVE_CACHE"),
+        "downscale_method": config.get("DOWNSCALE_METHOD"),
+        "opencv_interpolation": config.get("OPENCV_INTERPOLATION")
+        if config.get("DOWNSCALE_METHOD") == "opencv"
+        else None,
+        "downscale_factors": config.get("DOWNSCALE_FACTORS"),
+        "min_threshold": config.get("MIN_THRESHOLD"),
+        "max_threshold_percentile": config.get("MAX_THRESHOLD_PERCENTILE"),
+        "lcc_per_slice": bool(config.get("LCC_PER_SLICE", True)),
+        "lcc_mode": _lcc_mode(config),
+        "aorta_miss_count": circle_config.get("max_slice_miss_threshold"),
+        "aorta_out_of_tolerance_as_miss": circle_config.get(
+            "out_of_tolerance_as_miss"
+        ),
+        "aorta_interpolate_missed_circles": circle_config.get(
+            "interpolate_missed_circles"
+        ),
+        "aorta_candidate_selection_strategy": circle_config.get(
+            "candidate_selection_strategy"
+        ),
+        "artery_segmentation_method": _configured_artery_segmentation_method(config),
+    }
+
+
 def build_metadata(
     split_name,
     config,
@@ -509,8 +592,12 @@ def build_metadata(
             if config.get("DOWNSCALE_METHOD") == "opencv"
             else None,
             "downscale_factors": config.get("DOWNSCALE_FACTORS"),
+            "min_threshold": config.get("MIN_THRESHOLD"),
             "max_threshold_percentile": config.get("MAX_THRESHOLD_PERCENTILE"),
+            "lcc_per_slice": bool(config.get("LCC_PER_SLICE", True)),
+            "lcc_mode": _lcc_mode(config),
         },
+        "runtime_config": _runtime_config_metadata(config),
         "vesselness_config": {
             "ostios": _vesselness_metadata(config, "VESSELNESS_AORTA"),
             "artery": _vesselness_metadata(config, "VESSELNESS_ARTERY"),
@@ -518,11 +605,17 @@ def build_metadata(
         "circle_detection_config": config.get("CIRCLE_DETECTION"),
         "level_set_config": config.get("LEVEL_SET"),
         "ostia_detection_config": config.get("OSTIA_DETECTION"),
+        "artery_segmentation_config": config.get("ARTERY_SEGMENTATION"),
         "region_growing_config": config.get("REGION_GROWING"),
+        "fuzzy_connectedness_config": config.get("FUZZY_CONNECTEDNESS"),
         "postprocessing_config": config.get("POSTPROCESSING"),
         "cache_config": {
             "load_cache": config.get("LOAD_CACHE"),
             "save_cache": config.get("SAVE_CACHE"),
+            "saved_stages": ["vesselness"] if config.get("SAVE_CACHE") else [],
+            "skipped_save_stages": ["aorta_circles", "aorta_mask"],
+            "vesselness_cache_format": "npz_compressed_float32_or_original_dtype",
+            "vesselness_cache_key": "image_id_plus_config_hash",
         },
         "evaluation_config": {
             "tolerable_distance_mm": config["OSTIA_VALIDATION"][

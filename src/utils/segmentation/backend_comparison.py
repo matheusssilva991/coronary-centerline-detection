@@ -22,7 +22,7 @@ from ..processing.binary_operations import binary_closing, binary_dilation
 from ..processing.gpu_utils import GPU_AVAILABLE, cp
 from ..project.config import load_config_json, scale_config_to_resolution
 from ..utils.metrics import dice_score
-from .artery_segmentation import region_growing_segmentation
+from .artery_segmentation import normal_region_growing_from_ostia
 from .ostia_detection import (
     check_ostium_intersection,
     find_aorta_surface,
@@ -367,47 +367,24 @@ def _artery_steps(
         ),
     )
 
-    rg_config = config["REGION_GROWING"]
-    region_growing_params = {
-        "threshold": (vesselness_artery.max() - vesselness_artery.min())
-        / rg_config["threshold_divisor"],
-        "max_volume": rg_config["max_volume"],
-        "min_vesselness": vesselness_artery.max()
-        * rg_config["min_vesselness_fraction"],
-        "relaxed_floor_factor": rg_config["relaxed_floor_factor"],
-        "switch_at_voxels": rg_config["switch_at_voxels"],
-        "comparison_window": rg_config["comparison_window"],
-        "smooth_relaxation": rg_config["smooth_relaxation"],
-        "verbose": False,
-    }
-
-    def run_region_growing() -> Tuple[Any, Any]:
-        """Segmenta artéria esquerda/direita separadamente por óstio."""
-        left = (
-            region_growing_segmentation(
-                vesselness_artery, seed_point=ostia_left, **region_growing_params
-            )
-            if ostia_left is not None
-            else np.zeros_like(vesselness_artery, dtype=np.uint8)
+    def run_region_growing() -> Any:
+        """Executa o mesmo region growing usado pelo pipeline principal."""
+        return normal_region_growing_from_ostia(
+            vesselness_artery,
+            ostia_left,
+            ostia_right,
+            config,
         )
-        right = (
-            region_growing_segmentation(
-                vesselness_artery, seed_point=ostia_right, **region_growing_params
-            )
-            if ostia_right is not None
-            else np.zeros_like(vesselness_artery, dtype=np.uint8)
-        )
-        return left, right
 
-    left_mask, right_mask = _time_call(
+    raw_mask = _time_call(
         timings,
         "artery_region_growing",
         use_gpu,
         run_region_growing,
     )
 
-    # Une as máscaras esquerda/direita antes do pós-processamento.
-    raw_mask = ((left_mask > 0) | (right_mask > 0)).astype(np.uint8)
+    # Pós-processa a máscara bruta antes da comparação final.
+    raw_mask = (raw_mask > 0).astype(np.uint8)
     post_config = config["POSTPROCESSING"]
 
     def run_postprocessing() -> Tuple[Any, Any]:

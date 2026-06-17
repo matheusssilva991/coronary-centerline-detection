@@ -1,56 +1,68 @@
-# Organização dos outputs de segmentação
+# Organizacao dos outputs de segmentacao
 
-Esta pasta guarda os resultados do pipeline de segmentação e das análises
-derivadas dele. A ideia é separar claramente:
+Esta pasta guarda os resultados do pipeline de segmentacao, comparacoes de
+backend e analises derivadas. A ideia principal e separar:
 
-- execuções completas do pipeline;
-- resultados numéricos;
-- exemplos visuais;
-- análises feitas em notebooks;
-- resultados oficiais/canônicos;
-- resultados antigos que ficam apenas como histórico.
+- execucoes completas do pipeline;
+- resultados oficiais usados como referencia;
+- experimentos e sweeps de parametros;
+- comparacoes CPU/GPU;
+- outputs exploratorios de notebooks.
 
-## Estrutura geral
+## Estrutura atual
 
 ```text
 output/segmentation/
   runs/
   canonical/
   analysis/
-  8.final_results/
-  val_diff/
+  backend_comparison/
   README.md
 ```
 
-## `runs/`: execuções do pipeline
+Pastas antigas, como `8.final_results/` ou `val_diff/`, quando existirem, devem
+ser tratadas como historico. Resultados novos devem ir para `runs/`, `analysis/`
+ou `backend_comparison/`.
 
-Cada vez que o `segmentation_pipeline.py` é executado sem `--resume-dir`, uma
-nova pasta é criada em:
+## `runs/`: execucoes completas do pipeline
+
+Cada execucao nova do `src/segmentation_pipeline.py` cria uma pasta em:
 
 ```text
 output/segmentation/runs/<resolucao>_res/<timestamp>/
 ```
 
-Exemplo:
+Exemplos:
 
 ```text
-output/segmentation/runs/mid_res/2026-06-03_09-31-08/
+output/segmentation/runs/mid_res/2026-06-05_20-00-43/
+output/segmentation/runs/high_res/2026-06-15_09-24-23/
 ```
 
-Dentro de cada run, a estrutura principal é:
+Alguns estudos podem ficar agrupados por tema antes do timestamp, por exemplo:
 
 ```text
-config/
-logs/
-numeric/
+output/segmentation/runs/mid_res/train_diff/<timestamp>/
+output/segmentation/runs/mid_res/downscale_method/<timestamp>/
+output/segmentation/runs/mid_res/circle_detection_gpu_diff/<timestamp>/
 ```
 
-A pasta `visual/` é criada sob demanda, apenas quando algum notebook ou script
-salva exemplos visuais daquele run.
+Use esses agrupamentos quando quiser comparar muitas execucoes do mesmo tipo sem
+misturar tudo na raiz de `mid_res/`.
+
+### Estrutura de uma run
+
+```text
+<run>/
+  config/
+  logs/
+  numeric/
+  visual/        # criada apenas quando houver artefatos visuais
+```
 
 ### `config/`
 
-Guarda informações que explicam como aquele run foi produzido.
+Guarda os arquivos que explicam como a run foi produzida.
 
 ```text
 config/
@@ -58,32 +70,31 @@ config/
   split_ids.json
 ```
 
-- `effective_pipeline_config.json`: configuração efetiva usada no run.
-- `split_ids.json`: IDs processados em cada conjunto (`train`, `val`, `test`) e,
-  quando aplicável, qual arquivo de split foi usado.
+- `effective_pipeline_config.json`: configuracao efetiva usada no run, ja com
+  overrides, resolucao e parametros escalados quando aplicavel.
+- `split_ids.json`: IDs processados por split e, quando usado, o arquivo de
+  split alternativo.
 
-Use essa pasta quando quiser responder perguntas como:
+Use essa pasta para responder:
 
-- Esse resultado usou `mid_res` ou `high_res`?
-- Quais `sigmas`, raios de Hough e thresholds estavam configurados?
-- Quais IDs foram processados?
-- Foi usado o split padrão ou um split alternativo, como `train90`?
+- quais parametros foram usados;
+- quais IDs foram processados;
+- se era `mid_res` ou `high_res`;
+- se o split foi o padrao ou um split alternativo.
 
 ### `logs/`
-
-Guarda o log da execução.
 
 ```text
 logs/
   pipeline.log
 ```
 
-Use essa pasta para investigar falhas, retomadas de lote, tempos de execução e
-mensagens detalhadas do pipeline.
+Use para investigar falhas, retomadas, mensagens detalhadas e progresso da
+execucao.
 
 ### `numeric/`
 
-Guarda os resultados tabulares e metadados gerados diretamente pelo pipeline.
+Guarda os CSVs e metadados numéricos do pipeline.
 
 ```text
 numeric/
@@ -93,222 +104,174 @@ numeric/
   ostios_<split>_batch_timings.csv
 ```
 
-Exemplos:
+Arquivos principais:
 
-```text
-numeric/ostios_train_summary.csv
-numeric/ostios_train_metadata.json
-numeric/ostios_train_lote_1_summary.csv
-numeric/ostios_train_batch_timings.csv
-```
+- `ostios_<split>_summary.csv`: resultado consolidado final do split.
+- `ostios_<split>_metadata.json`: metadados da execucao e resumo agregado.
+- `ostios_<split>_lote_<n>_summary.csv`: resultado parcial de cada lote.
+- `ostios_<split>_batch_timings.csv`: tempo individual de cada lote.
 
-Arquivos de lote:
+Em caso de queda do servidor, os lotes ja salvos continuam em `numeric/`. Use
+`--resume-dir` e `--resume-batch` para continuar a partir do lote desejado.
 
-- `ostios_train_lote_1_summary.csv`
-- `ostios_train_lote_2_summary.csv`
-- etc.
+O arquivo de tempos por lote registra:
 
-Arquivo consolidado:
+- `batch_number`;
+- `num_images`;
+- `started_at`;
+- `finished_at`;
+- `duration_seconds`;
+- `duration_minutes`;
+- `duration_hours`;
+- `result_file`.
 
-- `ostios_train_summary.csv`
-
-O consolidado é gerado pela junção dos lotes. Se o servidor cair, os lotes já
-salvos continuam nessa pasta e podem ser usados com `--resume-dir` ou
-`--merge-only`.
-
-O arquivo `ostios_<split>_batch_timings.csv` guarda o tempo de cada lote. Ele é
-atualizado incrementalmente após cada lote salvo.
-
-Colunas principais:
-
-- `batch_number`: número do lote.
-- `num_images`: quantidade de imagens no lote.
-- `started_at`: horário de início do lote.
-- `finished_at`: horário de término do lote.
-- `duration_seconds`: duração em segundos.
-- `duration_minutes`: duração em minutos.
-- `duration_hours`: duração em horas.
-- `result_file`: CSV de resultado daquele lote.
-
-Em uma retomada com `--resume-batch`, o pipeline usa esse arquivo para somar os
-tempos conhecidos dos lotes anteriores com os novos lotes processados. Se um run
-antigo não tiver esse arquivo, o pipeline consegue retomar pelos CSVs, mas não
-consegue reconstruir o tempo dos lotes antigos.
-
-O metadata final registra:
-
-- `execution_time_seconds`, `execution_time_minutes`, `execution_time_hours`:
-  tempo total conhecido pelos lotes.
-- `current_run_execution_time_seconds`, `current_run_execution_time_minutes`,
-  `current_run_execution_time_hours`: tempo apenas da execução atual.
-- `batch_timing_summary`: resumo dos tempos por lote e lista de lotes sem tempo
-  salvo.
-- `batch_timings`: registros individuais de tempo por lote.
+O metadata final tambem registra tempos em segundos, minutos e horas, incluindo
+tempo total conhecido por lote e tempo apenas da execucao atual.
 
 ### `visual/`
 
-Reservado para exemplos visuais associados a um run específico.
+Reservado para HTMLs, PNGs ou outros exemplos visuais ligados diretamente a uma
+run. O pipeline nao cria essa pasta quando nao ha nada visual para salvar.
 
-Essa pasta não é criada automaticamente pelo pipeline quando não há nada para
-salvar nela. Ela deve aparecer apenas quando algum notebook/script gerar HTML,
-PNG ou outro artefato visual ligado diretamente àquele run.
-
-Sugestão de organização:
+Sugestao:
 
 ```text
 visual/
   ostia_examples/
-    correct/
-    tolerable/
-    wrong/
-    not_found/
   artery_examples/
   hough_examples/
 ```
 
-Use essa pasta quando o exemplo visual depende diretamente daquele run. Por
-exemplo: HTML 3D de um caso em que os óstios foram encontrados incorretamente
-durante aquela execução.
+Use `visual/` quando a figura depende daquela run especifica. Exemplos soltos ou
+mais exploratorios devem ir para `analysis/visual_examples/`.
 
-## `canonical/`: resultados oficiais atuais
+## `canonical/`: resultados oficiais de referencia
 
-O `canonical/` serve para apontar quais runs devem ser considerados os
-resultados oficiais atuais para notebooks e comparações.
+`canonical/` guarda os resultados que devem ser considerados referencia atual
+para notebooks, comparacoes e relatorios.
 
-Exemplo:
+Estrutura:
 
 ```text
-output/segmentation/canonical/
+canonical/
   mid_res/
-    train/
-    val/
-    test/
+    train/<timestamp>/
+    val/<timestamp>/
+    test/<timestamp>/
   high_res/
-    train/
-    val/
-    test/
+    train/<timestamp>/
+    val/<timestamp>/
+    test/<timestamp>/
 ```
 
-A motivação é simples: você pode ter muitos runs em `runs/`, mas normalmente
-quer que os notebooks usem um resultado de referência.
-
-Exemplo de situação:
+Exemplos atuais em `mid_res`:
 
 ```text
-runs/mid_res/2026-06-01_10-00-00/
-runs/mid_res/2026-06-02_10-00-00/
-runs/mid_res/2026-06-03_10-00-00/
+canonical/mid_res/train/2026-06-03_09-31-08/
+canonical/mid_res/val/2026-06-05_14-46-06/
+canonical/mid_res/test/2026-06-05_20-00-43/
 ```
 
-Se o run de `2026-06-03_10-00-00` virou o resultado oficial de teste, o
-`canonical/mid_res/test/` deve apontar para ele ou conter uma cópia dos arquivos
-numéricos dele.
-
-Assim os notebooks podem sempre procurar:
+Cada pasta canonica deve manter a mesma estrutura de uma run:
 
 ```text
-output/segmentation/canonical/mid_res/test/
+config/
+logs/
+numeric/
+visual/        # se existir
 ```
 
-em vez de depender de um timestamp fixo.
+Regra pratica: `runs/` pode ter varias tentativas; `canonical/` deve apontar ou
+conter apenas o resultado escolhido como referencia.
 
-Se `canonical/` estiver vazio, os helpers dos notebooks ainda usam os resultados
-legados em `8.final_results/` como fallback.
+## `analysis/`: experimentos e analises derivadas
 
-## `analysis/`: análises derivadas
-
-Use `analysis/` para outputs que não são uma execução direta do pipeline, mas
-sim produtos de notebooks, comparações ou estudos de caso.
+Use `analysis/` para outputs que nao sao uma execucao direta do pipeline
+principal.
 
 Estrutura atual:
 
 ```text
 analysis/
-  bad_cases/
-  cases_analysis/
-  ia_vs_math/
-  resolution_comparison/
-  subset_reports/
+  fuzzy_sweep/
+  fuzzy_pipeline_comparison/
   visual_examples/
 ```
 
-### `analysis/bad_cases/`
+### `analysis/fuzzy_pipeline_comparison/`
 
-Casos ruins exportados por notebooks ou scripts de análise.
+Resultados do notebook `src/fuzzy_pipeline_comparison.ipynb`. Use para comparar:
 
-Exemplos:
+- threshold HU normal;
+- threshold fuzzy alpha-cut;
+- contextual fuzzy ponderando o vesselness arterial;
+- region growing;
+- fuzzy connectedness;
+- combinacao contextual fuzzy + fuzzy connectedness.
 
-- casos com óstios não encontrados;
-- casos com apenas um óstio correto;
-- casos em que `mid_res` falha e `high_res` acerta;
-- casos em que ambos falham.
-
-### `analysis/cases_analysis/`
-
-Outputs do notebook de análise de casos.
-
-Sugestão:
+Estrutura esperada:
 
 ```text
-cases_analysis/
-  cache/
-  visual/
+fuzzy_pipeline_comparison/
+  <run_name>/
+    summary/ranking.csv
+    results/image_results.csv
+    parameters/variant_parameters.csv
 ```
 
-- `cache/`: arquivos intermediários reutilizáveis.
-- `visual/`: HTMLs, imagens ou visualizações 3D.
+### `analysis/fuzzy_sweep/`
 
-### `analysis/ia_vs_math/`
+Historico de varreduras exploratorias antigas. Ela pode ter subpastas como:
 
-Resultados de comparação entre IA e método matemático.
+```text
+fuzzy_sweep/
+  runs/<run_name>/
+    summary/
+    results/
+    parameters/
+    partial/
+    debug/       # opcional
+```
 
-Use aqui para tabelas e gráficos de comparação, especialmente quando ambos os
-métodos foram filtrados para os mesmos IDs.
+### Pastas antigas de sweep
 
-### `analysis/resolution_comparison/`
+Qualquer pasta antiga de varredura que ainda existir em `analysis/` deve ser
+tratada como historico. Os scripts de sweep foram removidos para manter os
+experimentos atuais mais simples.
 
-Comparações entre resoluções, como `mid_res` vs `high_res`.
-
-Exemplos:
-
-- Dice por resolução;
-- status dos óstios por resolução;
-- casos que melhoram/pioram ao mudar resolução;
-- interseção de erros entre resoluções.
-
-### `analysis/subset_reports/`
-
-Relatórios agregados por subset (`train`, `val`, `test`) ou por tamanho de
-treino, como experimentos com `train30`, `train90`, `train150`.
 
 ### `analysis/visual_examples/`
 
-Exemplos visuais soltos que não pertencem claramente a um único run ou que foram
-gerados por notebooks exploratórios.
+Figuras e exemplos visuais que nao pertencem claramente a uma run especifica.
 
-Exemplo atual:
+Exemplo:
 
 ```text
 analysis/visual_examples/ostia_3d/
 ```
 
-## `8.final_results/` e `val_diff/`: legado
+## `backend_comparison/`: comparacao CPU/GPU
 
-Essas pastas são resultados antigos.
+Resultados do comparador de backend ficam em:
 
 ```text
-8.final_results/
-val_diff/
+backend_comparison/<resolucao>_res/<timestamp>/
 ```
 
-Elas devem ser mantidas como referência histórica, mas os novos resultados devem
-ir para `runs/`.
+Arquivos principais:
 
-Não é necessário mover tudo antigo imediatamente. Quando algum resultado antigo
-for escolhido como referência atual, ele pode ser copiado ou referenciado em
-`canonical/`.
+```text
+stage_comparison.csv
+ostia_comparison.csv
+timing_comparison.csv
+run_config.json
+```
 
-## Como rodar e encontrar os resultados
+Use essa pasta para investigar diferencas entre CPU e GPU por etapa do pipeline,
+especialmente vesselness, localizacao de circulos, segmentacao de aorta,
+deteccao de ostios e segmentacao arterial.
+
+## Comandos uteis
 
 ### Rodar treino em mid resolution
 
@@ -319,31 +282,28 @@ uv run python src/segmentation_pipeline.py \
   --num-batches 5
 ```
 
-Saída:
+Saida:
 
 ```text
 output/segmentation/runs/mid_res/<timestamp>/
 ```
 
-CSV final:
+### Rodar high resolution
 
-```text
-output/segmentation/runs/mid_res/<timestamp>/numeric/ostios_train_summary.csv
+```bash
+uv run python src/segmentation_pipeline.py \
+  --resolution high \
+  --split train \
+  --num-batches 5
 ```
 
-Metadata:
+Saida:
 
 ```text
-output/segmentation/runs/mid_res/<timestamp>/numeric/ostios_train_metadata.json
+output/segmentation/runs/high_res/<timestamp>/
 ```
 
-IDs usados:
-
-```text
-output/segmentation/runs/mid_res/<timestamp>/config/split_ids.json
-```
-
-### Rodar treino com split alternativo de 90 imagens
+### Rodar com split alternativo
 
 ```bash
 uv run python src/segmentation_pipeline.py \
@@ -353,11 +313,11 @@ uv run python src/segmentation_pipeline.py \
   --split-config config/imagecas_splits_train90.json
 ```
 
-Para voltar ao split normal, remova `--split-config`.
+Para voltar ao split padrao, remova `--split-config`.
 
-### Retomar uma execução que caiu
+### Retomar uma execucao que caiu
 
-Se caiu no lote 3:
+Se caiu antes de terminar o lote 3:
 
 ```bash
 uv run python src/segmentation_pipeline.py \
@@ -368,13 +328,23 @@ uv run python src/segmentation_pipeline.py \
   --resume-dir output/segmentation/runs/mid_res/<timestamp>
 ```
 
-O pipeline procura os lotes em:
+O pipeline volta a salvar os proximos lotes como `lote_3`, `lote_4`, etc. Se
+voce retomou do lote 11, os arquivos novos continuam como `lote_11`,
+`lote_12`, e assim por diante.
 
-```text
-output/segmentation/runs/mid_res/<timestamp>/numeric/
+### Retomar varios splits
+
+```bash
+uv run python src/segmentation_pipeline.py \
+  --split all \
+  --num-batches 5 \
+  --resume-batches train=0,val=3,test=0 \
+  --resume-dir output/segmentation/runs/mid_res/<timestamp>
 ```
 
-### Apenas consolidar lotes já processados
+Use `0` para splits que nao devem ser reprocessados naquela retomada.
+
+### Apenas consolidar lotes existentes
 
 ```bash
 uv run python src/segmentation_pipeline.py \
@@ -383,12 +353,31 @@ uv run python src/segmentation_pipeline.py \
   --resume-dir output/segmentation/runs/mid_res/<timestamp>
 ```
 
-## Regra prática
+Esse modo nao reprocessa imagens. Ele junta os CSVs de lote existentes e
+atualiza o metadata.
 
-- Resultado bruto do pipeline: `runs/<resolucao>_res/<timestamp>/numeric/`
-- Configuração e IDs do run: `runs/<resolucao>_res/<timestamp>/config/`
-- Log do run: `runs/<resolucao>_res/<timestamp>/logs/`
-- Visual ligado a um run: `runs/<resolucao>_res/<timestamp>/visual/`
-- Visual/análise exploratória: `analysis/`
-- Resultado oficial para notebooks: `canonical/`
-- Resultado antigo: `8.final_results/` ou `val_diff/`
+### Forcar CPU ou GPU
+
+```bash
+uv run python src/segmentation_pipeline.py --split train --gpu
+uv run python src/segmentation_pipeline.py --split train --no-gpu
+```
+
+## Como encontrar rapidamente
+
+- Resultado bruto do pipeline:
+  `runs/<resolucao>_res/<timestamp>/numeric/`
+- Resultado bruto agrupado por estudo:
+  `runs/<resolucao>_res/<tema>/<timestamp>/numeric/`
+- Configuracao e IDs:
+  `runs/<resolucao>_res/<timestamp>/config/`
+- Log:
+  `runs/<resolucao>_res/<timestamp>/logs/pipeline.log`
+- Resultado oficial:
+  `canonical/<resolucao>_res/<split>/<timestamp>/numeric/`
+- Comparacao fuzzy/contextual/FC atual:
+  `analysis/fuzzy_pipeline_comparison/<run_name>/`
+- Sweeps exploratorios antigos:
+  `analysis/fuzzy_sweep/runs/<run_name>/`
+- Comparacao CPU/GPU:
+  `backend_comparison/<resolucao>_res/<timestamp>/`

@@ -4,6 +4,8 @@ Este módulo concentra as etapas que transformam um caso ImageCAS bruto em
 volumes prontos para detecção de aorta/óstios e segmentação arterial.
 """
 
+import hashlib
+import json
 from typing import Any, Dict
 
 import cv2
@@ -20,6 +22,46 @@ from ..processing.preprocessing import (
     run_core_preprocessing_pipeline,
 )
 from ..utils.nifti_io import load_raw_img_and_label
+
+
+def _json_safe_cache_value(value: Any) -> Any:
+    """Converte valores comuns para montar uma assinatura estável de cache."""
+    if isinstance(value, dict):
+        return {
+            str(key): _json_safe_cache_value(item)
+            for key, item in sorted(value.items())
+        }
+    if isinstance(value, (list, tuple)):
+        return [_json_safe_cache_value(item) for item in value]
+    if hasattr(value, "tolist"):
+        return _json_safe_cache_value(value.tolist())
+    if hasattr(value, "item"):
+        try:
+            return value.item()
+        except ValueError:
+            pass
+    return value
+
+
+def _vesselness_cache_signature(
+    image: Any,
+    vesselness_config: Dict[str, Any],
+    use_gpu: bool,
+    spacing: Any,
+) -> str:
+    """Gera hash curto para separar caches por parâmetros e resolução."""
+    payload = {
+        "version": 2,
+        "shape": list(np.asarray(image).shape),
+        "dtype": str(np.asarray(image).dtype),
+        "use_gpu": bool(use_gpu),
+        "spacing": _json_safe_cache_value(spacing),
+        "vesselness_config": _json_safe_cache_value(vesselness_config),
+    }
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode(
+        "utf-8"
+    )
+    return hashlib.sha1(encoded).hexdigest()[:12]
 
 
 def load_and_preprocess_image(
@@ -99,6 +141,13 @@ def get_or_compute_vesselness(
 
     if method != "normal":
         cache_dir = f"{cache_dir}_{method}"
+    cache_signature = _vesselness_cache_signature(
+        image,
+        vesselness_config,
+        use_gpu,
+        spacing,
+    )
+    cache_dir = f"{cache_dir}/{cache_signature}"
 
     # Reutiliza cache quando disponível para evitar recalcular Frangi.
     if load_cache:

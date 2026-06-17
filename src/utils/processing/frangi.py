@@ -357,8 +357,11 @@ def save_vesselness_cache(
     vesselness_i: Any, img_id: Any, cache_dir: str = "../cache"
 ) -> None:
     """
-    Salva o mapa de vesselness em cache.
-    Converte para NumPy se necessário.
+    Salva o mapa de vesselness em cache comprimido sem alterar dtype.
+
+    O formato atual usa ``.npz`` com compressão lossless. Isso reduz uso de
+    disco sem converter para float16, então evita pequenas diferenças numéricas
+    nos resultados.
 
     Args:
         vesselness_i: Mapa de vesselness (NumPy ou CuPy array)
@@ -367,10 +370,9 @@ def save_vesselness_cache(
     """
     os.makedirs(cache_dir, exist_ok=True)
     # Converte para NumPy se necessário
-    vesselness_i = to_cpu(vesselness_i)
-    cache_path = os.path.join(cache_dir, f"vesselness_{img_id}.pkl")
-    with open(cache_path, "wb") as f:
-        pickle.dump(vesselness_i, f)
+    vesselness_i = np.asarray(to_cpu(vesselness_i))
+    cache_path = os.path.join(cache_dir, f"vesselness_{img_id}.npz")
+    np.savez_compressed(cache_path, vesselness=vesselness_i)
 
 
 def load_vesselness_cache(
@@ -386,8 +388,14 @@ def load_vesselness_cache(
     Returns:
         vesselness_i como NumPy array, ou None se não encontrado
     """
-    cache_path = os.path.join(cache_dir, f"vesselness_{img_id}.pkl")
-    if os.path.exists(cache_path):
-        with open(cache_path, "rb") as f:
+    compressed_cache_path = os.path.join(cache_dir, f"vesselness_{img_id}.npz")
+    if os.path.exists(compressed_cache_path):
+        with np.load(compressed_cache_path) as data:
+            return data["vesselness"]
+
+    # Compatibilidade com caches antigos gerados em pickle.
+    legacy_cache_path = os.path.join(cache_dir, f"vesselness_{img_id}.pkl")
+    if os.path.exists(legacy_cache_path):
+        with open(legacy_cache_path, "rb") as f:
             return pickle.load(f)
     return None
