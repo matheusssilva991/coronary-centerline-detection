@@ -1,0 +1,494 @@
+{
+  "split": "train",
+  "split_sizes": "train:30,val:30",
+  "sample_size": 30,
+  "start_index": 0,
+  "ids": [
+    28,
+    380,
+    854,
+    937,
+    315,
+    428,
+    752,
+    13,
+    538,
+    965,
+    447,
+    836,
+    603,
+    676,
+    44,
+    129,
+    518,
+    793,
+    550,
+    631,
+    330,
+    90,
+    608,
+    887,
+    175,
+    760,
+    696,
+    194,
+    305,
+    344,
+    867,
+    450,
+    788,
+    362,
+    10,
+    605,
+    23,
+    553,
+    922,
+    682,
+    934,
+    737,
+    510,
+    2,
+    420,
+    881,
+    11,
+    906,
+    251,
+    409,
+    134,
+    822,
+    248,
+    907,
+    873,
+    376,
+    821,
+    988,
+    750,
+    459
+  ],
+  "image_items": [
+    {
+      "split": "train",
+      "IMG_ID": 28
+    },
+    {
+      "split": "train",
+      "IMG_ID": 380
+    },
+    {
+      "split": "train",
+      "IMG_ID": 854
+    },
+    {
+      "split": "train",
+      "IMG_ID": 937
+    },
+    {
+      "split": "train",
+      "IMG_ID": 315
+    },
+    {
+      "split": "train",
+      "IMG_ID": 428
+    },
+    {
+      "split": "train",
+      "IMG_ID": 752
+    },
+    {
+      "split": "train",
+      "IMG_ID": 13
+    },
+    {
+      "split": "train",
+      "IMG_ID": 538
+    },
+    {
+      "split": "train",
+      "IMG_ID": 965
+    },
+    {
+      "split": "train",
+      "IMG_ID": 447
+    },
+    {
+      "split": "train",
+      "IMG_ID": 836
+    },
+    {
+      "split": "train",
+      "IMG_ID": 603
+    },
+    {
+      "split": "train",
+      "IMG_ID": 676
+    },
+    {
+      "split": "train",
+      "IMG_ID": 44
+    },
+    {
+      "split": "train",
+      "IMG_ID": 129
+    },
+    {
+      "split": "train",
+      "IMG_ID": 518
+    },
+    {
+      "split": "train",
+      "IMG_ID": 793
+    },
+    {
+      "split": "train",
+      "IMG_ID": 550
+    },
+    {
+      "split": "train",
+      "IMG_ID": 631
+    },
+    {
+      "split": "train",
+      "IMG_ID": 330
+    },
+    {
+      "split": "train",
+      "IMG_ID": 90
+    },
+    {
+      "split": "train",
+      "IMG_ID": 608
+    },
+    {
+      "split": "train",
+      "IMG_ID": 887
+    },
+    {
+      "split": "train",
+      "IMG_ID": 175
+    },
+    {
+      "split": "train",
+      "IMG_ID": 760
+    },
+    {
+      "split": "train",
+      "IMG_ID": 696
+    },
+    {
+      "split": "train",
+      "IMG_ID": 194
+    },
+    {
+      "split": "train",
+      "IMG_ID": 305
+    },
+    {
+      "split": "train",
+      "IMG_ID": 344
+    },
+    {
+      "split": "val",
+      "IMG_ID": 867
+    },
+    {
+      "split": "val",
+      "IMG_ID": 450
+    },
+    {
+      "split": "val",
+      "IMG_ID": 788
+    },
+    {
+      "split": "val",
+      "IMG_ID": 362
+    },
+    {
+      "split": "val",
+      "IMG_ID": 10
+    },
+    {
+      "split": "val",
+      "IMG_ID": 605
+    },
+    {
+      "split": "val",
+      "IMG_ID": 23
+    },
+    {
+      "split": "val",
+      "IMG_ID": 553
+    },
+    {
+      "split": "val",
+      "IMG_ID": 922
+    },
+    {
+      "split": "val",
+      "IMG_ID": 682
+    },
+    {
+      "split": "val",
+      "IMG_ID": 934
+    },
+    {
+      "split": "val",
+      "IMG_ID": 737
+    },
+    {
+      "split": "val",
+      "IMG_ID": 510
+    },
+    {
+      "split": "val",
+      "IMG_ID": 2
+    },
+    {
+      "split": "val",
+      "IMG_ID": 420
+    },
+    {
+      "split": "val",
+      "IMG_ID": 881
+    },
+    {
+      "split": "val",
+      "IMG_ID": 11
+    },
+    {
+      "split": "val",
+      "IMG_ID": 906
+    },
+    {
+      "split": "val",
+      "IMG_ID": 251
+    },
+    {
+      "split": "val",
+      "IMG_ID": 409
+    },
+    {
+      "split": "val",
+      "IMG_ID": 134
+    },
+    {
+      "split": "val",
+      "IMG_ID": 822
+    },
+    {
+      "split": "val",
+      "IMG_ID": 248
+    },
+    {
+      "split": "val",
+      "IMG_ID": 907
+    },
+    {
+      "split": "val",
+      "IMG_ID": 873
+    },
+    {
+      "split": "val",
+      "IMG_ID": 376
+    },
+    {
+      "split": "val",
+      "IMG_ID": 821
+    },
+    {
+      "split": "val",
+      "IMG_ID": 988
+    },
+    {
+      "split": "val",
+      "IMG_ID": 750
+    },
+    {
+      "split": "val",
+      "IMG_ID": 459
+    }
+  ],
+  "resolution": "mid",
+  "config_path": "/data04/home/projetos/dac_seg_dlag/mssilva.ppgmc/matheus_codes/coronary-centerline-detection/config/pipeline_config.json",
+  "base_path": "/data04/home/mpmaia/ImageCAS/database/1-1000",
+  "load_cache": false,
+  "save_cache": false,
+  "use_gpu": true,
+  "variants": [
+    {
+      "name": "normal_rg",
+      "description": "Normal threshold + region growing baseline.",
+      "threshold_rule": "-300 <= I <= P99.7",
+      "vesselness_rule": "no contextual weighting",
+      "overrides": {
+        "threshold_mode": "normal",
+        "contextual_apply_to": "none",
+        "artery_method": "region_growing"
+      }
+    },
+    {
+      "name": "fuzzy_threshold_rg",
+      "description": "Contextual-object fuzzy threshold + region growing.",
+      "threshold_rule": "contextual object argmax, base parameters",
+      "vesselness_rule": "no contextual weighting",
+      "overrides": {
+        "threshold_mode": "contextual_object",
+        "contextual.weight_floor": 0.15,
+        "contextual.dense_power": 2.0,
+        "contextual.weight_mode": "dense_only",
+        "contextual.soft_margin_hu": 160,
+        "contextual.object_percentile": 99.8,
+        "contextual.dense_percentile": 99.95,
+        "contextual.smooth_radius": 1,
+        "contextual.smooth_mode": "mean",
+        "contextual_apply_to": "none",
+        "artery_method": "region_growing"
+      }
+    },
+    {
+      "name": "fuzzy_threshold_balanced_rg",
+      "description": "Moderate contextual-object fuzzy threshold + region growing.",
+      "threshold_rule": "contextual object argmax, moderate parameters",
+      "vesselness_rule": "no contextual weighting",
+      "overrides": {
+        "threshold_mode": "contextual_object",
+        "contextual.weight_floor": 0.1,
+        "contextual.dense_power": 3.0,
+        "contextual.weight_mode": "object_dense",
+        "contextual.soft_margin_hu": 160,
+        "contextual.object_percentile": 99.7,
+        "contextual.dense_percentile": 99.9,
+        "contextual.smooth_radius": 1,
+        "contextual.smooth_mode": "mean",
+        "contextual_apply_to": "none",
+        "artery_method": "region_growing"
+      }
+    },
+    {
+      "name": "contextual_strong_rg",
+      "description": "Strong contextual fuzzy weighting + region growing.",
+      "threshold_rule": "-300 <= I <= P99.7",
+      "vesselness_rule": "contextual weighting on artery vesselness",
+      "overrides": {
+        "threshold_mode": "normal",
+        "contextual_apply_to": "artery",
+        "artery_method": "region_growing",
+        "contextual.weight_floor": 0.05,
+        "contextual.dense_power": 4.0,
+        "contextual.weight_mode": "object_dense",
+        "contextual.soft_margin_hu": 160,
+        "contextual.object_percentile": 99.5,
+        "contextual.dense_percentile": 99.9,
+        "contextual.smooth_radius": 2,
+        "contextual.smooth_mode": "mean"
+      }
+    },
+    {
+      "name": "contextual_strong_object_threshold_rg",
+      "description": "Strong contextual-object threshold + strong contextual fuzzy weighting + RG.",
+      "threshold_rule": "contextual object argmax, strong parameters",
+      "vesselness_rule": "contextual weighting on artery vesselness",
+      "overrides": {
+        "threshold_mode": "contextual_object",
+        "contextual.weight_floor": 0.05,
+        "contextual.dense_power": 4.0,
+        "contextual.weight_mode": "object_dense",
+        "contextual.soft_margin_hu": 160,
+        "contextual.object_percentile": 99.5,
+        "contextual.dense_percentile": 99.9,
+        "contextual.smooth_radius": 2,
+        "contextual.smooth_mode": "mean",
+        "contextual_apply_to": "artery",
+        "artery_method": "region_growing"
+      }
+    },
+    {
+      "name": "normal_threshold_fc",
+      "description": "Normal threshold + base fuzzy connectedness.",
+      "threshold_rule": "-300 <= I <= P99.7",
+      "vesselness_rule": "no contextual weighting",
+      "overrides": {
+        "threshold_mode": "normal",
+        "contextual_apply_to": "none",
+        "artery_method": "fuzzy_connectedness",
+        "fc.alpha": 0.18,
+        "fc.sigma_hu": 80,
+        "fc.neighborhood": 26,
+        "fc.candidate_min_vesselness": 0.02,
+        "fc.seed_search_radius": 2,
+        "fc.max_seeds_per_ostium": 4,
+        "fc.seed_min_vesselness": 0.02,
+        "fc.min_seed_distance_voxels": 1.0,
+        "fc.vesselness_affinity_mode": "geometric_mean",
+        "fc.vesselness_floor": 0.02,
+        "fc.edge_affinity_mode": "weighted_product",
+        "fc.vesselness_weight": 0.9,
+        "fc.mask_strategy": "alpha"
+      }
+    },
+    {
+      "name": "fuzzy_threshold_balanced_fc_semi_permissive",
+      "description": "Moderate contextual-object threshold + semi-permissive fuzzy connectedness.",
+      "threshold_rule": "contextual object argmax, moderate parameters",
+      "vesselness_rule": "no contextual weighting",
+      "overrides": {
+        "threshold_mode": "contextual_object",
+        "contextual.weight_floor": 0.1,
+        "contextual.dense_power": 3.0,
+        "contextual.weight_mode": "object_dense",
+        "contextual.soft_margin_hu": 160,
+        "contextual.object_percentile": 99.7,
+        "contextual.dense_percentile": 99.9,
+        "contextual.smooth_radius": 1,
+        "contextual.smooth_mode": "mean",
+        "contextual_apply_to": "none",
+        "artery_method": "fuzzy_connectedness",
+        "fc.alpha": 0.16,
+        "fc.sigma_hu": 100,
+        "fc.neighborhood": 26,
+        "fc.candidate_min_vesselness": 0.018,
+        "fc.seed_search_radius": 2,
+        "fc.max_seeds_per_ostium": 4,
+        "fc.seed_min_vesselness": 0.018,
+        "fc.min_seed_distance_voxels": 1.0,
+        "fc.vesselness_affinity_mode": "geometric_mean",
+        "fc.vesselness_floor": 0.018,
+        "fc.edge_affinity_mode": "weighted_product",
+        "fc.vesselness_weight": 0.9,
+        "fc.mask_strategy": "alpha"
+      }
+    },
+    {
+      "name": "contextual_strong_object_threshold_fc",
+      "description": "Strong contextual-object threshold + strong contextual fuzzy weighting + FC.",
+      "threshold_rule": "contextual object argmax, strong parameters",
+      "vesselness_rule": "contextual weighting on artery vesselness",
+      "overrides": {
+        "threshold_mode": "contextual_object",
+        "contextual.weight_floor": 0.05,
+        "contextual.dense_power": 4.0,
+        "contextual.weight_mode": "object_dense",
+        "contextual.soft_margin_hu": 160,
+        "contextual.object_percentile": 99.5,
+        "contextual.dense_percentile": 99.9,
+        "contextual.smooth_radius": 2,
+        "contextual.smooth_mode": "mean",
+        "contextual_apply_to": "artery",
+        "artery_method": "fuzzy_connectedness",
+        "fc.alpha": 0.18,
+        "fc.sigma_hu": 80,
+        "fc.neighborhood": 26,
+        "fc.candidate_min_vesselness": 0.02,
+        "fc.seed_search_radius": 2,
+        "fc.max_seeds_per_ostium": 4,
+        "fc.seed_min_vesselness": 0.02,
+        "fc.min_seed_distance_voxels": 1.0,
+        "fc.vesselness_affinity_mode": "geometric_mean",
+        "fc.vesselness_floor": 0.02,
+        "fc.edge_affinity_mode": "weighted_product",
+        "fc.vesselness_weight": 0.9,
+        "fc.mask_strategy": "alpha"
+      }
+    }
+  ],
+  "run_dir": "/data04/home/projetos/dac_seg_dlag/mssilva.ppgmc/matheus_codes/coronary-centerline-detection/output/segmentation/analysis/fuzzy_pipeline_comparison/promissing_60_train"
+}

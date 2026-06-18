@@ -1,0 +1,2 @@
+variant,images,ostia_success_rate,ostia_found_rate,both_correct_rate,both_tolerable_rate,mean_dice,median_dice,mean_dice_success_ostia,mean_left_dist_mm,mean_right_dist_mm,error_count,runtime_seconds,runtime_minutes,selection_score
+normal_rg,60,0.8166666666666667,0.9833333333333333,0.03333333333333333,0.7833333333333333,0.5854080620653596,0.6334621439816802,0.6365866925212883,1.940336344774216,4.0189619425110275,1,4857.534075498581,80.95890125830968,0.5198791322257188
