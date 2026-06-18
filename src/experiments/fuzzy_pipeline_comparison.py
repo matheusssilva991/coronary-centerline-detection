@@ -163,14 +163,13 @@ def variant(
 
 
 def default_variants() -> list[dict[str, Any]]:
-    """Return the default comparison set plus promising follow-up variants."""
+    """Return the compact, article-oriented comparison set."""
     normal_threshold = "-300 <= I <= P99.7"
     fuzzy_original = "contextual object argmax, base parameters"
     fuzzy_balanced = "contextual object argmax, moderate parameters"
     fuzzy_conservative = "contextual object argmax, strong parameters"
     no_weight = "no contextual weighting"
     artery_weight = "contextual weighting on artery vesselness"
-    both_weight = "contextual weighting on ostia and artery vesselness"
 
     return [
         variant(
@@ -196,30 +195,6 @@ def default_variants() -> list[dict[str, Any]]:
             vesselness_rule=no_weight,
         ),
         variant(
-            "normal_threshold_fc",
-            "Normal threshold + base fuzzy connectedness.",
-            {
-                "threshold_mode": "normal",
-                "contextual_apply_to": "none",
-                "artery_method": "fuzzy_connectedness",
-                **FC_PARAMS,
-            },
-            threshold_rule=normal_threshold,
-            vesselness_rule=no_weight,
-        ),
-        variant(
-            "fuzzy_threshold_fc",
-            "Contextual-object fuzzy threshold + base fuzzy connectedness.",
-            {
-                **FUZZY_THRESHOLD_PARAMS,
-                "contextual_apply_to": "none",
-                "artery_method": "fuzzy_connectedness",
-                **FC_PARAMS,
-            },
-            threshold_rule=fuzzy_original,
-            vesselness_rule=no_weight,
-        ),
-        variant(
             "fuzzy_threshold_balanced_rg",
             "Moderate contextual-object fuzzy threshold + region growing.",
             {
@@ -231,53 +206,6 @@ def default_variants() -> list[dict[str, Any]]:
             vesselness_rule=no_weight,
         ),
         variant(
-            "fuzzy_threshold_conservative_rg",
-            "Strong contextual-object fuzzy threshold + region growing.",
-            {
-                **FUZZY_THRESHOLD_CONSERVATIVE_PARAMS,
-                "contextual_apply_to": "none",
-                "artery_method": "region_growing",
-            },
-            threshold_rule=fuzzy_conservative,
-            vesselness_rule=no_weight,
-        ),
-        variant(
-            "fuzzy_threshold_balanced_fc",
-            "Moderate contextual-object fuzzy threshold + base fuzzy connectedness.",
-            {
-                **FUZZY_THRESHOLD_BALANCED_PARAMS,
-                "contextual_apply_to": "none",
-                "artery_method": "fuzzy_connectedness",
-                **FC_PARAMS,
-            },
-            threshold_rule=fuzzy_balanced,
-            vesselness_rule=no_weight,
-        ),
-        variant(
-            "fuzzy_threshold_conservative_fc",
-            "Strong contextual-object fuzzy threshold + base fuzzy connectedness.",
-            {
-                **FUZZY_THRESHOLD_CONSERVATIVE_PARAMS,
-                "contextual_apply_to": "none",
-                "artery_method": "fuzzy_connectedness",
-                **FC_PARAMS,
-            },
-            threshold_rule=fuzzy_conservative,
-            vesselness_rule=no_weight,
-        ),
-        variant(
-            "contextual_moderate_rg",
-            "Moderate contextual fuzzy weighting + region growing.",
-            {
-                "threshold_mode": "normal",
-                "contextual_apply_to": "artery",
-                "artery_method": "region_growing",
-                **CONTEXTUAL_MODERATE_PARAMS,
-            },
-            threshold_rule=normal_threshold,
-            vesselness_rule=artery_weight,
-        ),
-        variant(
             "contextual_strong_rg",
             "Strong contextual fuzzy weighting + region growing.",
             {
@@ -285,44 +213,6 @@ def default_variants() -> list[dict[str, Any]]:
                 "contextual_apply_to": "artery",
                 "artery_method": "region_growing",
                 **CONTEXTUAL_STRONG_PARAMS,
-            },
-            threshold_rule=normal_threshold,
-            vesselness_rule=artery_weight,
-        ),
-        variant(
-            "contextual_strong_both_rg",
-            "Strong contextual fuzzy weighting on ostia and artery + region growing.",
-            {
-                "threshold_mode": "normal",
-                "contextual_apply_to": "both",
-                "artery_method": "region_growing",
-                **CONTEXTUAL_STRONG_PARAMS,
-            },
-            threshold_rule=normal_threshold,
-            vesselness_rule=both_weight,
-        ),
-        variant(
-            "contextual_moderate_fc",
-            "Moderate contextual fuzzy weighting + base fuzzy connectedness.",
-            {
-                "threshold_mode": "normal",
-                "contextual_apply_to": "artery",
-                "artery_method": "fuzzy_connectedness",
-                **CONTEXTUAL_MODERATE_PARAMS,
-                **FC_PARAMS,
-            },
-            threshold_rule=normal_threshold,
-            vesselness_rule=artery_weight,
-        ),
-        variant(
-            "contextual_strong_fc",
-            "Strong contextual fuzzy weighting + base fuzzy connectedness.",
-            {
-                "threshold_mode": "normal",
-                "contextual_apply_to": "artery",
-                "artery_method": "fuzzy_connectedness",
-                **CONTEXTUAL_STRONG_PARAMS,
-                **FC_PARAMS,
             },
             threshold_rule=normal_threshold,
             vesselness_rule=artery_weight,
@@ -340,50 +230,13 @@ def default_variants() -> list[dict[str, Any]]:
             vesselness_rule=artery_weight,
         ),
         variant(
-            "contextual_strong_object_threshold_fc",
-            "Strong contextual-object threshold + strong contextual fuzzy weighting + FC.",
+            "normal_threshold_fc",
+            "Normal threshold + base fuzzy connectedness.",
             {
-                **FUZZY_THRESHOLD_CONSERVATIVE_PARAMS,
-                "contextual_apply_to": "artery",
+                "threshold_mode": "normal",
+                "contextual_apply_to": "none",
                 "artery_method": "fuzzy_connectedness",
-                **CONTEXTUAL_STRONG_PARAMS,
                 **FC_PARAMS,
-            },
-            threshold_rule=fuzzy_conservative,
-            vesselness_rule=artery_weight,
-        ),
-        variant(
-            "normal_fc_semi_permissive",
-            "Normal threshold + semi-permissive fuzzy connectedness.",
-            {
-                "threshold_mode": "normal",
-                "contextual_apply_to": "none",
-                "artery_method": "fuzzy_connectedness",
-                **FC_SEMI_PERMISSIVE_PARAMS,
-            },
-            threshold_rule=normal_threshold,
-            vesselness_rule=no_weight,
-        ),
-        variant(
-            "normal_fc_permissive",
-            "Normal threshold + permissive fuzzy connectedness.",
-            {
-                "threshold_mode": "normal",
-                "contextual_apply_to": "none",
-                "artery_method": "fuzzy_connectedness",
-                **FC_PERMISSIVE_PARAMS,
-            },
-            threshold_rule=normal_threshold,
-            vesselness_rule=no_weight,
-        ),
-        variant(
-            "normal_fc_strict",
-            "Normal threshold + strict fuzzy connectedness.",
-            {
-                "threshold_mode": "normal",
-                "contextual_apply_to": "none",
-                "artery_method": "fuzzy_connectedness",
-                **FC_STRICT_PARAMS,
             },
             threshold_rule=normal_threshold,
             vesselness_rule=no_weight,
@@ -399,6 +252,19 @@ def default_variants() -> list[dict[str, Any]]:
             },
             threshold_rule=fuzzy_balanced,
             vesselness_rule=no_weight,
+        ),
+        variant(
+            "contextual_strong_object_threshold_fc",
+            "Strong contextual-object threshold + strong contextual fuzzy weighting + FC.",
+            {
+                **FUZZY_THRESHOLD_CONSERVATIVE_PARAMS,
+                "contextual_apply_to": "artery",
+                "artery_method": "fuzzy_connectedness",
+                **CONTEXTUAL_STRONG_PARAMS,
+                **FC_PARAMS,
+            },
+            threshold_rule=fuzzy_conservative,
+            vesselness_rule=artery_weight,
         ),
     ]
 
@@ -441,7 +307,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--run-name",
         default=None,
-        help="Output folder name. Defaults to fuzzy_pipeline_comparison_<timestamp>.",
+        help="Output folder name. Defaults to the current timestamp.",
     )
     parser.add_argument(
         "--variants",
@@ -486,11 +352,9 @@ def make_diagnostics(run_dir: Path, image_rows: list[dict[str, Any]]) -> None:
 
     pairs = [
         ("normal_rg", "normal_threshold_fc"),
-        ("fuzzy_threshold_rg", "fuzzy_threshold_fc"),
-        ("fuzzy_threshold_balanced_rg", "fuzzy_threshold_balanced_fc"),
-        ("normal_rg", "normal_fc_semi_permissive"),
-        ("normal_rg", "normal_fc_permissive"),
-        ("normal_rg", "normal_fc_strict"),
+        ("contextual_strong_rg", "contextual_strong_fc"),
+        ("fuzzy_threshold_balanced_rg", "fuzzy_threshold_balanced_fc_semi_permissive"),
+        ("contextual_strong_object_threshold_rg", "contextual_strong_object_threshold_fc"),
     ]
     delta_frames = []
     available = set(df["variant"])
@@ -521,7 +385,7 @@ def main() -> None:
     """Run all selected variants and save compact CSV outputs."""
     args = build_parser().parse_args()
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    run_name = sanitize_name(args.run_name or f"fuzzy_pipeline_comparison_{timestamp}")
+    run_name = sanitize_name(args.run_name or timestamp)
     run_dir = args.output_root / run_name
     cache_dir = run_dir / "cache"
     run_dir.mkdir(parents=True, exist_ok=True)
