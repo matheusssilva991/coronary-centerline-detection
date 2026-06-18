@@ -288,6 +288,68 @@ def select_variants(
     return selected
 
 
+def parse_split_sizes(value: str) -> list[tuple[str, int]]:
+    """Parse ``train:30,val:30`` into ordered split/size pairs."""
+    split_sizes: list[tuple[str, int]] = []
+    valid_splits = {"train", "val", "test"}
+    for raw_item in value.split(","):
+        item = raw_item.strip()
+        if not item:
+            continue
+        if ":" not in item:
+            raise ValueError(
+                f"Invalid --split-sizes item {item!r}. Use the form train:30,val:30."
+            )
+        split_name, raw_size = [part.strip() for part in item.split(":", 1)]
+        if split_name not in valid_splits:
+            raise ValueError(
+                f"Invalid split {split_name!r}. Expected one of {sorted(valid_splits)}."
+            )
+        size = int(raw_size)
+        if size <= 0:
+            raise ValueError("Split sizes must be > 0.")
+        split_sizes.append((split_name, size))
+    if not split_sizes:
+        raise ValueError("--split-sizes cannot be empty.")
+    return split_sizes
+
+
+def select_image_items(
+    split: str,
+    sample_size: int,
+    start_index: int,
+    ids_arg: str | None,
+    split_sizes_arg: str | None,
+    base_path: Path,
+) -> list[tuple[str, int]]:
+    """Select images while preserving the split name for each ID."""
+    if ids_arg:
+        image_ids = select_ids(split, sample_size, start_index, ids_arg, base_path)
+        return [(split, img_id) for img_id in image_ids]
+
+    if split_sizes_arg:
+        image_items: list[tuple[str, int]] = []
+        for split_name, requested_size in parse_split_sizes(split_sizes_arg):
+            selected_ids = select_ids(
+                split_name,
+                requested_size,
+                start_index,
+                None,
+                base_path,
+            )
+            if len(selected_ids) != requested_size:
+                raise ValueError(
+                    f"Split {split_name!r} returned {len(selected_ids)} images, "
+                    f"but {requested_size} were requested. "
+                    "Use a smaller size or another split."
+                )
+            image_items.extend((split_name, img_id) for img_id in selected_ids)
+        return image_items
+
+    image_ids = select_ids(split, sample_size, start_index, None, base_path)
+    return [(split, img_id) for img_id in image_ids]
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Create CLI parser."""
     parser = argparse.ArgumentParser(
@@ -300,6 +362,14 @@ def build_parser() -> argparse.ArgumentParser:
         "--ids",
         default=None,
         help="Comma-separated image IDs. Overrides --split/--sample-size.",
+    )
+    parser.add_argument(
+        "--split-sizes",
+        default=None,
+        help=(
+            "Comma-separated split sizes, for example train:30,val:30. "
+            "Ignored when --ids is provided."
+        ),
     )
     parser.add_argument("--resolution", choices=["mid", "high"], default="mid")
     parser.add_argument("--config-path", type=Path, default=DEFAULT_CONFIG_PATH)
@@ -399,22 +469,29 @@ def main() -> None:
         use_gpu=args.use_gpu,
     )
     base_config = build_base_config(base_config_args)
-    image_ids = select_ids(
+    image_items = select_image_items(
         args.split,
         args.sample_size,
         args.start_index,
         args.ids,
+        args.split_sizes,
         base_path,
     )
+    image_ids = [img_id for _, img_id in image_items]
     variants = select_variants(default_variants(), args.variants, args.variant_limit)
 
     write_json(
         run_dir / "run_config.json",
         {
             "split": args.split,
+            "split_sizes": args.split_sizes,
             "sample_size": args.sample_size,
             "start_index": args.start_index,
             "ids": image_ids,
+            "image_items": [
+                {"split": split_name, "IMG_ID": img_id}
+                for split_name, img_id in image_items
+            ],
             "resolution": args.resolution,
             "config_path": str(args.config_path),
             "base_path": str(base_path),
@@ -431,7 +508,7 @@ def main() -> None:
     parameter_rows: list[dict[str, Any]] = []
 
     print(f"Run dir: {run_dir}")
-    print(f"Images ({len(image_ids)}): {image_ids}")
+    print(f"Images ({len(image_items)}): {image_items}")
     print(f"Variants ({len(variants)}): {[item['name'] for item in variants]}")
 
     for variant_index, current_variant in enumerate(variants, start=1):
@@ -445,12 +522,14 @@ def main() -> None:
         print(f"\n[{variant_index}/{len(variants)}] {variant_name}")
         start_time = time.time()
         variant_rows = []
-        for img_index, img_id in enumerate(image_ids, start=1):
-            print(f"  [{img_index}/{len(image_ids)}] IMG_ID={img_id}")
+        for img_index, (split_name, img_id) in enumerate(image_items, start=1):
+            print(
+                f"  [{img_index}/{len(image_items)}] split={split_name} IMG_ID={img_id}"
+            )
             row = run_image(
                 img_id,
                 variant_name,
-                args.split,
+                split_name,
                 base_path,
                 cache_dir,
                 config,
