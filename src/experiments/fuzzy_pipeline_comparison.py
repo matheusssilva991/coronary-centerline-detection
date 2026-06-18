@@ -406,23 +406,46 @@ def make_diagnostics(run_dir: Path, image_rows: list[dict[str, Any]]) -> None:
     if df.empty:
         return
 
-    best_idx = df.groupby("IMG_ID")["dice_artery"].idxmax()
-    best_by_image = df.loc[
-        best_idx,
-        [
-            "IMG_ID",
-            "variant",
-            "dice_artery",
-            "ostia_status",
-            "ostia_success",
-            "artery_voxels",
-        ],
-    ].sort_values("IMG_ID")
-    csv_safe(best_by_image).to_csv(diagnostics_dir / "best_by_image.csv", index=False)
+    df["dice_artery"] = pd.to_numeric(df["dice_artery"], errors="coerce")
+    result_columns = [
+        "IMG_ID",
+        "variant",
+        "dice_artery",
+        "ostia_status",
+        "ostia_success",
+        "artery_voxels",
+    ]
+
+    # Some images can fail in every variant and therefore have only NaN Dice.
+    # Keep diagnostics generation robust and list those images separately.
+    valid_dice_df = df.dropna(subset=["dice_artery"])
+    missing_dice_df = df[
+        df.groupby("IMG_ID")["dice_artery"].transform(lambda values: values.notna().sum())
+        == 0
+    ]
+    if not missing_dice_df.empty:
+        missing_images = (
+            missing_dice_df[
+                ["IMG_ID", "variant", "ostia_status", "ostia_success", "artery_voxels"]
+            ]
+            .sort_values(["IMG_ID", "variant"])
+            .reset_index(drop=True)
+        )
+        csv_safe(missing_images).to_csv(
+            diagnostics_dir / "images_without_valid_dice.csv",
+            index=False,
+        )
+
+    if not valid_dice_df.empty:
+        best_idx = valid_dice_df.groupby("IMG_ID")["dice_artery"].idxmax()
+        best_by_image = df.loc[best_idx, result_columns].sort_values("IMG_ID")
+        csv_safe(best_by_image).to_csv(
+            diagnostics_dir / "best_by_image.csv",
+            index=False,
+        )
 
     pairs = [
         ("normal_rg", "normal_threshold_fc"),
-        ("contextual_strong_rg", "contextual_strong_fc"),
         ("fuzzy_threshold_balanced_rg", "fuzzy_threshold_balanced_fc_semi_permissive"),
         ("contextual_strong_object_threshold_rg", "contextual_strong_object_threshold_fc"),
     ]
