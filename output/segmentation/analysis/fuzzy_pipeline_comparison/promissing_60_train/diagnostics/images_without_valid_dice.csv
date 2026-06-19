@@ -1,0 +1,9 @@
+IMG_ID,variant,ostia_status,ostia_success,artery_voxels
+822,contextual_strong_object_threshold_fc,error,False,0
+822,contextual_strong_object_threshold_rg,error,False,0
+822,contextual_strong_rg,error,False,0
+822,fuzzy_threshold_balanced_fc_semi_permissive,error,False,0
+822,fuzzy_threshold_balanced_rg,error,False,0
+822,fuzzy_threshold_rg,error,False,0
+822,normal_rg,error,False,0
+822,normal_threshold_fc,error,False,0
