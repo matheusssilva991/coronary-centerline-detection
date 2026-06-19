@@ -1,11 +1,13 @@
-"""Threshold fuzzy e ponderação contextual reutilizáveis no pipeline.
+"""Threshold fuzzy contextual reutilizável no pipeline de segmentação.
 
-O mesmo modelo fuzzy contextual pode ser usado de duas formas:
+Este módulo concentra a etapa fuzzy usada antes da detecção de aorta/óstios e
+da segmentação arterial. O modelo contextual divide cada voxel em três
+pertinências: fundo mole, objeto e fundo denso. A partir dessas pertinências,
+o pipeline pode:
 
-- ``contextual_object``: mantém apenas voxels cuja maior pertinência é a classe
-  de objeto, substituindo o threshold superior por percentis fuzzy;
-- ``contextual_apply_to``: usa a pertinência contextual como mapa de peso para
-  penalizar vesselness em voxels densos ou pouco compatíveis com artéria.
+1. gerar uma máscara de objeto para substituir o threshold HU superior;
+2. gerar um mapa de pesos para penalizar vesselness em regiões densas ou pouco
+   compatíveis com artéria.
 """
 
 from __future__ import annotations
@@ -15,58 +17,10 @@ from typing import Any
 import numpy as np
 from scipy.ndimage import median_filter, uniform_filter
 
-from ..processing import largest_connected_component
-
-
-def fuzzy_trapezoid_threshold(
-    volume: np.ndarray,
-    min_hu: float,
-    max_hu: float,
-    margin_hu: float,
-) -> np.ndarray:
-    """Retorna a pertinência fuzzy para uma faixa HU trapezoidal.
-
-    Voxels dentro de `[min_hu, max_hu]` recebem pertinência alta. A margem cria
-    transições lineares nas bordas para evitar um corte totalmente rígido.
-    """
-    if margin_hu <= 0:
-        return ((volume >= min_hu) & (volume <= max_hu)).astype(np.float32)
-
-    rising = (volume - (min_hu - margin_hu)) / margin_hu
-    falling = ((max_hu + margin_hu) - volume) / margin_hu
-    membership = np.minimum(rising, falling)
-    return np.clip(membership, 0.0, 1.0).astype(np.float32)
-
-
-def build_lcc_image_from_mask(
-    volume: np.ndarray,
-    mask: np.ndarray,
-    offset: float,
-    per_slice: bool = True,
-) -> tuple[np.ndarray, np.ndarray]:
-    """Replica a maior componente conectada do pipeline usando máscara externa."""
-    thresholded = np.zeros_like(volume, dtype=np.float32)
-    thresholded[mask] = volume[mask] + offset
-
-    if per_slice:
-        # Mantém a mesma lógica do pipeline: LCC por fatia para reduzir vazamentos.
-        lcc_image = np.zeros_like(thresholded, dtype=np.float32)
-        lcc_mask = np.zeros_like(mask, dtype=bool)
-        for z_idx in range(thresholded.shape[2]):
-            lcc_slice, lcc_mask_slice = largest_connected_component(
-                thresholded[:, :, z_idx], mask[:, :, z_idx]
-            )
-            lcc_image[:, :, z_idx] = lcc_slice
-            lcc_mask[:, :, z_idx] = lcc_mask_slice
-    else:
-        # Alternativa 3D global para experimentos específicos.
-        lcc_image, lcc_mask = largest_connected_component(thresholded, mask)
-
-    return (lcc_image - offset).astype(np.float32), lcc_mask.astype(bool)
-
 
 def normalize_threshold_mode(mode: Any) -> str:
-    """Normaliza o método de threshold selecionado por config/CLI."""
+    """Normaliza aliases de configuração para os modos suportados."""
+    # Permite nomes curtos na config sem espalhar aliases pelo pipeline.
     normalized = str(mode or "normal").strip().lower()
     normalized = normalized.replace("-", "_").replace(" ", "_")
     aliases = {
@@ -86,7 +40,8 @@ def normalize_threshold_mode(mode: Any) -> str:
 
 
 def normalize_contextual_apply_to(value: Any) -> str:
-    """Normaliza a etapa onde o mapa contextual deve ponderar vesselness."""
+    """Normaliza onde o mapa fuzzy contextual deve ponderar o vesselness."""
+    # A ponderação pode ser desligada ou aplicada em ostia, artéria ou ambos.
     normalized = str(value or "none").strip().lower()
     normalized = normalized.replace("-", "_").replace(" ", "_")
     aliases = {
@@ -110,7 +65,8 @@ def normalize_contextual_apply_to(value: Any) -> str:
 
 
 def get_thresholding_config(config: dict[str, Any]) -> dict[str, Any]:
-    """Retorna a config de threshold com defaults compatíveis com o pipeline."""
+    """Retorna a seção ``THRESHOLDING`` com defaults do pipeline."""
+    # Mantém compatibilidade com configs antigas que ainda não tinham THRESHOLDING.
     thresholding = dict(config.get("THRESHOLDING", {}))
     thresholding.setdefault("method", "normal")
     thresholding.setdefault("contextual_apply_to", "none")
@@ -125,16 +81,25 @@ def estimate_contextual_centers(
     object_percentile: float,
     dense_percentile: float,
 ) -> np.ndarray:
-    """Estima centros HU para fundo mole, objeto e fundo denso."""
+    """Estima centros HU das três classes fuzzy contextuais.
+
+    O centro de fundo mole é ancorado abaixo de ``min_hu``. Os centros de objeto
+    e fundo denso são estimados por percentis da própria imagem, considerando
+    apenas voxels acima do limiar mínimo sempre que possível.
+    """
+    # Usa apenas valores finitos e, quando possível, ignora fundo abaixo do HU mínimo.
     values = np.asarray(volume, dtype=np.float32)
     values = values[np.isfinite(values)]
     valid = values[values >= min_hu]
     if valid.size == 0:
         valid = values
 
+    # O fundo mole é fixado por parâmetro; objeto/denso se adaptam à imagem.
     soft_center = float(min_hu - soft_margin_hu)
     object_center = float(np.percentile(valid, object_percentile))
     dense_center = float(np.percentile(valid, dense_percentile))
+
+    # Garante ordem estrita dos centros para evitar divisões degeneradas.
     object_center = max(object_center, min_hu + np.finfo(np.float32).eps)
     dense_center = max(dense_center, object_center + np.finfo(np.float32).eps)
     return np.array([soft_center, object_center, dense_center], dtype=np.float32)
@@ -155,9 +120,26 @@ def contextual_fuzzy_outputs(
 ) -> tuple[np.ndarray, np.ndarray, dict[str, Any]]:
     """Gera máscara fuzzy de objeto e mapa de peso contextual.
 
-    A classe de objeto fica entre fundo mole (abaixo do threshold HU mínimo) e
-    fundo denso (percentis altos). A agregação local suaviza pertinências para
-    reduzir decisões isoladas por voxel.
+    A pertinência de objeto é alta entre o fundo mole e o fundo denso. Após a
+    normalização das três classes, a máscara seleciona voxels cuja classe
+    dominante é objeto. O mapa de peso pode ser aplicado ao vesselness para
+    reduzir respostas em voxels densos ou pouco compatíveis com a classe objeto.
+
+    Args:
+        volume: Volume 3D usado para estimar e aplicar as pertinências.
+        min_hu: Limiar mínimo que ancora a separação entre fundo mole e objeto.
+        soft_margin_hu: Distância abaixo de ``min_hu`` usada como centro de
+            fundo mole.
+        object_percentile: Percentil usado como centro robusto da classe objeto.
+        dense_percentile: Percentil usado como centro robusto da classe densa.
+        smooth_radius: Raio da janela cúbica de suavização das pertinências.
+        smooth_mode: Tipo de suavização local, ``mean`` ou ``median``.
+        weight_floor: Piso mínimo do mapa de peso contextual.
+        dense_power: Expoente que controla a penalização de voxels densos.
+        weight_mode: Estratégia de peso, ``dense_only`` ou objeto+denso.
+
+    Returns:
+        Máscara de objeto, mapa de peso contextual e metadados dos centros/pesos.
     """
     centers = estimate_contextual_centers(
         volume,
@@ -170,9 +152,12 @@ def contextual_fuzzy_outputs(
     soft_width = max(min_hu - soft_center, np.finfo(np.float32).eps)
     dense_width = max(dense_center - object_center, np.finfo(np.float32).eps)
 
+    # Constrói rampas fuzzy: fundo mole cai, fundo denso sobe, objeto fica no meio.
     soft = np.clip((min_hu - volume) / soft_width, 0.0, 1.0)
     dense = np.clip((volume - object_center) / dense_width, 0.0, 1.0)
     obj = np.minimum(1.0 - soft, 1.0 - dense)
+
+    # Normaliza as três pertinências para cada voxel somar 1.
     memberships = np.stack([soft, obj, dense], axis=0).astype(np.float32)
     memberships /= np.maximum(
         memberships.sum(axis=0, keepdims=True),
@@ -180,6 +165,7 @@ def contextual_fuzzy_outputs(
     )
 
     if smooth_radius > 0:
+        # Suaviza cada classe separadamente e renormaliza a distribuição fuzzy.
         size = 2 * int(smooth_radius) + 1
         aggregated = np.empty_like(memberships)
         for idx in range(memberships.shape[0]):
@@ -194,7 +180,11 @@ def contextual_fuzzy_outputs(
 
     object_membership = memberships[1]
     dense_membership = memberships[2]
+
+    # A máscara final fica com voxels cuja classe dominante é objeto.
     object_mask = (np.argmax(memberships, axis=0) == 1) & (volume >= min_hu)
+
+    # O peso contextual penaliza regiões densas antes de aplicar vesselness.
     if weight_mode == "dense_only":
         raw_weight = 1.0 - np.power(dense_membership, dense_power)
     else:
@@ -216,7 +206,8 @@ def contextual_fuzzy_from_config(
     volume: np.ndarray,
     config: dict[str, Any],
 ) -> tuple[np.ndarray, np.ndarray, dict[str, Any]]:
-    """Executa o fuzzy contextual usando a seção ``THRESHOLDING`` da config."""
+    """Executa o fuzzy contextual a partir da configuração completa."""
+    # Isola os parâmetros do bloco THRESHOLDING.contextual e aplica defaults locais.
     thresholding = get_thresholding_config(config)
     contextual = dict(thresholding.get("contextual", {}))
     return contextual_fuzzy_outputs(
@@ -247,6 +238,8 @@ def maybe_apply_contextual_weight(
         raise ValueError(
             f"Mapa contextual incompatível: {vesselness.shape} vs {weight_map.shape}"
         )
+
+    # Preserva o dtype original do vesselness para não mudar o contrato da etapa.
     return (np.asarray(vesselness) * np.asarray(weight_map)).astype(
         np.asarray(vesselness).dtype,
         copy=False,

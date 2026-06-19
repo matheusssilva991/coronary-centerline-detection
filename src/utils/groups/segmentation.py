@@ -19,9 +19,7 @@ _SYMBOL_TO_MODULE = {
     "refine_circle_with_neighbors": "aorta_localization",
     "get_initial_circle_diagnostics": "aorta_localization",
     # pipeline modules
-    "build_lcc_image_from_mask": "fuzzy_threshold",
     "detect_and_evaluate_ostia": "pipeline_detection",
-    "fuzzy_trapezoid_threshold": "fuzzy_threshold",
     "get_or_compute_vesselness": "pipeline_preprocessing",
     "get_or_detect_aorta_circles": "pipeline_detection",
     "get_or_segment_aorta": "pipeline_detection",

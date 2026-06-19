@@ -30,6 +30,7 @@ def _interpolate_missing_circles(
     if denominator == 0:
         return []
 
+    # Distribui centro, raio e acumulador linearmente entre duas detecções válidas.
     interpolated = []
     for slice_index in missing_slice_indices:
         fraction = (int(slice_index) - previous_slice) / denominator
@@ -96,6 +97,7 @@ def _detect_circles_in_slice(
         # Caminho CPU padrão: Canny do scikit-image.
         edges = feature.canny(img_slice.astype(float), sigma=canny_sigma)
 
+    # A Hough recebe o mapa binário de bordas e devolve os melhores círculos.
     hough_res = hough_circle(edges, hough_radii)
     return hough_circle_peaks(hough_res, hough_radii, total_num_peaks=total_num_peaks)
 
@@ -150,6 +152,7 @@ def _select_circle_candidate(
         radius_diff <= radius_tolerance
     )
 
+    # Prioriza candidatos plausíveis; se nenhum passa, ainda escolhe o menos ruim.
     candidate_indices = np.where(tolerance_mask)[0]
     if len(candidate_indices) == 0:
         candidate_indices = np.arange(len(radii_arr))
@@ -194,6 +197,7 @@ def _compute_local_roi_bounds(
     """Calcula os limites de ROI local para busca de círculos na fatia."""
     height, width = img_shape
 
+    # A ROI cobre o círculo anterior, a tolerância de movimento e uma margem extra.
     search_radius = (
         ref_radius + distance_tolerance + radius_tolerance + local_roi_padding
     )
@@ -220,6 +224,7 @@ def _process_initial_circle(
     use_gpu: bool = False,
 ) -> dict:
     """Refina o círculo inicial com base em vizinhos próximos."""
+    # Reexecuta a detecção na fatia inicial para agregar candidatos próximos.
     _, cx, cy, radii = _detect_circles_in_slice(
         img_slice, hough_radii, total_num_peaks, canny_sigma, use_gpu=use_gpu
     )
@@ -270,6 +275,7 @@ def _process_slice(
     accums, cx, cy, radii = None, None, None, None
 
     if use_local_roi:
+        # Primeiro tenta uma busca local ao redor do círculo da fatia anterior.
         x_min, x_max, y_min, y_max = _compute_local_roi_bounds(
             img_slice.shape,
             ref_x,
@@ -289,7 +295,7 @@ def _process_slice(
             cx = cx + x_min
             cy = cy + y_min
         else:
-            # Se não encontrou na ROI local, tentar com ROI expandida ao invés de fallback para volume inteiro
+            # Se a ROI inicial falha, expande a busca sem voltar ao volume inteiro.
             expanded_padding = min(
                 local_roi_padding * 2,
                 int(np.sqrt(img_slice.shape[0] ** 2 + img_slice.shape[1] ** 2) / 2),
@@ -318,6 +324,7 @@ def _process_slice(
     if len(radii) == 0:
         return None
 
+    # Seleciona um candidato consistente com o círculo anterior.
     min_idx, min_dist = _select_circle_candidate(
         accums,
         cx,
@@ -337,6 +344,7 @@ def _process_slice(
     if not _is_circle_within_tolerance(
         radii[min_idx], min_dist, ref_radius, radius_tolerance, distance_tolerance
     ):
+        # Candidato fora da tolerância pode parar o rastreamento ou contar como miss.
         slice_idx = reference_circle.get("slice_index", "N/A")
         if verbose:
             print(
@@ -344,6 +352,7 @@ def _process_slice(
             )
         return OUT_OF_TOLERANCE
 
+    # Usa círculos vizinhos para reduzir jitter no centro e no raio escolhidos.
     cx_mean, cy_mean, radius_mean = refine_circle_with_neighbors(
         cx,
         cy,
@@ -384,6 +393,7 @@ def detect_initial_circle(
     center_x = (width // 2) - quadrant_offset[0]
     center_y = (height // 2) + quadrant_offset[1]
 
+    # A aorta ascendente esperada fica no quadrante anatômico configurado.
     cx_arr = np.asarray(cx)
     cy_arr = np.asarray(cy)
     mask = (cx_arr > center_x) & (cy_arr < center_y)
@@ -423,7 +433,7 @@ def get_initial_circle_diagnostics(
             "refinement_candidates": [],
         }
 
-    # Encontrar círculo inicial no quadrante (sem chamar detect_initial_circle novamente)
+    # Encontra o círculo inicial no quadrante sem repetir a Hough.
     height, width = img_slice.shape
     center_x = (width // 2) - quadrant_offset[0]
     center_y = (height // 2) + quadrant_offset[1]
@@ -449,6 +459,7 @@ def get_initial_circle_diagnostics(
         "accum": float(accums[idx]),
     }
 
+    # Separa candidatos usados para explicar/refazer o refinamento inicial.
     distances = _calculate_distances_vectorized(
         cx, cy, initial_circle["center_x"], initial_circle["center_y"]
     )
@@ -514,6 +525,7 @@ def refine_circle_with_neighbors(
     if not np.any(mask):
         return ref_x, ref_y, None
 
+    # Média local dos candidatos próximos suaviza pequenas variações da Hough.
     radii_arr = np.asarray(radii)
     cx_arr = np.asarray(cx)
     cy_arr = np.asarray(cy)
@@ -575,6 +587,7 @@ def detect_aorta_circles(
     radius_tolerance = tol_radius_mm / pixel_spacing
     distance_tolerance = tol_distance_mm / pixel_spacing
 
+    # O ImageCAS usado aqui tem a aorta nas fatias finais; começa pelo fim do volume.
     initial_circle = detect_initial_circle(
         img_volume[:, :, first_slice_idx],
         hough_radii,
@@ -589,6 +602,7 @@ def detect_aorta_circles(
             print("Nenhum círculo inicial detectado.")
         return []
 
+    # Refina a primeira detecção antes de usá-la como referência do rastreamento.
     refined_initial = _process_initial_circle(
         img_volume[:, :, first_slice_idx],
         hough_radii,
@@ -603,6 +617,7 @@ def detect_aorta_circles(
     miss_counter = 0
     pending_missed_slices: list[int] = []
 
+    # Caminha fatia a fatia usando sempre o último círculo válido como referência.
     for slice_idx in range(first_slice_idx - 1, -1, -1):
         result = _process_slice(
             img_volume[:, :, slice_idx],
@@ -624,6 +639,7 @@ def detect_aorta_circles(
         )
 
         if result is None:
+            # Sem candidato: guarda a fatia para possível interpolação futura.
             miss_counter += 1
             pending_missed_slices.append(slice_idx)
             if miss_counter >= max_slice_miss_threshold:
@@ -637,6 +653,8 @@ def detect_aorta_circles(
         if result == OUT_OF_TOLERANCE:
             if not out_of_tolerance_as_miss:
                 break
+
+            # Candidato geométricamente ruim também pode ser tratado como miss.
             miss_counter += 1
             pending_missed_slices.append(slice_idx)
             if miss_counter >= max_slice_miss_threshold:
@@ -651,6 +669,7 @@ def detect_aorta_circles(
 
         next_circle = {"slice_index": slice_idx, **result, "interpolated": False}
         if pending_missed_slices and interpolate_missed_circles:
+            # Preenche lacunas curtas quando o rastreamento volta a encontrar a aorta.
             detected_circles.extend(
                 _interpolate_missing_circles(
                     detected_circles[-1],

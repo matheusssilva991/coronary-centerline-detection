@@ -26,10 +26,9 @@ from utils.experiments.sweep_common import (
     set_nested,
 )
 from utils.project.config import load_config_json
-from utils.processing.preprocessing import downscale_image
+from utils.processing.preprocessing import build_lcc_image_from_mask, downscale_image
 from utils.segmentation.artery_segmentation import normal_region_growing_from_ostia
 from utils.segmentation.fuzzy_connectedness import segment_artery_fuzzy_connectedness
-from utils.segmentation.fuzzy_threshold import build_lcc_image_from_mask
 from utils.segmentation.pipeline_arteries import postprocess_artery_mask
 from utils.segmentation.pipeline_detection import (
     detect_and_evaluate_ostia,

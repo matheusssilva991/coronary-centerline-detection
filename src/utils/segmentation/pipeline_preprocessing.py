@@ -18,13 +18,13 @@ from ..processing.frangi import (
     save_vesselness_cache,
 )
 from ..processing.preprocessing import (
+    build_lcc_image_from_mask,
     downscale_image_ndi,
     downscale_image_opencv,
     run_core_preprocessing_pipeline,
 )
 from ..utils.nifti_io import load_raw_img_and_label
 from .fuzzy_threshold import (
-    build_lcc_image_from_mask,
     contextual_fuzzy_from_config,
     get_thresholding_config,
     normalize_contextual_apply_to,

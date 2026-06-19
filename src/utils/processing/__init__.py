@@ -28,6 +28,7 @@ _SYMBOL_TO_MODULE = {
     "downscale_image": "preprocessing",
     "downscale_image_ndi": "preprocessing",
     "downscale_image_opencv": "preprocessing",
+    "build_lcc_image_from_mask": "preprocessing",
     "largest_connected_component": "preprocessing",
     "run_core_preprocessing_pipeline": "preprocessing",
     "threshold_image": "preprocessing",
