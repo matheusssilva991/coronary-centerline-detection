@@ -26,6 +26,11 @@ from .pipeline_detection import (
     get_or_segment_aorta,
 )
 from .pipeline_preprocessing import get_or_compute_vesselness, load_and_preprocess_image
+from .fuzzy_threshold import (
+    get_thresholding_config,
+    maybe_apply_contextual_weight,
+    normalize_contextual_apply_to,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -61,6 +66,11 @@ def process_image(img_id, config, base_path, base_save_path):
         "right_dist_mm": None,
         "both_correct": False,
         "both_tolerable": False,
+        "threshold_mode": None,
+        "contextual_apply_to": None,
+        "threshold_voxels": None,
+        "lcc_voxels": None,
+        "mean_contextual_weight": None,
     }
 
     try:
@@ -69,10 +79,28 @@ def process_image(img_id, config, base_path, base_save_path):
         lcc_image = image_data["lcc_image"]
         label = image_data["label"]
         scaled_spacing = image_data["scaled_spacing"]
+        contextual_weight_map = image_data.get("contextual_weight_map")
+        preprocessing_details = image_data.get("preprocessing_details", {})
         vesselness_spacing = (scaled_spacing[1], scaled_spacing[0], scaled_spacing[2])
         downscale_factors = image_data["downscale_factors"]
+        contextual_apply_to = normalize_contextual_apply_to(
+            get_thresholding_config(config).get("contextual_apply_to")
+        )
 
         image_data = None
+        result.update(
+            {
+                "threshold_mode": preprocessing_details.get("threshold_mode"),
+                "contextual_apply_to": preprocessing_details.get(
+                    "contextual_apply_to"
+                ),
+                "threshold_voxels": preprocessing_details.get("threshold_voxels"),
+                "lcc_voxels": preprocessing_details.get("lcc_voxels"),
+                "mean_contextual_weight": preprocessing_details.get(
+                    "mean_contextual_weight"
+                ),
+            }
+        )
 
         # Calcula o mapa de vasos usado para selecionar candidatos de óstios.
         vesselness_ostios = get_or_compute_vesselness(
@@ -87,6 +115,12 @@ def process_image(img_id, config, base_path, base_save_path):
             save_cache=config["SAVE_CACHE"],
             use_gpu=config.get("USE_GPU", False),
             spacing=vesselness_spacing,
+        )
+        vesselness_ostios = maybe_apply_contextual_weight(
+            vesselness_ostios,
+            contextual_weight_map,
+            contextual_apply_to,
+            "ostia",
         )
 
         # Localiza a aorta por círculos em fatias consecutivas.
@@ -173,6 +207,7 @@ def process_image(img_id, config, base_path, base_save_path):
             config,
             base_save_path,
             scaled_spacing=scaled_spacing,
+            contextual_weight_map=contextual_weight_map,
         )
         artery_metrics.pop("artery_mask", None)
         result.update(artery_metrics)

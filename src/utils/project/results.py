@@ -21,6 +21,11 @@ RESULT_COLUMNS = [
     "fc_effective_alpha",
     "fc_object_seed_count",
     "fc_candidate_voxels_final",
+    "threshold_mode",
+    "contextual_apply_to",
+    "threshold_voxels",
+    "lcc_voxels",
+    "mean_contextual_weight",
     "ostia_found",
     "ostia_status",
     "segmentation_attempted",
@@ -62,6 +67,11 @@ READABLE_COLUMN_NAMES = {
     "fc_effective_alpha": "fc_effective_alpha",
     "fc_object_seed_count": "fc_object_seed_count",
     "fc_candidate_voxels_final": "fc_candidate_voxels_final",
+    "threshold_mode": "threshold_mode",
+    "contextual_apply_to": "contextual_apply_to",
+    "threshold_voxels": "threshold_voxel_count",
+    "lcc_voxels": "lcc_voxel_count",
+    "mean_contextual_weight": "mean_contextual_weight",
     "ostia_found": "ostia_detected",
     "ostia_status": "ostia_detection_status",
     "segmentation_attempted": "artery_segmentation_run",
@@ -347,6 +357,13 @@ def build_result_row(result: dict[str, Any]) -> dict[str, Any]:
         "fc_candidate_voxels_final": _get_result_value(
             result, "fc_candidate_voxels_final"
         ),
+        "threshold_mode": _get_result_value(result, "threshold_mode"),
+        "contextual_apply_to": _get_result_value(result, "contextual_apply_to"),
+        "threshold_voxels": _get_result_value(result, "threshold_voxels"),
+        "lcc_voxels": _get_result_value(result, "lcc_voxels"),
+        "mean_contextual_weight": _get_result_value(
+            result, "mean_contextual_weight"
+        ),
         "ostia_found": _as_bool_value(_get_result_value(result, "ostia_found", False)),
         "ostia_status": _get_result_value(result, "ostia_status"),
         "segmentation_attempted": _as_bool_value(
@@ -397,6 +414,9 @@ def add_config_columns(df: pd.DataFrame, config: dict[str, Any]) -> pd.DataFrame
     )
     df["downscale_factors"] = str(config.get("DOWNSCALE_FACTORS", "N/A"))
     df["max_threshold_percentile"] = config.get("MAX_THRESHOLD_PERCENTILE", "N/A")
+    thresholding_config = config.get("THRESHOLDING", {})
+    df["threshold_mode"] = thresholding_config.get("method", "normal")
+    df["contextual_apply_to"] = thresholding_config.get("contextual_apply_to", "none")
     df["lcc_per_slice"] = bool(config.get("LCC_PER_SLICE", True))
     df["lcc_mode"] = _lcc_mode(config)
     df["configured_artery_segmentation_method"] = (
@@ -523,6 +543,7 @@ def _runtime_config_metadata(config: dict[str, Any]) -> dict[str, Any]:
         "downscale_factors": config.get("DOWNSCALE_FACTORS"),
         "min_threshold": config.get("MIN_THRESHOLD"),
         "max_threshold_percentile": config.get("MAX_THRESHOLD_PERCENTILE"),
+        "thresholding": config.get("THRESHOLDING"),
         "lcc_per_slice": bool(config.get("LCC_PER_SLICE", True)),
         "lcc_mode": _lcc_mode(config),
         "aorta_miss_count": circle_config.get("max_slice_miss_threshold"),
@@ -594,6 +615,7 @@ def build_metadata(
             "downscale_factors": config.get("DOWNSCALE_FACTORS"),
             "min_threshold": config.get("MIN_THRESHOLD"),
             "max_threshold_percentile": config.get("MAX_THRESHOLD_PERCENTILE"),
+            "thresholding": config.get("THRESHOLDING"),
             "lcc_per_slice": bool(config.get("LCC_PER_SLICE", True)),
             "lcc_mode": _lcc_mode(config),
         },
@@ -606,6 +628,7 @@ def build_metadata(
         "level_set_config": config.get("LEVEL_SET"),
         "ostia_detection_config": config.get("OSTIA_DETECTION"),
         "artery_segmentation_config": config.get("ARTERY_SEGMENTATION"),
+        "thresholding_config": config.get("THRESHOLDING"),
         "region_growing_config": config.get("REGION_GROWING"),
         "fuzzy_connectedness_config": config.get("FUZZY_CONNECTEDNESS"),
         "postprocessing_config": config.get("POSTPROCESSING"),

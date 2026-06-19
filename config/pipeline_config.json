@@ -12,6 +12,20 @@
     ],
     "MIN_THRESHOLD": -300,
     "MAX_THRESHOLD_PERCENTILE": 99.7,
+    "THRESHOLDING": {
+        "method": "normal",
+        "contextual_apply_to": "none",
+        "contextual": {
+            "weight_floor": 0.05,
+            "dense_power": 4.0,
+            "weight_mode": "object_dense",
+            "soft_margin_hu": 160,
+            "object_percentile": 99.5,
+            "dense_percentile": 99.9,
+            "smooth_radius": 2,
+            "smooth_mode": "mean"
+        }
+    },
     "VESSELNESS_AORTA": {
         "method": "normal",
         "sigmas": [
@@ -133,19 +147,19 @@
         "verbose": false
     },
     "FUZZY_CONNECTEDNESS": {
-        "alpha": 0.18,
-        "sigma_hu": 80,
+        "alpha": 0.16,
+        "sigma_hu": 100,
         "neighborhood": 26,
-        "candidate_min_vesselness": 0.02,
+        "candidate_min_vesselness": 0.018,
         "max_candidate_voxels": 500000,
         "max_processed_voxels": 500000,
         "seed_search_radius": 2,
         "max_seeds_per_ostium": 4,
-        "seed_min_vesselness": 0.02,
+        "seed_min_vesselness": 0.018,
         "min_seed_distance_voxels": 1.0,
         "vesselness_affinity_mode": "geometric_mean",
         "vesselness_power": 1.0,
-        "vesselness_floor": 0.02,
+        "vesselness_floor": 0.018,
         "edge_affinity_mode": "weighted_product",
         "vesselness_weight": 0.9,
         "mask_strategy": "alpha",

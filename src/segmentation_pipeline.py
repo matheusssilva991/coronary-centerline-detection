@@ -157,6 +157,11 @@ def build_effective_config(args):
         effective_config.setdefault("ARTERY_SEGMENTATION", {})["method"] = (
             args.artery_segmentation_method
         )
+    thresholding_config = effective_config.setdefault("THRESHOLDING", {})
+    if args.threshold_method is not None:
+        thresholding_config["method"] = args.threshold_method
+    if args.contextual_apply_to is not None:
+        thresholding_config["contextual_apply_to"] = args.contextual_apply_to
 
     effective_config["NUM_BATCHES"] = args.num_batches
     return scale_config_to_resolution(effective_config)
@@ -191,9 +196,15 @@ def print_run_settings(args, config, base_path, base_save_path):
         f"{circle_config.get('out_of_tolerance_as_miss', False)}"
     )
     artery_config = config.get("ARTERY_SEGMENTATION", {})
+    thresholding_config = config.get("THRESHOLDING", {})
     print(
         "🫀 Segmentação arterial: "
         f"{artery_config.get('method', 'region_growing')}"
+    )
+    print(
+        "🧩 Threshold: "
+        f"{thresholding_config.get('method', 'normal')} | contextual em "
+        f"{thresholding_config.get('contextual_apply_to', 'none')}"
     )
     print(f"📦 Processamento em {args.num_batches} lotes")
 
