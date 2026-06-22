@@ -1,6 +1,6 @@
 {
   "execution_info": {
-    "timestamp": "2026-06-20T22:50:43.937890",
+    "timestamp": "2026-06-22T18:17:41.386431",
     "split_name": "test",
     "num_images": 700,
     "image_ids": [
@@ -705,12 +705,12 @@
       471,
       233
     ],
-    "execution_time_seconds": 51309.008799791336,
-    "execution_time_minutes": 855.1501466631889,
-    "execution_time_hours": 14.252502444386483,
-    "current_run_execution_time_seconds": 51309.05468702316,
-    "current_run_execution_time_minutes": 855.150911450386,
-    "current_run_execution_time_hours": 14.252515190839768,
+    "execution_time_seconds": 28749.647623062134,
+    "execution_time_minutes": 479.16079371770223,
+    "execution_time_hours": 7.98601322862837,
+    "current_run_execution_time_seconds": 28749.66211438179,
+    "current_run_execution_time_minutes": 479.1610352396965,
+    "current_run_execution_time_hours": 7.986017253994942,
     "batch_timing_summary": {
       "total_known_batches": 5,
       "known_batches": [
@@ -720,9 +720,9 @@
         4,
         5
       ],
-      "total_known_duration_seconds": 51309.008799791336,
-      "total_known_duration_minutes": 855.1501466631889,
-      "total_known_duration_hours": 14.252502444386483,
+      "total_known_duration_seconds": 28749.647623062134,
+      "total_known_duration_minutes": 479.16079371770223,
+      "total_known_duration_hours": 7.98601322862837,
       "missing_timing_batches": []
     },
     "batch_timings": [
@@ -734,11 +734,11 @@
         "first_img_id": 568,
         "last_img_id": 163,
         "result_file": "ostios_test_lote_1_summary.csv",
-        "started_at": "2026-06-20T08:35:34",
-        "finished_at": "2026-06-20T11:29:04",
-        "duration_seconds": 10409.788724899292,
-        "duration_minutes": 173.49647874832152,
-        "duration_hours": 2.8916079791386924
+        "started_at": "2026-06-22T10:18:31",
+        "finished_at": "2026-06-22T11:59:22",
+        "duration_seconds": 6050.844042539597,
+        "duration_minutes": 100.84740070899328,
+        "duration_hours": 1.6807900118165546
       },
       {
         "split_name": "test",
@@ -748,11 +748,11 @@
         "first_img_id": 138,
         "last_img_id": 803,
         "result_file": "ostios_test_lote_2_summary.csv",
-        "started_at": "2026-06-20T11:29:04",
-        "finished_at": "2026-06-20T14:25:46",
-        "duration_seconds": 10602.43472647667,
-        "duration_minutes": 176.70724544127782,
-        "duration_hours": 2.9451207573546303
+        "started_at": "2026-06-22T11:59:22",
+        "finished_at": "2026-06-22T13:28:22",
+        "duration_seconds": 5340.0593004226685,
+        "duration_minutes": 89.0009883403778,
+        "duration_hours": 1.4833498056729637
       },
       {
         "split_name": "test",
@@ -762,11 +762,11 @@
         "first_img_id": 627,
         "last_img_id": 500,
         "result_file": "ostios_test_lote_3_summary.csv",
-        "started_at": "2026-06-20T14:25:47",
-        "finished_at": "2026-06-20T17:13:31",
-        "duration_seconds": 10064.36475276947,
-        "duration_minutes": 167.73941254615784,
-        "duration_hours": 2.795656875769297
+        "started_at": "2026-06-22T13:28:22",
+        "finished_at": "2026-06-22T15:00:37",
+        "duration_seconds": 5534.750277996063,
+        "duration_minutes": 92.24583796660106,
+        "duration_hours": 1.5374306327766842
       },
       {
         "split_name": "test",
@@ -776,11 +776,11 @@
         "first_img_id": 114,
         "last_img_id": 412,
         "result_file": "ostios_test_lote_4_summary.csv",
-        "started_at": "2026-06-20T17:13:31",
-        "finished_at": "2026-06-20T20:01:11",
-        "duration_seconds": 10060.17713856697,
-        "duration_minutes": 167.66961897611617,
-        "duration_hours": 2.7944936496019364
+        "started_at": "2026-06-22T15:00:37",
+        "finished_at": "2026-06-22T16:44:00",
+        "duration_seconds": 6203.072283267975,
+        "duration_minutes": 103.38453805446623,
+        "duration_hours": 1.7230756342411042
       },
       {
         "split_name": "test",
@@ -790,20 +790,20 @@
         "first_img_id": 274,
         "last_img_id": 233,
         "result_file": "ostios_test_lote_5_summary.csv",
-        "started_at": "2026-06-20T20:01:11",
-        "finished_at": "2026-06-20T22:50:43",
-        "duration_seconds": 10172.243457078934,
-        "duration_minutes": 169.53739095131556,
-        "duration_hours": 2.8256231825219262
+        "started_at": "2026-06-22T16:44:00",
+        "finished_at": "2026-06-22T18:17:41",
+        "duration_seconds": 5620.921718835831,
+        "duration_minutes": 93.68202864726383,
+        "duration_hours": 1.561367144121064
       }
     ],
-    "python_version": "3.12.0",
-    "platform": "Linux-5.15.0-181-generic-x86_64-with-glibc2.35",
+    "python_version": "3.13.11",
+    "platform": "Linux-6.14.0-37-generic-x86_64-with-glibc2.39",
     "state_counters": {
       "ostia_found": 696,
       "ostia_status_not_found": 4,
       "segmentation_attempted": 696,
-      "proceeded_with_bad_ostia": 127,
+      "proceeded_with_bad_ostia": 130,
       "error_not_null": 0
     }
   },
@@ -1047,26 +1047,26 @@
     "ostia_found_percent": 99.42857142857143,
     "ostia_status_not_found": 4,
     "ostia_status_not_found_percent": 0.5714285714285714,
-    "both_correct": 61,
-    "both_correct_percent": 8.714285714285715,
-    "both_tolerable": 508,
-    "both_tolerable_percent": 72.57142857142857,
+    "both_correct": 60,
+    "both_correct_percent": 8.571428571428571,
+    "both_tolerable": 506,
+    "both_tolerable_percent": 72.28571428571429,
     "segmentation_attempted": 696,
     "segmentation_attempted_percent": 99.42857142857143,
-    "proceeded_with_bad_ostia": 127,
-    "proceeded_with_bad_ostia_percent": 18.142857142857142,
-    "total_success": 569,
-    "total_success_percent": 81.28571428571428,
-    "left_correct": 279,
-    "right_correct": 132,
+    "proceeded_with_bad_ostia": 130,
+    "proceeded_with_bad_ostia_percent": 18.571428571428573,
+    "total_success": 566,
+    "total_success_percent": 80.85714285714286,
+    "left_correct": 280,
+    "right_correct": 131,
     "error_not_null": 0,
-    "dice_artery_mean": 0.5774447361745945,
-    "dice_artery_std": 0.1963716204381137,
-    "dice_artery_median": 0.6511095283856235
+    "dice_artery_mean": 0.5784271629013902,
+    "dice_artery_std": 0.19618475170347965,
+    "dice_artery_median": 0.6520867162966079
   },
   "paths": {
-    "base_path": "/data04/home/mpmaia/ImageCAS/database/1-1000",
+    "base_path": "/media/matheus/HD/DatasetsCCTA/ImageCAS/1-1000",
     "base_save_path": "/media/matheus/HD/DatasetsCCTA/Processed_ImageCAS",
-    "output_dir": "/data04/home/projetos/dac_seg_dlag/mssilva.ppgmc/matheus_codes/coronary-centerline-detection/output"
+    "output_dir": "/home/matheus/workspace/coronary-centerline-detection/output"
   }
 }

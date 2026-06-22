@@ -13,7 +13,7 @@
   "MIN_THRESHOLD": -300,
   "MAX_THRESHOLD_PERCENTILE": 99.7,
   "THRESHOLDING": {
-    "method": "fuzzy",
+    "method": "normal",
     "contextual_apply_to": "none",
     "contextual": {
       "weight_floor": 0.05,
@@ -127,7 +127,7 @@
     "distance_threshold_mm": 7.0
   },
   "ARTERY_SEGMENTATION": {
-    "method": "fc"
+    "method": "rg"
   },
   "REGION_GROWING": {
     "max_volume": 100000,
