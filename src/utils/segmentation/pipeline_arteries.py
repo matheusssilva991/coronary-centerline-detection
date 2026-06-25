@@ -11,11 +11,6 @@ import numpy as np
 from skimage.morphology import ball
 
 from .artery_segmentation import normal_region_growing_from_ostia
-from .fuzzy_threshold import (
-    get_thresholding_config,
-    maybe_apply_contextual_weight,
-    normalize_contextual_apply_to,
-)
 from .pipeline_preprocessing import get_or_compute_vesselness
 from ..processing.binary_operations import binary_closing, binary_dilation
 from ..utils.metrics import dice_score
@@ -128,7 +123,6 @@ def segment_arteries_from_ostia(
     config: Dict[str, Any],
     base_save_path: str,
     scaled_spacing: Optional[Sequence[float]] = None,
-    contextual_weight_map: Optional[Any] = None,
 ) -> Dict[str, Any]:
     """Calcula vesselness arterial, segmenta artérias e avalia Dice."""
     vesselness_spacing = (
@@ -149,16 +143,6 @@ def segment_arteries_from_ostia(
         save_cache=config["SAVE_CACHE"],
         use_gpu=config.get("USE_GPU", False),
         spacing=vesselness_spacing,
-    )
-    thresholding_config = get_thresholding_config(config)
-    contextual_apply_to = normalize_contextual_apply_to(
-        thresholding_config.get("contextual_apply_to")
-    )
-    vesselness_artery = maybe_apply_contextual_weight(
-        vesselness_artery,
-        contextual_weight_map,
-        contextual_apply_to,
-        "artery",
     )
 
     method = _normalize_artery_segmentation_method(

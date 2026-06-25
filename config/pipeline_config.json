@@ -14,11 +14,7 @@
     "MAX_THRESHOLD_PERCENTILE": 99.7,
     "THRESHOLDING": {
         "method": "normal",
-        "contextual_apply_to": "none",
-        "contextual": {
-            "weight_floor": 0.05,
-            "dense_power": 4.0,
-            "weight_mode": "object_dense",
+        "fuzzy": {
             "soft_margin_hu": 160,
             "object_percentile": 99.5,
             "dense_percentile": 99.9,

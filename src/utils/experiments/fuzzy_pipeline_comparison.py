@@ -1,9 +1,7 @@
 """Helpers para comparar variantes fuzzy no pipeline coronário.
 
 Este módulo concentra a lógica que o notebook de comparação usa para alternar
-entre threshold normal, threshold fuzzy por pertinência contextual de objeto,
-ponderação contextual fuzzy do vesselness arterial, region growing e fuzzy
-connectedness.
+entre threshold normal, threshold fuzzy, region growing e fuzzy connectedness.
 """
 
 from __future__ import annotations
@@ -47,7 +45,6 @@ IMAGE_COLUMNS = [
     "split",
     "IMG_ID",
     "threshold_mode",
-    "contextual_apply_to",
     "artery_method",
     "dice_artery",
     "artery_voxels",
@@ -61,7 +58,6 @@ IMAGE_COLUMNS = [
     "segmentation_attempted",
     "threshold_voxels",
     "lcc_voxels",
-    "mean_contextual_weight",
     "fc_processed_voxels",
     "fc_effective_alpha",
     "error",
@@ -71,15 +67,11 @@ PARAMETER_COLUMNS = [
     "variant",
     "overrides_json",
     "threshold_mode",
-    "contextual_apply_to",
-    "contextual.weight_floor",
-    "contextual.dense_power",
-    "contextual.weight_mode",
-    "contextual.soft_margin_hu",
-    "contextual.object_percentile",
-    "contextual.dense_percentile",
-    "contextual.smooth_radius",
-    "contextual.smooth_mode",
+    "fuzzy.soft_margin_hu",
+    "fuzzy.object_percentile",
+    "fuzzy.dense_percentile",
+    "fuzzy.smooth_radius",
+    "fuzzy.smooth_mode",
     "artery_method",
     "fc.alpha",
     "fc.sigma_hu",
@@ -98,7 +90,6 @@ PARAMETER_COLUMNS = [
 
 EXPERIMENT_KEYS = {
     "threshold_mode",
-    "contextual_apply_to",
     "artery_method",
     "max_candidate_voxels",
     "max_processed_voxels",
@@ -110,7 +101,7 @@ def split_overrides(overrides: dict[str, Any]) -> tuple[dict[str, Any], dict[str
     config_overrides: dict[str, Any] = {}
     experiment: dict[str, Any] = {}
     for key, value in overrides.items():
-        if key in EXPERIMENT_KEYS or key.startswith(("fc.", "contextual.")):
+        if key in EXPERIMENT_KEYS or key.startswith(("fc.", "fuzzy.")):
             set_nested(experiment, key, value)
         else:
             set_nested(config_overrides, key, value)
@@ -166,7 +157,7 @@ def load_downsampled_case(
     }
 
 
-def estimate_contextual_centers(
+def estimate_fuzzy_centers(
     volume: np.ndarray,
     min_hu: float,
     soft_margin_hu: float,
@@ -188,7 +179,7 @@ def estimate_contextual_centers(
     return np.array([soft_center, object_center, dense_center], dtype=np.float32)
 
 
-def contextual_fuzzy_outputs(
+def fuzzy_threshold_outputs(
     volume: np.ndarray,
     *,
     min_hu: float,
@@ -197,12 +188,9 @@ def contextual_fuzzy_outputs(
     dense_percentile: float = 99.95,
     smooth_radius: int = 1,
     smooth_mode: str = "mean",
-    weight_floor: float = 0.15,
-    dense_power: float = 2.0,
-    weight_mode: str = "dense_only",
-) -> tuple[np.ndarray, np.ndarray, dict[str, Any]]:
-    """Gera máscara contextual de objeto e mapa de peso para vesselness."""
-    centers = estimate_contextual_centers(
+) -> tuple[np.ndarray, dict[str, Any]]:
+    """Gera máscara fuzzy de objeto."""
+    centers = estimate_fuzzy_centers(
         volume,
         min_hu,
         soft_margin_hu,
@@ -235,23 +223,12 @@ def contextual_fuzzy_outputs(
             np.finfo(np.float32).eps,
         )
 
-    object_membership = memberships[1]
-    dense_membership = memberships[2]
     object_mask = (np.argmax(memberships, axis=0) == 1) & (volume >= min_hu)
-    if weight_mode == "dense_only":
-        raw_weight = 1.0 - np.power(dense_membership, dense_power)
-    else:
-        raw_weight = object_membership * np.power(1.0 - dense_membership, dense_power)
-    weight = weight_floor + (1.0 - weight_floor) * raw_weight
-    weight = np.clip(weight, weight_floor, 1.0).astype(np.float32)
 
-    return object_mask.astype(bool), weight, {
+    return object_mask.astype(bool), {
         "soft_center_hu": soft_center,
         "object_center_hu": object_center,
         "dense_center_hu": dense_center,
-        "mean_contextual_weight": float(weight.mean()),
-        "min_contextual_weight": float(weight.min()),
-        "max_contextual_weight": float(weight.max()),
     }
 
 
@@ -259,30 +236,25 @@ def build_preprocessed_inputs(
     down_image: np.ndarray,
     config: dict[str, Any],
     experiment: dict[str, Any],
-) -> tuple[np.ndarray, np.ndarray, np.ndarray, dict[str, Any]]:
-    """Monta threshold/LCC e o mapa contextual usado para ponderar vesselness."""
+) -> tuple[np.ndarray, np.ndarray, dict[str, Any]]:
+    """Monta threshold/LCC para a variante."""
     min_hu = float(config.get("MIN_THRESHOLD", MIN_HU))
     max_hu = float(np.percentile(down_image, float(config["MAX_THRESHOLD_PERCENTILE"])))
     threshold_mode = experiment.get("threshold_mode", "normal")
-    contextual_cfg = experiment.get("contextual", {})
+    fuzzy_cfg = experiment.get("fuzzy", {})
 
-    contextual_mask, weight_map, contextual_details = contextual_fuzzy_outputs(
+    fuzzy_mask, fuzzy_details = fuzzy_threshold_outputs(
         down_image,
         min_hu=min_hu,
-        soft_margin_hu=float(contextual_cfg.get("soft_margin_hu", 160)),
-        object_percentile=float(contextual_cfg.get("object_percentile", 99.8)),
-        dense_percentile=float(contextual_cfg.get("dense_percentile", 99.95)),
-        smooth_radius=int(contextual_cfg.get("smooth_radius", 1)),
-        smooth_mode=str(contextual_cfg.get("smooth_mode", "mean")),
-        weight_floor=float(contextual_cfg.get("weight_floor", 0.15)),
-        dense_power=float(contextual_cfg.get("dense_power", 2.0)),
-        weight_mode=str(contextual_cfg.get("weight_mode", "dense_only")),
+        soft_margin_hu=float(fuzzy_cfg.get("soft_margin_hu", 160)),
+        object_percentile=float(fuzzy_cfg.get("object_percentile", 99.8)),
+        dense_percentile=float(fuzzy_cfg.get("dense_percentile", 99.95)),
+        smooth_radius=int(fuzzy_cfg.get("smooth_radius", 1)),
+        smooth_mode=str(fuzzy_cfg.get("smooth_mode", "mean")),
     )
 
-    if threshold_mode in {"contextual_3class", "contextual_object"}:
-        # Usa o mesmo mapa fuzzy contextual, mas como threshold: mantém apenas
-        # voxels cuja maior pertinência local é a classe "objeto".
-        mask = contextual_mask
+    if threshold_mode == "fuzzy":
+        mask = fuzzy_mask
     else:
         mask = (down_image >= min_hu) & (down_image <= max_hu)
 
@@ -292,29 +264,13 @@ def build_preprocessed_inputs(
         offset=abs(int(min_hu)),
         per_slice=bool(config.get("LCC_PER_SLICE", True)),
     )
-    return lcc_image, lcc_mask, weight_map, {
+    return lcc_image, lcc_mask, {
         "threshold_mode": threshold_mode,
         "max_hu": max_hu,
         "threshold_voxels": int(mask.sum()),
         "lcc_voxels": int(lcc_mask.sum()),
-        **contextual_details,
+        **fuzzy_details,
     }
-
-
-def maybe_apply_weight(
-    vesselness: np.ndarray,
-    weight_map: np.ndarray,
-    apply_to: str,
-    stage: str,
-) -> np.ndarray:
-    """Aplica o mapa contextual à etapa selecionada."""
-    if apply_to not in {stage, "both"}:
-        return vesselness
-    if vesselness.shape != weight_map.shape:
-        raise ValueError(
-            f"weight map shape mismatch: {vesselness.shape} vs {weight_map.shape}"
-        )
-    return (vesselness * weight_map).astype(vesselness.dtype, copy=False)
 
 
 def build_base_config(args: Any) -> dict[str, Any]:
@@ -352,7 +308,6 @@ def run_image(
         "split": split_name,
         "IMG_ID": img_id,
         "threshold_mode": experiment.get("threshold_mode", "normal"),
-        "contextual_apply_to": experiment.get("contextual_apply_to", "none"),
         "artery_method": experiment.get("artery_method", "region_growing"),
         "dice_artery": np.nan,
         "artery_voxels": 0,
@@ -366,14 +321,13 @@ def run_image(
         "segmentation_attempted": False,
         "threshold_voxels": 0,
         "lcc_voxels": 0,
-        "mean_contextual_weight": np.nan,
         "fc_processed_voxels": np.nan,
         "fc_effective_alpha": np.nan,
         "error": None,
     }
     try:
         case = load_downsampled_case(img_id, base_path, config)
-        lcc_image, lcc_mask, weight_map, prep_details = build_preprocessed_inputs(
+        lcc_image, lcc_mask, prep_details = build_preprocessed_inputs(
             case["down_image"],
             config,
             experiment,
@@ -381,12 +335,11 @@ def run_image(
         row.update(
             {
                 key: prep_details.get(key)
-                for key in ("threshold_voxels", "lcc_voxels", "mean_contextual_weight")
+                for key in ("threshold_voxels", "lcc_voxels")
             }
         )
         spacing = case["scaled_spacing"]
         vesselness_spacing = compute_vesselness_spacing(spacing)
-        apply_to = str(experiment.get("contextual_apply_to", "none"))
 
         vesselness_ostios = get_or_compute_vesselness(
             str(img_id),
@@ -398,13 +351,6 @@ def run_image(
             use_gpu=config.get("USE_GPU", False),
             spacing=vesselness_spacing,
         )
-        vesselness_ostios = maybe_apply_weight(
-            vesselness_ostios,
-            weight_map,
-            apply_to,
-            "ostia",
-        )
-
         detected_circles = get_or_detect_aorta_circles(
             str(img_id),
             lcc_image,
@@ -461,12 +407,6 @@ def run_image(
             save_cache=config["SAVE_CACHE"],
             use_gpu=config.get("USE_GPU", False),
             spacing=vesselness_spacing,
-        )
-        vesselness_artery = maybe_apply_weight(
-            vesselness_artery,
-            weight_map,
-            apply_to,
-            "artery",
         )
         row["segmentation_attempted"] = True
         label_artery = ostia_eval["label_artery"]
@@ -617,10 +557,9 @@ __all__ = [
     "build_base_config",
     "build_preprocessed_inputs",
     "compute_vesselness_spacing",
-    "contextual_fuzzy_outputs",
-    "estimate_contextual_centers",
+    "estimate_fuzzy_centers",
+    "fuzzy_threshold_outputs",
     "load_downsampled_case",
-    "maybe_apply_weight",
     "parameter_row",
     "run_image",
     "save_outputs",

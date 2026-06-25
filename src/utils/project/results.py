@@ -22,10 +22,8 @@ RESULT_COLUMNS = [
     "fc_object_seed_count",
     "fc_candidate_voxels_final",
     "threshold_mode",
-    "contextual_apply_to",
     "threshold_voxels",
     "lcc_voxels",
-    "mean_contextual_weight",
     "ostia_found",
     "ostia_status",
     "segmentation_attempted",
@@ -68,10 +66,8 @@ READABLE_COLUMN_NAMES = {
     "fc_object_seed_count": "fc_object_seed_count",
     "fc_candidate_voxels_final": "fc_candidate_voxels_final",
     "threshold_mode": "threshold_mode",
-    "contextual_apply_to": "contextual_apply_to",
     "threshold_voxels": "threshold_voxel_count",
     "lcc_voxels": "lcc_voxel_count",
-    "mean_contextual_weight": "mean_contextual_weight",
     "ostia_found": "ostia_detected",
     "ostia_status": "ostia_detection_status",
     "segmentation_attempted": "artery_segmentation_run",
@@ -358,12 +354,8 @@ def build_result_row(result: dict[str, Any]) -> dict[str, Any]:
             result, "fc_candidate_voxels_final"
         ),
         "threshold_mode": _get_result_value(result, "threshold_mode"),
-        "contextual_apply_to": _get_result_value(result, "contextual_apply_to"),
         "threshold_voxels": _get_result_value(result, "threshold_voxels"),
         "lcc_voxels": _get_result_value(result, "lcc_voxels"),
-        "mean_contextual_weight": _get_result_value(
-            result, "mean_contextual_weight"
-        ),
         "ostia_found": _as_bool_value(_get_result_value(result, "ostia_found", False)),
         "ostia_status": _get_result_value(result, "ostia_status"),
         "segmentation_attempted": _as_bool_value(
@@ -416,7 +408,6 @@ def add_config_columns(df: pd.DataFrame, config: dict[str, Any]) -> pd.DataFrame
     df["max_threshold_percentile"] = config.get("MAX_THRESHOLD_PERCENTILE", "N/A")
     thresholding_config = config.get("THRESHOLDING", {})
     df["threshold_mode"] = thresholding_config.get("method", "normal")
-    df["contextual_apply_to"] = thresholding_config.get("contextual_apply_to", "none")
     df["lcc_per_slice"] = bool(config.get("LCC_PER_SLICE", True))
     df["lcc_mode"] = _lcc_mode(config)
     df["configured_artery_segmentation_method"] = (

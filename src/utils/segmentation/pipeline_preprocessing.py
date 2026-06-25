@@ -25,9 +25,8 @@ from ..processing.preprocessing import (
 )
 from ..utils.nifti_io import load_raw_img_and_label
 from .fuzzy_threshold import (
-    contextual_fuzzy_from_config,
+    fuzzy_threshold_from_config,
     get_thresholding_config,
-    normalize_contextual_apply_to,
     normalize_threshold_mode,
 )
 
@@ -100,15 +99,9 @@ def load_and_preprocess_image(
 
     thresholding_config = get_thresholding_config(config)
     threshold_mode = normalize_threshold_mode(thresholding_config.get("method"))
-    contextual_apply_to = normalize_contextual_apply_to(
-        thresholding_config.get("contextual_apply_to")
-    )
-    needs_contextual = threshold_mode == "contextual_object" or contextual_apply_to != "none"
 
-    contextual_weight_map = None
     preprocessing_details = {
         "threshold_mode": threshold_mode,
-        "contextual_apply_to": contextual_apply_to,
     }
 
     if threshold_mode == "normal":
@@ -128,12 +121,6 @@ def load_and_preprocess_image(
                 "max_threshold": float(thresh_vals[1]),
             }
         )
-        if needs_contextual:
-            _, contextual_weight_map, contextual_details = contextual_fuzzy_from_config(
-                down_image,
-                config,
-            )
-            preprocessing_details.update(contextual_details)
     else:
         # Fuzzy threshold: mantém apenas voxels cuja classe dominante é objeto.
         if use_opencv:
@@ -144,12 +131,10 @@ def load_and_preprocess_image(
             )
         else:
             down_image = downscale_image_ndi(img, downscale_factors, order=3)
-        contextual_mask, contextual_weight_map, contextual_details = (
-            contextual_fuzzy_from_config(down_image, config)
-        )
+        fuzzy_mask, fuzzy_details = fuzzy_threshold_from_config(down_image, config)
         lcc_image, lcc_mask = build_lcc_image_from_mask(
             down_image,
-            contextual_mask,
+            fuzzy_mask,
             offset=abs(float(config.get("MIN_THRESHOLD", -300))),
             per_slice=bool(config.get("LCC_PER_SLICE", True)),
         )
@@ -157,9 +142,9 @@ def load_and_preprocess_image(
             {
                 "min_threshold": float(config.get("MIN_THRESHOLD", -300)),
                 "max_threshold": None,
-                "threshold_voxels": int(np.sum(contextual_mask)),
+                "threshold_voxels": int(np.sum(fuzzy_mask)),
                 "lcc_voxels": int(np.sum(lcc_mask)),
-                **contextual_details,
+                **fuzzy_details,
             }
         )
     # O label usa interpolação de vizinho mais próximo para preservar classes.
@@ -174,7 +159,6 @@ def load_and_preprocess_image(
     return {
         "lcc_image": lcc_image,
         "label": label,
-        "contextual_weight_map": contextual_weight_map,
         "preprocessing_details": preprocessing_details,
         "spacing": spacing,
         "scaled_spacing": (dx, dy, dz),

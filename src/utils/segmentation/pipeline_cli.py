@@ -47,8 +47,8 @@ Exemplos de uso:
   # Comparar candidatos do region growing com a média acumulada da região
   python segmentation_pipeline.py --split train --rg-comparison-window -1
 
-  # Usar fuzzy threshold e ponderar vesselness arterial pelo mapa contextual
-  python segmentation_pipeline.py --split val --threshold-method fuzzy --contextual-apply-to artery
+  # Usar fuzzy threshold
+  python segmentation_pipeline.py --split val --threshold-method fuzzy
 
   # PROCESSAMENTO EM LOTES (salvamento incremental):
     # Processar em 10 lotes (divide as imagens entre 10 blocos)
@@ -234,21 +234,11 @@ def build_parser(default_base_path, default_base_save_path, default_output_dir):
     )
     parser.add_argument(
         "--threshold-method",
-        choices=["normal", "fuzzy", "contextual_object"],
+        choices=["normal", "fuzzy"],
         default=None,
         help=(
             "Threshold inicial: 'normal' usa -300 HU até percentil; "
-            "'fuzzy'/'contextual_object' mantém voxels cuja maior pertinência "
-            "contextual é objeto."
-        ),
-    )
-    parser.add_argument(
-        "--contextual-apply-to",
-        choices=["none", "artery", "ostia", "both"],
-        default=None,
-        help=(
-            "Onde aplicar a ponderação contextual fuzzy no vesselness: none, "
-            "artery, ostia ou both."
+            "'fuzzy' mantém voxels cuja maior pertinência é objeto."
         ),
     )
     parser.add_argument(

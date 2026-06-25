@@ -1,13 +1,9 @@
-"""Threshold fuzzy contextual reutilizável no pipeline de segmentação.
+"""Threshold fuzzy reutilizável no pipeline de segmentação.
 
 Este módulo concentra a etapa fuzzy usada antes da detecção de aorta/óstios e
-da segmentação arterial. O modelo contextual divide cada voxel em três
-pertinências: fundo mole, objeto e fundo denso. A partir dessas pertinências,
-o pipeline pode:
-
-1. gerar uma máscara de objeto para substituir o threshold HU superior;
-2. gerar um mapa de pesos para penalizar vesselness em regiões densas ou pouco
-   compatíveis com artéria.
+da segmentação arterial. O modelo divide cada voxel em três pertinências:
+fundo mole, objeto e fundo denso. A máscara fuzzy mantém os voxels cuja classe
+dominante é objeto.
 """
 
 from __future__ import annotations
@@ -27,40 +23,12 @@ def normalize_threshold_mode(mode: Any) -> str:
         "normal": "normal",
         "classic": "normal",
         "threshold": "normal",
-        "fuzzy": "contextual_object",
-        "contextual": "contextual_object",
-        "contextual_3class": "contextual_object",
-        "contextual_object": "contextual_object",
-        "object": "contextual_object",
+        "fuzzy": "fuzzy",
+        "object": "fuzzy",
     }
     if normalized not in aliases:
         valid = ", ".join(sorted(set(aliases.values())))
         raise ValueError(f"Método de threshold inválido: {mode!r}. Use: {valid}.")
-    return aliases[normalized]
-
-
-def normalize_contextual_apply_to(value: Any) -> str:
-    """Normaliza onde o mapa fuzzy contextual deve ponderar o vesselness."""
-    # A ponderação pode ser desligada ou aplicada em ostia, artéria ou ambos.
-    normalized = str(value or "none").strip().lower()
-    normalized = normalized.replace("-", "_").replace(" ", "_")
-    aliases = {
-        "none": "none",
-        "off": "none",
-        "false": "none",
-        "no": "none",
-        "artery": "artery",
-        "arteries": "artery",
-        "ostia": "ostia",
-        "ostios": "ostia",
-        "both": "both",
-        "all": "both",
-    }
-    if normalized not in aliases:
-        valid = ", ".join(sorted(set(aliases.values())))
-        raise ValueError(
-            f"Alvo contextual inválido: {value!r}. Use: {valid}."
-        )
     return aliases[normalized]
 
 
@@ -69,19 +37,18 @@ def get_thresholding_config(config: dict[str, Any]) -> dict[str, Any]:
     # Mantém compatibilidade com configs antigas que ainda não tinham THRESHOLDING.
     thresholding = dict(config.get("THRESHOLDING", {}))
     thresholding.setdefault("method", "normal")
-    thresholding.setdefault("contextual_apply_to", "none")
-    thresholding.setdefault("contextual", {})
+    thresholding.setdefault("fuzzy", {})
     return thresholding
 
 
-def estimate_contextual_centers(
+def estimate_fuzzy_centers(
     volume: np.ndarray,
     min_hu: float,
     soft_margin_hu: float,
     object_percentile: float,
     dense_percentile: float,
 ) -> np.ndarray:
-    """Estima centros HU das três classes fuzzy contextuais.
+    """Estima centros HU das três classes fuzzy.
 
     O centro de fundo mole é ancorado abaixo de ``min_hu``. Os centros de objeto
     e fundo denso são estimados por percentis da própria imagem, considerando
@@ -105,7 +72,7 @@ def estimate_contextual_centers(
     return np.array([soft_center, object_center, dense_center], dtype=np.float32)
 
 
-def contextual_fuzzy_outputs(
+def fuzzy_threshold_outputs(
     volume: np.ndarray,
     *,
     min_hu: float,
@@ -114,16 +81,12 @@ def contextual_fuzzy_outputs(
     dense_percentile: float = 99.95,
     smooth_radius: int = 1,
     smooth_mode: str = "mean",
-    weight_floor: float = 0.15,
-    dense_power: float = 2.0,
-    weight_mode: str = "dense_only",
-) -> tuple[np.ndarray, np.ndarray, dict[str, Any]]:
-    """Gera máscara fuzzy de objeto e mapa de peso contextual.
+) -> tuple[np.ndarray, dict[str, Any]]:
+    """Gera máscara fuzzy de objeto e metadados dos centros.
 
     A pertinência de objeto é alta entre o fundo mole e o fundo denso. Após a
     normalização das três classes, a máscara seleciona voxels cuja classe
-    dominante é objeto. O mapa de peso pode ser aplicado ao vesselness para
-    reduzir respostas em voxels densos ou pouco compatíveis com a classe objeto.
+    dominante é objeto.
 
     Args:
         volume: Volume 3D usado para estimar e aplicar as pertinências.
@@ -134,14 +97,11 @@ def contextual_fuzzy_outputs(
         dense_percentile: Percentil usado como centro robusto da classe densa.
         smooth_radius: Raio da janela cúbica de suavização das pertinências.
         smooth_mode: Tipo de suavização local, ``mean`` ou ``median``.
-        weight_floor: Piso mínimo do mapa de peso contextual.
-        dense_power: Expoente que controla a penalização de voxels densos.
-        weight_mode: Estratégia de peso, ``dense_only`` ou objeto+denso.
 
     Returns:
-        Máscara de objeto, mapa de peso contextual e metadados dos centros/pesos.
+        Máscara de objeto e metadados dos centros/pertinências.
     """
-    centers = estimate_contextual_centers(
+    centers = estimate_fuzzy_centers(
         volume,
         min_hu,
         soft_margin_hu,
@@ -178,69 +138,29 @@ def contextual_fuzzy_outputs(
             np.finfo(np.float32).eps,
         )
 
-    object_membership = memberships[1]
-    dense_membership = memberships[2]
-
     # A máscara final fica com voxels cuja classe dominante é objeto.
     object_mask = (np.argmax(memberships, axis=0) == 1) & (volume >= min_hu)
-
-    # O peso contextual penaliza regiões densas antes de aplicar vesselness.
-    if weight_mode == "dense_only":
-        raw_weight = 1.0 - np.power(dense_membership, dense_power)
-    else:
-        raw_weight = object_membership * np.power(1.0 - dense_membership, dense_power)
-    weight = weight_floor + (1.0 - weight_floor) * raw_weight
-    weight = np.clip(weight, weight_floor, 1.0).astype(np.float32)
-
-    return object_mask.astype(bool), weight, {
+    return object_mask.astype(bool), {
         "soft_center_hu": soft_center,
         "object_center_hu": object_center,
         "dense_center_hu": dense_center,
-        "mean_contextual_weight": float(weight.mean()),
-        "min_contextual_weight": float(weight.min()),
-        "max_contextual_weight": float(weight.max()),
     }
 
 
-def contextual_fuzzy_from_config(
+def fuzzy_threshold_from_config(
     volume: np.ndarray,
     config: dict[str, Any],
-) -> tuple[np.ndarray, np.ndarray, dict[str, Any]]:
-    """Executa o fuzzy contextual a partir da configuração completa."""
-    # Isola os parâmetros do bloco THRESHOLDING.contextual e aplica defaults locais.
+) -> tuple[np.ndarray, dict[str, Any]]:
+    """Executa o fuzzy threshold a partir da configuração completa."""
+    # Isola os parâmetros do bloco THRESHOLDING.fuzzy e aplica defaults locais.
     thresholding = get_thresholding_config(config)
-    contextual = dict(thresholding.get("contextual", {}))
-    return contextual_fuzzy_outputs(
+    fuzzy = dict(thresholding.get("fuzzy", {}))
+    return fuzzy_threshold_outputs(
         np.asarray(volume, dtype=np.float32),
         min_hu=float(config.get("MIN_THRESHOLD", -300)),
-        soft_margin_hu=float(contextual.get("soft_margin_hu", 160)),
-        object_percentile=float(contextual.get("object_percentile", 99.8)),
-        dense_percentile=float(contextual.get("dense_percentile", 99.95)),
-        smooth_radius=int(contextual.get("smooth_radius", 1)),
-        smooth_mode=str(contextual.get("smooth_mode", "mean")),
-        weight_floor=float(contextual.get("weight_floor", 0.15)),
-        dense_power=float(contextual.get("dense_power", 2.0)),
-        weight_mode=str(contextual.get("weight_mode", "dense_only")),
-    )
-
-
-def maybe_apply_contextual_weight(
-    vesselness: np.ndarray,
-    weight_map: np.ndarray | None,
-    apply_to: Any,
-    stage: str,
-) -> np.ndarray:
-    """Pondera vesselness com o mapa contextual quando a etapa foi selecionada."""
-    target = normalize_contextual_apply_to(apply_to)
-    if target not in {stage, "both"} or weight_map is None:
-        return vesselness
-    if vesselness.shape != weight_map.shape:
-        raise ValueError(
-            f"Mapa contextual incompatível: {vesselness.shape} vs {weight_map.shape}"
-        )
-
-    # Preserva o dtype original do vesselness para não mudar o contrato da etapa.
-    return (np.asarray(vesselness) * np.asarray(weight_map)).astype(
-        np.asarray(vesselness).dtype,
-        copy=False,
+        soft_margin_hu=float(fuzzy.get("soft_margin_hu", 160)),
+        object_percentile=float(fuzzy.get("object_percentile", 99.8)),
+        dense_percentile=float(fuzzy.get("dense_percentile", 99.95)),
+        smooth_radius=int(fuzzy.get("smooth_radius", 1)),
+        smooth_mode=str(fuzzy.get("smooth_mode", "mean")),
     )

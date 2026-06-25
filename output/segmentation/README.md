@@ -204,10 +204,9 @@ Resultados do notebook `src/fuzzy_pipeline_comparison.ipynb`. Use para comparar:
 
 - threshold HU normal;
 - threshold fuzzy alpha-cut;
-- contextual fuzzy ponderando o vesselness arterial;
 - region growing;
 - fuzzy connectedness;
-- combinacao contextual fuzzy + fuzzy connectedness.
+- combinacao de threshold fuzzy + fuzzy connectedness.
 
 Estrutura esperada:
 
@@ -375,7 +374,7 @@ uv run python src/segmentation_pipeline.py --split train --no-gpu
   `runs/<resolucao>_res/<timestamp>/logs/pipeline.log`
 - Resultado oficial:
   `canonical/<resolucao>_res/<split>/<timestamp>/numeric/`
-- Comparacao fuzzy/contextual/FC atual:
+- Comparacao fuzzy/FC atual:
   `analysis/fuzzy_pipeline_comparison/<run_name>/`
 - Sweeps exploratorios antigos:
   `analysis/fuzzy_sweep/runs/<run_name>/`

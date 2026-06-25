@@ -9,7 +9,7 @@ avaliar o pipeline. Ela nao segue a mesma estrutura das execucoes finais em
 - `fuzzy_sweep/`: historico de varreduras exploratorias antigas.
 - `fuzzy_pipeline_comparison/`: resultados do notebook
   `src/fuzzy_pipeline_comparison.ipynb`, comparando normal, fuzzy alpha-cut,
-  contextual fuzzy e fuzzy connectedness.
+  fuzzy threshold e fuzzy connectedness.
 - `cases_analysis/`: estudos de casos especificos, geralmente com cache e
   exemplos visuais.
 - `bad_cases/`: relatorios ou amostras de casos problemáticos.

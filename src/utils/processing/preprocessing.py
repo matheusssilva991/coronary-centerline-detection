@@ -167,8 +167,8 @@ def build_lcc_image_from_mask(
     """Aplica uma máscara externa e preserva a maior componente conectada.
 
     Esta função reproduz a etapa de LCC do pré-processamento clássico para
-    qualquer máscara candidata, incluindo máscaras geradas por threshold fuzzy
-    contextual. O offset mantém intensidades negativas distinguíveis do fundo
+    qualquer máscara candidata, incluindo máscaras geradas por threshold fuzzy.
+    O offset mantém intensidades negativas distinguíveis do fundo
     durante a extração do componente conectado.
 
     Args:

@@ -11,13 +11,12 @@ de unidade/CI devem ficar em `tests/` se forem criados no futuro.
 - `compare_cpu_gpu.py`: compara saídas de CPU/GPU e ajuda a identificar etapas
   com diferença numérica relevante.
 - `fuzzy_pipeline_comparison.py`: versão executável do notebook de comparação
-  fuzzy/contextual/FC, útil para rodar no servidor.
+  fuzzy/FC, útil para rodar no servidor.
 
 ## Notebooks relacionados
 
 - `src/fuzzy_pipeline_comparison.ipynb`: compara threshold normal, fuzzy
-  alpha-cut, contextual fuzzy ponderando o vesselness arterial, region growing e
-  fuzzy connectedness.
+  threshold, region growing e fuzzy connectedness.
 
 Os helpers compartilhados ficam em `src/utils/experiments/`.
 
