@@ -157,6 +157,10 @@ def build_effective_config(args):
         effective_config.setdefault("ARTERY_SEGMENTATION", {})["method"] = (
             args.artery_segmentation_method
         )
+    if args.rg_comparison_window is not None:
+        effective_config.setdefault("REGION_GROWING", {})["comparison_window"] = (
+            args.rg_comparison_window
+        )
     thresholding_config = effective_config.setdefault("THRESHOLDING", {})
     if args.threshold_method is not None:
         thresholding_config["method"] = args.threshold_method

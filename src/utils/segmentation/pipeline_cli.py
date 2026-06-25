@@ -44,6 +44,9 @@ Exemplos de uso:
   # Escolher método de segmentação arterial
   python segmentation_pipeline.py --split val --artery-method fc
 
+  # Comparar candidatos do region growing com a média acumulada da região
+  python segmentation_pipeline.py --split train --rg-comparison-window -1
+
   # Usar fuzzy threshold e ponderar vesselness arterial pelo mapa contextual
   python segmentation_pipeline.py --split val --threshold-method fuzzy --contextual-apply-to artery
 
@@ -217,6 +220,16 @@ def build_parser(default_base_path, default_base_save_path, default_output_dir):
         help=(
             "Método de segmentação arterial: 'rg'/'region_growing' ou "
             "'fc'/'fuzzy_connectedness'."
+        ),
+    )
+    parser.add_argument(
+        "--rg-comparison-window",
+        type=int,
+        default=None,
+        help=(
+            "Referência de comparação do region growing: 1 compara com o voxel "
+            "atual, -1 compara com a média acumulada da região, valores >1 "
+            "comparam com a média dos últimos N voxels aceitos."
         ),
     )
     parser.add_argument(
