@@ -1,0 +1,444 @@
+"""Executa vários runs do pipeline variando o limiar inferior HU.
+
+O script chama ``src/segmentation_pipeline.py`` para cada variante, mantendo o
+pipeline oficial intacto. As variantes focam em ``threshold normal + RG`` para
+avaliar isoladamente o impacto do piso inferior.
+
+Exemplos:
+    uv run python src/experiments/lower_threshold_sweep.py --split train --dry-run
+
+    uv run python src/experiments/lower_threshold_sweep.py \\
+      --split train \\
+      --percentiles 1,2,5,10 \\
+      --num-batches 5 \\
+      --gpu \\
+      --no-save-cache
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import subprocess
+import sys
+import time
+from datetime import datetime
+from pathlib import Path
+from typing import Any
+
+import pandas as pd
+
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+DEFAULT_OUTPUT_ROOT = REPO_ROOT / "output/segmentation/analysis/lower_threshold_sweep"
+DEFAULT_CONFIG_PATH = REPO_ROOT / "config/pipeline_config.json"
+
+
+def parse_csv_floats(value: str) -> list[float]:
+    """Converte ``1,2,5`` em lista de floats."""
+    items = [item.strip() for item in value.split(",") if item.strip()]
+    if not items:
+        raise argparse.ArgumentTypeError("A lista de percentis não pode ser vazia.")
+    return [float(item) for item in items]
+
+
+def parse_csv_methods(value: str) -> list[str]:
+    """Converte lista textual de métodos e valida nomes conhecidos."""
+    valid = {"fixed", "percentile", "object_relative_percentile"}
+    methods = [item.strip() for item in value.split(",") if item.strip()]
+    invalid = [method for method in methods if method not in valid]
+    if invalid:
+        raise argparse.ArgumentTypeError(
+            f"Métodos inválidos: {invalid}. Use: {sorted(valid)}."
+        )
+    return methods
+
+
+def variant_name(method: str, percentile: float | None = None) -> str:
+    """Gera nome curto para a variante."""
+    if method == "fixed":
+        return "fixed_m300"
+    percent_text = str(percentile).replace(".", "p")
+    if method == "object_relative_percentile":
+        return f"object_relative_p{percent_text}"
+    return f"percentile_p{percent_text}"
+
+
+def build_variants(
+    methods: list[str],
+    percentiles: list[float],
+    object_percentile: float,
+    clip_min_hu: float,
+    clip_max_hu: float,
+) -> list[dict[str, Any]]:
+    """Monta variantes de limiar inferior."""
+    variants: list[dict[str, Any]] = []
+    if "fixed" in methods:
+        variants.append(
+            {
+                "name": variant_name("fixed"),
+                "method": "fixed",
+                "percentile": None,
+                "overrides": {
+                    "LOWER_THRESHOLD": {
+                        "method": "fixed",
+                        "fixed_hu": -300,
+                    }
+                },
+            }
+        )
+
+    for method in methods:
+        if method == "fixed":
+            continue
+        for percentile in percentiles:
+            variants.append(
+                {
+                    "name": variant_name(method, percentile),
+                    "method": method,
+                    "percentile": percentile,
+                    "overrides": {
+                        "LOWER_THRESHOLD": {
+                            "method": method,
+                            "percentile": percentile,
+                            "clip_min_hu": clip_min_hu,
+                            "clip_max_hu": clip_max_hu,
+                            "object_percentile": object_percentile,
+                        }
+                    },
+                }
+            )
+    return variants
+
+
+def base_pipeline_overrides(use_gpu: bool | None) -> dict[str, Any]:
+    """Força o experimento para threshold normal + region growing."""
+    overrides: dict[str, Any] = {
+        "THRESHOLDING": {"method": "normal"},
+        "ARTERY_SEGMENTATION": {"method": "region_growing"},
+    }
+    if use_gpu is not None:
+        overrides["USE_GPU"] = bool(use_gpu)
+    return overrides
+
+
+def deep_merge(base: dict[str, Any], updates: dict[str, Any]) -> dict[str, Any]:
+    """Merge recursivo simples para overrides JSON."""
+    merged = dict(base)
+    for key, value in updates.items():
+        if isinstance(value, dict) and isinstance(merged.get(key), dict):
+            merged[key] = deep_merge(merged[key], value)
+        else:
+            merged[key] = value
+    return merged
+
+
+def write_json(path: Path, data: dict[str, Any]) -> None:
+    """Escreve JSON indentado."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+
+
+def resolve_repo_path(path: Path) -> Path:
+    """Resolve caminhos relativos a partir da raiz do repositório."""
+    return path if path.is_absolute() else REPO_ROOT / path
+
+
+def load_json(path: Path) -> dict[str, Any]:
+    """Carrega um JSON de configuração."""
+    resolved = resolve_repo_path(path)
+    return json.loads(resolved.read_text(encoding="utf-8"))
+
+
+def latest_pipeline_run(variant_output_root: Path, resolution: str) -> Path | None:
+    """Encontra o run criado pelo pipeline dentro da pasta da variante."""
+    runs_root = variant_output_root / "segmentation" / "runs" / f"{resolution}_res"
+    if not runs_root.exists():
+        return None
+    candidates = [path for path in runs_root.iterdir() if path.is_dir()]
+    if not candidates:
+        return None
+    return max(candidates, key=lambda path: path.stat().st_mtime)
+
+
+def read_split_summary(run_dir: Path, split: str) -> pd.DataFrame:
+    """Carrega o CSV consolidado do split."""
+    path = run_dir / "numeric" / f"ostios_{split}_summary.csv"
+    if not path.exists():
+        return pd.DataFrame()
+    return pd.read_csv(path)
+
+
+def summarize_run(
+    variant: dict[str, Any],
+    run_dir: Path | None,
+    split: str,
+    duration_seconds: float,
+    return_code: int,
+) -> dict[str, Any]:
+    """Gera uma linha de resumo por variante."""
+    row = {
+        "variant": variant["name"],
+        "lower_threshold_method": variant["method"],
+        "lower_threshold_percentile": variant["percentile"],
+        "run_dir": None if run_dir is None else str(run_dir.relative_to(REPO_ROOT)),
+        "return_code": return_code,
+        "duration_seconds": duration_seconds,
+        "duration_minutes": duration_seconds / 60,
+        "n_images": None,
+        "mean_min_threshold_hu": None,
+        "std_min_threshold_hu": None,
+        "mean_dice": None,
+        "median_dice": None,
+        "ostia_success_rate": None,
+        "both_correct_n": None,
+        "both_tolerable_n": None,
+        "found_wrong_n": None,
+        "not_found_n": None,
+    }
+    if run_dir is None or return_code != 0:
+        return row
+
+    df = read_split_summary(run_dir, split)
+    if df.empty:
+        return row
+
+    dice = pd.to_numeric(df.get("artery_dice"), errors="coerce")
+    min_threshold = pd.to_numeric(df.get("min_threshold_hu"), errors="coerce")
+    status = df.get("ostia_detection_status", pd.Series(dtype=str)).astype(str)
+    success = status.isin({"both correct", "both tolerable"})
+
+    row.update(
+        {
+            "n_images": int(len(df)),
+            "mean_min_threshold_hu": float(min_threshold.mean()),
+            "std_min_threshold_hu": float(min_threshold.std()),
+            "mean_dice": float(dice.mean()),
+            "median_dice": float(dice.median()),
+            "ostia_success_rate": float(success.mean()),
+            "both_correct_n": int((status == "both correct").sum()),
+            "both_tolerable_n": int((status == "both tolerable").sum()),
+            "found_wrong_n": int((status == "found but incorrect").sum()),
+            "not_found_n": int((status == "not found").sum()),
+        }
+    )
+    return row
+
+
+def build_parser() -> argparse.ArgumentParser:
+    """Cria o parser do sweep."""
+    parser = argparse.ArgumentParser(
+        description="Sweep de limiar inferior adaptativo usando threshold normal + RG.",
+    )
+    parser.add_argument("--split", choices=["train", "val", "test"], default="train")
+    parser.add_argument("--resolution", choices=["mid", "high"], default="mid")
+    parser.add_argument("--num-batches", type=int, default=5)
+    parser.add_argument("--output-root", type=Path, default=DEFAULT_OUTPUT_ROOT)
+    parser.add_argument("--run-name", default=None)
+    parser.add_argument("--config-path", type=Path, default=DEFAULT_CONFIG_PATH)
+    parser.add_argument(
+        "--methods",
+        type=parse_csv_methods,
+        default=parse_csv_methods("fixed,percentile,object_relative_percentile"),
+        help=(
+            "Métodos separados por vírgula. Opções: fixed, percentile, "
+            "object_relative_percentile."
+        ),
+    )
+    parser.add_argument(
+        "--percentiles",
+        type=parse_csv_floats,
+        default=parse_csv_floats("1,2,5,10"),
+        help="Percentis baixos testados nos métodos adaptativos.",
+    )
+    parser.add_argument("--object-percentile", type=float, default=99.5)
+    parser.add_argument("--clip-min-hu", type=float, default=-700.0)
+    parser.add_argument("--clip-max-hu", type=float, default=500.0)
+    parser.add_argument("--cache", action="store_true")
+    parser.add_argument("--no-save-cache", action="store_true")
+    parser.add_argument("--base-path", type=Path, default=None)
+    parser.add_argument("--base-save-path", type=Path, default=None)
+    parser.add_argument("--downscale-method", choices=["scipy", "opencv"], default=None)
+    parser.add_argument(
+        "--opencv-interpolation",
+        choices=["nearest", "linear", "cubic", "area", "lanczos4"],
+        default=None,
+    )
+    gpu_group = parser.add_mutually_exclusive_group()
+    gpu_group.add_argument("--gpu", dest="use_gpu", action="store_true", default=None)
+    gpu_group.add_argument("--no-gpu", dest="use_gpu", action="store_false")
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Mostra os comandos e grava configs, mas não executa o pipeline.",
+    )
+    parser.add_argument(
+        "--stop-on-error",
+        action="store_true",
+        help="Interrompe o sweep se uma variante falhar.",
+    )
+    return parser
+
+
+def pipeline_command(
+    args: argparse.Namespace,
+    variant_output_root: Path,
+    config_file: Path,
+) -> list[str]:
+    """Monta o comando do pipeline para uma variante."""
+    command = [
+        sys.executable,
+        str(REPO_ROOT / "src/segmentation_pipeline.py"),
+        "--split",
+        args.split,
+        "--resolution",
+        args.resolution,
+        "--num-batches",
+        str(args.num_batches),
+        "--threshold-method",
+        "normal",
+        "--artery-method",
+        "rg",
+        "--config-file",
+        str(config_file),
+        "--output-dir",
+        str(variant_output_root),
+    ]
+    if args.cache:
+        command.append("--cache")
+    if args.no_save_cache:
+        command.append("--no-save-cache")
+    if args.use_gpu is True:
+        command.append("--gpu")
+    elif args.use_gpu is False:
+        command.append("--no-gpu")
+    if args.base_path is not None:
+        command.extend(["--base-path", str(args.base_path)])
+    if args.base_save_path is not None:
+        command.extend(["--base-save-path", str(args.base_save_path)])
+    if args.downscale_method is not None:
+        command.extend(["--downscale-method", args.downscale_method])
+    if args.opencv_interpolation is not None:
+        command.extend(["--opencv-interpolation", args.opencv_interpolation])
+    return command
+
+
+def main() -> None:
+    """Executa o sweep."""
+    args = build_parser().parse_args()
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    run_name = args.run_name or timestamp
+    run_dir = args.output_root / run_name
+    configs_dir = run_dir / "configs"
+    variants_root = run_dir / "pipeline_runs"
+    results_dir = run_dir / "results"
+    results_dir.mkdir(parents=True, exist_ok=True)
+
+    variants = build_variants(
+        args.methods,
+        args.percentiles,
+        args.object_percentile,
+        args.clip_min_hu,
+        args.clip_max_hu,
+    )
+    base_config = load_json(args.config_path)
+    base_overrides = base_pipeline_overrides(args.use_gpu)
+    write_json(
+        run_dir / "sweep_config.json",
+        {
+            "split": args.split,
+            "resolution": args.resolution,
+            "num_batches": args.num_batches,
+            "methods": args.methods,
+            "percentiles": args.percentiles,
+            "object_percentile": args.object_percentile,
+            "clip_min_hu": args.clip_min_hu,
+            "clip_max_hu": args.clip_max_hu,
+            "config_path": str(resolve_repo_path(args.config_path)),
+            "dry_run": args.dry_run,
+        },
+    )
+
+    variant_rows = []
+    run_rows = []
+    summary_rows = []
+    for index, variant in enumerate(variants, start=1):
+        variant_dir = variants_root / variant["name"]
+        config_file = configs_dir / f"{variant['name']}.json"
+        overrides = deep_merge(base_overrides, variant["overrides"])
+        variant_config = deep_merge(base_config, overrides)
+        write_json(config_file, variant_config)
+        command = pipeline_command(args, variant_dir, config_file)
+        command_text = " ".join(command)
+
+        print(f"[{index}/{len(variants)}] {variant['name']}")
+        print(command_text)
+        variant_rows.append(
+            {
+                "variant": variant["name"],
+                "lower_threshold_method": variant["method"],
+                "lower_threshold_percentile": variant["percentile"],
+                "config_file": str(config_file.relative_to(REPO_ROOT)),
+                "command": command_text,
+            }
+        )
+
+        if args.dry_run:
+            run_rows.append(
+                {
+                    "variant": variant["name"],
+                    "return_code": None,
+                    "duration_seconds": 0.0,
+                    "run_dir": None,
+                    "command": command_text,
+                }
+            )
+            continue
+
+        start = time.perf_counter()
+        completed = subprocess.run(command, cwd=REPO_ROOT, check=False)
+        duration = time.perf_counter() - start
+        pipeline_run_dir = latest_pipeline_run(variant_dir, args.resolution)
+        run_rows.append(
+            {
+                "variant": variant["name"],
+                "return_code": completed.returncode,
+                "duration_seconds": duration,
+                "run_dir": (
+                    None
+                    if pipeline_run_dir is None
+                    else str(pipeline_run_dir.relative_to(REPO_ROOT))
+                ),
+                "command": command_text,
+            }
+        )
+        summary_rows.append(
+            summarize_run(
+                variant,
+                pipeline_run_dir,
+                args.split,
+                duration,
+                completed.returncode,
+            )
+        )
+        pd.DataFrame(summary_rows).to_csv(results_dir / "summary.csv", index=False)
+        if completed.returncode != 0 and args.stop_on_error:
+            raise SystemExit(completed.returncode)
+
+    pd.DataFrame(variant_rows).to_csv(results_dir / "variants.csv", index=False)
+    pd.DataFrame(run_rows).to_csv(results_dir / "runs.csv", index=False)
+    if summary_rows:
+        summary_df = pd.DataFrame(summary_rows).sort_values(
+            ["ostia_success_rate", "mean_dice"],
+            ascending=False,
+            na_position="last",
+        )
+        summary_df.to_csv(results_dir / "summary.csv", index=False)
+        print("\nResumo salvo em:", results_dir / "summary.csv")
+        print(summary_df[["variant", "mean_dice", "ostia_success_rate", "mean_min_threshold_hu"]])
+    else:
+        print("\nDry run concluído. Configs salvas em:", configs_dir)
+
+
+if __name__ == "__main__":
+    main()

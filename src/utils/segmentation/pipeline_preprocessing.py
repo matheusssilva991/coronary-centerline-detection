@@ -21,8 +21,10 @@ from ..processing.preprocessing import (
     build_lcc_image_from_mask,
     downscale_image_ndi,
     downscale_image_opencv,
-    run_core_preprocessing_pipeline,
+    largest_connected_component,
+    threshold_image_with_offset,
 )
+from .lower_threshold import resolve_lower_threshold
 from ..utils.nifti_io import load_raw_img_and_label
 from .fuzzy_threshold import (
     fuzzy_threshold_from_config,
@@ -106,19 +108,49 @@ def load_and_preprocess_image(
 
     if threshold_mode == "normal":
         # Caminho histórico: threshold HU superior por percentil + LCC.
-        down_image, _, lcc_image, thresh_vals = run_core_preprocessing_pipeline(
-            img,
-            downscale_factors=downscale_factors,
-            lcc_per_slice=config.get("LCC_PER_SLICE", True),
-            min_threshold=config.get("MIN_THRESHOLD", -300),
-            max_threshold_percentile=config["MAX_THRESHOLD_PERCENTILE"],
-            use_opencv=use_opencv,
-            opencv_interpolation=opencv_interpolation,
+        if use_opencv:
+            down_image = downscale_image_opencv(
+                img,
+                downscale_factors,
+                interpolation=opencv_interpolation,
+            )
+        else:
+            down_image = downscale_image_ndi(img, downscale_factors, order=3)
+
+        min_threshold, lower_threshold_details = resolve_lower_threshold(
+            down_image,
+            config,
         )
+        thresh_vals = (
+            float(min_threshold),
+            float(np.percentile(down_image, config["MAX_THRESHOLD_PERCENTILE"])),
+        )
+        thresh_image, thresh_mask, offset = threshold_image_with_offset(
+            down_image,
+            *thresh_vals,
+        )
+
+        if config.get("LCC_PER_SLICE", True):
+            lcc_image = np.zeros_like(thresh_image, dtype=thresh_image.dtype)
+            lcc_mask = np.zeros_like(thresh_mask, dtype=bool)
+            for z_idx in range(thresh_image.shape[2]):
+                lcc_slice, lcc_mask_slice = largest_connected_component(
+                    thresh_image[:, :, z_idx],
+                    thresh_mask[:, :, z_idx],
+                )
+                lcc_image[:, :, z_idx] = lcc_slice
+                lcc_mask[:, :, z_idx] = lcc_mask_slice
+        else:
+            lcc_image, lcc_mask = largest_connected_component(thresh_image, thresh_mask)
+
+        lcc_image = (lcc_image - offset).astype(np.float32)
         preprocessing_details.update(
             {
+                **lower_threshold_details,
                 "min_threshold": float(thresh_vals[0]),
                 "max_threshold": float(thresh_vals[1]),
+                "threshold_voxels": int(np.sum(thresh_mask)),
+                "lcc_voxels": int(np.sum(lcc_mask)),
             }
         )
     else:
@@ -131,16 +163,23 @@ def load_and_preprocess_image(
             )
         else:
             down_image = downscale_image_ndi(img, downscale_factors, order=3)
-        fuzzy_mask, fuzzy_details = fuzzy_threshold_from_config(down_image, config)
+        min_threshold, lower_threshold_details = resolve_lower_threshold(
+            down_image,
+            config,
+        )
+        fuzzy_config = dict(config)
+        fuzzy_config["MIN_THRESHOLD"] = float(min_threshold)
+        fuzzy_mask, fuzzy_details = fuzzy_threshold_from_config(down_image, fuzzy_config)
         lcc_image, lcc_mask = build_lcc_image_from_mask(
             down_image,
             fuzzy_mask,
-            offset=abs(float(config.get("MIN_THRESHOLD", -300))),
+            offset=abs(float(min_threshold)),
             per_slice=bool(config.get("LCC_PER_SLICE", True)),
         )
         preprocessing_details.update(
             {
-                "min_threshold": float(config.get("MIN_THRESHOLD", -300)),
+                **lower_threshold_details,
+                "min_threshold": float(min_threshold),
                 "max_threshold": None,
                 "threshold_voxels": int(np.sum(fuzzy_mask)),
                 "lcc_voxels": int(np.sum(lcc_mask)),

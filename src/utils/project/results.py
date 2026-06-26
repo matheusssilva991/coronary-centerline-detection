@@ -22,6 +22,11 @@ RESULT_COLUMNS = [
     "fc_object_seed_count",
     "fc_candidate_voxels_final",
     "threshold_mode",
+    "min_threshold",
+    "lower_threshold_method",
+    "lower_threshold_percentile",
+    "lower_threshold_object_percentile",
+    "lower_threshold_object_center_hu",
     "threshold_voxels",
     "lcc_voxels",
     "ostia_found",
@@ -66,6 +71,11 @@ READABLE_COLUMN_NAMES = {
     "fc_object_seed_count": "fc_object_seed_count",
     "fc_candidate_voxels_final": "fc_candidate_voxels_final",
     "threshold_mode": "threshold_mode",
+    "min_threshold": "min_threshold_hu",
+    "lower_threshold_method": "lower_threshold_method",
+    "lower_threshold_percentile": "lower_threshold_percentile",
+    "lower_threshold_object_percentile": "lower_threshold_object_percentile",
+    "lower_threshold_object_center_hu": "lower_threshold_object_center_hu",
     "threshold_voxels": "threshold_voxel_count",
     "lcc_voxels": "lcc_voxel_count",
     "ostia_found": "ostia_detected",
@@ -354,6 +364,19 @@ def build_result_row(result: dict[str, Any]) -> dict[str, Any]:
             result, "fc_candidate_voxels_final"
         ),
         "threshold_mode": _get_result_value(result, "threshold_mode"),
+        "min_threshold": _get_result_value(result, "min_threshold"),
+        "lower_threshold_method": _get_result_value(
+            result, "lower_threshold_method"
+        ),
+        "lower_threshold_percentile": _get_result_value(
+            result, "lower_threshold_percentile"
+        ),
+        "lower_threshold_object_percentile": _get_result_value(
+            result, "lower_threshold_object_percentile"
+        ),
+        "lower_threshold_object_center_hu": _get_result_value(
+            result, "lower_threshold_object_center_hu"
+        ),
         "threshold_voxels": _get_result_value(result, "threshold_voxels"),
         "lcc_voxels": _get_result_value(result, "lcc_voxels"),
         "ostia_found": _as_bool_value(_get_result_value(result, "ostia_found", False)),
@@ -407,7 +430,11 @@ def add_config_columns(df: pd.DataFrame, config: dict[str, Any]) -> pd.DataFrame
     df["downscale_factors"] = str(config.get("DOWNSCALE_FACTORS", "N/A"))
     df["max_threshold_percentile"] = config.get("MAX_THRESHOLD_PERCENTILE", "N/A")
     thresholding_config = config.get("THRESHOLDING", {})
+    lower_threshold_config = config.get("LOWER_THRESHOLD", {})
     df["threshold_mode"] = thresholding_config.get("method", "normal")
+    df["configured_lower_threshold_method"] = lower_threshold_config.get(
+        "method", "fixed"
+    )
     df["lcc_per_slice"] = bool(config.get("LCC_PER_SLICE", True))
     df["lcc_mode"] = _lcc_mode(config)
     df["configured_artery_segmentation_method"] = (

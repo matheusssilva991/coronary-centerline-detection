@@ -62,6 +62,11 @@ def process_image(img_id, config, base_path, base_save_path):
         "both_correct": False,
         "both_tolerable": False,
         "threshold_mode": None,
+        "min_threshold": None,
+        "lower_threshold_method": None,
+        "lower_threshold_percentile": None,
+        "lower_threshold_object_percentile": None,
+        "lower_threshold_object_center_hu": None,
         "threshold_voxels": None,
         "lcc_voxels": None,
     }
@@ -80,6 +85,19 @@ def process_image(img_id, config, base_path, base_save_path):
         result.update(
             {
                 "threshold_mode": preprocessing_details.get("threshold_mode"),
+                "min_threshold": preprocessing_details.get("min_threshold"),
+                "lower_threshold_method": preprocessing_details.get(
+                    "lower_threshold_method"
+                ),
+                "lower_threshold_percentile": preprocessing_details.get(
+                    "lower_threshold_percentile"
+                ),
+                "lower_threshold_object_percentile": preprocessing_details.get(
+                    "lower_threshold_object_percentile"
+                ),
+                "lower_threshold_object_center_hu": preprocessing_details.get(
+                    "lower_threshold_object_center_hu"
+                ),
                 "threshold_voxels": preprocessing_details.get("threshold_voxels"),
                 "lcc_voxels": preprocessing_details.get("lcc_voxels"),
             }

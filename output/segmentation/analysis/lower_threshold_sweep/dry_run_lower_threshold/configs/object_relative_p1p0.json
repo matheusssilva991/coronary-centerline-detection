@@ -1,0 +1,16 @@
+{
+  "THRESHOLDING": {
+    "method": "normal"
+  },
+  "ARTERY_SEGMENTATION": {
+    "method": "region_growing"
+  },
+  "USE_GPU": false,
+  "LOWER_THRESHOLD": {
+    "method": "object_relative_percentile",
+    "percentile": 1.0,
+    "clip_min_hu": -700.0,
+    "clip_max_hu": 500.0,
+    "object_percentile": 99.5
+  }
+}

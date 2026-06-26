@@ -12,6 +12,8 @@ de unidade/CI devem ficar em `tests/` se forem criados no futuro.
   com diferença numérica relevante.
 - `fuzzy_pipeline_comparison.py`: versão executável do notebook de comparação
   fuzzy/FC, útil para rodar no servidor.
+- `lower_threshold_sweep.py`: executa vários runs do pipeline variando o limiar
+  inferior HU, mantendo `threshold normal + region growing`.
 
 ## Notebooks relacionados
 
@@ -30,4 +32,11 @@ uv run python src/experiments/fuzzy_pipeline_comparison.py \
   --sample-size 15 \
   --run-name fuzzy_val_fc_test \
   --variants normal_rg,normal_threshold_fc,normal_fc_semi_permissive
+
+uv run python src/experiments/lower_threshold_sweep.py \
+  --split train \
+  --percentiles 1,2,5,10 \
+  --num-batches 5 \
+  --gpu \
+  --no-save-cache
 ```

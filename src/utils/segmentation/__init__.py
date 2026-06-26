@@ -40,12 +40,15 @@ _SYMBOL_TO_MODULE = {
     "fuzzy_threshold_from_config": "fuzzy_threshold",
     "fuzzy_threshold_outputs": "fuzzy_threshold",
     "get_thresholding_config": "fuzzy_threshold",
+    "get_lower_threshold_config": "lower_threshold",
     "get_or_compute_vesselness": "pipeline_preprocessing",
     "get_or_detect_aorta_circles": "pipeline_detection",
     "get_or_segment_aorta": "pipeline_detection",
     "load_and_preprocess_image": "pipeline_preprocessing",
+    "normalize_lower_threshold_method": "lower_threshold",
     "normal_region_growing_from_ostia": "artery_segmentation",
     "postprocess_artery_mask": "pipeline_arteries",
+    "resolve_lower_threshold": "lower_threshold",
     "segment_arteries_from_ostia": "pipeline_arteries",
 }
 

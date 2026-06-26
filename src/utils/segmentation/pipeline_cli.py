@@ -50,6 +50,9 @@ Exemplos de uso:
   # Usar fuzzy threshold
   python segmentation_pipeline.py --split val --threshold-method fuzzy
 
+  # Testar limiar inferior adaptativo mantendo threshold normal + RG
+  python segmentation_pipeline.py --split train --threshold-method normal --artery-method rg --lower-threshold-method percentile --lower-threshold-percentile 5
+
   # PROCESSAMENTO EM LOTES (salvamento incremental):
     # Processar em 10 lotes (divide as imagens entre 10 blocos)
     python segmentation_pipeline.py --num-batches 10
@@ -240,6 +243,44 @@ def build_parser(default_base_path, default_base_save_path, default_output_dir):
             "Threshold inicial: 'normal' usa -300 HU até percentil; "
             "'fuzzy' mantém voxels cuja maior pertinência é objeto."
         ),
+    )
+    parser.add_argument(
+        "--lower-threshold-method",
+        choices=["fixed", "percentile", "object_relative_percentile"],
+        default=None,
+        help=(
+            "Método do limiar inferior HU: fixed usa MIN_THRESHOLD; "
+            "percentile usa percentil baixo dos voxels válidos; "
+            "object_relative_percentile calcula o percentil baixo abaixo "
+            "do centro de objeto."
+        ),
+    )
+    parser.add_argument(
+        "--lower-threshold-percentile",
+        type=float,
+        default=None,
+        help="Percentil baixo usado nos métodos adaptativos de limiar inferior.",
+    )
+    parser.add_argument(
+        "--lower-threshold-object-percentile",
+        type=float,
+        default=None,
+        help=(
+            "Percentil usado para estimar o centro de objeto no método "
+            "object_relative_percentile."
+        ),
+    )
+    parser.add_argument(
+        "--lower-threshold-clip-min",
+        type=float,
+        default=None,
+        help="HU mínimo da faixa considerada no cálculo adaptativo do piso.",
+    )
+    parser.add_argument(
+        "--lower-threshold-clip-max",
+        type=float,
+        default=None,
+        help="HU máximo da faixa considerada no cálculo adaptativo do piso.",
     )
     parser.add_argument(
         "--downscale-method",

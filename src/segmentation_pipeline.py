@@ -165,6 +165,20 @@ def build_effective_config(args):
     if args.threshold_method is not None:
         thresholding_config["method"] = args.threshold_method
 
+    lower_threshold_config = effective_config.setdefault("LOWER_THRESHOLD", {})
+    if args.lower_threshold_method is not None:
+        lower_threshold_config["method"] = args.lower_threshold_method
+    if args.lower_threshold_percentile is not None:
+        lower_threshold_config["percentile"] = args.lower_threshold_percentile
+    if args.lower_threshold_object_percentile is not None:
+        lower_threshold_config["object_percentile"] = (
+            args.lower_threshold_object_percentile
+        )
+    if args.lower_threshold_clip_min is not None:
+        lower_threshold_config["clip_min_hu"] = args.lower_threshold_clip_min
+    if args.lower_threshold_clip_max is not None:
+        lower_threshold_config["clip_max_hu"] = args.lower_threshold_clip_max
+
     effective_config["NUM_BATCHES"] = args.num_batches
     return scale_config_to_resolution(effective_config)
 
@@ -199,6 +213,7 @@ def print_run_settings(args, config, base_path, base_save_path):
     )
     artery_config = config.get("ARTERY_SEGMENTATION", {})
     thresholding_config = config.get("THRESHOLDING", {})
+    lower_threshold_config = config.get("LOWER_THRESHOLD", {})
     print(
         "🫀 Segmentação arterial: "
         f"{artery_config.get('method', 'region_growing')}"
@@ -206,6 +221,11 @@ def print_run_settings(args, config, base_path, base_save_path):
     print(
         "🧩 Threshold: "
         f"{thresholding_config.get('method', 'normal')}"
+    )
+    print(
+        "🧱 Piso inferior: "
+        f"{lower_threshold_config.get('method', 'fixed')} "
+        f"(p={lower_threshold_config.get('percentile', 'N/A')})"
     )
     print(f"📦 Processamento em {args.num_batches} lotes")
 
