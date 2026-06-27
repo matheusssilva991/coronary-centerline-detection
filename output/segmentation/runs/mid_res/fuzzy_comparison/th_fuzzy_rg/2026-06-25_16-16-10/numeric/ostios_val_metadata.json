@@ -1,6 +1,6 @@
 {
   "execution_info": {
-    "timestamp": "2026-06-22T15:12:28.798361",
+    "timestamp": "2026-06-25T21:33:07.764894",
     "split_name": "val",
     "num_images": 270,
     "image_ids": [
@@ -275,12 +275,12 @@
       959,
       618
     ],
-    "execution_time_seconds": 21135.517633914948,
-    "execution_time_minutes": 352.2586272319158,
-    "execution_time_hours": 5.87097712053193,
-    "current_run_execution_time_seconds": 21135.535688638687,
-    "current_run_execution_time_minutes": 352.2589281439781,
-    "current_run_execution_time_hours": 5.870982135732969,
+    "execution_time_seconds": 19017.586209774017,
+    "execution_time_minutes": 316.95977016290027,
+    "execution_time_hours": 5.282662836048338,
+    "current_run_execution_time_seconds": 19017.620604991913,
+    "current_run_execution_time_minutes": 316.9603434165319,
+    "current_run_execution_time_hours": 5.282672390275532,
     "batch_timing_summary": {
       "total_known_batches": 5,
       "known_batches": [
@@ -290,9 +290,9 @@
         4,
         5
       ],
-      "total_known_duration_seconds": 21135.517633914948,
-      "total_known_duration_minutes": 352.2586272319158,
-      "total_known_duration_hours": 5.87097712053193,
+      "total_known_duration_seconds": 19017.586209774017,
+      "total_known_duration_minutes": 316.95977016290027,
+      "total_known_duration_hours": 5.282662836048338,
       "missing_timing_batches": []
     },
     "batch_timings": [
@@ -304,11 +304,11 @@
         "first_img_id": 867,
         "last_img_id": 512,
         "result_file": "ostios_val_lote_1_summary.csv",
-        "started_at": "2026-06-22T09:20:13",
-        "finished_at": "2026-06-22T10:28:23",
-        "duration_seconds": 4090.079807043076,
-        "duration_minutes": 68.16799678405125,
-        "duration_hours": 1.1361332797341877
+        "started_at": "2026-06-25T16:16:10",
+        "finished_at": "2026-06-25T17:18:46",
+        "duration_seconds": 3756.10333108902,
+        "duration_minutes": 62.601722184817,
+        "duration_hours": 1.0433620364136167
       },
       {
         "split_name": "val",
@@ -318,11 +318,11 @@
         "first_img_id": 769,
         "last_img_id": 156,
         "result_file": "ostios_val_lote_2_summary.csv",
-        "started_at": "2026-06-22T10:28:23",
-        "finished_at": "2026-06-22T11:36:55",
-        "duration_seconds": 4112.03586435318,
-        "duration_minutes": 68.533931072553,
-        "duration_hours": 1.14223218454255
+        "started_at": "2026-06-25T17:18:46",
+        "finished_at": "2026-06-25T18:23:20",
+        "duration_seconds": 3874.4285204410553,
+        "duration_minutes": 64.57380867401758,
+        "duration_hours": 1.0762301445669598
       },
       {
         "split_name": "val",
@@ -332,11 +332,11 @@
         "first_img_id": 110,
         "last_img_id": 127,
         "result_file": "ostios_val_lote_3_summary.csv",
-        "started_at": "2026-06-22T11:36:55",
-        "finished_at": "2026-06-22T12:50:50",
-        "duration_seconds": 4435.271125793457,
-        "duration_minutes": 73.92118542989095,
-        "duration_hours": 1.2320197571648492
+        "started_at": "2026-06-25T18:23:20",
+        "finished_at": "2026-06-25T19:30:46",
+        "duration_seconds": 4045.9091532230377,
+        "duration_minutes": 67.43181922038396,
+        "duration_hours": 1.123863653673066
       },
       {
         "split_name": "val",
@@ -346,11 +346,11 @@
         "first_img_id": 639,
         "last_img_id": 753,
         "result_file": "ostios_val_lote_4_summary.csv",
-        "started_at": "2026-06-22T12:50:50",
-        "finished_at": "2026-06-22T14:03:16",
-        "duration_seconds": 4345.475810050964,
-        "duration_minutes": 72.42459683418274,
-        "duration_hours": 1.2070766139030455
+        "started_at": "2026-06-25T19:30:46",
+        "finished_at": "2026-06-25T20:31:26",
+        "duration_seconds": 3639.532154798508,
+        "duration_minutes": 60.65886924664179,
+        "duration_hours": 1.0109811541106966
       },
       {
         "split_name": "val",
@@ -360,11 +360,11 @@
         "first_img_id": 772,
         "last_img_id": 618,
         "result_file": "ostios_val_lote_5_summary.csv",
-        "started_at": "2026-06-22T14:03:16",
-        "finished_at": "2026-06-22T15:12:28",
-        "duration_seconds": 4152.655026674271,
-        "duration_minutes": 69.21091711123785,
-        "duration_hours": 1.1535152851872974
+        "started_at": "2026-06-25T20:31:26",
+        "finished_at": "2026-06-25T21:33:07",
+        "duration_seconds": 3701.613050222397,
+        "duration_minutes": 61.69355083703995,
+        "duration_hours": 1.0282258472839991
       }
     ],
     "python_version": "3.12.0",
@@ -373,7 +373,7 @@
       "ostia_found": 268,
       "ostia_status_not_found": 2,
       "segmentation_attempted": 268,
-      "proceeded_with_bad_ostia": 48,
+      "proceeded_with_bad_ostia": 45,
       "error_not_null": 0
     }
   },
@@ -388,12 +388,8 @@
     "min_threshold": -300,
     "max_threshold_percentile": 99.7,
     "thresholding": {
-      "method": "normal",
-      "contextual_apply_to": "artery",
-      "contextual": {
-        "weight_floor": 0.05,
-        "dense_power": 4.0,
-        "weight_mode": "object_dense",
+      "method": "fuzzy",
+      "fuzzy": {
         "soft_margin_hu": 160,
         "object_percentile": 99.5,
         "dense_percentile": 99.9,
@@ -418,12 +414,8 @@
     "min_threshold": -300,
     "max_threshold_percentile": 99.7,
     "thresholding": {
-      "method": "normal",
-      "contextual_apply_to": "artery",
-      "contextual": {
-        "weight_floor": 0.05,
-        "dense_power": 4.0,
-        "weight_mode": "object_dense",
+      "method": "fuzzy",
+      "fuzzy": {
         "soft_margin_hu": 160,
         "object_percentile": 99.5,
         "dense_percentile": 99.9,
@@ -542,12 +534,8 @@
     "method": "rg"
   },
   "thresholding_config": {
-    "method": "normal",
-    "contextual_apply_to": "artery",
-    "contextual": {
-      "weight_floor": 0.05,
-      "dense_power": 4.0,
-      "weight_mode": "object_dense",
+    "method": "fuzzy",
+    "fuzzy": {
       "soft_margin_hu": 160,
       "object_percentile": 99.5,
       "dense_percentile": 99.9,
@@ -619,20 +607,20 @@
     "ostia_status_not_found_percent": 0.7407407407407408,
     "both_correct": 22,
     "both_correct_percent": 8.148148148148149,
-    "both_tolerable": 198,
-    "both_tolerable_percent": 73.33333333333333,
+    "both_tolerable": 201,
+    "both_tolerable_percent": 74.44444444444444,
     "segmentation_attempted": 268,
     "segmentation_attempted_percent": 99.25925925925925,
-    "proceeded_with_bad_ostia": 48,
-    "proceeded_with_bad_ostia_percent": 17.77777777777778,
-    "total_success": 220,
-    "total_success_percent": 81.48148148148148,
-    "left_correct": 110,
-    "right_correct": 46,
+    "proceeded_with_bad_ostia": 45,
+    "proceeded_with_bad_ostia_percent": 16.666666666666664,
+    "total_success": 223,
+    "total_success_percent": 82.5925925925926,
+    "left_correct": 102,
+    "right_correct": 45,
     "error_not_null": 0,
-    "dice_artery_mean": 0.5771902832484133,
-    "dice_artery_std": 0.1927914230416086,
-    "dice_artery_median": 0.6447961462523162
+    "dice_artery_mean": 0.5828666632922396,
+    "dice_artery_std": 0.19242790503993332,
+    "dice_artery_median": 0.6484446459717768
   },
   "paths": {
     "base_path": "/data04/home/mpmaia/ImageCAS/database/1-1000",
