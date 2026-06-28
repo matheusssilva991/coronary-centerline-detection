@@ -165,6 +165,131 @@ def visualize_aorta_with_ostia(
     return plot
 
 
+def _add_mask_mesh(
+    plot: Any,
+    mask: NDArray[Any],
+    *,
+    spacing: Sequence[float],
+    color: int,
+    opacity: float,
+    name: str,
+) -> None:
+    """Adiciona uma máscara 3D ao plot quando ela contém voxels."""
+    mask_bool = np.asarray(mask) > 0
+    if not np.any(mask_bool):
+        print(f"Máscara vazia ignorada: {name}")
+        return
+
+    verts, faces, _, _ = measure.marching_cubes(
+        mask_bool.astype(float), level=0.5, spacing=spacing
+    )
+    plot += k3d.mesh(
+        verts.astype(np.float32),
+        faces.astype(np.uint32),
+        color=color,
+        opacity=opacity,
+        name=name,
+    )
+
+
+def _add_ostium_point(
+    plot: Any,
+    ostium: Optional[Sequence[float]],
+    *,
+    spacing: Sequence[float],
+    color: int,
+    name: str,
+) -> None:
+    """Adiciona um ponto de óstio ao plot quando a coordenada existe."""
+    if ostium is None:
+        return
+
+    dy, dx, dz = tuple(float(s) for s in spacing)
+    position = np.array(
+        [[float(ostium[0] * dy), float(ostium[1] * dx), float(ostium[2] * dz)]],
+        dtype=np.float32,
+    )
+    plot += k3d.points(
+        positions=position,
+        point_size=12.0,
+        color=color,
+        name=f"{name}\ny={ostium[0]}, x={ostium[1]}, z={ostium[2]}",
+    )
+
+
+def visualize_aorta_ostia_artery(
+    aorta_mask: NDArray[Any],
+    ostia_left: Optional[Sequence[float]],
+    ostia_right: Optional[Sequence[float]],
+    artery_mask: Optional[NDArray[Any]] = None,
+    label_artery: Optional[NDArray[Any]] = None,
+    spacing: Sequence[float] = (1, 1, 1),
+    use_physical_coords: bool = True,
+    save_html_path: Optional[str] = None,
+    display_plot: bool = True,
+    plot_name: str = "Aorta + óstios + artéria",
+) -> Any:
+    """Renderiza aorta, óstios, artéria predita e referência no mesmo plot 3D."""
+    if use_physical_coords:
+        dy, dx, dz = tuple(float(s) for s in spacing)
+        mesh_spacing = (dy, dx, dz)
+        axes_labels = ["Y (mm)", "X (mm)", "Z (mm)"]
+    else:
+        mesh_spacing = (1.0, 1.0, 1.0)
+        axes_labels = ["Y (pixels)", "X (pixels)", "Z (pixels)"]
+
+    plot = k3d.plot(name=plot_name, height=800, grid_visible=True, axes=axes_labels)
+    _add_mask_mesh(
+        plot,
+        aorta_mask,
+        spacing=mesh_spacing,
+        color=0xFF5555,
+        opacity=0.22,
+        name="Aorta",
+    )
+    if label_artery is not None:
+        _add_mask_mesh(
+            plot,
+            label_artery,
+            spacing=mesh_spacing,
+            color=0x39B54A,
+            opacity=0.34,
+            name="Artéria GT",
+        )
+    if artery_mask is not None:
+        _add_mask_mesh(
+            plot,
+            artery_mask,
+            spacing=mesh_spacing,
+            color=0x2F80ED,
+            opacity=0.44,
+            name="Artéria predita",
+        )
+
+    _add_ostium_point(
+        plot,
+        ostia_left,
+        spacing=mesh_spacing,
+        color=0xFFFF00,
+        name="Óstio esquerdo",
+    )
+    _add_ostium_point(
+        plot,
+        ostia_right,
+        spacing=mesh_spacing,
+        color=0x00FFFF,
+        name="Óstio direito",
+    )
+
+    if save_html_path is not None:
+        with open(save_html_path, "w", encoding="utf-8") as html_file:
+            html_file.write(plot.get_snapshot())
+
+    if display_plot:
+        plot.display()
+    return plot
+
+
 def visualize_arteries_comparison(
     label_mask: NDArray[Any],
     predicted_mask: NDArray[Any],

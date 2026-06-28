@@ -1,0 +1,5 @@
+comparison_name,reference_variant,comparison_variant,reference_label,comparison_label,n_images,comparison_better_n,reference_better_n,same_dice_n,comparison_better_by_0_02_n,reference_better_by_0_02_n,mean_delta,median_delta,max_gain,max_loss
+"Threshold fuzzy vs normal, ambos com RG",normal_rg,th_fuzzy_rg,Normal + RG,Fuzzy threshold + RG,700,400,269,31,78,62,0.0025090960042970386,0.00014752535688350443,0.7976397659655579,-0.7349430671081321
+"Threshold fuzzy vs normal, ambos com FC",normal_fc,th_fuzzy_fc,Normal + FC,Fuzzy threshold + FC,700,367,298,35,65,72,-0.0019239153777399725,3.606797160563002e-05,0.7917361650124685,-0.7395587991375021
+FC vs RG com threshold normal,normal_rg,normal_fc,Normal + RG,Normal + FC,700,215,451,34,89,212,-0.013706472210927781,-0.007689904349943599,0.3198048794196873,-0.3779942311767778
+FC vs RG com threshold fuzzy,th_fuzzy_rg,th_fuzzy_fc,Fuzzy threshold + RG,Fuzzy threshold + FC,700,209,455,36,76,224,-0.018139483592964793,-0.007647435931929014,0.496013546884922,-0.556285119292163

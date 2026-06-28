@@ -44,6 +44,7 @@ _SYMBOL_TO_MODULE = {
     "plot_subset_ostia_success_by_resolution": "subset",
     # volume
     "visualize_3d_k3d": "volume",
+    "visualize_aorta_ostia_artery": "volume",
     "visualize_aorta_with_ostia": "volume",
     "visualize_arteries_comparison": "volume",
     "save_k3d_plot_html": "volume",
@@ -55,6 +56,21 @@ _SYMBOL_TO_MODULE = {
     "plot_validation_dice": "category",
     "plot_validation_execution_time": "category",
     "plot_validation_ostia_success": "category",
+    # variant_comparison
+    "best_variant_by_suffix": "variant_comparison",
+    "add_pair_ostia_status_groups": "variant_comparison",
+    "build_dice_stats_by_variant": "variant_comparison",
+    "build_delta_summary_vs_reference": "variant_comparison",
+    "build_pair_outcome_counts": "variant_comparison",
+    "build_ranking_table": "variant_comparison",
+    "largest_pair_changes": "variant_comparison",
+    "load_variant_results": "variant_comparison",
+    "make_pair_delta": "variant_comparison",
+    "normalize_ostia_status_group": "variant_comparison",
+    "pair_summary": "variant_comparison",
+    "plot_largest_pair_changes": "variant_comparison",
+    "plot_ostia_status_by_variant": "variant_comparison",
+    "select_qualitative_pair_cases": "variant_comparison",
 }
 
 

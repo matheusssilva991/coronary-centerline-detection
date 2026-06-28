@@ -44,8 +44,12 @@ _VISUALIZATION_EXPORTS = {
     "plot_validation_execution_time",
     "plot_validation_ostia_success",
     "save_k3d_plot_html",
+    "add_pair_ostia_status_groups",
+    "normalize_ostia_status_group",
+    "select_qualitative_pair_cases",
     "visualize_arteries_comparison",
     "visualize_3d_k3d",
+    "visualize_aorta_ostia_artery",
     "visualize_aorta_with_ostia",
     "visualize_circles_on_slices",
 }
