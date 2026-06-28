@@ -300,6 +300,14 @@ def make_pair_delta(
     for column in ("left_ostium", "right_ostium"):
         if column not in df.columns:
             df[column] = ""
+    for column in (
+        "both_ostia_correct",
+        "both_ostia_tolerable",
+        "left_ostium_correct",
+        "right_ostium_correct",
+    ):
+        if column not in df.columns:
+            df[column] = False
 
     base_columns = [
         "IMG_ID",
@@ -308,6 +316,10 @@ def make_pair_delta(
         "artery_voxel_count",
         "left_ostium",
         "right_ostium",
+        "both_ostia_correct",
+        "both_ostia_tolerable",
+        "left_ostium_correct",
+        "right_ostium_correct",
     ]
     reference = df.loc[
         df["folder_variant"] == reference_variant,
@@ -319,6 +331,10 @@ def make_pair_delta(
             "artery_voxel_count": "reference_artery_voxels",
             "left_ostium": "reference_left_ostium",
             "right_ostium": "reference_right_ostium",
+            "both_ostia_correct": "reference_both_ostia_correct",
+            "both_ostia_tolerable": "reference_both_ostia_tolerable",
+            "left_ostium_correct": "reference_left_ostium_correct",
+            "right_ostium_correct": "reference_right_ostium_correct",
         }
     )
     comparison = df.loc[
@@ -331,11 +347,33 @@ def make_pair_delta(
             "artery_voxel_count": "comparison_artery_voxels",
             "left_ostium": "comparison_left_ostium",
             "right_ostium": "comparison_right_ostium",
+            "both_ostia_correct": "comparison_both_ostia_correct",
+            "both_ostia_tolerable": "comparison_both_ostia_tolerable",
+            "left_ostium_correct": "comparison_left_ostium_correct",
+            "right_ostium_correct": "comparison_right_ostium_correct",
         }
     )
     pair_df = reference.merge(comparison, on="IMG_ID", how="inner")
     pair_df["dice_delta"] = pair_df["comparison_dice"] - pair_df["reference_dice"]
     pair_df["abs_delta"] = pair_df["dice_delta"].abs()
+    for prefix in ("reference", "comparison"):
+        for column in (
+            "both_ostia_correct",
+            "both_ostia_tolerable",
+            "left_ostium_correct",
+            "right_ostium_correct",
+        ):
+            full_column = f"{prefix}_{column}"
+            pair_df[f"{full_column}_bool"] = yes_no_to_bool(pair_df[full_column])
+
+    pair_df["reference_one_ostium_correct"] = (
+        pair_df["reference_left_ostium_correct_bool"]
+        ^ pair_df["reference_right_ostium_correct_bool"]
+    )
+    pair_df["comparison_ostia_success"] = (
+        pair_df["comparison_both_ostia_correct_bool"]
+        | pair_df["comparison_both_ostia_tolerable_bool"]
+    )
     pair_df["same_ostia_points"] = (
         pair_df["reference_left_ostium"].astype(str)
         == pair_df["comparison_left_ostium"].astype(str)
@@ -450,6 +488,16 @@ def select_qualitative_pair_cases(
     comparison_variant: str,
     *,
     min_dice: float = 0.02,
+    same_status_min_delta: float | None = None,
+    same_status_max_delta: float | None = None,
+    same_status_require_both_correct: bool = False,
+    different_status_min_delta: float | None = None,
+    different_status_max_delta: float | None = None,
+    different_reference_status_group: str | None = None,
+    different_reference_one_ostium_correct: bool = False,
+    different_comparison_both_correct: bool = False,
+    different_comparison_success: bool = False,
+    excluded_img_ids_by_case: dict[str, Sequence[int]] | None = None,
 ) -> tuple[dict[str, dict[str, Any]], pd.DataFrame]:
     """Seleciona casos qualitativos para comparar duas variantes.
 
@@ -471,16 +519,74 @@ def select_qualitative_pair_cases(
         results_df["folder_variant"] == comparison_variant, "artery_dice"
     ].mean()
 
-    same_candidates = (
-        pair_df.loc[valid_mask & pair_df["same_ostia_status_group"]]
-        .sort_values("abs_delta", ascending=False)
+    excluded_img_ids_by_case = excluded_img_ids_by_case or {}
+    same_excluded = set(excluded_img_ids_by_case.get("same_ostia", []))
+    different_excluded = set(excluded_img_ids_by_case.get("different_ostia", []))
+    near_mean_excluded = set(excluded_img_ids_by_case.get("near_mean", []))
+
+    same_mask = valid_mask & pair_df["same_ostia_status_group"]
+    if same_status_require_both_correct:
+        same_mask &= pair_df["reference_ostia_status"].astype(str).str.lower().isin(
+            CORRECT_LABELS
+        )
+        same_mask &= pair_df["comparison_ostia_status"].astype(str).str.lower().isin(
+            CORRECT_LABELS
+        )
+    if same_status_min_delta is not None:
+        same_mask &= pair_df["dice_delta"] > same_status_min_delta
+    if same_status_max_delta is not None:
+        same_mask &= pair_df["dice_delta"] <= same_status_max_delta
+    if same_excluded:
+        same_mask &= ~pair_df["IMG_ID"].isin(same_excluded)
+    same_candidates = pair_df.loc[same_mask].sort_values("dice_delta", ascending=False)
+    if same_candidates.empty:
+        fallback_mask = valid_mask & pair_df["same_ostia_status_group"]
+        if same_excluded:
+            fallback_mask &= ~pair_df["IMG_ID"].isin(same_excluded)
+        same_candidates = pair_df.loc[fallback_mask].sort_values(
+            "abs_delta", ascending=False
+        )
+    different_mask = (
+        valid_mask
+        & ~pair_df["same_ostia_status_group"]
+        & ~pair_df["IMG_ID"].isin(different_excluded)
     )
-    different_candidates = (
-        pair_df.loc[valid_mask & ~pair_df["same_ostia_status_group"]]
-        .sort_values("abs_delta", ascending=False)
+    if different_status_min_delta is not None:
+        different_mask &= pair_df["dice_delta"] > different_status_min_delta
+    if different_status_max_delta is not None:
+        different_mask &= pair_df["dice_delta"] <= different_status_max_delta
+    if different_reference_status_group is not None:
+        different_mask &= (
+            pair_df["reference_status_group"] == different_reference_status_group
+        )
+    if different_reference_one_ostium_correct:
+        different_mask &= pair_df["reference_one_ostium_correct"]
+    if different_comparison_both_correct:
+        different_mask &= pair_df["comparison_both_ostia_correct_bool"]
+    elif different_comparison_success:
+        different_mask &= pair_df["comparison_ostia_success"]
+
+    different_candidates = pair_df.loc[different_mask].sort_values(
+        "dice_delta", ascending=False
     )
+    if different_candidates.empty and (
+        different_status_min_delta is not None
+        or different_status_max_delta is not None
+        or different_reference_status_group is not None
+        or different_reference_one_ostium_correct
+        or different_comparison_both_correct
+        or different_comparison_success
+    ):
+        fallback_mask = (
+            valid_mask
+            & ~pair_df["same_ostia_status_group"]
+            & ~pair_df["IMG_ID"].isin(different_excluded)
+        )
+        different_candidates = pair_df.loc[fallback_mask].sort_values(
+            "abs_delta", ascending=False
+        )
     near_mean_candidates = (
-        pair_df.loc[valid_mask]
+        pair_df.loc[valid_mask & ~pair_df["IMG_ID"].isin(near_mean_excluded)]
         .assign(
             distance_to_variant_means=lambda df: (
                 (df["reference_dice"] - reference_mean_dice).abs()
