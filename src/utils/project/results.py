@@ -29,6 +29,13 @@ RESULT_COLUMNS = [
     "lower_threshold_object_center_hu",
     "threshold_voxels",
     "lcc_voxels",
+    "image_slice_count",
+    "aorta_circle_count",
+    "aorta_detected_circle_count",
+    "aorta_interpolated_circle_count",
+    "aorta_circle_first_slice",
+    "aorta_circle_last_slice",
+    "aorta_circle_coverage",
     "ostia_found",
     "ostia_status",
     "segmentation_attempted",
@@ -78,6 +85,13 @@ READABLE_COLUMN_NAMES = {
     "lower_threshold_object_center_hu": "lower_threshold_object_center_hu",
     "threshold_voxels": "threshold_voxel_count",
     "lcc_voxels": "lcc_voxel_count",
+    "image_slice_count": "image_slice_count",
+    "aorta_circle_count": "aorta_circle_count",
+    "aorta_detected_circle_count": "aorta_detected_circle_count",
+    "aorta_interpolated_circle_count": "aorta_interpolated_circle_count",
+    "aorta_circle_first_slice": "aorta_circle_first_slice",
+    "aorta_circle_last_slice": "aorta_circle_last_slice",
+    "aorta_circle_coverage": "aorta_circle_coverage",
     "ostia_found": "ostia_detected",
     "ostia_status": "ostia_detection_status",
     "segmentation_attempted": "artery_segmentation_run",
@@ -379,6 +393,23 @@ def build_result_row(result: dict[str, Any]) -> dict[str, Any]:
         ),
         "threshold_voxels": _get_result_value(result, "threshold_voxels"),
         "lcc_voxels": _get_result_value(result, "lcc_voxels"),
+        "image_slice_count": _get_result_value(result, "image_slice_count"),
+        "aorta_circle_count": _get_result_value(result, "aorta_circle_count"),
+        "aorta_detected_circle_count": _get_result_value(
+            result, "aorta_detected_circle_count"
+        ),
+        "aorta_interpolated_circle_count": _get_result_value(
+            result, "aorta_interpolated_circle_count"
+        ),
+        "aorta_circle_first_slice": _get_result_value(
+            result, "aorta_circle_first_slice"
+        ),
+        "aorta_circle_last_slice": _get_result_value(
+            result, "aorta_circle_last_slice"
+        ),
+        "aorta_circle_coverage": _get_result_value(
+            result, "aorta_circle_coverage"
+        ),
         "ostia_found": _as_bool_value(_get_result_value(result, "ostia_found", False)),
         "ostia_status": _get_result_value(result, "ostia_status"),
         "segmentation_attempted": _as_bool_value(

@@ -69,6 +69,13 @@ def process_image(img_id, config, base_path, base_save_path):
         "lower_threshold_object_center_hu": None,
         "threshold_voxels": None,
         "lcc_voxels": None,
+        "image_slice_count": None,
+        "aorta_circle_count": None,
+        "aorta_detected_circle_count": None,
+        "aorta_interpolated_circle_count": None,
+        "aorta_circle_first_slice": None,
+        "aorta_circle_last_slice": None,
+        "aorta_circle_coverage": None,
     }
 
     try:
@@ -100,6 +107,7 @@ def process_image(img_id, config, base_path, base_save_path):
                 ),
                 "threshold_voxels": preprocessing_details.get("threshold_voxels"),
                 "lcc_voxels": preprocessing_details.get("lcc_voxels"),
+                "image_slice_count": int(lcc_image.shape[2]),
             }
         )
 
@@ -128,6 +136,34 @@ def process_image(img_id, config, base_path, base_save_path):
             base_save_path,
             load_cache=config["LOAD_CACHE"],
             save_cache=False,
+        )
+        circle_slices = [
+            int(circle["slice_index"])
+            for circle in detected_circles
+            if circle.get("slice_index") is not None
+        ]
+        interpolated_circle_count = sum(
+            1 for circle in detected_circles if bool(circle.get("interpolated", False))
+        )
+        result.update(
+            {
+                "aorta_circle_count": len(detected_circles),
+                "aorta_detected_circle_count": (
+                    len(detected_circles) - interpolated_circle_count
+                ),
+                "aorta_interpolated_circle_count": interpolated_circle_count,
+                "aorta_circle_first_slice": min(circle_slices)
+                if circle_slices
+                else None,
+                "aorta_circle_last_slice": max(circle_slices)
+                if circle_slices
+                else None,
+                "aorta_circle_coverage": (
+                    len(detected_circles) / result["image_slice_count"]
+                    if result["image_slice_count"]
+                    else None
+                ),
+            }
         )
 
         # Segmenta a aorta a partir dos círculos detectados.

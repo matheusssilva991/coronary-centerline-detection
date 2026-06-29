@@ -9,7 +9,9 @@ Exemplos:
 
     uv run python src/experiments/lower_threshold_sweep.py \\
       --split train \\
-      --percentiles 1,2,5,10 \\
+      --methods fixed,percentile \\
+      --percentiles 9,10,11,14,15,16 \\
+      --object-percentiles 99.5 \\
       --num-batches 5 \\
       --gpu \\
       --no-save-cache
@@ -54,20 +56,28 @@ def parse_csv_methods(value: str) -> list[str]:
     return methods
 
 
-def variant_name(method: str, percentile: float | None = None) -> str:
+def variant_name(
+    method: str,
+    percentile: float | None = None,
+    object_percentile: float | None = None,
+) -> str:
     """Gera nome curto para a variante."""
     if method == "fixed":
         return "fixed_m300"
     percent_text = str(percentile).replace(".", "p")
     if method == "object_relative_percentile":
-        return f"object_relative_p{percent_text}"
+        name = f"object_relative_p{percent_text}"
+        if object_percentile is not None and object_percentile != 99.5:
+            object_text = str(object_percentile).replace(".", "p")
+            name = f"{name}_objp{object_text}"
+        return name
     return f"percentile_p{percent_text}"
 
 
 def build_variants(
     methods: list[str],
     percentiles: list[float],
-    object_percentile: float,
+    object_percentiles: list[float],
     clip_min_hu: float,
     clip_max_hu: float,
 ) -> list[dict[str, Any]]:
@@ -79,6 +89,7 @@ def build_variants(
                 "name": variant_name("fixed"),
                 "method": "fixed",
                 "percentile": None,
+                "object_percentile": None,
                 "overrides": {
                     "LOWER_THRESHOLD": {
                         "method": "fixed",
@@ -92,22 +103,31 @@ def build_variants(
         if method == "fixed":
             continue
         for percentile in percentiles:
-            variants.append(
-                {
-                    "name": variant_name(method, percentile),
+            method_object_percentiles = (
+                object_percentiles
+                if method == "object_relative_percentile"
+                else [None]
+            )
+            for object_percentile in method_object_percentiles:
+                lower_threshold_config = {
                     "method": method,
                     "percentile": percentile,
-                    "overrides": {
-                        "LOWER_THRESHOLD": {
-                            "method": method,
-                            "percentile": percentile,
-                            "clip_min_hu": clip_min_hu,
-                            "clip_max_hu": clip_max_hu,
-                            "object_percentile": object_percentile,
-                        }
-                    },
+                    "clip_min_hu": clip_min_hu,
+                    "clip_max_hu": clip_max_hu,
                 }
-            )
+                if object_percentile is not None:
+                    lower_threshold_config["object_percentile"] = object_percentile
+                variants.append(
+                    {
+                        "name": variant_name(method, percentile, object_percentile),
+                        "method": method,
+                        "percentile": percentile,
+                        "object_percentile": object_percentile,
+                        "overrides": {
+                            "LOWER_THRESHOLD": lower_threshold_config,
+                        },
+                    }
+                )
     return variants
 
 
@@ -181,6 +201,7 @@ def summarize_run(
         "variant": variant["name"],
         "lower_threshold_method": variant["method"],
         "lower_threshold_percentile": variant["percentile"],
+        "lower_threshold_object_percentile": variant.get("object_percentile"),
         "run_dir": None if run_dir is None else str(run_dir.relative_to(REPO_ROOT)),
         "return_code": return_code,
         "duration_seconds": duration_seconds,
@@ -188,6 +209,7 @@ def summarize_run(
         "n_images": None,
         "mean_min_threshold_hu": None,
         "std_min_threshold_hu": None,
+        "mean_object_center_hu": None,
         "mean_dice": None,
         "median_dice": None,
         "ostia_success_rate": None,
@@ -205,6 +227,10 @@ def summarize_run(
 
     dice = pd.to_numeric(df.get("artery_dice"), errors="coerce")
     min_threshold = pd.to_numeric(df.get("min_threshold_hu"), errors="coerce")
+    object_center = pd.to_numeric(
+        df.get("lower_threshold_object_center_hu"),
+        errors="coerce",
+    )
     status = df.get("ostia_detection_status", pd.Series(dtype=str)).astype(str)
     success = status.isin({"both correct", "both tolerable"})
 
@@ -213,6 +239,7 @@ def summarize_run(
             "n_images": int(len(df)),
             "mean_min_threshold_hu": float(min_threshold.mean()),
             "std_min_threshold_hu": float(min_threshold.std()),
+            "mean_object_center_hu": float(object_center.mean()),
             "mean_dice": float(dice.mean()),
             "median_dice": float(dice.median()),
             "ostia_success_rate": float(success.mean()),
@@ -239,7 +266,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--methods",
         type=parse_csv_methods,
-        default=parse_csv_methods("fixed,percentile,object_relative_percentile"),
+        default=parse_csv_methods("fixed,percentile"),
         help=(
             "Métodos separados por vírgula. Opções: fixed, percentile, "
             "object_relative_percentile."
@@ -248,11 +275,33 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--percentiles",
         type=parse_csv_floats,
-        default=parse_csv_floats("1,2,5,10"),
-        help="Percentis baixos testados nos métodos adaptativos.",
+        default=parse_csv_floats("9,10,11,14,15,16"),
+        help=(
+            "Percentis baixos testados nos métodos adaptativos. O default "
+            "densifica a busca perto de p10 e faz uma checagem curta perto "
+            "de p15, que foram as melhores faixas do sweep anterior."
+        ),
     )
-    parser.add_argument("--object-percentile", type=float, default=99.5)
-    parser.add_argument("--clip-min-hu", type=float, default=-700.0)
+    parser.add_argument(
+        "--object-percentiles",
+        type=parse_csv_floats,
+        default=parse_csv_floats("99.5"),
+        help=(
+            "Percentis usados como centro do objeto no método "
+            "object_relative_percentile. Use 99.0,99.5,99.7 para uma busca "
+            "expandida."
+        ),
+    )
+    parser.add_argument(
+        "--object-percentile",
+        type=float,
+        default=None,
+        help=(
+            "Compatibilidade com sweeps antigos: se definido, substitui "
+            "--object-percentiles por um único valor."
+        ),
+    )
+    parser.add_argument("--clip-min-hu", type=float, default=-400.0)
     parser.add_argument("--clip-max-hu", type=float, default=500.0)
     parser.add_argument("--cache", action="store_true")
     parser.add_argument("--no-save-cache", action="store_true")
@@ -333,11 +382,16 @@ def main() -> None:
     variants_root = run_dir / "pipeline_runs"
     results_dir = run_dir / "results"
     results_dir.mkdir(parents=True, exist_ok=True)
+    object_percentiles = (
+        [float(args.object_percentile)]
+        if args.object_percentile is not None
+        else args.object_percentiles
+    )
 
     variants = build_variants(
         args.methods,
         args.percentiles,
-        args.object_percentile,
+        object_percentiles,
         args.clip_min_hu,
         args.clip_max_hu,
     )
@@ -351,7 +405,7 @@ def main() -> None:
             "num_batches": args.num_batches,
             "methods": args.methods,
             "percentiles": args.percentiles,
-            "object_percentile": args.object_percentile,
+            "object_percentiles": object_percentiles,
             "clip_min_hu": args.clip_min_hu,
             "clip_max_hu": args.clip_max_hu,
             "config_path": str(resolve_repo_path(args.config_path)),
@@ -378,6 +432,9 @@ def main() -> None:
                 "variant": variant["name"],
                 "lower_threshold_method": variant["method"],
                 "lower_threshold_percentile": variant["percentile"],
+                "lower_threshold_object_percentile": variant.get(
+                    "object_percentile"
+                ),
                 "config_file": str(config_file.relative_to(REPO_ROOT)),
                 "command": command_text,
             }
