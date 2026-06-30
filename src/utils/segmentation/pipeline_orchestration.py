@@ -63,6 +63,7 @@ def process_image(img_id, config, base_path, base_save_path):
         "both_tolerable": False,
         "threshold_mode": None,
         "min_threshold": None,
+        "max_threshold": None,
         "lower_threshold_method": None,
         "lower_threshold_percentile": None,
         "lower_threshold_object_percentile": None,
@@ -93,6 +94,7 @@ def process_image(img_id, config, base_path, base_save_path):
             {
                 "threshold_mode": preprocessing_details.get("threshold_mode"),
                 "min_threshold": preprocessing_details.get("min_threshold"),
+                "max_threshold": preprocessing_details.get("max_threshold"),
                 "lower_threshold_method": preprocessing_details.get(
                     "lower_threshold_method"
                 ),

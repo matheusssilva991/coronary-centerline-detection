@@ -11,6 +11,7 @@ Exemplos:
       --split train \\
       --methods fixed,percentile \\
       --percentiles 9,10,11,14,15,16 \\
+      --max-threshold-percentiles 99.7 \\
       --object-percentiles 99.5 \\
       --num-batches 5 \\
       --gpu \\
@@ -56,48 +57,65 @@ def parse_csv_methods(value: str) -> list[str]:
     return methods
 
 
+def _percent_text(value: float | None) -> str:
+    """Formata percentil para nomes de variantes."""
+    return str(value).replace(".", "p")
+
+
 def variant_name(
     method: str,
     percentile: float | None = None,
     object_percentile: float | None = None,
+    max_threshold_percentile: float = 99.7,
 ) -> str:
     """Gera nome curto para a variante."""
     if method == "fixed":
-        return "fixed_m300"
-    percent_text = str(percentile).replace(".", "p")
-    if method == "object_relative_percentile":
-        name = f"object_relative_p{percent_text}"
-        if object_percentile is not None and object_percentile != 99.5:
-            object_text = str(object_percentile).replace(".", "p")
-            name = f"{name}_objp{object_text}"
-        return name
-    return f"percentile_p{percent_text}"
+        name = "fixed_m300"
+    else:
+        percent_text = _percent_text(percentile)
+        if method == "object_relative_percentile":
+            name = f"object_relative_p{percent_text}"
+            if object_percentile is not None and object_percentile != 99.5:
+                name = f"{name}_objp{_percent_text(object_percentile)}"
+        else:
+            name = f"percentile_p{percent_text}"
+
+    if max_threshold_percentile != 99.7:
+        name = f"{name}_maxp{_percent_text(max_threshold_percentile)}"
+    return name
 
 
 def build_variants(
     methods: list[str],
     percentiles: list[float],
     object_percentiles: list[float],
+    max_threshold_percentiles: list[float],
     clip_min_hu: float,
     clip_max_hu: float,
 ) -> list[dict[str, Any]]:
-    """Monta variantes de limiar inferior."""
+    """Monta variantes de limiar inferior e superior."""
     variants: list[dict[str, Any]] = []
     if "fixed" in methods:
-        variants.append(
-            {
-                "name": variant_name("fixed"),
-                "method": "fixed",
-                "percentile": None,
-                "object_percentile": None,
-                "overrides": {
-                    "LOWER_THRESHOLD": {
-                        "method": "fixed",
-                        "fixed_hu": -300,
-                    }
-                },
-            }
-        )
+        for max_threshold_percentile in max_threshold_percentiles:
+            variants.append(
+                {
+                    "name": variant_name(
+                        "fixed",
+                        max_threshold_percentile=max_threshold_percentile,
+                    ),
+                    "method": "fixed",
+                    "percentile": None,
+                    "object_percentile": None,
+                    "max_threshold_percentile": max_threshold_percentile,
+                    "overrides": {
+                        "MAX_THRESHOLD_PERCENTILE": max_threshold_percentile,
+                        "LOWER_THRESHOLD": {
+                            "method": "fixed",
+                            "fixed_hu": -300,
+                        },
+                    },
+                }
+            )
 
     for method in methods:
         if method == "fixed":
@@ -109,27 +127,36 @@ def build_variants(
                 else [None]
             )
             for object_percentile in method_object_percentiles:
-                lower_threshold_config = {
-                    "method": method,
-                    "percentile": percentile,
-                    "clip_min_hu": clip_min_hu,
-                    "clip_max_hu": clip_max_hu,
-                }
-                if object_percentile is not None:
-                    lower_threshold_config["object_percentile"] = object_percentile
-                variants.append(
-                    {
-                        "name": variant_name(method, percentile, object_percentile),
+                for max_threshold_percentile in max_threshold_percentiles:
+                    lower_threshold_config = {
                         "method": method,
                         "percentile": percentile,
-                        "object_percentile": object_percentile,
-                        "overrides": {
-                            "LOWER_THRESHOLD": lower_threshold_config,
-                        },
+                        "clip_min_hu": clip_min_hu,
+                        "clip_max_hu": clip_max_hu,
                     }
-                )
+                    if object_percentile is not None:
+                        lower_threshold_config["object_percentile"] = (
+                            object_percentile
+                        )
+                    variants.append(
+                        {
+                            "name": variant_name(
+                                method,
+                                percentile,
+                                object_percentile,
+                                max_threshold_percentile,
+                            ),
+                            "method": method,
+                            "percentile": percentile,
+                            "object_percentile": object_percentile,
+                            "max_threshold_percentile": max_threshold_percentile,
+                            "overrides": {
+                                "MAX_THRESHOLD_PERCENTILE": max_threshold_percentile,
+                                "LOWER_THRESHOLD": lower_threshold_config,
+                            },
+                        }
+                    )
     return variants
-
 
 def base_pipeline_overrides(use_gpu: bool | None) -> dict[str, Any]:
     """Força o experimento para threshold normal + region growing."""
@@ -202,12 +229,14 @@ def summarize_run(
         "lower_threshold_method": variant["method"],
         "lower_threshold_percentile": variant["percentile"],
         "lower_threshold_object_percentile": variant.get("object_percentile"),
+        "max_threshold_percentile": variant.get("max_threshold_percentile"),
         "run_dir": None if run_dir is None else str(run_dir.relative_to(REPO_ROOT)),
         "return_code": return_code,
         "duration_seconds": duration_seconds,
         "duration_minutes": duration_seconds / 60,
         "n_images": None,
         "mean_min_threshold_hu": None,
+        "mean_max_threshold_hu": None,
         "std_min_threshold_hu": None,
         "mean_object_center_hu": None,
         "mean_dice": None,
@@ -227,17 +256,26 @@ def summarize_run(
 
     dice = pd.to_numeric(df.get("artery_dice"), errors="coerce")
     min_threshold = pd.to_numeric(df.get("min_threshold_hu"), errors="coerce")
+    max_threshold = (
+        pd.to_numeric(df["max_threshold_hu"], errors="coerce")
+        if "max_threshold_hu" in df.columns
+        else pd.Series([pd.NA] * len(df), dtype="Float64")
+    )
     object_center = pd.to_numeric(
         df.get("lower_threshold_object_center_hu"),
         errors="coerce",
     )
     status = df.get("ostia_detection_status", pd.Series(dtype=str)).astype(str)
     success = status.isin({"both correct", "both tolerable"})
+    mean_max_threshold = max_threshold.mean()
 
     row.update(
         {
             "n_images": int(len(df)),
             "mean_min_threshold_hu": float(min_threshold.mean()),
+            "mean_max_threshold_hu": (
+                None if pd.isna(mean_max_threshold) else float(mean_max_threshold)
+            ),
             "std_min_threshold_hu": float(min_threshold.std()),
             "mean_object_center_hu": float(object_center.mean()),
             "mean_dice": float(dice.mean()),
@@ -299,6 +337,15 @@ def build_parser() -> argparse.ArgumentParser:
         help=(
             "Compatibilidade com sweeps antigos: se definido, substitui "
             "--object-percentiles por um único valor."
+        ),
+    )
+    parser.add_argument(
+        "--max-threshold-percentiles",
+        type=parse_csv_floats,
+        default=parse_csv_floats("99.7"),
+        help=(
+            "Percentis do limiar superior HU. Use, por exemplo, "
+            "99.5,99.7,99.9 para testar estruturas densas."
         ),
     )
     parser.add_argument("--clip-min-hu", type=float, default=-400.0)
@@ -392,6 +439,7 @@ def main() -> None:
         args.methods,
         args.percentiles,
         object_percentiles,
+        args.max_threshold_percentiles,
         args.clip_min_hu,
         args.clip_max_hu,
     )
@@ -406,6 +454,7 @@ def main() -> None:
             "methods": args.methods,
             "percentiles": args.percentiles,
             "object_percentiles": object_percentiles,
+            "max_threshold_percentiles": args.max_threshold_percentiles,
             "clip_min_hu": args.clip_min_hu,
             "clip_max_hu": args.clip_max_hu,
             "config_path": str(resolve_repo_path(args.config_path)),
@@ -434,6 +483,9 @@ def main() -> None:
                 "lower_threshold_percentile": variant["percentile"],
                 "lower_threshold_object_percentile": variant.get(
                     "object_percentile"
+                ),
+                "max_threshold_percentile": variant.get(
+                    "max_threshold_percentile"
                 ),
                 "config_file": str(config_file.relative_to(REPO_ROOT)),
                 "command": command_text,

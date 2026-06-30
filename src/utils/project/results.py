@@ -23,6 +23,7 @@ RESULT_COLUMNS = [
     "fc_candidate_voxels_final",
     "threshold_mode",
     "min_threshold",
+    "max_threshold",
     "lower_threshold_method",
     "lower_threshold_percentile",
     "lower_threshold_object_percentile",
@@ -79,6 +80,7 @@ READABLE_COLUMN_NAMES = {
     "fc_candidate_voxels_final": "fc_candidate_voxels_final",
     "threshold_mode": "threshold_mode",
     "min_threshold": "min_threshold_hu",
+    "max_threshold": "max_threshold_hu",
     "lower_threshold_method": "lower_threshold_method",
     "lower_threshold_percentile": "lower_threshold_percentile",
     "lower_threshold_object_percentile": "lower_threshold_object_percentile",
@@ -379,6 +381,7 @@ def build_result_row(result: dict[str, Any]) -> dict[str, Any]:
         ),
         "threshold_mode": _get_result_value(result, "threshold_mode"),
         "min_threshold": _get_result_value(result, "min_threshold"),
+        "max_threshold": _get_result_value(result, "max_threshold"),
         "lower_threshold_method": _get_result_value(
             result, "lower_threshold_method"
         ),
