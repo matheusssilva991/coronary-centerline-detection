@@ -1,8 +1,8 @@
-"""Executa vários runs do pipeline variando o limiar inferior HU.
+"""Executa vários runs do pipeline variando limiares HU.
 
 O script chama ``src/segmentation_pipeline.py`` para cada variante, mantendo o
-pipeline oficial intacto. As variantes focam em ``threshold normal + RG`` para
-avaliar isoladamente o impacto do piso inferior.
+pipeline oficial intacto. As variantes focam em ``threshold + RG`` para avaliar
+isoladamente o impacto do piso inferior, do teto superior e do threshold fuzzy.
 
 Exemplos:
     uv run python src/experiments/lower_threshold_sweep.py --split train --dry-run
@@ -33,7 +33,7 @@ import pandas as pd
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_OUTPUT_ROOT = REPO_ROOT / "output/segmentation/analysis/lower_threshold_sweep"
+DEFAULT_OUTPUT_ROOT = REPO_ROOT / "output/segmentation/analysis/threshold_sweep"
 DEFAULT_CONFIG_PATH = REPO_ROOT / "config/pipeline_config.json"
 
 

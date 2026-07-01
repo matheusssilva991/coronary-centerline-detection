@@ -12,13 +12,15 @@ de unidade/CI devem ficar em `tests/` se forem criados no futuro.
   com diferença numérica relevante.
 - `fuzzy_pipeline_comparison.py`: versão executável do notebook de comparação
   fuzzy/FC, útil para rodar no servidor.
-- `lower_threshold_sweep.py`: executa vários runs do pipeline variando o limiar
-  inferior HU, mantendo `threshold normal + region growing`.
+- `lower_threshold_sweep.py`: executa vários runs do pipeline variando limiares
+  HU e parâmetros do threshold fuzzy, mantendo `region growing`.
 
 ## Notebooks relacionados
 
-- `src/fuzzy_pipeline_comparison.ipynb`: compara threshold normal, fuzzy
+- `src/experiments/fuzzy_pipeline_comparison.ipynb`: compara threshold normal, fuzzy
   threshold, region growing e fuzzy connectedness.
+- `src/eda/threshold_pipeline_comparison_analysis.ipynb`: analisa resultados
+  consolidados das variantes de threshold, RG e FC.
 
 Os helpers compartilhados ficam em `src/utils/experiments/`.
 

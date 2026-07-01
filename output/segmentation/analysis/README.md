@@ -8,8 +8,10 @@ avaliar o pipeline. Ela nao segue a mesma estrutura das execucoes finais em
 
 - `fuzzy_sweep/`: historico de varreduras exploratorias antigas.
 - `fuzzy_pipeline_comparison/`: resultados do notebook
-  `src/fuzzy_pipeline_comparison.ipynb`, comparando normal, fuzzy alpha-cut,
+  `src/experiments/fuzzy_pipeline_comparison.ipynb`, comparando normal, fuzzy alpha-cut,
   fuzzy threshold e fuzzy connectedness.
+- `threshold_sweep/`: varreduras de limiar HU, incluindo limiar inferior
+  adaptativo, limiar superior e threshold fuzzy.
 - `cases_analysis/`: estudos de casos especificos, geralmente com cache e
   exemplos visuais.
 - `bad_cases/`: relatorios ou amostras de casos problemáticos.
@@ -21,5 +23,6 @@ avaliar o pipeline. Ela nao segue a mesma estrutura das execucoes finais em
 ## Regra pratica
 
 Para escolher parametros, use primeiro os arquivos de resumo em
-`fuzzy_pipeline_comparison/<run_name>/summary`. Abra os CSVs detalhados apenas
+`fuzzy_pipeline_comparison/<run_name>/summary` e
+`threshold_sweep/<run_name>/results/summary.csv`. Abra os CSVs detalhados apenas
 quando precisar entender um caso especifico.
