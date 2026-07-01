@@ -1,0 +1,390 @@
+{
+  "execution_info": {
+    "timestamp": "2026-06-30T13:48:20.873587",
+    "split_name": "train",
+    "num_images": 30,
+    "image_ids": [
+      28,
+      380,
+      854,
+      937,
+      315,
+      428,
+      752,
+      13,
+      538,
+      965,
+      447,
+      836,
+      603,
+      676,
+      44,
+      129,
+      518,
+      793,
+      550,
+      631,
+      330,
+      90,
+      608,
+      887,
+      175,
+      760,
+      696,
+      194,
+      305,
+      344
+    ],
+    "execution_time_seconds": 1993.8959794044497,
+    "execution_time_minutes": 33.231599656740826,
+    "execution_time_hours": 0.5538599942790138,
+    "current_run_execution_time_seconds": 1993.913785457611,
+    "current_run_execution_time_minutes": 33.23189642429352,
+    "current_run_execution_time_hours": 0.553864940404892,
+    "batch_timing_summary": {
+      "total_known_batches": 5,
+      "known_batches": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "total_known_duration_seconds": 1993.8959794044497,
+      "total_known_duration_minutes": 33.231599656740826,
+      "total_known_duration_hours": 0.5538599942790138,
+      "missing_timing_batches": []
+    },
+    "batch_timings": [
+      {
+        "split_name": "train",
+        "batch_number": 1,
+        "total_batches": 5,
+        "num_images": 6,
+        "first_img_id": 28,
+        "last_img_id": 428,
+        "result_file": "ostios_train_lote_1_summary.csv",
+        "started_at": "2026-06-30T13:15:06",
+        "finished_at": "2026-06-30T13:23:24",
+        "duration_seconds": 497.7712910175324,
+        "duration_minutes": 8.296188183625539,
+        "duration_hours": 0.1382698030604256
+      },
+      {
+        "split_name": "train",
+        "batch_number": 2,
+        "total_batches": 5,
+        "num_images": 6,
+        "first_img_id": 752,
+        "last_img_id": 836,
+        "result_file": "ostios_train_lote_2_summary.csv",
+        "started_at": "2026-06-30T13:23:24",
+        "finished_at": "2026-06-30T13:29:14",
+        "duration_seconds": 350.1537251472473,
+        "duration_minutes": 5.835895419120789,
+        "duration_hours": 0.0972649236520131
+      },
+      {
+        "split_name": "train",
+        "batch_number": 3,
+        "total_batches": 5,
+        "num_images": 6,
+        "first_img_id": 603,
+        "last_img_id": 793,
+        "result_file": "ostios_train_lote_3_summary.csv",
+        "started_at": "2026-06-30T13:29:14",
+        "finished_at": "2026-06-30T13:35:32",
+        "duration_seconds": 377.49245262146,
+        "duration_minutes": 6.291540877024333,
+        "duration_hours": 0.1048590146170722
+      },
+      {
+        "split_name": "train",
+        "batch_number": 4,
+        "total_batches": 5,
+        "num_images": 6,
+        "first_img_id": 550,
+        "last_img_id": 887,
+        "result_file": "ostios_train_lote_4_summary.csv",
+        "started_at": "2026-06-30T13:35:32",
+        "finished_at": "2026-06-30T13:41:57",
+        "duration_seconds": 385.1795272827149,
+        "duration_minutes": 6.419658788045248,
+        "duration_hours": 0.1069943131340874
+      },
+      {
+        "split_name": "train",
+        "batch_number": 5,
+        "total_batches": 5,
+        "num_images": 6,
+        "first_img_id": 175,
+        "last_img_id": 344,
+        "result_file": "ostios_train_lote_5_summary.csv",
+        "started_at": "2026-06-30T13:41:57",
+        "finished_at": "2026-06-30T13:48:20",
+        "duration_seconds": 383.298983335495,
+        "duration_minutes": 6.388316388924917,
+        "duration_hours": 0.1064719398154152
+      }
+    ],
+    "python_version": "3.12.0",
+    "platform": "Linux-5.15.0-181-generic-x86_64-with-glibc2.35",
+    "state_counters": {
+      "ostia_found": 30,
+      "ostia_status_not_found": 0,
+      "segmentation_attempted": 30,
+      "proceeded_with_bad_ostia": 2,
+      "error_not_null": 0
+    }
+  },
+  "preprocessing_config": {
+    "downscale_method": "opencv",
+    "opencv_interpolation": "linear",
+    "downscale_factors": [
+      2,
+      2,
+      1
+    ],
+    "min_threshold": -300,
+    "max_threshold_percentile": 99.7,
+    "thresholding": {
+      "method": "normal",
+      "fuzzy": {
+        "soft_margin_hu": 160,
+        "object_percentile": 99.5,
+        "dense_percentile": 99.9,
+        "smooth_radius": 2,
+        "smooth_mode": "mean"
+      }
+    },
+    "lcc_per_slice": true,
+    "lcc_mode": "per_slice"
+  },
+  "runtime_config": {
+    "use_gpu": true,
+    "load_cache": false,
+    "save_cache": false,
+    "downscale_method": "opencv",
+    "opencv_interpolation": "linear",
+    "downscale_factors": [
+      2,
+      2,
+      1
+    ],
+    "min_threshold": -300,
+    "max_threshold_percentile": 99.7,
+    "thresholding": {
+      "method": "normal",
+      "fuzzy": {
+        "soft_margin_hu": 160,
+        "object_percentile": 99.5,
+        "dense_percentile": 99.9,
+        "smooth_radius": 2,
+        "smooth_mode": "mean"
+      }
+    },
+    "lcc_per_slice": true,
+    "lcc_mode": "per_slice",
+    "aorta_miss_count": 5,
+    "aorta_out_of_tolerance_as_miss": false,
+    "aorta_interpolate_missed_circles": true,
+    "aorta_candidate_selection_strategy": "closest",
+    "artery_segmentation_method": "rg"
+  },
+  "vesselness_config": {
+    "ostios": {
+      "method": "normal",
+      "sigmas": [
+        2.5,
+        3.0
+      ],
+      "black_ridges": false,
+      "alpha": 0.5,
+      "beta": 1.0,
+      "gamma": 30,
+      "normalization": "none",
+      "smooth_sigma": 0.0,
+      "modified": {
+        "smooth_sigma": 1.0,
+        "gd_epsilon": 1e-06,
+        "gf_center_percentile": 50.0,
+        "gf_scale_percentile": 99.5,
+        "gd_clip_percentiles": [
+          1.0,
+          99.0
+        ],
+        "ratio_clip": [
+          0.0,
+          10.0
+        ],
+        "use_spacing": true
+      }
+    },
+    "artery": {
+      "method": "normal",
+      "sigmas": [
+        1.5,
+        2.0,
+        2.5,
+        3.0
+      ],
+      "black_ridges": false,
+      "alpha": 0.5,
+      "beta": 0.5,
+      "gamma": 55,
+      "normalization": "none",
+      "smooth_sigma": 0.0,
+      "modified": {
+        "smooth_sigma": 1.0,
+        "gd_epsilon": 1e-06,
+        "gf_center_percentile": 50.0,
+        "gf_scale_percentile": 99.5,
+        "gd_clip_percentiles": [
+          1.0,
+          99.0
+        ],
+        "ratio_clip": [
+          0.0,
+          10.0
+        ],
+        "use_spacing": true
+      }
+    }
+  },
+  "circle_detection_config": {
+    "radii_start_px": 18,
+    "radii_end_px": 31,
+    "radius_step_px": 1,
+    "tol_radius_mm": 9.0,
+    "tol_distance_mm": 20.0,
+    "quadrant_offset": [
+      30,
+      30
+    ],
+    "max_slice_miss_threshold": 5,
+    "neighbor_distance_threshold": 5,
+    "total_num_peaks_initial": 15,
+    "total_num_peaks": 15,
+    "canny_sigma": 3,
+    "use_local_roi": true,
+    "local_roi_padding": 30,
+    "out_of_tolerance_as_miss": false,
+    "interpolate_missed_circles": true,
+    "candidate_selection_strategy": "closest",
+    "candidate_score_accum_weight": 1.0,
+    "candidate_score_distance_weight": 1.0,
+    "candidate_score_radius_weight": 1.0
+  },
+  "level_set_config": {
+    "radius_reduction_factor": 0.15,
+    "num_iter": 31,
+    "balloon": 0.8,
+    "smoothing": 2,
+    "leak_removal_radius": 2
+  },
+  "ostia_detection_config": {
+    "top_n": 2000,
+    "max_z_diff_mm": 40.0,
+    "lower_fraction": 0.85,
+    "min_center_distance_factor": 0.85,
+    "min_lateral_factor": 0.4,
+    "erosion_radius": 4
+  },
+  "artery_segmentation_config": {
+    "method": "rg"
+  },
+  "thresholding_config": {
+    "method": "normal",
+    "fuzzy": {
+      "soft_margin_hu": 160,
+      "object_percentile": 99.5,
+      "dense_percentile": 99.9,
+      "smooth_radius": 2,
+      "smooth_mode": "mean"
+    }
+  },
+  "region_growing_config": {
+    "max_volume": 100000,
+    "switch_at_voxels": 2000,
+    "min_vesselness_fraction": 0.078,
+    "threshold_divisor": 7,
+    "relaxed_floor_factor": 0.98,
+    "comparison_window": 1,
+    "smooth_relaxation": true,
+    "use_seed_refinement": true,
+    "use_multi_seed": true,
+    "grow_each_ostium_separately": true,
+    "seed_search_radius": 2,
+    "seed_candidate_radius": 1,
+    "max_seed_candidates": 6,
+    "seed_min_vesselness_fraction": 0.02,
+    "verbose": false
+  },
+  "fuzzy_connectedness_config": {
+    "alpha": 0.16,
+    "sigma_hu": 100,
+    "neighborhood": 26,
+    "candidate_min_vesselness": 0.018,
+    "max_candidate_voxels": 500000,
+    "max_processed_voxels": 500000,
+    "seed_search_radius": 2,
+    "max_seeds_per_ostium": 4,
+    "seed_min_vesselness": 0.018,
+    "min_seed_distance_voxels": 1.0,
+    "vesselness_affinity_mode": "geometric_mean",
+    "vesselness_power": 1.0,
+    "vesselness_floor": 0.018,
+    "edge_affinity_mode": "weighted_product",
+    "vesselness_weight": 0.9,
+    "mask_strategy": "alpha",
+    "connectivity_percentile": null,
+    "postprocess_closing_radius": null,
+    "postprocess_dilation_radius": null
+  },
+  "postprocessing_config": {
+    "closing_radius": 3,
+    "dilation_radius": 2
+  },
+  "cache_config": {
+    "load_cache": false,
+    "save_cache": false,
+    "saved_stages": [],
+    "skipped_save_stages": [
+      "aorta_circles",
+      "aorta_mask"
+    ],
+    "vesselness_cache_format": "npz_compressed_float32_or_original_dtype",
+    "vesselness_cache_key": "image_id_plus_config_hash"
+  },
+  "evaluation_config": {
+    "tolerable_distance_mm": 7.0
+  },
+  "results_summary": {
+    "total_processed": 30,
+    "ostia_found": 30,
+    "ostia_found_percent": 100.0,
+    "ostia_status_not_found": 0,
+    "ostia_status_not_found_percent": 0.0,
+    "both_correct": 0,
+    "both_correct_percent": 0.0,
+    "both_tolerable": 28,
+    "both_tolerable_percent": 93.33333333333333,
+    "segmentation_attempted": 30,
+    "segmentation_attempted_percent": 100.0,
+    "proceeded_with_bad_ostia": 2,
+    "proceeded_with_bad_ostia_percent": 6.666666666666667,
+    "total_success": 28,
+    "total_success_percent": 93.33333333333333,
+    "left_correct": 12,
+    "right_correct": 4,
+    "error_not_null": 0,
+    "dice_artery_mean": 0.6330826712786627,
+    "dice_artery_std": 0.10212413404683755,
+    "dice_artery_median": 0.6581513681774691
+  },
+  "paths": {
+    "base_path": "/data04/home/mpmaia/ImageCAS/database/1-1000",
+    "base_save_path": "/media/matheus/HD/DatasetsCCTA/Processed_ImageCAS",
+    "output_dir": "/data04/home/projetos/dac_seg_dlag/mssilva.ppgmc/matheus_codes/coronary-centerline-detection/output/segmentation/analysis/lower_threshold_sweep/lower_threshold_refined_p10_p12/pipeline_runs/percentile_p9p5"
+  }
+}
