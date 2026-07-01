@@ -57,9 +57,51 @@ def parse_csv_methods(value: str) -> list[str]:
     return methods
 
 
+def parse_csv_threshold_methods(value: str) -> list[str]:
+    """Converte lista textual de modos de threshold."""
+    valid = {"normal", "fuzzy"}
+    methods = [item.strip().lower() for item in value.split(",") if item.strip()]
+    invalid = [method for method in methods if method not in valid]
+    if invalid:
+        raise argparse.ArgumentTypeError(
+            f"Thresholds inválidos: {invalid}. Use: {sorted(valid)}."
+        )
+    return methods
+
+
+def parse_csv_ints(value: str) -> list[int]:
+    """Converte ``1,2,3`` em lista de inteiros."""
+    items = [item.strip() for item in value.split(",") if item.strip()]
+    if not items:
+        raise argparse.ArgumentTypeError("A lista de inteiros não pode ser vazia.")
+    return [int(item) for item in items]
+
+
+def parse_csv_strings(value: str) -> list[str]:
+    """Converte ``mean,median`` em lista de strings."""
+    items = [item.strip() for item in value.split(",") if item.strip()]
+    if not items:
+        raise argparse.ArgumentTypeError("A lista textual não pode ser vazia.")
+    return items
+
+
 def _percent_text(value: float | None) -> str:
     """Formata percentil para nomes de variantes."""
     return str(value).replace(".", "p")
+
+
+def fuzzy_suffix(fuzzy_config: dict[str, Any] | None) -> str:
+    """Gera sufixo curto para variantes de threshold fuzzy."""
+    if not fuzzy_config:
+        return ""
+    return (
+        "_thfuzzy"
+        f"_objp{_percent_text(fuzzy_config['object_percentile'])}"
+        f"_densep{_percent_text(fuzzy_config['dense_percentile'])}"
+        f"_m{_percent_text(fuzzy_config['soft_margin_hu'])}"
+        f"_r{fuzzy_config['smooth_radius']}"
+        f"_{fuzzy_config['smooth_mode']}"
+    )
 
 
 def variant_name(
@@ -67,6 +109,8 @@ def variant_name(
     percentile: float | None = None,
     object_percentile: float | None = None,
     max_threshold_percentile: float = 99.7,
+    threshold_method: str = "normal",
+    fuzzy_config: dict[str, Any] | None = None,
 ) -> str:
     """Gera nome curto para a variante."""
     if method == "fixed":
@@ -82,86 +126,119 @@ def variant_name(
 
     if max_threshold_percentile != 99.7:
         name = f"{name}_maxp{_percent_text(max_threshold_percentile)}"
+    if threshold_method == "fuzzy":
+        name = f"{name}{fuzzy_suffix(fuzzy_config)}"
     return name
 
 
 def build_variants(
     methods: list[str],
+    threshold_methods: list[str],
     percentiles: list[float],
     object_percentiles: list[float],
     max_threshold_percentiles: list[float],
+    fuzzy_configs: list[dict[str, Any] | None],
     clip_min_hu: float,
     clip_max_hu: float,
 ) -> list[dict[str, Any]]:
     """Monta variantes de limiar inferior e superior."""
     variants: list[dict[str, Any]] = []
     if "fixed" in methods:
-        for max_threshold_percentile in max_threshold_percentiles:
-            variants.append(
-                {
-                    "name": variant_name(
-                        "fixed",
-                        max_threshold_percentile=max_threshold_percentile,
-                    ),
-                    "method": "fixed",
-                    "percentile": None,
-                    "object_percentile": None,
-                    "max_threshold_percentile": max_threshold_percentile,
-                    "overrides": {
-                        "MAX_THRESHOLD_PERCENTILE": max_threshold_percentile,
-                        "LOWER_THRESHOLD": {
+        for threshold_method in threshold_methods:
+            method_fuzzy_configs = fuzzy_configs if threshold_method == "fuzzy" else [None]
+            for fuzzy_config in method_fuzzy_configs:
+                method_max_threshold_percentiles = (
+                    max_threshold_percentiles if threshold_method == "normal" else [99.7]
+                )
+                for max_threshold_percentile in method_max_threshold_percentiles:
+                    thresholding = {"method": threshold_method}
+                    if fuzzy_config:
+                        thresholding["fuzzy"] = fuzzy_config
+                    variants.append(
+                        {
+                            "name": variant_name(
+                                "fixed",
+                                max_threshold_percentile=max_threshold_percentile,
+                                threshold_method=threshold_method,
+                                fuzzy_config=fuzzy_config,
+                            ),
                             "method": "fixed",
-                            "fixed_hu": -300,
+                            "threshold_method": threshold_method,
+                            "percentile": None,
+                            "object_percentile": None,
+                            "max_threshold_percentile": max_threshold_percentile,
+                            "fuzzy_config": fuzzy_config,
+                            "overrides": {
+                                "MAX_THRESHOLD_PERCENTILE": max_threshold_percentile,
+                                "THRESHOLDING": thresholding,
+                                "LOWER_THRESHOLD": {
+                                    "method": "fixed",
+                                    "fixed_hu": -300,
+                                },
+                            },
                         },
-                    },
-                }
-            )
+                    )
 
     for method in methods:
         if method == "fixed":
             continue
-        for percentile in percentiles:
-            method_object_percentiles = (
-                object_percentiles
-                if method == "object_relative_percentile"
-                else [None]
-            )
-            for object_percentile in method_object_percentiles:
-                for max_threshold_percentile in max_threshold_percentiles:
-                    lower_threshold_config = {
-                        "method": method,
-                        "percentile": percentile,
-                        "clip_min_hu": clip_min_hu,
-                        "clip_max_hu": clip_max_hu,
-                    }
-                    if object_percentile is not None:
-                        lower_threshold_config["object_percentile"] = (
-                            object_percentile
-                        )
-                    variants.append(
-                        {
-                            "name": variant_name(
-                                method,
-                                percentile,
-                                object_percentile,
-                                max_threshold_percentile,
-                            ),
-                            "method": method,
-                            "percentile": percentile,
-                            "object_percentile": object_percentile,
-                            "max_threshold_percentile": max_threshold_percentile,
-                            "overrides": {
-                                "MAX_THRESHOLD_PERCENTILE": max_threshold_percentile,
-                                "LOWER_THRESHOLD": lower_threshold_config,
-                            },
-                        }
+        for threshold_method in threshold_methods:
+            method_fuzzy_configs = fuzzy_configs if threshold_method == "fuzzy" else [None]
+            for fuzzy_config in method_fuzzy_configs:
+                for percentile in percentiles:
+                    method_object_percentiles = (
+                        object_percentiles
+                        if method == "object_relative_percentile"
+                        else [None]
                     )
+                    for object_percentile in method_object_percentiles:
+                        method_max_threshold_percentiles = (
+                            max_threshold_percentiles
+                            if threshold_method == "normal"
+                            else [99.7]
+                        )
+                        for max_threshold_percentile in method_max_threshold_percentiles:
+                            thresholding = {"method": threshold_method}
+                            if fuzzy_config:
+                                thresholding["fuzzy"] = fuzzy_config
+                            lower_threshold_config = {
+                                "method": method,
+                                "percentile": percentile,
+                                "clip_min_hu": clip_min_hu,
+                                "clip_max_hu": clip_max_hu,
+                            }
+                            if object_percentile is not None:
+                                lower_threshold_config["object_percentile"] = (
+                                    object_percentile
+                                )
+                            variants.append(
+                                {
+                                    "name": variant_name(
+                                        method,
+                                        percentile,
+                                        object_percentile,
+                                        max_threshold_percentile,
+                                        threshold_method,
+                                        fuzzy_config,
+                                    ),
+                                    "method": method,
+                                    "threshold_method": threshold_method,
+                                    "percentile": percentile,
+                                    "object_percentile": object_percentile,
+                                    "max_threshold_percentile": max_threshold_percentile,
+                                    "fuzzy_config": fuzzy_config,
+                                    "overrides": {
+                                        "MAX_THRESHOLD_PERCENTILE": max_threshold_percentile,
+                                        "THRESHOLDING": thresholding,
+                                        "LOWER_THRESHOLD": lower_threshold_config,
+                                    },
+                                }
+                            )
     return variants
 
 def base_pipeline_overrides(use_gpu: bool | None) -> dict[str, Any]:
-    """Força o experimento para threshold normal + region growing."""
+    """Força o experimento para region growing, deixando o threshold por variante."""
     overrides: dict[str, Any] = {
-        "THRESHOLDING": {"method": "normal"},
         "ARTERY_SEGMENTATION": {"method": "region_growing"},
     }
     if use_gpu is not None:
@@ -226,10 +303,16 @@ def summarize_run(
     """Gera uma linha de resumo por variante."""
     row = {
         "variant": variant["name"],
+        "threshold_method": variant.get("threshold_method", "normal"),
         "lower_threshold_method": variant["method"],
         "lower_threshold_percentile": variant["percentile"],
         "lower_threshold_object_percentile": variant.get("object_percentile"),
         "max_threshold_percentile": variant.get("max_threshold_percentile"),
+        "fuzzy_object_percentile": None,
+        "fuzzy_dense_percentile": None,
+        "fuzzy_soft_margin_hu": None,
+        "fuzzy_smooth_radius": None,
+        "fuzzy_smooth_mode": None,
         "run_dir": None if run_dir is None else str(run_dir.relative_to(REPO_ROOT)),
         "return_code": return_code,
         "duration_seconds": duration_seconds,
@@ -247,6 +330,16 @@ def summarize_run(
         "found_wrong_n": None,
         "not_found_n": None,
     }
+    fuzzy_config = variant.get("fuzzy_config") or {}
+    row.update(
+        {
+            "fuzzy_object_percentile": fuzzy_config.get("object_percentile"),
+            "fuzzy_dense_percentile": fuzzy_config.get("dense_percentile"),
+            "fuzzy_soft_margin_hu": fuzzy_config.get("soft_margin_hu"),
+            "fuzzy_smooth_radius": fuzzy_config.get("smooth_radius"),
+            "fuzzy_smooth_mode": fuzzy_config.get("smooth_mode"),
+        }
+    )
     if run_dir is None or return_code != 0:
         return row
 
@@ -293,7 +386,9 @@ def summarize_run(
 def build_parser() -> argparse.ArgumentParser:
     """Cria o parser do sweep."""
     parser = argparse.ArgumentParser(
-        description="Sweep de limiar inferior adaptativo usando threshold normal + RG.",
+        description=(
+            "Sweep de limiar HU usando RG. Pode comparar threshold normal e fuzzy."
+        ),
     )
     parser.add_argument("--split", choices=["train", "val", "test"], default="train")
     parser.add_argument("--resolution", choices=["mid", "high"], default="mid")
@@ -308,6 +403,15 @@ def build_parser() -> argparse.ArgumentParser:
         help=(
             "Métodos separados por vírgula. Opções: fixed, percentile, "
             "object_relative_percentile."
+        ),
+    )
+    parser.add_argument(
+        "--threshold-methods",
+        type=parse_csv_threshold_methods,
+        default=parse_csv_threshold_methods("normal"),
+        help=(
+            "Modos de threshold separados por vírgula. Use normal,fuzzy para "
+            "comparar o threshold original com o fuzzy."
         ),
     )
     parser.add_argument(
@@ -347,6 +451,36 @@ def build_parser() -> argparse.ArgumentParser:
             "Percentis do limiar superior HU. Use, por exemplo, "
             "99.5,99.7,99.9 para testar estruturas densas."
         ),
+    )
+    parser.add_argument(
+        "--fuzzy-object-percentiles",
+        type=parse_csv_floats,
+        default=parse_csv_floats("99.5"),
+        help="Percentis usados como centro da classe objeto no threshold fuzzy.",
+    )
+    parser.add_argument(
+        "--fuzzy-dense-percentiles",
+        type=parse_csv_floats,
+        default=parse_csv_floats("99.9"),
+        help="Percentis usados como centro da classe fundo denso no threshold fuzzy.",
+    )
+    parser.add_argument(
+        "--fuzzy-soft-margins",
+        type=parse_csv_floats,
+        default=parse_csv_floats("160"),
+        help="Margens HU abaixo do limiar mínimo para o centro do fundo mole.",
+    )
+    parser.add_argument(
+        "--fuzzy-smooth-radii",
+        type=parse_csv_ints,
+        default=parse_csv_ints("2"),
+        help="Raios da suavização contextual das pertinências fuzzy.",
+    )
+    parser.add_argument(
+        "--fuzzy-smooth-modes",
+        type=parse_csv_strings,
+        default=parse_csv_strings("mean"),
+        help="Modos de suavização fuzzy. Opções úteis: mean, median.",
     )
     parser.add_argument("--clip-min-hu", type=float, default=-400.0)
     parser.add_argument("--clip-max-hu", type=float, default=500.0)
@@ -391,8 +525,6 @@ def pipeline_command(
         args.resolution,
         "--num-batches",
         str(args.num_batches),
-        "--threshold-method",
-        "normal",
         "--artery-method",
         "rg",
         "--config-file",
@@ -419,6 +551,33 @@ def pipeline_command(
     return command
 
 
+def build_fuzzy_configs(args: argparse.Namespace) -> list[dict[str, Any] | None]:
+    """Monta o grid de parâmetros fuzzy usado apenas em variantes fuzzy."""
+    if "fuzzy" not in args.threshold_methods:
+        return [None]
+    configs: list[dict[str, Any] | None] = []
+    for object_percentile in args.fuzzy_object_percentiles:
+        for dense_percentile in args.fuzzy_dense_percentiles:
+            if dense_percentile <= object_percentile:
+                raise ValueError(
+                    "Cada fuzzy dense percentile precisa ser maior que o "
+                    "fuzzy object percentile."
+                )
+            for soft_margin_hu in args.fuzzy_soft_margins:
+                for smooth_radius in args.fuzzy_smooth_radii:
+                    for smooth_mode in args.fuzzy_smooth_modes:
+                        configs.append(
+                            {
+                                "object_percentile": object_percentile,
+                                "dense_percentile": dense_percentile,
+                                "soft_margin_hu": soft_margin_hu,
+                                "smooth_radius": smooth_radius,
+                                "smooth_mode": smooth_mode,
+                            }
+                        )
+    return configs
+
+
 def main() -> None:
     """Executa o sweep."""
     args = build_parser().parse_args()
@@ -434,12 +593,15 @@ def main() -> None:
         if args.object_percentile is not None
         else args.object_percentiles
     )
+    fuzzy_configs = build_fuzzy_configs(args)
 
     variants = build_variants(
         args.methods,
+        args.threshold_methods,
         args.percentiles,
         object_percentiles,
         args.max_threshold_percentiles,
+        fuzzy_configs,
         args.clip_min_hu,
         args.clip_max_hu,
     )
@@ -452,9 +614,11 @@ def main() -> None:
             "resolution": args.resolution,
             "num_batches": args.num_batches,
             "methods": args.methods,
+            "threshold_methods": args.threshold_methods,
             "percentiles": args.percentiles,
             "object_percentiles": object_percentiles,
             "max_threshold_percentiles": args.max_threshold_percentiles,
+            "fuzzy_configs": fuzzy_configs,
             "clip_min_hu": args.clip_min_hu,
             "clip_max_hu": args.clip_max_hu,
             "config_path": str(resolve_repo_path(args.config_path)),
@@ -479,6 +643,7 @@ def main() -> None:
         variant_rows.append(
             {
                 "variant": variant["name"],
+                "threshold_method": variant.get("threshold_method", "normal"),
                 "lower_threshold_method": variant["method"],
                 "lower_threshold_percentile": variant["percentile"],
                 "lower_threshold_object_percentile": variant.get(
@@ -487,6 +652,7 @@ def main() -> None:
                 "max_threshold_percentile": variant.get(
                     "max_threshold_percentile"
                 ),
+                "fuzzy_config": variant.get("fuzzy_config"),
                 "config_file": str(config_file.relative_to(REPO_ROOT)),
                 "command": command_text,
             }
@@ -544,7 +710,18 @@ def main() -> None:
         )
         summary_df.to_csv(results_dir / "summary.csv", index=False)
         print("\nResumo salvo em:", results_dir / "summary.csv")
-        print(summary_df[["variant", "mean_dice", "ostia_success_rate", "mean_min_threshold_hu"]])
+        print(
+            summary_df[
+                [
+                    "variant",
+                    "threshold_method",
+                    "mean_dice",
+                    "ostia_success_rate",
+                    "mean_min_threshold_hu",
+                    "mean_max_threshold_hu",
+                ]
+            ]
+        )
     else:
         print("\nDry run concluído. Configs salvas em:", configs_dir)
 
