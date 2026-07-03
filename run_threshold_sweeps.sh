@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+d#!/usr/bin/env bash
 set -euo pipefail
 
 # Use a GPU especifica antes de chamar este script:
