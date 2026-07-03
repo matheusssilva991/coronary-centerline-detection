@@ -41,6 +41,30 @@ def get_thresholding_config(config: dict[str, Any]) -> dict[str, Any]:
     return thresholding
 
 
+def normalize_fuzzy_mask_strategy(strategy: Any) -> str:
+    """Normaliza a estratégia usada para converter pertinências em máscara."""
+    normalized = str(strategy or "object_argmax").strip().lower()
+    normalized = normalized.replace("-", "_").replace(" ", "_")
+    aliases = {
+        "argmax": "object_argmax",
+        "object": "object_argmax",
+        "object_argmax": "object_argmax",
+        "dense": "dense_suppression",
+        "dense_suppression": "dense_suppression",
+        "not_dense": "dense_suppression",
+        "hybrid": "normal_dense_suppression",
+        "normal_dense": "normal_dense_suppression",
+        "normal_dense_suppression": "normal_dense_suppression",
+        "normal_and_not_dense": "normal_dense_suppression",
+    }
+    if normalized not in aliases:
+        valid = ", ".join(sorted(set(aliases.values())))
+        raise ValueError(
+            f"Estrategia fuzzy invalida: {strategy!r}. Use uma de: {valid}."
+        )
+    return aliases[normalized]
+
+
 def estimate_fuzzy_centers(
     volume: np.ndarray,
     min_hu: float,
@@ -76,11 +100,14 @@ def fuzzy_threshold_outputs(
     volume: np.ndarray,
     *,
     min_hu: float,
+    max_hu: float | None = None,
     soft_margin_hu: float = 160,
     object_percentile: float = 99.8,
     dense_percentile: float = 99.95,
     smooth_radius: int = 1,
     smooth_mode: str = "mean",
+    mask_strategy: str = "object_argmax",
+    dense_membership_threshold: float = 0.5,
 ) -> tuple[np.ndarray, dict[str, Any]]:
     """Gera máscara fuzzy de objeto e metadados dos centros.
 
@@ -91,12 +118,21 @@ def fuzzy_threshold_outputs(
     Args:
         volume: Volume 3D usado para estimar e aplicar as pertinências.
         min_hu: Limiar mínimo que ancora a separação entre fundo mole e objeto.
+        max_hu: Limiar máximo usado apenas pela estratégia híbrida com o
+            threshold normal.
         soft_margin_hu: Distância abaixo de ``min_hu`` usada como centro de
             fundo mole.
         object_percentile: Percentil usado como centro robusto da classe objeto.
         dense_percentile: Percentil usado como centro robusto da classe densa.
         smooth_radius: Raio da janela cúbica de suavização das pertinências.
         smooth_mode: Tipo de suavização local, ``mean`` ou ``median``.
+        mask_strategy: Estratégia de binarização das pertinências. O modo
+            ``object_argmax`` preserva o comportamento histórico. O modo
+            ``dense_suppression`` mantém voxels válidos que não são muito
+            densos. O modo ``normal_dense_suppression`` aplica essa supressão
+            sobre o threshold normal ``min_hu <= I <= max_hu``.
+        dense_membership_threshold: Pertinência densa máxima aceita nas
+            estratégias de supressão densa.
 
     Returns:
         Máscara de objeto e metadados dos centros/pertinências.
@@ -108,6 +144,7 @@ def fuzzy_threshold_outputs(
         object_percentile,
         dense_percentile,
     )
+    mask_strategy = normalize_fuzzy_mask_strategy(mask_strategy)
     soft_center, object_center, dense_center = map(float, centers)
     soft_width = max(min_hu - soft_center, np.finfo(np.float32).eps)
     dense_width = max(dense_center - object_center, np.finfo(np.float32).eps)
@@ -138,12 +175,32 @@ def fuzzy_threshold_outputs(
             np.finfo(np.float32).eps,
         )
 
-    # A máscara final fica com voxels cuja classe dominante é objeto.
-    object_mask = (np.argmax(memberships, axis=0) == 1) & (volume >= min_hu)
+    dense_membership_threshold = float(
+        np.clip(dense_membership_threshold, 0.0, 1.0)
+    )
+    valid_min = volume >= min_hu
+    if mask_strategy == "object_argmax":
+        # Caminho histórico: mantém voxels cuja classe dominante é objeto.
+        object_mask = (np.argmax(memberships, axis=0) == 1) & valid_min
+    elif mask_strategy == "dense_suppression":
+        # Caminho permissivo: usa fuzzy apenas para rejeitar voxels muito densos.
+        object_mask = valid_min & (memberships[2] <= dense_membership_threshold)
+    else:
+        # Caminho híbrido: threshold normal + remoção fuzzy de fundo denso.
+        if max_hu is None:
+            raise ValueError(
+                "max_hu precisa ser definido para normal_dense_suppression."
+            )
+        normal_mask = valid_min & (volume <= float(max_hu))
+        object_mask = normal_mask & (memberships[2] <= dense_membership_threshold)
+
     return object_mask.astype(bool), {
         "soft_center_hu": soft_center,
         "object_center_hu": object_center,
         "dense_center_hu": dense_center,
+        "fuzzy_mask_strategy": mask_strategy,
+        "fuzzy_dense_membership_threshold": dense_membership_threshold,
+        "max_threshold": None if max_hu is None else float(max_hu),
     }
 
 
@@ -155,12 +212,25 @@ def fuzzy_threshold_from_config(
     # Isola os parâmetros do bloco THRESHOLDING.fuzzy e aplica defaults locais.
     thresholding = get_thresholding_config(config)
     fuzzy = dict(thresholding.get("fuzzy", {}))
+    max_hu = fuzzy.get("max_hu")
+    if max_hu is None and "MAX_THRESHOLD_PERCENTILE" in config:
+        max_hu = float(
+            np.percentile(
+                np.asarray(volume, dtype=np.float32),
+                float(config["MAX_THRESHOLD_PERCENTILE"]),
+            )
+        )
     return fuzzy_threshold_outputs(
         np.asarray(volume, dtype=np.float32),
         min_hu=float(config.get("MIN_THRESHOLD", -300)),
+        max_hu=None if max_hu is None else float(max_hu),
         soft_margin_hu=float(fuzzy.get("soft_margin_hu", 160)),
         object_percentile=float(fuzzy.get("object_percentile", 99.8)),
         dense_percentile=float(fuzzy.get("dense_percentile", 99.95)),
         smooth_radius=int(fuzzy.get("smooth_radius", 1)),
         smooth_mode=str(fuzzy.get("smooth_mode", "mean")),
+        mask_strategy=str(fuzzy.get("mask_strategy", "object_argmax")),
+        dense_membership_threshold=float(
+            fuzzy.get("dense_membership_threshold", 0.5)
+        ),
     )

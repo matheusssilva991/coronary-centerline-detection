@@ -94,6 +94,8 @@ def fuzzy_suffix(fuzzy_config: dict[str, Any] | None) -> str:
     """Gera sufixo curto para variantes de threshold fuzzy."""
     if not fuzzy_config:
         return ""
+    strategy = fuzzy_config.get("mask_strategy", "object_argmax")
+    dense_threshold = fuzzy_config.get("dense_membership_threshold", 0.5)
     return (
         "_thfuzzy"
         f"_objp{_percent_text(fuzzy_config['object_percentile'])}"
@@ -101,6 +103,8 @@ def fuzzy_suffix(fuzzy_config: dict[str, Any] | None) -> str:
         f"_m{_percent_text(fuzzy_config['soft_margin_hu'])}"
         f"_r{fuzzy_config['smooth_radius']}"
         f"_{fuzzy_config['smooth_mode']}"
+        f"_{strategy}"
+        f"_dt{_percent_text(dense_threshold)}"
     )
 
 
@@ -313,6 +317,8 @@ def summarize_run(
         "fuzzy_soft_margin_hu": None,
         "fuzzy_smooth_radius": None,
         "fuzzy_smooth_mode": None,
+        "fuzzy_mask_strategy": None,
+        "fuzzy_dense_membership_threshold": None,
         "run_dir": None if run_dir is None else str(run_dir.relative_to(REPO_ROOT)),
         "return_code": return_code,
         "duration_seconds": duration_seconds,
@@ -338,6 +344,10 @@ def summarize_run(
             "fuzzy_soft_margin_hu": fuzzy_config.get("soft_margin_hu"),
             "fuzzy_smooth_radius": fuzzy_config.get("smooth_radius"),
             "fuzzy_smooth_mode": fuzzy_config.get("smooth_mode"),
+            "fuzzy_mask_strategy": fuzzy_config.get("mask_strategy"),
+            "fuzzy_dense_membership_threshold": fuzzy_config.get(
+                "dense_membership_threshold"
+            ),
         }
     )
     if run_dir is None or return_code != 0:
@@ -482,6 +492,24 @@ def build_parser() -> argparse.ArgumentParser:
         default=parse_csv_strings("mean"),
         help="Modos de suavização fuzzy. Opções úteis: mean, median.",
     )
+    parser.add_argument(
+        "--fuzzy-mask-strategies",
+        type=parse_csv_strings,
+        default=parse_csv_strings("object_argmax"),
+        help=(
+            "Estratégias de máscara fuzzy. Opções: object_argmax, "
+            "dense_suppression, normal_dense_suppression."
+        ),
+    )
+    parser.add_argument(
+        "--fuzzy-dense-membership-thresholds",
+        type=parse_csv_floats,
+        default=parse_csv_floats("0.5"),
+        help=(
+            "Limiar máximo de pertinência densa aceito nas estratégias de "
+            "supressão densa."
+        ),
+    )
     parser.add_argument("--clip-min-hu", type=float, default=-400.0)
     parser.add_argument("--clip-max-hu", type=float, default=500.0)
     parser.add_argument("--cache", action="store_true")
@@ -566,15 +594,21 @@ def build_fuzzy_configs(args: argparse.Namespace) -> list[dict[str, Any] | None]
             for soft_margin_hu in args.fuzzy_soft_margins:
                 for smooth_radius in args.fuzzy_smooth_radii:
                     for smooth_mode in args.fuzzy_smooth_modes:
-                        configs.append(
-                            {
-                                "object_percentile": object_percentile,
-                                "dense_percentile": dense_percentile,
-                                "soft_margin_hu": soft_margin_hu,
-                                "smooth_radius": smooth_radius,
-                                "smooth_mode": smooth_mode,
-                            }
-                        )
+                        for mask_strategy in args.fuzzy_mask_strategies:
+                            for dense_threshold in (
+                                args.fuzzy_dense_membership_thresholds
+                            ):
+                                configs.append(
+                                    {
+                                        "object_percentile": object_percentile,
+                                        "dense_percentile": dense_percentile,
+                                        "soft_margin_hu": soft_margin_hu,
+                                        "smooth_radius": smooth_radius,
+                                        "smooth_mode": smooth_mode,
+                                        "mask_strategy": mask_strategy,
+                                        "dense_membership_threshold": dense_threshold,
+                                    }
+                                )
     return configs
 
 

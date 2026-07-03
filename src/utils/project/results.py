@@ -22,6 +22,8 @@ RESULT_COLUMNS = [
     "fc_object_seed_count",
     "fc_candidate_voxels_final",
     "threshold_mode",
+    "fuzzy_mask_strategy",
+    "fuzzy_dense_membership_threshold",
     "min_threshold",
     "max_threshold",
     "lower_threshold_method",
@@ -79,6 +81,8 @@ READABLE_COLUMN_NAMES = {
     "fc_object_seed_count": "fc_object_seed_count",
     "fc_candidate_voxels_final": "fc_candidate_voxels_final",
     "threshold_mode": "threshold_mode",
+    "fuzzy_mask_strategy": "fuzzy_mask_strategy",
+    "fuzzy_dense_membership_threshold": "fuzzy_dense_membership_threshold",
     "min_threshold": "min_threshold_hu",
     "max_threshold": "max_threshold_hu",
     "lower_threshold_method": "lower_threshold_method",
@@ -380,6 +384,10 @@ def build_result_row(result: dict[str, Any]) -> dict[str, Any]:
             result, "fc_candidate_voxels_final"
         ),
         "threshold_mode": _get_result_value(result, "threshold_mode"),
+        "fuzzy_mask_strategy": _get_result_value(result, "fuzzy_mask_strategy"),
+        "fuzzy_dense_membership_threshold": _get_result_value(
+            result, "fuzzy_dense_membership_threshold"
+        ),
         "min_threshold": _get_result_value(result, "min_threshold"),
         "max_threshold": _get_result_value(result, "max_threshold"),
         "lower_threshold_method": _get_result_value(

@@ -62,6 +62,8 @@ def process_image(img_id, config, base_path, base_save_path):
         "both_correct": False,
         "both_tolerable": False,
         "threshold_mode": None,
+        "fuzzy_mask_strategy": None,
+        "fuzzy_dense_membership_threshold": None,
         "min_threshold": None,
         "max_threshold": None,
         "lower_threshold_method": None,
@@ -93,6 +95,12 @@ def process_image(img_id, config, base_path, base_save_path):
         result.update(
             {
                 "threshold_mode": preprocessing_details.get("threshold_mode"),
+                "fuzzy_mask_strategy": preprocessing_details.get(
+                    "fuzzy_mask_strategy"
+                ),
+                "fuzzy_dense_membership_threshold": preprocessing_details.get(
+                    "fuzzy_dense_membership_threshold"
+                ),
                 "min_threshold": preprocessing_details.get("min_threshold"),
                 "max_threshold": preprocessing_details.get("max_threshold"),
                 "lower_threshold_method": preprocessing_details.get(

@@ -1,23 +1,28 @@
-d#!/usr/bin/env bash
+#!/usr/bin/env bash
 set -euo pipefail
 
-# Use a GPU especifica antes de chamar este script:
+# Use uma GPU especifica antes de chamar este script:
 #   CUDA_VISIBLE_DEVICES=1 bash run_threshold_sweeps.sh
 #
-# Objetivo dos dois sweeps:
-# 1. Normal: refinar ao redor do melhor normal atual:
-#    lower p10.75 + max threshold p99.8.
-# 2. Fuzzy: refinar ao redor do melhor fuzzy atual:
-#    lower p10.5 + fuzzy object p99.8 + dense p99.97 + smooth radius 0.
+# Sweep 1: refina os parametros do fuzzy atual (object_argmax).
+# Sweep 2: testa melhorias fuzzy mais permissivas:
+#   - dense_suppression: usa fuzzy apenas para remover voxels muito densos.
+#   - normal_dense_suppression: threshold normal + remocao fuzzy de fundo denso.
 
 python src/experiments/lower_threshold_sweep.py \
   --split train \
   --resolution mid \
-  --run-name normal_threshold_refined_p10p75_upper \
+  --run-name fuzzy_threshold_object_argmax_refined \
   --methods percentile \
-  --threshold-methods normal \
-  --percentiles 10.6,10.75,10.9 \
-  --max-threshold-percentiles 99.75,99.8,99.85 \
+  --threshold-methods fuzzy \
+  --percentiles 10.25,10.5 \
+  --max-threshold-percentiles 99.7 \
+  --fuzzy-object-percentiles 99.8,99.85 \
+  --fuzzy-dense-percentiles 99.94,99.96 \
+  --fuzzy-soft-margins 100,120 \
+  --fuzzy-smooth-radii 0 \
+  --fuzzy-mask-strategies object_argmax \
+  --fuzzy-dense-membership-thresholds 0.5 \
   --num-batches 5 \
   --gpu \
   --no-save-cache \
@@ -27,15 +32,17 @@ python src/experiments/lower_threshold_sweep.py \
 python src/experiments/lower_threshold_sweep.py \
   --split train \
   --resolution mid \
-  --run-name fuzzy_threshold_refined_permissive_p10 \
+  --run-name fuzzy_threshold_strategy_refined \
   --methods percentile \
   --threshold-methods fuzzy \
-  --percentiles 10,10.25,10.5 \
+  --percentiles 10.5 \
   --max-threshold-percentiles 99.7 \
   --fuzzy-object-percentiles 99.8 \
-  --fuzzy-dense-percentiles 99.96,99.97,99.98,99.99 \
+  --fuzzy-dense-percentiles 99.96 \
   --fuzzy-soft-margins 120 \
   --fuzzy-smooth-radii 0 \
+  --fuzzy-mask-strategies dense_suppression,normal_dense_suppression \
+  --fuzzy-dense-membership-thresholds 0.55,0.6,0.65,0.7 \
   --num-batches 5 \
   --gpu \
   --no-save-cache \
