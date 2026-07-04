@@ -1,13 +1,13 @@
-"""Executa vários runs do pipeline variando limiares HU.
+"""Executa vários runs do pipeline variando parâmetros de threshold.
 
 O script chama ``src/segmentation_pipeline.py`` para cada variante, mantendo o
 pipeline oficial intacto. As variantes focam em ``threshold + RG`` para avaliar
-isoladamente o impacto do piso inferior, do teto superior e do threshold fuzzy.
+o impacto do piso inferior, do teto superior e dos parâmetros do threshold fuzzy.
 
 Exemplos:
-    uv run python src/experiments/lower_threshold_sweep.py --split train --dry-run
+    uv run python src/experiments/threshold_parameter_sweep.py --split train --dry-run
 
-    uv run python src/experiments/lower_threshold_sweep.py \\
+    uv run python src/experiments/threshold_parameter_sweep.py \\
       --split train \\
       --methods fixed,percentile \\
       --percentiles 9,10,11,14,15,16 \\
@@ -278,6 +278,14 @@ def load_json(path: Path) -> dict[str, Any]:
     return json.loads(resolved.read_text(encoding="utf-8"))
 
 
+def display_path(path: Path) -> str:
+    """Retorna caminho relativo ao repo quando possível."""
+    try:
+        return str(path.relative_to(REPO_ROOT))
+    except ValueError:
+        return str(path)
+
+
 def latest_pipeline_run(variant_output_root: Path, resolution: str) -> Path | None:
     """Encontra o run criado pelo pipeline dentro da pasta da variante."""
     runs_root = variant_output_root / "segmentation" / "runs" / f"{resolution}_res"
@@ -319,7 +327,7 @@ def summarize_run(
         "fuzzy_smooth_mode": None,
         "fuzzy_mask_strategy": None,
         "fuzzy_dense_membership_threshold": None,
-        "run_dir": None if run_dir is None else str(run_dir.relative_to(REPO_ROOT)),
+        "run_dir": None if run_dir is None else display_path(run_dir),
         "return_code": return_code,
         "duration_seconds": duration_seconds,
         "duration_minutes": duration_seconds / 60,
@@ -687,7 +695,7 @@ def main() -> None:
                     "max_threshold_percentile"
                 ),
                 "fuzzy_config": variant.get("fuzzy_config"),
-                "config_file": str(config_file.relative_to(REPO_ROOT)),
+                "config_file": display_path(config_file),
                 "command": command_text,
             }
         )
@@ -716,7 +724,7 @@ def main() -> None:
                 "run_dir": (
                     None
                     if pipeline_run_dir is None
-                    else str(pipeline_run_dir.relative_to(REPO_ROOT))
+                    else display_path(pipeline_run_dir)
                 ),
                 "command": command_text,
             }
