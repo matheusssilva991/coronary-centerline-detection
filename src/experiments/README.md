@@ -67,6 +67,8 @@ uv run python src/experiments/threshold_parameter_sweep.py \
 uv run python src/experiments/aorta_ostia_parameter_sweep.py \
   --split train \
   --run-name aorta_ostia_train_quick \
+  --sample-size 60 \
+  --sample-source-splits train,val \
   --threshold-preset best_normal \
   --timeout-minutes 180 \
   --gpu \

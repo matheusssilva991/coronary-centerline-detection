@@ -36,6 +36,7 @@ import pandas as pd
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OUTPUT_ROOT = REPO_ROOT / "output/segmentation/analysis/aorta_ostia_sweep"
 DEFAULT_CONFIG_PATH = REPO_ROOT / "config/pipeline_config.json"
+DEFAULT_SPLIT_CONFIG_PATH = REPO_ROOT / "config/imagecas_splits.json"
 SUCCESS_STATUSES = {"both ostia correct", "both ostia tolerable"}
 
 
@@ -227,6 +228,89 @@ def deep_merge(base: dict[str, Any], updates: dict[str, Any]) -> dict[str, Any]:
     return merged
 
 
+def load_split_config(path: Path) -> dict[str, Any]:
+    """Carrega um arquivo de splits no formato ImageCAS."""
+    data = load_json(path)
+    splits = data.get("splits", {})
+    missing = [name for name in ("train", "val", "test") if name not in splits]
+    if missing:
+        raise ValueError(f"Split config sem chaves obrigatórias: {missing}")
+    return data
+
+
+def select_sample_ids(
+    splits: dict[str, list[int]],
+    source_splits: list[str],
+    sample_size: int,
+) -> list[int]:
+    """Seleciona IDs em ordem a partir de um ou mais splits fonte."""
+    selected: list[int] = []
+    for split_name in source_splits:
+        if split_name not in splits:
+            raise ValueError(
+                f"Split fonte inválido: {split_name}. Use train, val ou test."
+            )
+        for img_id in splits[split_name]:
+            if img_id not in selected:
+                selected.append(int(img_id))
+            if len(selected) >= sample_size:
+                return selected
+    raise ValueError(
+        f"Não há IDs suficientes em {source_splits} para sample_size={sample_size}."
+    )
+
+
+def build_sample_split_config(
+    args: argparse.Namespace,
+    run_dir: Path,
+) -> Path | None:
+    """Cria split temporário quando o usuário limita o número de imagens."""
+    if args.sample_size is None:
+        return None
+    if args.sample_size <= 0:
+        raise ValueError("--sample-size precisa ser maior que zero.")
+
+    source_data = load_split_config(args.split_config_source)
+    source_splits = {
+        split_name: [int(img_id) for img_id in ids]
+        for split_name, ids in source_data["splits"].items()
+    }
+    selected_ids = select_sample_ids(
+        source_splits,
+        args.sample_source_splits,
+        args.sample_size,
+    )
+    selected_set = set(selected_ids)
+
+    sampled_splits = {
+        split_name: [
+            int(img_id)
+            for img_id in source_splits[split_name]
+            if int(img_id) not in selected_set
+        ]
+        for split_name in ("train", "val", "test")
+    }
+    sampled_splits[args.split] = selected_ids
+
+    split_config = {
+        "metadata": {
+            "source": display_path(resolve_repo_path(args.split_config_source)),
+            "created_by": "src/experiments/aorta_ostia_parameter_sweep.py",
+            "target_split": args.split,
+            "sample_size": args.sample_size,
+            "sample_source_splits": args.sample_source_splits,
+            "note": (
+                "Temporary split config for experiment only; original "
+                "config/imagecas_splits.json is not modified."
+            ),
+        },
+        "splits": sampled_splits,
+    }
+    split_config_path = run_dir / "sample_split_config.json"
+    write_json(split_config_path, split_config)
+    return split_config_path
+
+
 def variant_overrides(
     variant: dict[str, Any],
     *,
@@ -270,6 +354,7 @@ def pipeline_command(
     args: argparse.Namespace,
     variant_output_root: Path,
     config_file: Path,
+    split_config_path: Path | None = None,
 ) -> list[str]:
     """Monta o comando do pipeline para uma variante."""
     command = [
@@ -302,6 +387,8 @@ def pipeline_command(
         command.extend(["--downscale-method", args.downscale_method])
     if args.opencv_interpolation is not None:
         command.extend(["--opencv-interpolation", args.opencv_interpolation])
+    if split_config_path is not None:
+        command.extend(["--split-config", str(split_config_path)])
     return command
 
 
@@ -469,6 +556,30 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--run-name", default=None)
     parser.add_argument("--config-path", type=Path, default=DEFAULT_CONFIG_PATH)
     parser.add_argument(
+        "--sample-size",
+        type=int,
+        default=None,
+        help=(
+            "Número de imagens no split alvo do experimento. Ex.: 60 cria um "
+            "split temporário com 60 IDs sem alterar config/imagecas_splits.json."
+        ),
+    )
+    parser.add_argument(
+        "--sample-source-splits",
+        type=parse_csv_strings,
+        default=parse_csv_strings("train,val"),
+        help=(
+            "Splits usados, em ordem, para preencher --sample-size. "
+            "Padrão: train,val."
+        ),
+    )
+    parser.add_argument(
+        "--split-config-source",
+        type=Path,
+        default=DEFAULT_SPLIT_CONFIG_PATH,
+        help="Arquivo de splits usado como fonte para criar amostras temporárias.",
+    )
+    parser.add_argument(
         "--full-grid",
         action="store_true",
         help="Usa produto cartesiano dos parâmetros em vez do grid enxuto.",
@@ -536,6 +647,7 @@ def main() -> None:
     variants_root = run_dir / "pipeline_runs"
     results_dir = run_dir / "results"
     results_dir.mkdir(parents=True, exist_ok=True)
+    sample_split_config_path = build_sample_split_config(args, run_dir)
 
     variants = build_grid_variants(args) if args.full_grid else default_variants()
     for variant in variants:
@@ -558,6 +670,11 @@ def main() -> None:
             "split": args.split,
             "resolution": args.resolution,
             "num_batches": args.num_batches,
+            "sample_size": args.sample_size,
+            "sample_source_splits": args.sample_source_splits,
+            "sample_split_config": None
+            if sample_split_config_path is None
+            else display_path(sample_split_config_path),
             "full_grid": args.full_grid,
             "variants": variants,
             "threshold_preset": args.threshold_preset,
@@ -585,7 +702,12 @@ def main() -> None:
         )
         variant_config = deep_merge(base_config, overrides)
         write_json(config_file, variant_config)
-        command = pipeline_command(args, variant_dir, config_file)
+        command = pipeline_command(
+            args,
+            variant_dir,
+            config_file,
+            split_config_path=sample_split_config_path,
+        )
         command_text = " ".join(command)
 
         print(f"[{index}/{len(variants)}] {variant['name']}")
