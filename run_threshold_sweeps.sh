@@ -10,7 +10,7 @@ set -euo pipefail
 #   1. threshold normal com melhor configuração do treino;
 #   2. threshold fuzzy com melhor configuração do treino.
 
-uv run python src/experiments/threshold_parameter_sweep.py \
+python src/experiments/threshold_parameter_sweep.py \
   --split val \
   --resolution mid \
   --run-name val_normal_threshold_best \
@@ -24,7 +24,7 @@ uv run python src/experiments/threshold_parameter_sweep.py \
   --downscale-method opencv \
   --opencv-interpolation linear
 
-uv run python src/experiments/threshold_parameter_sweep.py \
+python src/experiments/threshold_parameter_sweep.py \
   --split val \
   --resolution mid \
   --run-name val_fuzzy_threshold_best \
