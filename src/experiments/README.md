@@ -10,6 +10,9 @@ de unidade/CI devem ficar em `tests/` se forem criados no futuro.
 
 - `compare_cpu_gpu.py`: compara saídas de CPU/GPU e ajuda a identificar etapas
   com diferença numérica relevante.
+- `aorta_ostia_parameter_sweep.py`: executa runs do pipeline variando parâmetros
+  da localização da aorta e da detecção dos óstios. Também salva métricas sobre
+  quantidade de fatias, círculos detectados e cobertura da aorta.
 - `fuzzy_pipeline_comparison.py`: versão executável do notebook de comparação
   fuzzy/FC, útil para rodar no servidor.
 - `threshold_parameter_sweep.py`: executa vários runs do pipeline variando
@@ -24,6 +27,24 @@ de unidade/CI devem ficar em `tests/` se forem criados no futuro.
   consolidados das variantes de threshold, RG e FC.
 
 Os helpers compartilhados ficam em `src/utils/experiments/`.
+
+## Runners
+
+Os scripts `.sh` usados para rodar sweeps longos ficam em
+`src/experiments/runners/`. Eles fazem `cd` automático para a raiz do projeto,
+então podem ser chamados a partir de qualquer pasta.
+
+```bash
+bash src/experiments/runners/run_threshold_sweeps.sh
+
+bash src/experiments/runners/run_aorta_ostia_sweeps.sh
+```
+
+Para escolher uma GPU específica:
+
+```bash
+CUDA_VISIBLE_DEVICES=1 bash src/experiments/runners/run_aorta_ostia_sweeps.sh
+```
 
 ## Exemplos
 
@@ -40,6 +61,14 @@ uv run python src/experiments/threshold_parameter_sweep.py \
   --split train \
   --percentiles 1,2,5,10 \
   --num-batches 5 \
+  --gpu \
+  --no-save-cache
+
+uv run python src/experiments/aorta_ostia_parameter_sweep.py \
+  --split train \
+  --run-name aorta_ostia_train_quick \
+  --threshold-preset best_normal \
+  --timeout-minutes 180 \
   --gpu \
   --no-save-cache
 ```

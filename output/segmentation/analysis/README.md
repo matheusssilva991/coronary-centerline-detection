@@ -6,23 +6,31 @@ avaliar o pipeline. Ela nao segue a mesma estrutura das execucoes finais em
 
 ## Subpastas
 
-- `fuzzy_sweep/`: historico de varreduras exploratorias antigas.
+- `aorta_ostia_sweep/`: resultados dos sweeps focados em localização da aorta,
+  quantidade/cobertura de círculos e detecção dos óstios.
+- `fuzzy_comparison_eda/`: tabelas e figuras geradas pela análise comparativa
+  das variantes fuzzy/normal.
+- `fuzzy_membership_functions/`: figuras das funções de pertinência fuzzy.
 - `fuzzy_pipeline_comparison/`: resultados do notebook
   `src/experiments/fuzzy_pipeline_comparison.ipynb`, comparando normal, fuzzy alpha-cut,
   fuzzy threshold e fuzzy connectedness.
-- `threshold_sweep/`: varreduras de limiar HU, incluindo limiar inferior
-  adaptativo, limiar superior e threshold fuzzy.
-- `cases_analysis/`: estudos de casos especificos, geralmente com cache e
-  exemplos visuais.
-- `bad_cases/`: relatorios ou amostras de casos problemáticos.
-- `ia_vs_math/`: comparacoes entre resultados da IA e metodo matematico.
-- `resolution_comparison/`: comparacoes entre resolucoes.
-- `subset_reports/`: relatorios de subconjuntos de treino, validacao ou teste.
+- `threshold_sweep/`: tabelas consolidadas das varreduras de limiar HU. Os runs
+  individuais antigos foram removidos para manter apenas os CSVs resumidos.
 - `visual_examples/`: figuras e exemplos visuais para inspecao/documentos.
 
 ## Regra pratica
 
 Para escolher parametros, use primeiro os arquivos de resumo em
-`fuzzy_pipeline_comparison/<run_name>/summary` e
-`threshold_sweep/<run_name>/results/summary.csv`. Abra os CSVs detalhados apenas
-quando precisar entender um caso especifico.
+`fuzzy_pipeline_comparison/<run_name>/summary` e os CSVs consolidados em
+`threshold_sweep/`. Abra arquivos detalhados apenas quando precisar entender um
+caso especifico.
+
+Arquivos principais em `threshold_sweep/`:
+
+- `threshold_sweep_summary_all.csv`: tabela consolidada de todos os runs de
+  threshold mantidos.
+- `threshold_sweep_ranking.csv`: ranking consolidado por desempenho.
+- `latest_best_pairwise.csv`: comparação par-a-par das melhores configurações
+  do treino.
+- `val_threshold_pairwise_comparison.csv`: comparação par-a-par dos melhores
+  thresholds na validação.
