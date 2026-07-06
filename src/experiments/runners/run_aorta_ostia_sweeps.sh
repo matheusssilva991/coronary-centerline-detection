@@ -16,7 +16,7 @@ cd "$REPO_ROOT"
 #   - fora da tolerância como parada vs miss;
 #   - seleção do círculo por closest vs score.
 
-uv run python src/experiments/aorta_ostia_parameter_sweep.py \
+python src/experiments/aorta_ostia_parameter_sweep.py \
   --split train \
   --resolution mid \
   --run-name aorta_ostia_train60_quick \
