@@ -48,6 +48,14 @@ def parse_csv_ints(value: str) -> list[int]:
     return [int(item) for item in items]
 
 
+def parse_csv_floats(value: str) -> list[float]:
+    """Converte ``2.5,3`` em lista de floats."""
+    items = [item.strip() for item in value.split(",") if item.strip()]
+    if not items:
+        raise argparse.ArgumentTypeError("A lista de floats não pode ser vazia.")
+    return [float(item) for item in items]
+
+
 def parse_csv_strings(value: str) -> list[str]:
     """Converte ``a,b`` em lista textual."""
     items = [item.strip() for item in value.split(",") if item.strip()]
@@ -117,12 +125,31 @@ def _bool_text(value: bool) -> str:
     return "miss" if value else "stop"
 
 
+def _optional_values(value: list[Any] | None) -> list[Any | None]:
+    """Retorna lista com ``None`` quando o parâmetro opcional não foi passado."""
+    return [None] if value is None else value
+
+
+def _param_text(prefix: str, value: Any | None) -> str:
+    """Formata parâmetro opcional para nome de variante."""
+    if value is None:
+        return ""
+    text = str(value).replace(".", "p").replace("-", "m")
+    return f"_{prefix}{text}"
+
+
 def variant_name(
     *,
     lcc_mode: str,
     miss_count: int,
     out_of_tolerance_as_miss: bool,
     candidate_strategy: str,
+    tol_radius_mm: float | None = None,
+    tol_distance_mm: float | None = None,
+    neighbor_distance_threshold: float | None = None,
+    canny_sigma: float | None = None,
+    total_num_peaks: int | None = None,
+    local_roi_padding: int | None = None,
 ) -> str:
     """Gera nome curto e legível para uma variante."""
     return (
@@ -130,6 +157,12 @@ def variant_name(
         f"_out_{_bool_text(out_of_tolerance_as_miss)}"
         f"_miss{miss_count}"
         f"_cand_{candidate_strategy}"
+        f"{_param_text('tolr', tol_radius_mm)}"
+        f"{_param_text('told', tol_distance_mm)}"
+        f"{_param_text('neigh', neighbor_distance_threshold)}"
+        f"{_param_text('canny', canny_sigma)}"
+        f"{_param_text('peaks', total_num_peaks)}"
+        f"{_param_text('roi', local_roi_padding)}"
     )
 
 
@@ -182,14 +215,34 @@ def build_grid_variants(args: argparse.Namespace) -> list[dict[str, Any]]:
         for miss_count in args.miss_counts:
             for out_of_tolerance_as_miss in args.tolerance_modes:
                 for candidate_strategy in args.candidate_strategies:
-                    variants.append(
-                        {
-                            "lcc_mode": lcc_mode,
-                            "miss_count": miss_count,
-                            "out_of_tolerance_as_miss": out_of_tolerance_as_miss,
-                            "candidate_strategy": candidate_strategy,
-                        }
-                    )
+                    for tol_radius_mm in _optional_values(args.tol_radius_mm):
+                        for tol_distance_mm in _optional_values(args.tol_distance_mm):
+                            for neighbor_distance_threshold in _optional_values(
+                                args.neighbor_distance_thresholds
+                            ):
+                                for canny_sigma in _optional_values(
+                                    args.canny_sigmas
+                                ):
+                                    for total_num_peaks in _optional_values(
+                                        args.total_num_peaks
+                                    ):
+                                        for local_roi_padding in _optional_values(
+                                            args.local_roi_paddings
+                                        ):
+                                            variants.append(
+                                                {
+                                                    "lcc_mode": lcc_mode,
+                                                    "miss_count": miss_count,
+                                                    "out_of_tolerance_as_miss": out_of_tolerance_as_miss,
+                                                    "candidate_strategy": candidate_strategy,
+                                                    "tol_radius_mm": tol_radius_mm,
+                                                    "tol_distance_mm": tol_distance_mm,
+                                                    "neighbor_distance_threshold": neighbor_distance_threshold,
+                                                    "canny_sigma": canny_sigma,
+                                                    "total_num_peaks": total_num_peaks,
+                                                    "local_roi_padding": local_roi_padding,
+                                                }
+                                            )
     return variants
 
 
@@ -332,6 +385,20 @@ def variant_overrides(
             "candidate_score_radius_weight": float(radius_weight),
         },
     }
+    circle_overrides = overrides["CIRCLE_DETECTION"]
+    optional_circle_params = {
+        "tol_radius_mm": variant.get("tol_radius_mm"),
+        "tol_distance_mm": variant.get("tol_distance_mm"),
+        "neighbor_distance_threshold": variant.get("neighbor_distance_threshold"),
+        "canny_sigma": variant.get("canny_sigma"),
+        "total_num_peaks": variant.get("total_num_peaks"),
+        "local_roi_padding": variant.get("local_roi_padding"),
+    }
+    for key, value in optional_circle_params.items():
+        if value is not None:
+            circle_overrides[key] = value
+            if key == "total_num_peaks":
+                circle_overrides["total_num_peaks_initial"] = value
     if threshold_preset == "best_normal":
         overrides.update(
             {
@@ -434,6 +501,12 @@ def summarize_run(
         "aorta_miss_count": variant["miss_count"],
         "out_of_tolerance_as_miss": variant["out_of_tolerance_as_miss"],
         "candidate_selection_strategy": variant["candidate_strategy"],
+        "tol_radius_mm": variant.get("tol_radius_mm"),
+        "tol_distance_mm": variant.get("tol_distance_mm"),
+        "neighbor_distance_threshold": variant.get("neighbor_distance_threshold"),
+        "canny_sigma": variant.get("canny_sigma"),
+        "total_num_peaks": variant.get("total_num_peaks"),
+        "local_roi_padding": variant.get("local_roi_padding"),
         "run_dir": None if run_dir is None else display_path(run_dir),
         "return_code": return_code,
         "timed_out": timed_out,
@@ -508,6 +581,12 @@ def build_circle_slice_metrics(
     out.insert(2, "aorta_miss_count", variant["miss_count"])
     out.insert(3, "out_of_tolerance_as_miss", variant["out_of_tolerance_as_miss"])
     out.insert(4, "candidate_selection_strategy", variant["candidate_strategy"])
+    out.insert(5, "tol_radius_mm", variant.get("tol_radius_mm"))
+    out.insert(6, "tol_distance_mm", variant.get("tol_distance_mm"))
+    out.insert(7, "neighbor_distance_threshold", variant.get("neighbor_distance_threshold"))
+    out.insert(8, "canny_sigma", variant.get("canny_sigma"))
+    out.insert(9, "total_num_peaks", variant.get("total_num_peaks"))
+    out.insert(10, "local_roi_padding", variant.get("local_roi_padding"))
     out["ostia_success"] = status_success(out["status"])
     out["aorta_detected_circle_coverage"] = (
         out["aorta_detected_circle_count"] / out["image_slice_count"]
@@ -615,6 +694,42 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--score-distance-weight", type=float, default=1.0)
     parser.add_argument("--score-radius-weight", type=float, default=1.0)
     parser.add_argument(
+        "--tol-radius-mm",
+        type=parse_csv_floats,
+        default=None,
+        help="Lista opcional de tolerâncias de raio em mm. Ex.: 7,9.",
+    )
+    parser.add_argument(
+        "--tol-distance-mm",
+        type=parse_csv_floats,
+        default=None,
+        help="Lista opcional de tolerâncias de deslocamento em mm. Ex.: 16,20.",
+    )
+    parser.add_argument(
+        "--neighbor-distance-thresholds",
+        type=parse_csv_floats,
+        default=None,
+        help="Lista opcional para refinamento por vizinhos em pixels. Ex.: 3,5,7.",
+    )
+    parser.add_argument(
+        "--canny-sigmas",
+        type=parse_csv_floats,
+        default=None,
+        help="Lista opcional de sigmas do Canny/Hough. Ex.: 2.5,3,3.5.",
+    )
+    parser.add_argument(
+        "--total-num-peaks",
+        type=parse_csv_ints,
+        default=None,
+        help="Lista opcional de picos da Hough por fatia. Ex.: 10,15,20.",
+    )
+    parser.add_argument(
+        "--local-roi-paddings",
+        type=parse_csv_ints,
+        default=None,
+        help="Lista opcional de margens da ROI local em pixels. Ex.: 20,30,40.",
+    )
+    parser.add_argument(
         "--timeout-minutes",
         type=float,
         default=180.0,
@@ -656,6 +771,12 @@ def main() -> None:
             miss_count=variant["miss_count"],
             out_of_tolerance_as_miss=variant["out_of_tolerance_as_miss"],
             candidate_strategy=variant["candidate_strategy"],
+            tol_radius_mm=variant.get("tol_radius_mm"),
+            tol_distance_mm=variant.get("tol_distance_mm"),
+            neighbor_distance_threshold=variant.get("neighbor_distance_threshold"),
+            canny_sigma=variant.get("canny_sigma"),
+            total_num_peaks=variant.get("total_num_peaks"),
+            local_roi_padding=variant.get("local_roi_padding"),
         )
 
     base_config = load_json(args.config_path)
@@ -679,6 +800,12 @@ def main() -> None:
             "variants": variants,
             "threshold_preset": args.threshold_preset,
             "score_weights": score_weights,
+            "tol_radius_mm": args.tol_radius_mm,
+            "tol_distance_mm": args.tol_distance_mm,
+            "neighbor_distance_thresholds": args.neighbor_distance_thresholds,
+            "canny_sigmas": args.canny_sigmas,
+            "total_num_peaks": args.total_num_peaks,
+            "local_roi_paddings": args.local_roi_paddings,
             "timeout_minutes": args.timeout_minutes,
             "config_path": display_path(resolve_repo_path(args.config_path)),
             "dry_run": args.dry_run,

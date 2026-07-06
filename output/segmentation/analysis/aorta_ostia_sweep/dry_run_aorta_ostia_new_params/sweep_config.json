@@ -1,0 +1,88 @@
+{
+  "split": "train",
+  "resolution": "mid",
+  "num_batches": 5,
+  "sample_size": 5,
+  "sample_source_splits": [
+    "train",
+    "val"
+  ],
+  "sample_split_config": "output/segmentation/analysis/aorta_ostia_sweep/dry_run_aorta_ostia_new_params/sample_split_config.json",
+  "full_grid": true,
+  "variants": [
+    {
+      "lcc_mode": "per_volume",
+      "miss_count": 5,
+      "out_of_tolerance_as_miss": false,
+      "candidate_strategy": "closest",
+      "tol_radius_mm": 7.0,
+      "tol_distance_mm": 18.0,
+      "neighbor_distance_threshold": 3.0,
+      "canny_sigma": null,
+      "total_num_peaks": null,
+      "local_roi_padding": null,
+      "name": "lcc_per_volume_out_stop_miss5_cand_closest_tolr7p0_told18p0_neigh3p0"
+    },
+    {
+      "lcc_mode": "per_volume",
+      "miss_count": 5,
+      "out_of_tolerance_as_miss": false,
+      "candidate_strategy": "closest",
+      "tol_radius_mm": 9.0,
+      "tol_distance_mm": 18.0,
+      "neighbor_distance_threshold": 3.0,
+      "canny_sigma": null,
+      "total_num_peaks": null,
+      "local_roi_padding": null,
+      "name": "lcc_per_volume_out_stop_miss5_cand_closest_tolr9p0_told18p0_neigh3p0"
+    },
+    {
+      "lcc_mode": "per_volume",
+      "miss_count": 5,
+      "out_of_tolerance_as_miss": false,
+      "candidate_strategy": "score",
+      "tol_radius_mm": 7.0,
+      "tol_distance_mm": 18.0,
+      "neighbor_distance_threshold": 3.0,
+      "canny_sigma": null,
+      "total_num_peaks": null,
+      "local_roi_padding": null,
+      "name": "lcc_per_volume_out_stop_miss5_cand_score_tolr7p0_told18p0_neigh3p0"
+    },
+    {
+      "lcc_mode": "per_volume",
+      "miss_count": 5,
+      "out_of_tolerance_as_miss": false,
+      "candidate_strategy": "score",
+      "tol_radius_mm": 9.0,
+      "tol_distance_mm": 18.0,
+      "neighbor_distance_threshold": 3.0,
+      "canny_sigma": null,
+      "total_num_peaks": null,
+      "local_roi_padding": null,
+      "name": "lcc_per_volume_out_stop_miss5_cand_score_tolr9p0_told18p0_neigh3p0"
+    }
+  ],
+  "threshold_preset": "best_normal",
+  "score_weights": [
+    1.0,
+    1.0,
+    1.0
+  ],
+  "tol_radius_mm": [
+    7.0,
+    9.0
+  ],
+  "tol_distance_mm": [
+    18.0
+  ],
+  "neighbor_distance_thresholds": [
+    3.0
+  ],
+  "canny_sigmas": null,
+  "total_num_peaks": null,
+  "local_roi_paddings": null,
+  "timeout_minutes": 180.0,
+  "config_path": "config/pipeline_config.json",
+  "dry_run": true
+}
