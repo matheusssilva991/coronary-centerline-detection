@@ -1,8 +1,7 @@
 """Run fuzzy pipeline comparison variants from the command line.
 
-This script is the server-friendly version of
-``src/experiments/fuzzy_pipeline_comparison.ipynb``. It compares the normal
-pipeline, fuzzy thresholding, region growing and fuzzy connectedness.
+It compares the four retained combinations of normal/fuzzy thresholding and
+region growing/fuzzy connectedness.
 
 Example:
     uv run python src/experiments/fuzzy_pipeline_comparison.py --split train --sample-size 30
@@ -50,69 +49,24 @@ DEFAULT_CONFIG_PATH = REPO_ROOT / "config/pipeline_config.json"
 
 
 FC_PARAMS = {
-    "fc.alpha": 0.18,
-    "fc.sigma_hu": 80,
-    "fc.neighborhood": 26,
-    "fc.candidate_min_vesselness": 0.02,
-    "fc.seed_search_radius": 2,
-    "fc.max_seeds_per_ostium": 4,
-    "fc.seed_min_vesselness": 0.02,
-    "fc.min_seed_distance_voxels": 1.0,
-    "fc.vesselness_affinity_mode": "geometric_mean",
-    "fc.vesselness_floor": 0.02,
-    "fc.edge_affinity_mode": "weighted_product",
-    "fc.vesselness_weight": 0.9,
-    "fc.mask_strategy": "alpha",
-}
-
-FC_PERMISSIVE_PARAMS = {
-    **FC_PARAMS,
-    "fc.alpha": 0.14,
-    "fc.sigma_hu": 120,
-    "fc.candidate_min_vesselness": 0.015,
-    "fc.seed_min_vesselness": 0.015,
-    "fc.vesselness_floor": 0.015,
-}
-
-FC_SEMI_PERMISSIVE_PARAMS = {
-    **FC_PARAMS,
     "fc.alpha": 0.16,
     "fc.sigma_hu": 100,
+    "fc.neighborhood": 26,
     "fc.candidate_min_vesselness": 0.018,
+    "fc.seed_search_radius": 2,
+    "fc.max_seeds_per_ostium": 4,
     "fc.seed_min_vesselness": 0.018,
+    "fc.min_seed_distance_voxels": 1.0,
     "fc.vesselness_floor": 0.018,
-}
-
-FC_STRICT_PARAMS = {
-    **FC_PARAMS,
-    "fc.alpha": 0.22,
-    "fc.sigma_hu": 60,
-    "fc.candidate_min_vesselness": 0.03,
-    "fc.seed_min_vesselness": 0.02,
-    "fc.vesselness_floor": 0.03,
+    "fc.vesselness_weight": 0.9,
 }
 
 FUZZY_PARAMS = {
-    "fuzzy.soft_margin_hu": 160,
+    "LOWER_THRESHOLD.percentile": 10.5,
+    "fuzzy.soft_margin_hu": 100,
     "fuzzy.object_percentile": 99.8,
-    "fuzzy.dense_percentile": 99.95,
-    "fuzzy.smooth_radius": 1,
-    "fuzzy.smooth_mode": "mean",
-}
-
-FUZZY_MODERATE_PARAMS = {
-    "fuzzy.soft_margin_hu": 160,
-    "fuzzy.object_percentile": 99.7,
-    "fuzzy.dense_percentile": 99.9,
-    "fuzzy.smooth_radius": 1,
-    "fuzzy.smooth_mode": "mean",
-}
-
-FUZZY_STRONG_PARAMS = {
-    "fuzzy.soft_margin_hu": 160,
-    "fuzzy.object_percentile": 99.5,
-    "fuzzy.dense_percentile": 99.9,
-    "fuzzy.smooth_radius": 2,
+    "fuzzy.dense_percentile": 99.96,
+    "fuzzy.smooth_radius": 0,
     "fuzzy.smooth_mode": "mean",
 }
 
@@ -120,17 +74,6 @@ FUZZY_THRESHOLD_PARAMS = {
     "threshold_mode": "fuzzy",
     **FUZZY_PARAMS,
 }
-
-FUZZY_THRESHOLD_BALANCED_PARAMS = {
-    "threshold_mode": "fuzzy",
-    **FUZZY_MODERATE_PARAMS,
-}
-
-FUZZY_THRESHOLD_CONSERVATIVE_PARAMS = {
-    "threshold_mode": "fuzzy",
-    **FUZZY_STRONG_PARAMS,
-}
-
 
 def variant(
     name: str,
@@ -152,10 +95,8 @@ def variant(
 
 def default_variants() -> list[dict[str, Any]]:
     """Return the compact, article-oriented comparison set."""
-    normal_threshold = "-300 <= I <= P99.7"
-    fuzzy_original = "fuzzy object argmax, base parameters"
-    fuzzy_balanced = "fuzzy object argmax, moderate parameters"
-    fuzzy_conservative = "fuzzy object argmax, strong parameters"
+    normal_threshold = "P10.75 <= I <= P99.8"
+    fuzzy_threshold = "P10.5 + fuzzy object argmax (P99.8/P99.96)"
     no_weight = "no vesselness weighting"
 
     return [
@@ -176,32 +117,12 @@ def default_variants() -> list[dict[str, Any]]:
                 **FUZZY_THRESHOLD_PARAMS,
                 "artery_method": "region_growing",
             },
-            threshold_rule=fuzzy_original,
-            vesselness_rule=no_weight,
-        ),
-        variant(
-            "fuzzy_threshold_balanced_rg",
-            "Moderate fuzzy threshold + region growing.",
-            {
-                **FUZZY_THRESHOLD_BALANCED_PARAMS,
-                "artery_method": "region_growing",
-            },
-            threshold_rule=fuzzy_balanced,
-            vesselness_rule=no_weight,
-        ),
-        variant(
-            "fuzzy_threshold_conservative_rg",
-            "Strong fuzzy threshold + region growing.",
-            {
-                **FUZZY_THRESHOLD_CONSERVATIVE_PARAMS,
-                "artery_method": "region_growing",
-            },
-            threshold_rule=fuzzy_conservative,
+            threshold_rule=fuzzy_threshold,
             vesselness_rule=no_weight,
         ),
         variant(
             "normal_threshold_fc",
-            "Normal threshold + base fuzzy connectedness.",
+            "Normal threshold + fuzzy connectedness.",
             {
                 "threshold_mode": "normal",
                 "artery_method": "fuzzy_connectedness",
@@ -211,25 +132,14 @@ def default_variants() -> list[dict[str, Any]]:
             vesselness_rule=no_weight,
         ),
         variant(
-            "fuzzy_threshold_balanced_fc_semi_permissive",
-            "Moderate fuzzy threshold + semi-permissive fuzzy connectedness.",
+            "fuzzy_threshold_fc",
+            "Fuzzy threshold + fuzzy connectedness.",
             {
-                **FUZZY_THRESHOLD_BALANCED_PARAMS,
-                "artery_method": "fuzzy_connectedness",
-                **FC_SEMI_PERMISSIVE_PARAMS,
-            },
-            threshold_rule=fuzzy_balanced,
-            vesselness_rule=no_weight,
-        ),
-        variant(
-            "fuzzy_threshold_conservative_fc",
-            "Strong fuzzy threshold + fuzzy connectedness.",
-            {
-                **FUZZY_THRESHOLD_CONSERVATIVE_PARAMS,
+                **FUZZY_THRESHOLD_PARAMS,
                 "artery_method": "fuzzy_connectedness",
                 **FC_PARAMS,
             },
-            threshold_rule=fuzzy_conservative,
+            threshold_rule=fuzzy_threshold,
             vesselness_rule=no_weight,
         ),
     ]
@@ -412,8 +322,7 @@ def make_diagnostics(run_dir: Path, image_rows: list[dict[str, Any]]) -> None:
 
     pairs = [
         ("normal_rg", "normal_threshold_fc"),
-        ("fuzzy_threshold_balanced_rg", "fuzzy_threshold_balanced_fc_semi_permissive"),
-        ("fuzzy_threshold_conservative_rg", "fuzzy_threshold_conservative_fc"),
+        ("fuzzy_threshold_rg", "fuzzy_threshold_fc"),
     ]
     delta_frames = []
     available = set(df["variant"])

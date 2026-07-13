@@ -7,6 +7,13 @@ import os
 import numpy as np
 
 
+AORTA_OSTIA_METHOD_ALIASES = {
+    "default": "standard",
+    "baseline": "standard",
+    "bilateral_thin_conditional": "bilateral_thin",
+}
+
+
 def deep_update_dict(base, updates):
     """Atualiza um dicionário recursivamente (merge profundo)."""
     for key, value in updates.items():
@@ -86,6 +93,31 @@ def save_config_json(config, path):
         os.makedirs(save_dir, exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
         json.dump(serialize_config_for_json(config), f, indent=2, ensure_ascii=False)
+
+
+def apply_aorta_ostia_method(config, method=None):
+    """Aplica um perfil validado de segmentação da aorta e seleção dos óstios.
+
+    O perfil ``standard`` preserva o comportamento histórico. O perfil
+    ``bilateral_thin`` combina superfície fina, seleção bilateral e correção
+    condicional das fatias anômalas da máscara da aorta.
+    """
+    cfg = copy.deepcopy(config)
+    method_config = cfg.setdefault("AORTA_OSTIA_METHOD", {})
+    selected = method or method_config.get("method", "standard")
+    selected = AORTA_OSTIA_METHOD_ALIASES.get(selected, selected)
+    profiles = method_config.get("profiles", {})
+
+    if selected not in profiles:
+        valid_methods = ", ".join(sorted(profiles)) or "nenhum perfil configurado"
+        raise ValueError(
+            f"Método de aorta/óstios inválido: {selected}. "
+            f"Opções disponíveis: {valid_methods}."
+        )
+
+    deep_update_dict(cfg, profiles[selected])
+    cfg["AORTA_OSTIA_METHOD"]["method"] = selected
+    return cfg
 
 
 def scale_config_to_resolution(config, reference_downscale_xy=2):

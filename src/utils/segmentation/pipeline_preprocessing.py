@@ -12,7 +12,6 @@ import cv2
 import numpy as np
 
 from ..processing.frangi import (
-    get_modified_vesselness,
     get_vesselness,
     load_vesselness_cache,
     save_vesselness_cache,
@@ -130,18 +129,15 @@ def load_and_preprocess_image(
             *thresh_vals,
         )
 
-        if config.get("LCC_PER_SLICE", True):
-            lcc_image = np.zeros_like(thresh_image, dtype=thresh_image.dtype)
-            lcc_mask = np.zeros_like(thresh_mask, dtype=bool)
-            for z_idx in range(thresh_image.shape[2]):
-                lcc_slice, lcc_mask_slice = largest_connected_component(
-                    thresh_image[:, :, z_idx],
-                    thresh_mask[:, :, z_idx],
-                )
-                lcc_image[:, :, z_idx] = lcc_slice
-                lcc_mask[:, :, z_idx] = lcc_mask_slice
-        else:
-            lcc_image, lcc_mask = largest_connected_component(thresh_image, thresh_mask)
+        lcc_image = np.zeros_like(thresh_image, dtype=thresh_image.dtype)
+        lcc_mask = np.zeros_like(thresh_mask, dtype=bool)
+        for z_idx in range(thresh_image.shape[2]):
+            lcc_slice, lcc_mask_slice = largest_connected_component(
+                thresh_image[:, :, z_idx],
+                thresh_mask[:, :, z_idx],
+            )
+            lcc_image[:, :, z_idx] = lcc_slice
+            lcc_mask[:, :, z_idx] = lcc_mask_slice
 
         lcc_image = (lcc_image - offset).astype(np.float32)
         preprocessing_details.update(
@@ -163,18 +159,27 @@ def load_and_preprocess_image(
             )
         else:
             down_image = downscale_image_ndi(img, downscale_factors, order=3)
+        fuzzy_config = dict(config)
+        fuzzy_threshold_config = dict(thresholding_config.get("fuzzy", {}))
+        fuzzy_lower_config = dict(config.get("LOWER_THRESHOLD", {}))
+        fuzzy_lower_config["percentile"] = float(
+            fuzzy_threshold_config.get(
+                "lower_percentile",
+                fuzzy_lower_config.get("percentile", 10.5),
+            )
+        )
+        fuzzy_config["LOWER_THRESHOLD"] = fuzzy_lower_config
         min_threshold, lower_threshold_details = resolve_lower_threshold(
             down_image,
-            config,
+            fuzzy_config,
         )
-        fuzzy_config = dict(config)
         fuzzy_config["MIN_THRESHOLD"] = float(min_threshold)
         fuzzy_mask, fuzzy_details = fuzzy_threshold_from_config(down_image, fuzzy_config)
         lcc_image, lcc_mask = build_lcc_image_from_mask(
             down_image,
             fuzzy_mask,
             offset=abs(float(min_threshold)),
-            per_slice=bool(config.get("LCC_PER_SLICE", True)),
+            per_slice=True,
         )
         preprocessing_details.update(
             {
@@ -216,18 +221,6 @@ def get_or_compute_vesselness(
     spacing: Any = None,
 ) -> Any:
     """Carrega ou calcula o mapa de vasos (Frangi) para um volume 3D."""
-    method = vesselness_config.get("method", "normal")
-    vesselness_fn = {
-        "normal": get_vesselness,
-        "modified": get_modified_vesselness,
-    }.get(method)
-    if vesselness_fn is None:
-        raise ValueError(
-            f"Método de vesselness inválido: {method}. Use 'normal' ou 'modified'."
-        )
-
-    if method != "normal":
-        cache_dir = f"{cache_dir}_{method}"
     cache_signature = _vesselness_cache_signature(
         image,
         vesselness_config,
@@ -242,7 +235,7 @@ def get_or_compute_vesselness(
         if cache is not None:
             return cache
 
-    # Monta os parâmetros compatíveis com Frangi normal ou modificado.
+    # Monta os parâmetros do Frangi validado para aorta e artérias.
     vesselness_kwargs = {
         "sigmas": vesselness_config["sigmas"],
         "black_ridges": vesselness_config.get("black_ridges", False),
@@ -253,16 +246,8 @@ def get_or_compute_vesselness(
         "smooth_sigma": vesselness_config.get("smooth_sigma", 0.0),
         "gpu": bool(use_gpu),
     }
-    if method == "modified":
-        modified_config = dict(vesselness_config.get("modified", {}))
-        # Algumas variações do Frangi modificado usam espaçamento físico.
-        if not modified_config.pop("use_spacing", True):
-            spacing = None
-        vesselness_kwargs.update(modified_config)
-        vesselness_kwargs["spacing"] = spacing
-
     # Calcula o mapa de vasos usado na detecção dos óstios ou segmentação arterial.
-    vesselness = vesselness_fn(image, **vesselness_kwargs)
+    vesselness = get_vesselness(image, **vesselness_kwargs)
     if save_cache:
         save_vesselness_cache(vesselness, img_id, cache_dir=cache_dir)
     return vesselness

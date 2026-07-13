@@ -3,7 +3,6 @@
 O módulo mantém apenas duas entradas públicas:
 
 - ``normal_region_growing_from_ostia``: método usado pelo pipeline principal;
-- ``region_growing_article``: variante simples baseada no método do artigo.
 
 As demais funções são helpers privados usados para validar sementes, selecionar
 sementes locais e controlar os critérios de aceitação do crescimento de região.
@@ -243,91 +242,6 @@ def _region_growing_from_seeds(
     return mask
 
 
-def _initialize_article_region(
-    vesselness_map: NDArray[Any],
-    seeds: Iterable[Sequence[int]],
-    min_vesselness: float | None,
-) -> tuple[NDArray[np.bool_], NDArray[np.bool_], deque[tuple[int, int, int]], float, int]:
-    """Inicializa a variante do artigo com múltiplas sementes."""
-    mask = np.zeros_like(vesselness_map, dtype=bool)
-    visited = np.zeros_like(vesselness_map, dtype=bool)
-    queue: deque[tuple[int, int, int]] = deque()
-    initial_sum = 0.0
-    initial_count = 0
-
-    for seed in seeds:
-        coord = _validate_seed(seed, vesselness_map.shape)
-        if coord is None:
-            continue
-
-        seed_val = float(vesselness_map[coord])
-        if min_vesselness is not None and seed_val < float(min_vesselness):
-            continue
-
-        visited[coord] = True
-        mask[coord] = True
-        queue.append(coord)
-        initial_sum += seed_val
-        initial_count += 1
-
-    return mask, visited, queue, initial_sum, initial_count
-
-
-def region_growing_article(
-    vesselness_map: NDArray[Any],
-    seeds: Iterable[Sequence[int]],
-    threshold: float | None = None,
-    min_vesselness: float | None = None,
-    max_volume: int | None = None,
-) -> NDArray[np.bool_]:
-    """Executa a variante de crescimento de região baseada no artigo."""
-    if vesselness_map.ndim != 3:
-        raise ValueError(
-            f"vesselness_map deve ser 3D, recebido shape={vesselness_map.shape}"
-        )
-
-    if threshold is None:
-        threshold = (float(vesselness_map.max()) - float(vesselness_map.min())) / 10.0
-
-    mask, visited, queue, current_sum, current_count = _initialize_article_region(
-        vesselness_map,
-        seeds,
-        None if min_vesselness is None else float(min_vesselness),
-    )
-    if current_count == 0:
-        print("Nenhuma semente válida fornecida.")
-        return mask
-
-    region_mean = float(current_sum / current_count)
-    dims = vesselness_map.shape
-    while queue:
-        if max_volume and current_count >= int(max_volume):
-            print(f"Limite de voxels atingido: {max_volume}")
-            break
-
-        cy, cx, cz = queue.popleft()
-        for dy, dx, dz in NEIGHBORS_26:
-            ny, nx, nz = cy + dy, cx + dx, cz + dz
-            if not (0 <= ny < dims[0] and 0 <= nx < dims[1] and 0 <= nz < dims[2]):
-                continue
-            if visited[ny, nx, nz]:
-                continue
-
-            visited[ny, nx, nz] = True
-            neighbor_val = float(vesselness_map[ny, nx, nz])
-            if min_vesselness is not None and neighbor_val < float(min_vesselness):
-                continue
-
-            if abs(neighbor_val - region_mean) < float(threshold):
-                mask[ny, nx, nz] = True
-                queue.append((ny, nx, nz))
-                current_sum += neighbor_val
-                current_count += 1
-                region_mean = float(current_sum / current_count)
-
-    return mask
-
-
 def normal_region_growing_from_ostia(
     vesselness_artery: NDArray[Any],
     ostia_left: Sequence[int] | None,
@@ -421,5 +335,4 @@ def normal_region_growing_from_ostia(
 __all__ = [
     "NEIGHBORS_26",
     "normal_region_growing_from_ostia",
-    "region_growing_article",
 ]

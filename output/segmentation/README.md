@@ -193,51 +193,30 @@ Estrutura atual:
 
 ```text
 analysis/
-  fuzzy_sweep/
-  fuzzy_pipeline_comparison/
+  EXPERIMENTS_ARCHIVE.md
+  aorta_mask_ostia_comparison/
+  threshold_pipeline_comparison/
+  fuzzy_membership_functions/
   visual_examples/
 ```
 
-### `analysis/fuzzy_pipeline_comparison/`
+### `analysis/aorta_mask_ostia_comparison/`
 
-Resultados do notebook `src/fuzzy_pipeline_comparison.ipynb`. Use para comparar:
+Mantem somente a confirmacao final da abordagem de aorta/ostios promovida ao
+pipeline. Triagens e variantes descartadas estao resumidas em
+`analysis/EXPERIMENTS_ARCHIVE.md`.
 
-- threshold HU normal;
-- threshold fuzzy alpha-cut;
-- region growing;
-- fuzzy connectedness;
-- combinacao de threshold fuzzy + fuzzy connectedness.
+### `analysis/threshold_pipeline_comparison/`
 
-Estrutura esperada:
-
-```text
-fuzzy_pipeline_comparison/
-  <run_name>/
-    summary/ranking.csv
-    results/image_results.csv
-    parameters/variant_parameters.csv
-```
-
-### `analysis/fuzzy_sweep/`
-
-Historico de varreduras exploratorias antigas. Ela pode ter subpastas como:
+Tabelas, figuras e exemplos qualitativos da comparacao entre threshold normal e
+fuzzy, combinados com region growing e fuzzy connectedness.
 
 ```text
-fuzzy_sweep/
-  runs/<run_name>/
-    summary/
-    results/
-    parameters/
-    partial/
-    debug/       # opcional
+threshold_pipeline_comparison/
+  tables/
+  figures/
+  qualitative_3d/
 ```
-
-### Pastas antigas de sweep
-
-Qualquer pasta antiga de varredura que ainda existir em `analysis/` deve ser
-tratada como historico. Os scripts de sweep foram removidos para manter os
-experimentos atuais mais simples.
-
 
 ### `analysis/visual_examples/`
 
@@ -362,6 +341,29 @@ uv run python src/segmentation_pipeline.py --split train --gpu
 uv run python src/segmentation_pipeline.py --split train --no-gpu
 ```
 
+### Escolher a abordagem de aorta e ostios
+
+O comportamento historico continua sendo o padrao:
+
+```bash
+uv run python src/segmentation_pipeline.py \
+  --split test \
+  --resolution mid \
+  --aorta-ostia-method standard
+```
+
+Para ativar a abordagem bilateral validada:
+
+```bash
+uv run python src/segmentation_pipeline.py \
+  --split test \
+  --resolution mid \
+  --aorta-ostia-method bilateral_thin
+```
+
+O metodo escolhido e salvo no CSV como `aorta_ostia_method` e no metadata da
+execucao, junto com os parametros efetivos.
+
 ## Como encontrar rapidamente
 
 - Resultado bruto do pipeline:
@@ -374,9 +376,11 @@ uv run python src/segmentation_pipeline.py --split train --no-gpu
   `runs/<resolucao>_res/<timestamp>/logs/pipeline.log`
 - Resultado oficial:
   `canonical/<resolucao>_res/<split>/<timestamp>/numeric/`
-- Comparacao fuzzy/FC atual:
-  `analysis/fuzzy_pipeline_comparison/<run_name>/`
-- Sweeps exploratorios antigos:
-  `analysis/fuzzy_sweep/runs/<run_name>/`
+- Comparacao atual de threshold/RG/FC:
+  `analysis/threshold_pipeline_comparison/`
+- Historico dos experimentos removidos:
+  `analysis/EXPERIMENTS_ARCHIVE.md`
+- Confirmacao final de aorta/ostios:
+  `analysis/aorta_mask_ostia_comparison/aorta_ostia_bilateral_final_val90/`
 - Comparacao CPU/GPU:
   `backend_comparison/<resolucao>_res/<timestamp>/`

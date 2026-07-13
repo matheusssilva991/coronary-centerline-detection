@@ -91,17 +91,10 @@ Trade-off:
 - Fatores maiores: pipeline mais rapido, menor detalhe.
 - Fatores menores: melhor detalhe, maior custo computacional.
 
-### `LCC_PER_SLICE` (bool)
+### Maior componente conectada
 
-- Valor atual: `true`
-- Define como o maior componente conectado (LCC) e extraido no pre-processamento.
-- `true`: calcula o LCC separadamente em cada slice 2D.
-- `false`: calcula um unico LCC no volume 3D completo.
-
-Impacto:
-
-- Por slice tende a preservar continuidade slice-a-slice mesmo quando o volume 3D esta fragmentado.
-- Por volume completo tende a ser mais restritivo globalmente e pode remover componentes desconectados pequenos.
+O pipeline calcula a LCC separadamente em cada fatia 2D. O modo por volume foi
+retirado porque não melhorou os resultados nos sweeps de aorta/óstios.
 
 ### `MIN_THRESHOLD` (int/float)
 
@@ -115,9 +108,25 @@ Interpretacao:
 - Valores menos negativos tornam a mascara mais restritiva.
 - Valores mais negativos preservam mais estruturas, mas tambem podem incluir mais ruido/fundo.
 
+### `LOWER_THRESHOLD` (object)
+
+- `method`: `percentile` e o padrão validado; `fixed` permanece para reproduzir
+  o baseline histórico.
+- `percentile`: `10.75` no threshold normal.
+- `fixed_hu`: `-300`, usado apenas quando `method = "fixed"`.
+- `clip_min_hu`/`clip_max_hu`: faixa válida para estimar o percentil.
+
+### `THRESHOLDING` (object)
+
+- `method`: `normal` ou `fuzzy`.
+- O fuzzy usa somente `object_argmax`, com margem 100 HU, centro de objeto
+  P99,8, centro denso P99,96 e sem suavização espacial.
+- `fuzzy.lower_percentile = 10.5` aplica automaticamente o piso vencedor ao
+  selecionar fuzzy; o normal continua usando P10,75.
+
 ### `MAX_THRESHOLD_PERCENTILE` (float)
 
-- Valor atual: `99.7`
+- Valor atual: `99.8`
 - Percentil usado para limitar/clamp de intensidade em alguma etapa de limiarizacao normalizada.
 
 Efeito pratico:
@@ -135,27 +144,15 @@ Realca estruturas tubulares para facilitar segmentacao/deteccao.
 
 - Valor atual: `"normal"`
 - Seleciona a variante de vesselness.
-- Valores possiveis: `"normal"`, `"modified"`
+- O único método mantido é `"normal"` (Frangi).
 
 Interpretacao:
 
 - `normal`: usa diretamente o filtro Frangi.
-- `modified`: aplica suavizacao previa, calcula Frangi e pondera a resposta por medidas auxiliares de grayness/gradient.
-
-### `modified` (object)
-
-- Configura a variante `"modified"` de vesselness.
-- `smooth_sigma`: suavizacao gaussiana antes do Frangi.
-- `gd_epsilon`: piso numerico para evitar divisao por zero em `Gf/Gd`.
-- `gf_center_percentile`: centro robusto usado na medida de grayness.
-- `gf_scale_percentile`: escala robusta usada na medida de grayness.
-- `gd_clip_percentiles`: percentis usados para limitar outliers do gradiente.
-- `ratio_clip`: intervalo usado para limitar a ponderacao `Gf/Gd`.
-- `use_spacing`: usa espacamento fisico no calculo do gradiente.
 
 ### `sigmas` (array[float])
 
-- Valor atual: `[2.5, 3.0]`
+- Valor atual: `[2.0, 2.25, 2.5]`
 - Escalas gaussianas para analise multiescala.
 
 Interpretacao:
@@ -215,12 +212,7 @@ Mesmo conceito da aorta, com foco em arterias coronarias (mais finas e ramificad
 ### `method` (string)
 
 - Valor atual: `"normal"`
-- Seleciona a variante de vesselness.
-- Valores possiveis: `"normal"`, `"modified"`
-
-### `modified` (object)
-
-- Mesmos campos descritos em `VESSELNESS_AORTA.modified`.
+- O único método mantido é `"normal"` (Frangi).
 
 ### `sigmas` (array[float])
 
@@ -341,30 +333,14 @@ Trade-off:
 - Padding maior: menos risco de cortar estrutura valida, mais custo/falso positivo.
 - Padding menor: mais foco, risco de truncar alvo.
 
-### `candidate_selection_strategy` (str)
+### Rastreamento validado
 
-- Valor atual: `"closest"`
-- Estrategia para escolher o candidato circular em cada slice.
-- Opcoes:
-  - `"closest"`: comportamento original, seleciona o centro mais proximo do
-    circulo anterior e depois valida raio/distancia.
-  - `"score"`: pontua candidatos usando acumulador Hough, distancia ao centro
-    anterior e diferenca de raio.
-
-### `out_of_tolerance_as_miss` (bool)
-
-- Valor atual: `false`
-- Quando `false`, um candidato fora da tolerancia interrompe o rastreamento.
-- Quando `true`, esse caso conta como slice sem deteccao e o algoritmo so para
-  depois de `max_slice_miss_threshold` misses consecutivos.
-
-### Pesos do score de candidato
-
-- `candidate_score_accum_weight`: peso do acumulador Hough.
-- `candidate_score_distance_weight`: penalidade para salto de centro.
-- `candidate_score_radius_weight`: penalidade para mudanca de raio.
-
-Esses pesos so sao usados quando `candidate_selection_strategy = "score"`.
+- Filtra candidatos pelas tolerâncias de raio/distância e escolhe o válido mais
+  próximo do último círculo aceito.
+- `early_track_recovery = true` tenta novas inicializações nas 8 fatias
+  anteriores quando a trajetória inicial tem menos de 10 círculos.
+- Candidatos fora da tolerância interrompem o rastreamento; eles não são mais
+  tratados como misses.
 
 ---
 
@@ -411,6 +387,14 @@ Efeito:
 - Valor atual: `2`
 - Raio estrutural para limpar pequenos vazamentos apos evolucao.
 
+### Correcao condicional pela trajetoria
+
+- `trajectory_area_ratio_threshold`: quando definido, corrige somente fatias
+  cuja area da mascara excede a area esperada pelo circulo rastreado. Fica
+  desativado (`null`) no metodo `standard` e vale `2.0` em `bilateral_thin`.
+- `trajectory_correction_radius_factor`: fator `1.75` usado para reconstruir
+  as fatias consideradas anomalas.
+
 ---
 
 ## 6) Deteccao de Ostios - `OSTIA_DETECTION`
@@ -447,13 +431,48 @@ Seleciona candidatos de ostio e filtra por regras anatomicas/geometricas.
 - Valor atual: `4`
 - Raio de erosao morfologica em mascara auxiliar para robustez da selecao.
 
+### Selecao do par
+
+- `pair_selection_mode = "greedy"`: comportamento historico, que escolhe o
+  primeiro candidato pelo vesselness e procura o segundo pelas restricoes
+  geometricas.
+- `pair_selection_mode = "bilateral"`: separa candidatos pelos dois lados da
+  trajetoria da aorta e procura um par bilateral consistente.
+- `bilateral_top_k_per_side = 50`: quantidade maxima de candidatos avaliada em
+  cada lado no metodo bilateral.
+
+---
+
+## 6.1) Metodo conjunto de aorta e ostios - `AORTA_OSTIA_METHOD`
+
+O campo `method` permite alternar entre dois perfis sem editar manualmente os
+parametros internos:
+
+- `standard`: preserva o comportamento historico, com erosao 4, selecao
+  `greedy` e sem correcao condicional da mascara da aorta.
+- `bilateral_thin`: usa erosao 2, selecao bilateral com 50 candidatos por lado
+  e corrige fatias cuja area excede duas vezes a area esperada pela trajetoria.
+
+Pela linha de comando:
+
+```bash
+# Comportamento historico
+uv run python src/segmentation_pipeline.py --aorta-ostia-method standard
+
+# Nova abordagem validada
+uv run python src/segmentation_pipeline.py --aorta-ostia-method bilateral_thin
+```
+
+O alias `bilateral_thin_conditional` tambem e aceito pela CLI e resolve para o
+perfil `bilateral_thin`.
+
 ---
 
 ## 7) Validacao de Ostios - `OSTIA_VALIDATION`
 
 ### `distance_threshold_mm` (float)
 
-- Valor atual: `8.0`
+- Valor atual: `7.0`
 - Distancia maxima aceitavel para considerar uma deteccao valida contra referencia/regra de consistencia.
 
 Uso tipico:
@@ -509,7 +528,26 @@ Expansao adaptativa da segmentacao com controle por intensidade/vesselness e lim
 
 ---
 
-## 9) Pos-processamento - `POSTPROCESSING`
+## 9) Fuzzy Connectedness - `FUZZY_CONNECTEDNESS`
+
+O FC usa os óstios como sementes, restringe a propagação pela LCC/vesselness e
+combina afinidade geométrica de vesselness com similaridade Gaussiana em HU.
+
+- `alpha = 0.16`: corte final do mapa de conectividade.
+- `sigma_hu = 100`: escala da similaridade de intensidade.
+- `neighborhood = 26`: vizinhança 3D usada na propagação max-min.
+- `candidate_min_vesselness`, `seed_min_vesselness` e `vesselness_floor = 0.018`:
+  pisos validados para região candidata, sementes e afinidade.
+- `vesselness_weight = 0.9`: peso do vesselness no produto ponderado com HU.
+- `seed_search_radius = 2` e `max_seeds_per_ostium = 4`: refinamento local
+  das sementes ao redor de cada óstio.
+- `max_candidate_voxels` e `max_processed_voxels`: limites de segurança de
+  memória/tempo.
+
+As afinidades alternativas, sementes de fundo e corte por percentil foram
+retirados após não melhorarem o resultado.
+
+## 10) Pos-processamento - `POSTPROCESSING`
 
 Operacoes morfologicas finais para consolidar mascara.
 

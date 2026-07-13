@@ -63,13 +63,10 @@ def process_image(img_id, config, base_path, base_save_path):
         "both_tolerable": False,
         "threshold_mode": None,
         "fuzzy_mask_strategy": None,
-        "fuzzy_dense_membership_threshold": None,
         "min_threshold": None,
         "max_threshold": None,
         "lower_threshold_method": None,
         "lower_threshold_percentile": None,
-        "lower_threshold_object_percentile": None,
-        "lower_threshold_object_center_hu": None,
         "threshold_voxels": None,
         "lcc_voxels": None,
         "image_slice_count": None,
@@ -79,6 +76,8 @@ def process_image(img_id, config, base_path, base_save_path):
         "aorta_circle_first_slice": None,
         "aorta_circle_last_slice": None,
         "aorta_circle_coverage": None,
+        "aorta_recovered_initialization": False,
+        "aorta_mask_voxels": None,
     }
 
     try:
@@ -98,9 +97,6 @@ def process_image(img_id, config, base_path, base_save_path):
                 "fuzzy_mask_strategy": preprocessing_details.get(
                     "fuzzy_mask_strategy"
                 ),
-                "fuzzy_dense_membership_threshold": preprocessing_details.get(
-                    "fuzzy_dense_membership_threshold"
-                ),
                 "min_threshold": preprocessing_details.get("min_threshold"),
                 "max_threshold": preprocessing_details.get("max_threshold"),
                 "lower_threshold_method": preprocessing_details.get(
@@ -108,12 +104,6 @@ def process_image(img_id, config, base_path, base_save_path):
                 ),
                 "lower_threshold_percentile": preprocessing_details.get(
                     "lower_threshold_percentile"
-                ),
-                "lower_threshold_object_percentile": preprocessing_details.get(
-                    "lower_threshold_object_percentile"
-                ),
-                "lower_threshold_object_center_hu": preprocessing_details.get(
-                    "lower_threshold_object_center_hu"
                 ),
                 "threshold_voxels": preprocessing_details.get("threshold_voxels"),
                 "lcc_voxels": preprocessing_details.get("lcc_voxels"),
@@ -173,6 +163,10 @@ def process_image(img_id, config, base_path, base_save_path):
                     if result["image_slice_count"]
                     else None
                 ),
+                "aorta_recovered_initialization": any(
+                    bool(circle.get("recovered_initialization", False))
+                    for circle in detected_circles
+                ),
             }
         )
 
@@ -187,6 +181,7 @@ def process_image(img_id, config, base_path, base_save_path):
             save_cache=False,
             use_gpu=config.get("USE_GPU", False),
         )
+        result["aorta_mask_voxels"] = int(aorta_mask.sum())
 
         try:
             # Seleciona os óstios e valida contra o label arterial.
@@ -196,6 +191,7 @@ def process_image(img_id, config, base_path, base_save_path):
                 label,
                 scaled_spacing,
                 config,
+                detected_circles=detected_circles,
             )
 
             del aorta_mask

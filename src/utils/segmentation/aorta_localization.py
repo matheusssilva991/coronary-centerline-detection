@@ -102,21 +102,28 @@ def _detect_circles_in_slice(
     return hough_circle_peaks(hough_res, hough_radii, total_num_peaks=total_num_peaks)
 
 
-def _find_closest_circle(
+def _select_initial_circle_candidate(
     cx: Sequence[float],
     cy: Sequence[float],
-    radii: Sequence[float],
-    ref_x: float,
-    ref_y: float,
-) -> Tuple[int, float]:
-    """Encontra o círculo detectado mais próximo de um ponto de referência (vetorizado)."""
-    distances = _calculate_distances_vectorized(cx, cy, ref_x, ref_y)
-    min_idx = int(np.argmin(distances))
-    return min_idx, float(distances[min_idx])
+    img_shape: Sequence[int],
+    quadrant_offset: Sequence[int],
+) -> int | None:
+    """Seleciona o primeiro pico da Hough no quadrante anatômico esperado."""
+    height, width = img_shape
+    center_x = (width // 2) - quadrant_offset[0]
+    center_y = (height // 2) + quadrant_offset[1]
+
+    # A aorta ascendente esperada fica no quadrante anatômico configurado.
+    cx_arr = np.asarray(cx, dtype=float)
+    cy_arr = np.asarray(cy, dtype=float)
+    mask = (cx_arr > center_x) & (cy_arr < center_y)
+    candidate_indices = np.where(mask)[0]
+    if len(candidate_indices) == 0:
+        return None
+    return int(candidate_indices[0])
 
 
 def _select_circle_candidate(
-    accums: Sequence[float],
     cx: Sequence[float],
     cy: Sequence[float],
     radii: Sequence[float],
@@ -125,51 +132,21 @@ def _select_circle_candidate(
     ref_radius: float,
     radius_tolerance: float,
     distance_tolerance: float,
-    strategy: str = "closest",
-    accum_weight: float = 1.0,
-    distance_weight: float = 1.0,
-    radius_weight: float = 1.0,
 ) -> Tuple[int, float]:
-    """Seleciona o melhor círculo candidato na fatia atual.
-
-    `closest` preserva o comportamento original: escolhe o centro mais próximo
-    do círculo anterior e só depois valida o raio. `score` usa acumulador Hough,
-    distância ao centro anterior e variação de raio para escolher o candidato
-    mais consistente; quando há candidatos dentro das tolerâncias, pontua apenas
-    esse subconjunto.
-    """
-    if strategy == "closest":
-        return _find_closest_circle(cx, cy, radii, ref_x, ref_y)
-
-    if strategy != "score":
-        raise ValueError("candidate_selection_strategy must be 'closest' or 'score'")
-
+    """Seleciona o candidato válido mais próximo do círculo anterior."""
     distances = _calculate_distances_vectorized(cx, cy, ref_x, ref_y)
-    accums_arr = np.asarray(accums, dtype=float)
     radii_arr = np.asarray(radii, dtype=float)
     radius_diff = np.abs(radii_arr - ref_radius)
     tolerance_mask = (distances <= distance_tolerance) & (
         radius_diff <= radius_tolerance
     )
 
-    # Prioriza candidatos plausíveis; se nenhum passa, ainda escolhe o menos ruim.
+    # Filtra por continuidade geométrica antes de escolher o centro mais próximo.
     candidate_indices = np.where(tolerance_mask)[0]
     if len(candidate_indices) == 0:
         candidate_indices = np.arange(len(radii_arr))
 
-    max_accum = float(np.max(accums_arr[candidate_indices]))
-    accum_norm = accums_arr / max(max_accum, np.finfo(float).eps)
-    distance_norm = distances / max(distance_tolerance, np.finfo(float).eps)
-    radius_norm = radius_diff / max(radius_tolerance, np.finfo(float).eps)
-
-    # Maior acumulador favorece bordas circulares fortes; penalidades evitam
-    # saltos abruptos e mudanças grandes de raio entre fatias consecutivas.
-    scores = (
-        float(accum_weight) * accum_norm
-        - float(distance_weight) * distance_norm
-        - float(radius_weight) * radius_norm
-    )
-    best_idx = int(candidate_indices[np.argmax(scores[candidate_indices])])
+    best_idx = int(candidate_indices[np.argmin(distances[candidate_indices])])
     return best_idx, float(distances[best_idx])
 
 
@@ -225,7 +202,7 @@ def _process_initial_circle(
 ) -> dict:
     """Refina o círculo inicial com base em vizinhos próximos."""
     # Reexecuta a detecção na fatia inicial para agregar candidatos próximos.
-    _, cx, cy, radii = _detect_circles_in_slice(
+    accums, cx, cy, radii = _detect_circles_in_slice(
         img_slice, hough_radii, total_num_peaks, canny_sigma, use_gpu=use_gpu
     )
 
@@ -260,10 +237,6 @@ def _process_slice(
     canny_sigma: float,
     use_local_roi: bool = True,
     local_roi_padding: int = 20,
-    candidate_selection_strategy: str = "closest",
-    candidate_score_accum_weight: float = 1.0,
-    candidate_score_distance_weight: float = 1.0,
-    candidate_score_radius_weight: float = 1.0,
     use_gpu: bool = False,
     verbose: bool = True,
 ) -> Optional[dict]:
@@ -326,7 +299,6 @@ def _process_slice(
 
     # Seleciona um candidato consistente com o círculo anterior.
     min_idx, min_dist = _select_circle_candidate(
-        accums,
         cx,
         cy,
         radii,
@@ -335,10 +307,6 @@ def _process_slice(
         ref_radius,
         radius_tolerance,
         distance_tolerance,
-        strategy=candidate_selection_strategy,
-        accum_weight=candidate_score_accum_weight,
-        distance_weight=candidate_score_distance_weight,
-        radius_weight=candidate_score_radius_weight,
     )
 
     if not _is_circle_within_tolerance(
@@ -389,20 +357,15 @@ def detect_initial_circle(
     if len(accums) == 0:
         return None
 
-    height, width = img_slice.shape
-    center_x = (width // 2) - quadrant_offset[0]
-    center_y = (height // 2) + quadrant_offset[1]
-
-    # A aorta ascendente esperada fica no quadrante anatômico configurado.
-    cx_arr = np.asarray(cx)
-    cy_arr = np.asarray(cy)
-    mask = (cx_arr > center_x) & (cy_arr < center_y)
-    first_quad_indices = np.where(mask)[0]
-
-    if len(first_quad_indices) == 0:
+    idx = _select_initial_circle_candidate(
+        cx,
+        cy,
+        img_slice.shape,
+        quadrant_offset,
+    )
+    if idx is None:
         return None
 
-    idx = int(first_quad_indices[0])
     return {
         "center_x": float(cx[idx]),
         "center_y": float(cy[idx]),
@@ -551,28 +514,24 @@ def detect_aorta_circles(
     canny_sigma: float = 3,
     use_local_roi: bool = True,
     local_roi_padding: int = 20,
-    out_of_tolerance_as_miss: bool = False,
     interpolate_missed_circles: bool = True,
-    candidate_selection_strategy: str = "closest",
-    candidate_score_accum_weight: float = 1.0,
-    candidate_score_distance_weight: float = 1.0,
-    candidate_score_radius_weight: float = 1.0,
+    early_track_recovery: bool = True,
+    early_recovery_search_slices: int = 8,
+    early_recovery_min_circles: int = 10,
+    early_recovery_require_min_circles: bool = False,
     use_gpu: bool = False,
     verbose: bool = True,
 ) -> list:
     """Detecta círculos da aorta ao longo do volume 3D fatia a fatia.
 
     Args:
-        out_of_tolerance_as_miss: Se `False`, preserva o comportamento antigo e
-            para ao encontrar um candidato fora das tolerâncias. Se `True`, trata
-            esse caso como uma fatia sem detecção e só para após
-            `max_slice_miss_threshold` misses consecutivos.
         interpolate_missed_circles: Preenche por interpolação linear as fatias
             sem detecção quando uma nova detecção válida aparece antes do limite
             de misses consecutivos.
-        candidate_selection_strategy: `closest` mantém a seleção por menor
-            distância ao círculo anterior. `score` escolhe por acumulador Hough,
-            distância e diferença de raio.
+        early_track_recovery: Quando a trajetória inicial é muito curta, tenta
+            reiniciar a busca em fatias anteriores próximas ao fim do volume.
+        early_recovery_require_min_circles: Opção experimental que descarta uma
+            recuperação que continua abaixo de ``early_recovery_min_circles``.
     """
     if img_volume.ndim != 3:
         raise ValueError(f"img_volume deve ser 3D, recebido shape={img_volume.shape}")
@@ -619,10 +578,11 @@ def detect_aorta_circles(
 
     # Caminha fatia a fatia usando sempre o último círculo válido como referência.
     for slice_idx in range(first_slice_idx - 1, -1, -1):
+        reference_circle = detected_circles[-1]
         result = _process_slice(
             img_volume[:, :, slice_idx],
             hough_radii,
-            detected_circles[-1],
+            reference_circle,
             radius_tolerance,
             distance_tolerance,
             neighbor_distance_threshold,
@@ -630,10 +590,6 @@ def detect_aorta_circles(
             canny_sigma,
             use_local_roi,
             local_roi_padding,
-            candidate_selection_strategy,
-            candidate_score_accum_weight,
-            candidate_score_distance_weight,
-            candidate_score_radius_weight,
             use_gpu=use_gpu,
             verbose=verbose,
         )
@@ -651,21 +607,7 @@ def detect_aorta_circles(
             continue
 
         if result == OUT_OF_TOLERANCE:
-            if not out_of_tolerance_as_miss:
-                break
-
-            # Candidato geométricamente ruim também pode ser tratado como miss.
-            miss_counter += 1
-            pending_missed_slices.append(slice_idx)
-            if miss_counter >= max_slice_miss_threshold:
-                if verbose:
-                    print(
-                        "Parada: "
-                        f"{max_slice_miss_threshold} fatias consecutivas "
-                        "sem detecção dentro da tolerância."
-                    )
-                break
-            continue
+            break
 
         next_circle = {"slice_index": slice_idx, **result, "interpolated": False}
         if pending_missed_slices and interpolate_missed_circles:
@@ -680,6 +622,47 @@ def detect_aorta_circles(
         detected_circles.append(next_circle)
         miss_counter = 0
         pending_missed_slices = []
+
+    if early_track_recovery and len(detected_circles) < early_recovery_min_circles:
+        best_circles = detected_circles
+        max_offset = min(max(1, early_recovery_search_slices), num_slices)
+        for offset in range(1, max_offset):
+            retry_volume = img_volume[:, :, : num_slices - offset]
+            retry_circles = detect_aorta_circles(
+                retry_volume,
+                hough_radii,
+                pixel_spacing,
+                tol_radius_mm=tol_radius_mm,
+                tol_distance_mm=tol_distance_mm,
+                max_slice_miss_threshold=max_slice_miss_threshold,
+                neighbor_distance_threshold=neighbor_distance_threshold,
+                quadrant_offset=quadrant_offset,
+                total_num_peaks_initial=total_num_peaks_initial,
+                total_num_peaks=total_num_peaks,
+                canny_sigma=canny_sigma,
+                use_local_roi=use_local_roi,
+                local_roi_padding=local_roi_padding,
+                interpolate_missed_circles=interpolate_missed_circles,
+                early_track_recovery=False,
+                early_recovery_require_min_circles=False,
+                use_gpu=use_gpu,
+                verbose=False,
+            )
+            if len(retry_circles) > len(best_circles):
+                best_circles = retry_circles
+            if len(retry_circles) >= early_recovery_min_circles:
+                break
+
+        if best_circles is not detected_circles:
+            for circle in best_circles:
+                circle["recovered_initialization"] = True
+            detected_circles = best_circles
+
+        if (
+            early_recovery_require_min_circles
+            and len(detected_circles) < early_recovery_min_circles
+        ):
+            return []
 
     return detected_circles
 

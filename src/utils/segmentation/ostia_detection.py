@@ -9,7 +9,12 @@ Este módulo fornece funções auxiliares para:
 """
 
 import numpy as np
-from scipy.ndimage import distance_transform_edt
+from scipy.ndimage import (
+    distance_transform_edt,
+    maximum_filter,
+    percentile_filter,
+    uniform_filter,
+)
 from skimage.morphology import ball
 from typing import Any, Optional, Sequence, Tuple
 from numpy.typing import NDArray
@@ -53,20 +58,104 @@ def _extract_lower_region(
 
 
 def _get_top_candidates(
-    surface_mask: NDArray[Any], vesselness_map: NDArray[Any], top_n: int = 50
+    surface_mask: NDArray[Any],
+    score_map: NDArray[Any],
+    top_n: int = 50,
+    spacing: Sequence[float] = (1.0, 1.0, 1.0),
+    suppression_radius_mm: float = 0.0,
 ) -> NDArray[Any]:
-    """Retorna os top-N candidatos de superfície ordenados por vesselness decrescente."""
+    """Retorna candidatos ordenados, opcionalmente limitados a máximos locais."""
     if top_n <= 0:
         raise ValueError("top_n deve ser maior que 0")
 
-    surface_coords = np.argwhere(surface_mask > 0)
+    candidate_mask = surface_mask > 0
+    if suppression_radius_mm > 0:
+        # Mantém somente máximos locais fisicamente separados para evitar que
+        # milhares de voxels da mesma região dominem a lista de candidatos.
+        radii = np.maximum(
+            1,
+            np.ceil(suppression_radius_mm / np.asarray(spacing, dtype=float)).astype(
+                int
+            ),
+        )
+        window = tuple(int(2 * radius + 1) for radius in radii)
+        local_maximum = maximum_filter(score_map, size=window, mode="nearest")
+        candidate_mask &= score_map >= local_maximum
+        positive_candidates = candidate_mask & (score_map > 0)
+        if np.any(positive_candidates):
+            candidate_mask = positive_candidates
+
+    surface_coords = np.argwhere(candidate_mask)
     if len(surface_coords) == 0:
         raise ValueError("Nenhum voxel encontrado na superfície!")
 
     # Quanto maior o vesselness na superfície, mais provável o ponto de óstio.
-    surface_values = vesselness_map[surface_mask > 0]
+    surface_values = score_map[candidate_mask]
     sorted_indices = np.argsort(surface_values)[::-1][:top_n]
     return surface_coords[sorted_indices]
+
+
+def _candidate_score_map(
+    aorta_mask: NDArray[Any],
+    vesselness_map: NDArray[Any],
+    mode: str,
+    radius: int,
+    local_percentile: float,
+    point_weight: float,
+    evaluation_mask: Optional[NDArray[Any]] = None,
+) -> NDArray[np.float32]:
+    """Calcula o score pontual, local ou externo usado para ordenar candidatos."""
+    vesselness = np.asarray(vesselness_map, dtype=np.float32)
+    if mode == "voxel":
+        return vesselness
+    if radius < 1:
+        raise ValueError("candidate_score_radius deve ser >= 1")
+
+    filter_size = 2 * int(radius) + 1
+    if mode == "local_mean":
+        return uniform_filter(vesselness, size=filter_size, mode="nearest")
+    if mode == "robust_percentile":
+        if not 0 <= local_percentile <= 100:
+            raise ValueError("candidate_local_percentile deve estar em [0, 100]")
+        if not 0 <= point_weight <= 1:
+            raise ValueError("candidate_point_weight deve estar em [0, 1]")
+        if evaluation_mask is None or not np.any(evaluation_mask):
+            evaluation_mask = np.ones_like(vesselness, dtype=bool)
+        coords = np.argwhere(evaluation_mask)
+        lower = np.maximum(coords.min(axis=0) - radius, 0)
+        upper = np.minimum(coords.max(axis=0) + radius + 1, vesselness.shape)
+        slices = tuple(slice(int(start), int(stop)) for start, stop in zip(lower, upper))
+        vesselness_roi = vesselness[slices]
+        local_score_roi = percentile_filter(
+            vesselness_roi,
+            percentile=local_percentile,
+            size=filter_size,
+            mode="nearest",
+        )
+        score = np.zeros_like(vesselness)
+        score[slices] = (
+            point_weight * vesselness_roi
+            + (1.0 - point_weight) * local_score_roi
+        ).astype(np.float32)
+        return score
+    if mode == "external_mean":
+        outside = (~np.asarray(aorta_mask, dtype=bool)).astype(np.float32)
+        weighted_sum = uniform_filter(
+            vesselness * outside,
+            size=filter_size,
+            mode="nearest",
+        )
+        outside_fraction = uniform_filter(outside, size=filter_size, mode="nearest")
+        return np.divide(
+            weighted_sum,
+            outside_fraction,
+            out=np.zeros_like(weighted_sum),
+            where=outside_fraction > 0,
+        )
+    raise ValueError(
+        "candidate_score_mode deve ser 'voxel', 'local_mean', "
+        "'external_mean' ou 'robust_percentile'"
+    )
 
 
 def _validate_ostium_pair(
@@ -75,13 +164,22 @@ def _validate_ostium_pair(
     min_center_dist: float,
     max_z_diff_mm: float,
     min_lateral_sep: float,
-    spacing_dz: float,
+    spacing: Sequence[float],
+    distance_mode: str,
 ) -> bool:
     """Verifica restrições anatômicas para um par candidato de óstios."""
-    dist = np.linalg.norm(ostium_1 - ostium_2)
+    delta = np.asarray(ostium_1, dtype=float) - np.asarray(ostium_2, dtype=float)
+    if distance_mode == "voxel_xyz":
+        dist = np.linalg.norm(delta)
+    elif distance_mode == "physical_xy":
+        dist = np.linalg.norm(delta[:2] * np.asarray(spacing[:2], dtype=float))
+    else:
+        raise ValueError("pair_distance_mode deve ser 'voxel_xyz' ou 'physical_xy'")
     z_diff_voxels = abs(ostium_1[2] - ostium_2[2])
-    z_diff_mm = z_diff_voxels * spacing_dz
+    z_diff_mm = z_diff_voxels * spacing[2]
     x_diff = abs(ostium_1[1] - ostium_2[1])
+    if distance_mode == "physical_xy":
+        x_diff *= spacing[1]
 
     return (
         dist >= min_center_dist
@@ -96,7 +194,8 @@ def _find_second_ostium(
     min_center_dist: float,
     max_z_diff_mm: float,
     min_lateral_sep: float,
-    spacing_dz: float,
+    spacing: Sequence[float],
+    distance_mode: str,
 ) -> Optional[NDArray[Any]]:
     """Busca o segundo óstio entre candidatos com base em restrições anatômicas."""
     for candidate in candidates[1:]:
@@ -107,10 +206,152 @@ def _find_second_ostium(
             min_center_dist,
             max_z_diff_mm,
             min_lateral_sep,
-            spacing_dz,
+            spacing,
+            distance_mode,
         ):
             return candidate
     return None
+
+
+def _find_best_ostium_pair(
+    candidates: NDArray[Any],
+    score_map: NDArray[Any],
+    aorta_mask: NDArray[Any],
+    min_center_distance_factor: float,
+    max_z_diff_mm: float,
+    min_lateral_factor: float,
+    spacing: Sequence[float],
+    distance_mode: str,
+    top_k: int,
+) -> Tuple[Optional[NDArray[Any]], Optional[NDArray[Any]]]:
+    """Escolhe globalmente o par anatômico com maior soma de scores."""
+    if top_k < 2:
+        raise ValueError("joint_pair_top_k deve ser >= 2")
+    limited = candidates[:top_k]
+    best_pair: tuple[NDArray[Any], NDArray[Any]] | None = None
+    best_score = -np.inf
+
+    for index, first in enumerate(limited[:-1]):
+        for second in limited[index + 1 :]:
+            diameter_first = calculate_robust_diameter(
+                aorta_mask[:, :, int(first[2])]
+            )
+            diameter_second = calculate_robust_diameter(
+                aorta_mask[:, :, int(second[2])]
+            )
+            diameter_ref = 0.5 * (diameter_first + diameter_second)
+            min_center_dist = diameter_ref * min_center_distance_factor
+            min_lateral_sep = min_center_dist * min_lateral_factor
+            if distance_mode == "physical_xy":
+                xy_spacing = float(np.mean(spacing[:2]))
+                min_center_dist *= xy_spacing
+                min_lateral_sep *= xy_spacing
+            if not _validate_ostium_pair(
+                first,
+                second,
+                min_center_dist,
+                max_z_diff_mm,
+                min_lateral_sep,
+                spacing,
+                distance_mode,
+            ):
+                continue
+
+            pair_score = float(score_map[tuple(first)]) + float(
+                score_map[tuple(second)]
+            )
+            if pair_score > best_score:
+                best_score = pair_score
+                best_pair = (first, second)
+
+    if best_pair is None:
+        return None, None
+    return best_pair[0].copy(), best_pair[1].copy()
+
+
+def _aorta_center_x_at_slices(
+    slice_indices: NDArray[Any],
+    detected_circles: Sequence[dict[str, Any]],
+) -> NDArray[np.float64]:
+    """Interpola a coordenada x do centro da aorta nas fatias solicitadas."""
+    circles_by_slice = {
+        int(circle["slice_index"]): float(circle["center_x"])
+        for circle in detected_circles
+        if circle.get("slice_index") is not None
+        and circle.get("center_x") is not None
+    }
+    if not circles_by_slice:
+        raise ValueError("Seleção bilateral requer círculos válidos da aorta")
+    source_z = np.array(sorted(circles_by_slice), dtype=float)
+    source_x = np.array([circles_by_slice[int(z)] for z in source_z], dtype=float)
+    return np.interp(np.asarray(slice_indices, dtype=float), source_z, source_x)
+
+
+def _find_best_bilateral_pair(
+    candidates: NDArray[Any],
+    score_map: NDArray[Any],
+    aorta_mask: NDArray[Any],
+    detected_circles: Sequence[dict[str, Any]],
+    min_center_distance_factor: float,
+    max_z_diff_mm: float,
+    min_lateral_factor: float,
+    spacing: Sequence[float],
+    distance_mode: str,
+    top_k_per_side: int,
+) -> Tuple[Optional[NDArray[Any]], Optional[NDArray[Any]]]:
+    """Escolhe um candidato de cada lado do centro interpolado da aorta."""
+    if top_k_per_side < 1:
+        raise ValueError("bilateral_top_k_per_side deve ser >= 1")
+
+    center_x = _aorta_center_x_at_slices(candidates[:, 2], detected_circles)
+    left_candidates: list[NDArray[Any]] = []
+    right_candidates: list[NDArray[Any]] = []
+    for candidate, center in zip(candidates, center_x):
+        target = left_candidates if float(candidate[1]) >= center else right_candidates
+        if len(target) < top_k_per_side:
+            target.append(candidate)
+        if (
+            len(left_candidates) >= top_k_per_side
+            and len(right_candidates) >= top_k_per_side
+        ):
+            break
+    if not left_candidates or not right_candidates:
+        return None, None
+
+    best_pair: tuple[NDArray[Any], NDArray[Any]] | None = None
+    best_score = -np.inf
+    for first in left_candidates:
+        for second in right_candidates:
+            diameter_ref = 0.5 * (
+                calculate_robust_diameter(aorta_mask[:, :, int(first[2])])
+                + calculate_robust_diameter(aorta_mask[:, :, int(second[2])])
+            )
+            min_center_dist = diameter_ref * min_center_distance_factor
+            min_lateral_sep = min_center_dist * min_lateral_factor
+            if distance_mode == "physical_xy":
+                xy_spacing = float(np.mean(spacing[:2]))
+                min_center_dist *= xy_spacing
+                min_lateral_sep *= xy_spacing
+            if not _validate_ostium_pair(
+                first,
+                second,
+                min_center_dist,
+                max_z_diff_mm,
+                min_lateral_sep,
+                spacing,
+                distance_mode,
+            ):
+                continue
+            pair_score = float(score_map[tuple(first)]) + float(
+                score_map[tuple(second)]
+            )
+            if pair_score > best_score:
+                best_score = pair_score
+                best_pair = (first, second)
+
+    if best_pair is None:
+        return None, None
+    return best_pair[0].copy(), best_pair[1].copy()
 
 
 def _classify_left_right(
@@ -125,17 +366,29 @@ def _classify_left_right(
 def find_aorta_surface(
     aorta_mask: NDArray[Any],
     erosion_radius: int = 2,
+    spacing: Sequence[float] = (1.0, 1.0, 1.0),
+    surface_mode: str = "erosion",
+    surface_thickness_mm: float = 2.0,
 ) -> NDArray[Any]:
-    """Extrai a casca da aorta como (máscara - máscara erodida), sempre na CPU."""
+    """Extrai a casca da aorta por erosão ou distância física ao fundo."""
+    mask = aorta_mask.astype(bool)
+    if surface_mode == "physical_distance":
+        if surface_thickness_mm <= 0:
+            raise ValueError("surface_thickness_mm deve ser maior que zero")
+        distance_inside = distance_transform_edt(mask, sampling=spacing)
+        return (mask & (distance_inside <= surface_thickness_mm)).astype(np.uint8)
+    if surface_mode != "erosion":
+        raise ValueError("surface_mode deve ser 'erosion' ou 'physical_distance'")
+
     struct_elem = ball(erosion_radius)
     eroded = binary_erosion(
-        aorta_mask.astype(bool),
+        mask,
         structure=struct_elem,
         # A superfície entra diretamente na escolha dos candidatos de óstio.
         # Mantê-la na CPU reduz diferenças discretas entre execuções CPU/GPU.
         gpu=False,
     )
-    surface = aorta_mask.astype(bool) & (~eroded)  # pyright: ignore[reportOperatorIssue]
+    surface = mask & (~eroded)  # pyright: ignore[reportOperatorIssue]
     return surface.astype(np.uint8)
 
 
@@ -235,6 +488,18 @@ def find_ostia(
     min_center_distance_factor: float = 0.8,
     min_lateral_factor: float = 0.5,
     erosion_radius: int = 2,
+    surface_mode: str = "erosion",
+    surface_thickness_mm: float = 2.0,
+    candidate_score_mode: str = "voxel",
+    candidate_score_radius: int = 2,
+    candidate_local_percentile: float = 90.0,
+    candidate_point_weight: float = 0.7,
+    candidate_suppression_radius_mm: float = 0.0,
+    pair_selection_mode: str = "greedy",
+    joint_pair_top_k: int = 100,
+    bilateral_top_k_per_side: int = 50,
+    detected_circles: Optional[Sequence[dict[str, Any]]] = None,
+    pair_distance_mode: str = "voxel_xyz",
     verbose: bool = True,
 ) -> Tuple[NDArray[Any], Optional[NDArray[Any]]]:
     """Detecta óstios coronários esquerdo/direito na superfície da aorta.
@@ -253,16 +518,76 @@ def find_ostia(
     aorta_surface = find_aorta_surface(
         aorta_mask,
         erosion_radius=erosion_radius,
+        spacing=spacing,
+        surface_mode=surface_mode,
+        surface_thickness_mm=surface_thickness_mm,
     )
     lower_region_mask, _, _ = _extract_lower_region(aorta_surface, lower_fraction)
-    # Seleciona candidatos de superfície ordenados pelo mapa de vasos.
-    top_candidates = _get_top_candidates(lower_region_mask, vesselness_map, top_n)
+    # Agrega o vesselness conforme a estratégia e ordena os candidatos.
+    score_map = _candidate_score_map(
+        aorta_mask,
+        vesselness_map,
+        mode=candidate_score_mode,
+        radius=candidate_score_radius,
+        local_percentile=candidate_local_percentile,
+        point_weight=candidate_point_weight,
+        evaluation_mask=lower_region_mask,
+    )
+    top_candidates = _get_top_candidates(
+        lower_region_mask,
+        score_map,
+        top_n,
+        spacing=spacing,
+        suppression_radius_mm=candidate_suppression_radius_mm,
+    )
+
+    if pair_selection_mode == "joint":
+        ostium_1, ostium_2 = _find_best_ostium_pair(
+            top_candidates,
+            score_map,
+            aorta_mask,
+            min_center_distance_factor,
+            max_z_diff_mm,
+            min_lateral_factor,
+            spacing,
+            pair_distance_mode,
+            joint_pair_top_k,
+        )
+        if ostium_1 is None or ostium_2 is None:
+            return top_candidates[0].copy(), None
+        return _classify_left_right(ostium_1, ostium_2)
+    if pair_selection_mode == "bilateral":
+        if not detected_circles:
+            raise ValueError("pair_selection_mode bilateral requer detected_circles")
+        ostium_1, ostium_2 = _find_best_bilateral_pair(
+            top_candidates,
+            score_map,
+            aorta_mask,
+            detected_circles,
+            min_center_distance_factor,
+            max_z_diff_mm,
+            min_lateral_factor,
+            spacing,
+            pair_distance_mode,
+            bilateral_top_k_per_side,
+        )
+        if ostium_1 is None or ostium_2 is None:
+            return top_candidates[0].copy(), None
+        return _classify_left_right(ostium_1, ostium_2)
+    if pair_selection_mode != "greedy":
+        raise ValueError(
+            "pair_selection_mode deve ser 'greedy', 'joint' ou 'bilateral'"
+        )
 
     # Primeiro óstio: maior vesselness na região candidata.
     ostium_1 = top_candidates[0]
     diameter_ref = calculate_robust_diameter(aorta_mask[:, :, ostium_1[2]])
     min_center_dist = diameter_ref * min_center_distance_factor
     min_lateral_sep = min_center_dist * min_lateral_factor
+    if pair_distance_mode == "physical_xy":
+        xy_spacing = float(np.mean(spacing[:2]))
+        min_center_dist *= xy_spacing
+        min_lateral_sep *= xy_spacing
 
     # Segundo óstio: próximo candidato que respeita restrições anatômicas.
     ostium_2 = _find_second_ostium(
@@ -271,7 +596,8 @@ def find_ostia(
         min_center_dist,
         max_z_diff_mm,
         min_lateral_sep,
-        spacing[2],
+        spacing,
+        pair_distance_mode,
     )
 
     if ostium_2 is None:

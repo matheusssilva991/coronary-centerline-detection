@@ -35,13 +35,11 @@ uv run python src/experiments/threshold_parameter_sweep.py \
   --methods percentile \
   --threshold-methods fuzzy \
   --percentiles 10.5 \
-  --max-threshold-percentiles 99.7 \
+  --max-threshold-percentiles 99.8 \
   --fuzzy-object-percentiles 99.8 \
   --fuzzy-dense-percentiles 99.96 \
   --fuzzy-soft-margins 100 \
   --fuzzy-smooth-radii 0 \
-  --fuzzy-mask-strategies object_argmax \
-  --fuzzy-dense-membership-thresholds 0.5 \
   --num-batches 5 \
   --gpu \
   --no-save-cache \

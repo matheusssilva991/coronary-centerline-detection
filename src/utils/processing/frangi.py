@@ -3,7 +3,7 @@ from skimage.filters import ridges, gaussian
 import os
 import pickle
 import warnings
-from typing import Any, Optional, Sequence, Tuple
+from typing import Any, Optional, Sequence
 from numpy.typing import NDArray
 
 # Importa utilitários de GPU centralizados
@@ -11,7 +11,6 @@ from .gpu_utils import (
     to_gpu,
     to_cpu,
     GPU_AVAILABLE,
-    cp,
 )
 
 # Importa funções de normalização
@@ -29,71 +28,6 @@ if GPU_AVAILABLE:
             UserWarning,
         )
         gpu_filters = None
-
-
-def get_gf(
-    image_volume: NDArray[Any],
-    center_percentile: float = 50.0,
-    scale_percentile: float = 99.5,
-    scale_epsilon: float = 1e-6,
-) -> NDArray[Any]:
-    """
-    Calcula a medida de grayness (Gf) baseada na Equação (7) do artigo.
-    Funciona com NumPy ou CuPy arrays.
-
-    Args:
-      image_volume: Um array NumPy/CuPy 3D representando a imagem CCTA.
-
-    Returns:
-      Um array NumPy/CuPy 3D com a medida Gf para cada voxel.
-    """
-    is_gpu = GPU_AVAILABLE and isinstance(image_volume, cp.ndarray)
-    xp = cp if is_gpu else np
-
-    center = xp.percentile(image_volume, center_percentile)
-    abs_deviation = xp.abs(image_volume - center)
-    scale = xp.percentile(abs_deviation, scale_percentile)
-
-    if float(scale) <= scale_epsilon:
-        return xp.zeros_like(image_volume, dtype=float)
-
-    gf = abs_deviation / scale
-
-    return gf
-
-
-def get_gd(
-    image_volume: NDArray[Any],
-    spacing: Optional[Sequence[float]] = None,
-    clip_percentiles: Tuple[float, float] = (1.0, 99.0),
-) -> NDArray[Any]:
-    """
-    Calcula a medida de gradiente (Gd).
-    Funciona com NumPy ou CuPy arrays.
-
-    Args:
-      image_volume: Um array NumPy/CuPy 3D representando a imagem CCTA.
-
-    Returns:
-      Um array NumPy/CuPy 3D com a medida Gd para cada voxel.
-    """
-    is_gpu = GPU_AVAILABLE and isinstance(image_volume, cp.ndarray)
-    xp = cp if is_gpu else np
-
-    if spacing is None:
-        gradients = xp.gradient(image_volume)
-    else:
-        gradients = xp.gradient(image_volume, *spacing)
-    g_mag = xp.sqrt(sum(axis_grad**2 for axis_grad in gradients))
-
-    # Clipar outliers de gradiente (ex: stents metálicos)
-    gd = xp.clip(
-        g_mag,
-        xp.percentile(g_mag, clip_percentiles[0]),
-        xp.percentile(g_mag, clip_percentiles[1]),
-    )
-
-    return gd  # Retorna sem normalizar novamente
 
 
 def _as_sigma_sequence(sigmas: Sequence[float]) -> list[float]:
@@ -209,148 +143,6 @@ def get_vesselness(
         black_ridges=black_ridges,
     )
     return _apply_normalization(vesselness, normalization)
-
-
-def get_modified_vesselness(
-    image: Any,
-    sigmas: Sequence[float] = np.arange(1.0, 4.0, 0.5),
-    alpha: float = 0.5,
-    beta: float = 0.5,
-    gamma: Optional[float] = None,
-    black_ridges: bool = False,
-    normalization: str = "none",
-    smooth_sigma: float = 1.0,
-    gd_epsilon: float = 1e-6,
-    gf_center_percentile: float = 50.0,
-    gf_scale_percentile: float = 99.5,
-    gd_clip_percentiles: Tuple[float, float] = (1.0, 99.0),
-    ratio_clip: Optional[Tuple[float, float]] = (0.0, 10.0),
-    spacing: Optional[Sequence[float]] = None,
-    gpu: Optional[bool] = None,
-) -> NDArray[Any]:
-    """
-    Vesselness modificada com pré-suavização e ponderação por grayness/gradient.
-    Usa GPU se disponível, caso contrário usa CPU.
-
-    Args:
-        image: Imagem 3D de entrada (NumPy ou CuPy array)
-        sigmas: Range de sigmas para multi-escala
-        alpha: Sensibilidade a estruturas blob (0.1-1.0, padrão 0.5)
-        beta: Sensibilidade ao ruído de fundo (0.1-1.0, padrão 0.5)
-        gamma: Sensibilidade ao contraste (padrão None)
-        black_ridges: Se True, detecta estruturas escuras
-        normalization: Método de normalização ('robust', 'minmax', 'none')
-        smooth_sigma: Sigma para suavização Gaussiana
-        gd_epsilon: Piso numérico para evitar divisão por zero em Gf/Gd
-        gf_center_percentile: Percentil usado como centro robusto da intensidade
-        gf_scale_percentile: Percentil usado como escala robusta da grayness
-        gd_clip_percentiles: Percentis usados para limitar outliers do gradiente
-        ratio_clip: Intervalo opcional para limitar a razão Gf/Gd
-        spacing: Espaçamento físico por eixo do array, na ordem (y, x, z)
-        gpu: Se None (padrão), detecta automaticamente. Se True, força GPU. Se False, força CPU.
-
-    Returns:
-        modified_vesselness: Vesselness modificado com Gf e Gd (como NumPy array)
-    """
-    # Determina se deve usar GPU
-    use_gpu_flag = gpu if gpu is not None else GPU_AVAILABLE
-
-    if use_gpu_flag and GPU_AVAILABLE and gpu_filters is not None:
-        try:
-            # Converte para GPU
-            img_gpu = to_gpu(image)
-
-            # Suavização leve para remover ruído na GPU
-            img_smooth = gpu_filters.gaussian(
-                img_gpu, sigma=smooth_sigma, preserve_range=True
-            )
-
-            vesselness = get_vesselness(
-                img_smooth,
-                sigmas=sigmas,
-                alpha=alpha,
-                beta=beta,
-                gamma=gamma,
-                black_ridges=black_ridges,
-                normalization="none",
-                smooth_sigma=0.0,
-                gpu=True,
-                return_cpu=False,
-            )
-
-            # Medidas auxiliares na GPU (mantém na GPU para eficiência)
-            gf = get_gf(
-                img_smooth,
-                center_percentile=gf_center_percentile,
-                scale_percentile=gf_scale_percentile,
-                scale_epsilon=gd_epsilon,
-            )
-            gd = get_gd(
-                img_smooth,
-                spacing=spacing,
-                clip_percentiles=gd_clip_percentiles,
-            )
-
-            xp = cp
-            gd_safe = xp.maximum(xp.abs(gd), gd_epsilon)
-            ratio = gf / gd_safe
-            if ratio_clip is not None:
-                ratio = xp.clip(ratio, ratio_clip[0], ratio_clip[1])
-
-            # Combinação na GPU
-            modified_vesselness = vesselness * ratio
-            modified_vesselness = _apply_normalization(modified_vesselness, normalization)
-
-            # Só converte para CPU no final
-            return to_cpu(modified_vesselness)
-        except Exception as e:
-            warnings.warn(
-                f"Vesselness modificada na GPU falhou ({type(e).__name__}: {e}). "
-                "Usando CPU.",
-                UserWarning,
-            )
-
-    # Pipeline na CPU
-    if not isinstance(image, np.ndarray):
-        image = to_cpu(image)
-
-    # Suavização leve para remover ruído
-    img_smooth = gaussian(image, sigma=smooth_sigma, preserve_range=True)
-
-    vesselness = get_vesselness(
-        img_smooth,
-        sigmas=sigmas,
-        alpha=alpha,
-        beta=beta,
-        gamma=gamma,
-        black_ridges=black_ridges,
-        normalization="none",
-        smooth_sigma=0.0,
-        gpu=False,
-    )
-
-    # Medidas auxiliares
-    gf = get_gf(
-        img_smooth,
-        center_percentile=gf_center_percentile,
-        scale_percentile=gf_scale_percentile,
-        scale_epsilon=gd_epsilon,
-    )
-    gd = get_gd(
-        img_smooth,
-        spacing=spacing,
-        clip_percentiles=gd_clip_percentiles,
-    )
-    gd_safe = np.maximum(np.abs(gd), gd_epsilon)
-    ratio = gf / gd_safe
-    if ratio_clip is not None:
-        ratio = np.clip(ratio, ratio_clip[0], ratio_clip[1])
-
-    # Combinação
-    modified_vesselness = vesselness * ratio
-    modified_vesselness = _apply_normalization(modified_vesselness, normalization)
-
-    return modified_vesselness
 
 
 def save_vesselness_cache(

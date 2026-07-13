@@ -57,18 +57,13 @@ def neighbor_offsets_3d(neighborhood: int) -> tuple[tuple[int, int, int], ...]:
 def vesselness_affinity(
     current_vessel: float,
     neighbor_vessel: float,
-    mode: str = "mean",
-    power: float = 1.0,
     floor: float = 0.0,
 ) -> float:
-    """Calcula a afinidade de vesselness entre dois voxels vizinhos.
+    """Calcula a afinidade geométrica de vesselness entre voxels vizinhos.
 
     Args:
         current_vessel: Valor normalizado de vesselness do voxel atual.
         neighbor_vessel: Valor normalizado de vesselness do voxel vizinho.
-        mode: Estratégia de combinação (`mean`, `geometric_mean`,
-            `max_relaxed`).
-        power: Expoente aplicado à afinidade resultante.
         floor: Piso mínimo suave para evitar afinidades exatamente nulas.
 
     Returns:
@@ -77,19 +72,7 @@ def vesselness_affinity(
     current_vessel = float(np.clip(current_vessel, 0.0, 1.0))
     neighbor_vessel = float(np.clip(neighbor_vessel, 0.0, 1.0))
 
-    # Mede compatibilidade entre o voxel atual e o vizinho no mapa de vasos.
-    if mode == "geometric_mean":
-        affinity = math.sqrt(current_vessel * neighbor_vessel)
-    elif mode == "max_relaxed":
-        affinity = (
-            0.7 * max(current_vessel, neighbor_vessel)
-            + 0.3 * min(current_vessel, neighbor_vessel)
-        )
-    else:
-        affinity = 0.5 * (current_vessel + neighbor_vessel)
-
-    if power != 1.0:
-        affinity = float(np.power(np.clip(affinity, 0.0, 1.0), power))
+    affinity = math.sqrt(current_vessel * neighbor_vessel)
 
     # O piso evita que pequenas falhas do vesselness quebrem totalmente o caminho.
     floor = float(np.clip(floor, 0.0, 1.0))
@@ -100,24 +83,14 @@ def vesselness_affinity(
 def edge_affinity(
     mu_vessel: float,
     mu_hu: float,
-    mode: str = "min",
-    vesselness_weight: float = 0.7,
+    vesselness_weight: float = 0.9,
 ) -> float:
-    """Combina afinidade de vesselness e similaridade HU em uma aresta.
-
-    A combinação `weighted_product` foi a melhor nos experimentos recentes,
-    pois penaliza discordâncias sem ser tão rígida quanto o mínimo puro.
-    """
+    """Combina vesselness e similaridade HU pelo produto ponderado validado."""
     mu_vessel = float(np.clip(mu_vessel, 0.0, 1.0))
     mu_hu = float(np.clip(mu_hu, 0.0, 1.0))
     weight = float(np.clip(vesselness_weight, 0.0, 1.0))
 
-    if mode == "weighted_sum":
-        return float(np.clip(weight * mu_vessel + (1.0 - weight) * mu_hu, 0.0, 1.0))
-    if mode == "weighted_product":
-        # Produto ponderado preserva arestas boas em ambos os critérios.
-        return float(np.power(mu_vessel, weight) * np.power(mu_hu, 1.0 - weight))
-    return min(mu_vessel, mu_hu)
+    return float(np.power(mu_vessel, weight) * np.power(mu_hu, 1.0 - weight))
 
 
 def valid_seed(
@@ -264,11 +237,8 @@ def fuzzy_connectedness_map(
     candidate_mask: NDArray[Any] | None = None,
     max_processed_voxels: int | None = None,
     min_connectivity_to_process: float = 0.0,
-    vesselness_affinity_mode: str = "mean",
-    vesselness_power: float = 1.0,
     vesselness_floor: float = 0.0,
-    edge_affinity_mode: str = "min",
-    vesselness_weight: float = 0.7,
+    vesselness_weight: float = 0.9,
 ) -> tuple[NDArray[np.float32], dict[str, Any]]:
     """Propaga conectividade fuzzy max-min a partir das sementes do objeto.
 
@@ -286,10 +256,7 @@ def fuzzy_connectedness_map(
         candidate_mask: Região permitida para a propagação.
         max_processed_voxels: Limite de segurança para evitar expansão excessiva.
         min_connectivity_to_process: Menor conectividade que ainda entra na fila.
-        vesselness_affinity_mode: Estratégia de afinidade baseada em vesselness.
-        vesselness_power: Expoente aplicado à afinidade de vesselness.
         vesselness_floor: Piso suave da afinidade de vesselness.
-        edge_affinity_mode: Como combinar vesselness e HU.
         vesselness_weight: Peso do vesselness na combinação ponderada.
 
     Returns:
@@ -367,8 +334,6 @@ def fuzzy_connectedness_map(
             mu_vessel = vesselness_affinity(
                 current_vessel,
                 float(vesselness_norm[neighbor]),
-                mode=vesselness_affinity_mode,
-                power=vesselness_power,
                 floor=vesselness_floor,
             )
             hu_diff = current_hu - float(image[neighbor])
@@ -376,7 +341,6 @@ def fuzzy_connectedness_map(
             affinity = edge_affinity(
                 mu_vessel,
                 mu_hu,
-                mode=edge_affinity_mode,
                 vesselness_weight=vesselness_weight,
             )
             # Critério max-min: a força do caminho é limitada pela pior aresta.
@@ -392,38 +356,9 @@ def fuzzy_connectedness_map(
         "valid_seed_count": len(valid_seeds),
         "processed_voxels": processed_voxels,
         "max_connectivity": float(connectivity.max()),
-        "vesselness_affinity_mode": vesselness_affinity_mode,
-        "vesselness_power": float(vesselness_power),
         "vesselness_floor": float(vesselness_floor),
-        "edge_affinity_mode": edge_affinity_mode,
         "vesselness_weight": float(vesselness_weight),
     }
-
-
-def build_background_seeds(
-    candidate_mask: NDArray[Any],
-    vesselness: NDArray[Any],
-    max_count: int = 300,
-    low_vesselness_percentile: float = 10.0,
-) -> list[tuple[int, int, int]]:
-    """Gera sementes simples de fundo a partir de regiões com baixo vesselness."""
-    # Usa voxels candidatos pouco tubulares como amostras de fundo competitivo.
-    vesselness_norm = normalize_vesselness(vesselness)
-    coords = np.argwhere(candidate_mask)
-    if coords.size == 0:
-        return []
-
-    values = vesselness_norm[np.asarray(candidate_mask, dtype=bool)]
-    cutoff = np.percentile(values, low_vesselness_percentile)
-    low_coords = coords[values <= cutoff]
-    if len(low_coords) == 0:
-        return []
-
-    if len(low_coords) > max_count:
-        # Amostra uniformemente para limitar custo sem depender de aleatoriedade.
-        step = max(1, len(low_coords) // max_count)
-        low_coords = low_coords[::step][:max_count]
-    return [tuple(map(int, coord)) for coord in low_coords]
 
 
 def fuzzy_connectedness_segmentation(
@@ -435,31 +370,18 @@ def fuzzy_connectedness_segmentation(
     sigma_hu: float,
     neighborhood: int,
     candidate_mask: NDArray[Any],
-    background_seeds: Iterable[Sequence[int] | None] | None = None,
     max_processed_voxels: int | None = None,
-    vesselness_affinity_mode: str = "mean",
-    vesselness_power: float = 1.0,
     vesselness_floor: float = 0.0,
-    edge_affinity_mode: str = "min",
-    vesselness_weight: float = 0.7,
-    mask_strategy: str = "alpha",
-    connectivity_percentile: float | None = None,
+    vesselness_weight: float = 0.9,
 ) -> dict[str, Any]:
-    """Executa fuzzy connectedness e converte o mapa em máscara binária.
-
-    Se `background_seeds` for informado, a máscara é definida por competição
-    entre conectividade do objeto e do fundo (`Ko > Kb`). Caso contrário, usa o
-    limiar absoluto `alpha` ou, opcionalmente, um percentil das conectividades.
+    """Executa fuzzy connectedness e aplica o limiar absoluto ``alpha``.
 
     Returns:
         Dicionário com:
         - `connectivity`: mapa de conectividade do objeto;
-        - `background_connectivity`: mapa do fundo, quando usado;
         - `mask`: máscara binária antes do pós-processamento;
         - `details`: metadados da propagação e dos parâmetros efetivos.
     """
-    background_seeds = list(background_seeds or [])
-
     # Calcula o mapa de conectividade a partir das sementes do objeto.
     object_connectivity, object_details = fuzzy_connectedness_map(
         image,
@@ -469,71 +391,23 @@ def fuzzy_connectedness_segmentation(
         neighborhood=neighborhood,
         candidate_mask=candidate_mask,
         max_processed_voxels=max_processed_voxels,
-        min_connectivity_to_process=0.0 if background_seeds else float(alpha),
-        vesselness_affinity_mode=vesselness_affinity_mode,
-        vesselness_power=vesselness_power,
+        min_connectivity_to_process=float(alpha),
         vesselness_floor=vesselness_floor,
-        edge_affinity_mode=edge_affinity_mode,
         vesselness_weight=vesselness_weight,
     )
-
-    background_connectivity = None
-    background_details = None
-    if background_seeds:
-        # Modo competitivo: objeto vence quando Ko é maior que Kb.
-        background_connectivity, background_details = fuzzy_connectedness_map(
-            image,
-            vesselness,
-            background_seeds,
-            sigma_hu=sigma_hu,
-            neighborhood=neighborhood,
-            candidate_mask=candidate_mask,
-            max_processed_voxels=max_processed_voxels,
-            min_connectivity_to_process=0.05,
-            vesselness_affinity_mode=vesselness_affinity_mode,
-            vesselness_power=vesselness_power,
-            vesselness_floor=vesselness_floor,
-            edge_affinity_mode=edge_affinity_mode,
-            vesselness_weight=vesselness_weight,
-        )
-        mask = object_connectivity > background_connectivity
-        effective_alpha = np.nan
-    elif mask_strategy == "connectivity_percentile":
-        # Alternativa experimental: escolhe o corte por percentil da conectividade.
-        positive_values = object_connectivity[object_connectivity > 0]
-        if positive_values.size == 0:
-            effective_alpha = float(alpha)
-        else:
-            percentile = 70.0 if connectivity_percentile is None else float(connectivity_percentile)
-            percentile = float(np.clip(percentile, 0.0, 100.0))
-            effective_alpha = max(float(np.percentile(positive_values, percentile)), float(alpha))
-        mask = object_connectivity >= effective_alpha
-    else:
-        effective_alpha = float(alpha)
-        mask = object_connectivity >= effective_alpha
+    mask = object_connectivity >= float(alpha)
 
     return {
         "connectivity": object_connectivity,
-        "background_connectivity": background_connectivity,
         "mask": mask.astype(np.uint8),
         "details": {
             **object_details,
             "alpha": float(alpha),
             "sigma_hu": float(sigma_hu),
             "neighborhood": int(neighborhood),
-            "vesselness_affinity_mode": vesselness_affinity_mode,
-            "vesselness_power": float(vesselness_power),
             "vesselness_floor": float(vesselness_floor),
-            "edge_affinity_mode": edge_affinity_mode,
             "vesselness_weight": float(vesselness_weight),
-            "mask_strategy": mask_strategy,
-            "connectivity_percentile": connectivity_percentile,
-            "effective_alpha": effective_alpha,
-            "uses_background_seeds": bool(background_seeds),
-            "background_seed_count": len(background_seeds),
-            "background_processed_voxels": (
-                None if background_details is None else background_details["processed_voxels"]
-            ),
+            "effective_alpha": float(alpha),
         },
     }
 
@@ -609,15 +483,9 @@ def segment_artery_fuzzy_connectedness(
         sigma_hu=float(params["sigma_hu"]),
         neighborhood=int(params["neighborhood"]),
         candidate_mask=candidate_mask,
-        background_seeds=None,
         max_processed_voxels=max_processed_voxels,
-        vesselness_affinity_mode=str(params.get("vesselness_affinity_mode", "geometric_mean")),
-        vesselness_power=float(params.get("vesselness_power", 1.0)),
         vesselness_floor=float(params.get("vesselness_floor", 0.02)),
-        edge_affinity_mode=str(params.get("edge_affinity_mode", "weighted_product")),
         vesselness_weight=float(params.get("vesselness_weight", 0.90)),
-        mask_strategy=str(params.get("mask_strategy", "alpha")),
-        connectivity_percentile=params.get("connectivity_percentile"),
     )
     raw_mask = fc_result["mask"].astype(np.uint8)
 
@@ -625,8 +493,6 @@ def segment_artery_fuzzy_connectedness(
     artery_mask = postprocess_artery_mask(
         raw_mask,
         config,
-        closing_radius=params.get("postprocess_closing_radius"),
-        dilation_radius=params.get("postprocess_dilation_radius"),
     )
     details = {
         **fc_result["details"],
@@ -644,7 +510,6 @@ def segment_artery_fuzzy_connectedness(
 
 
 __all__ = [
-    "build_background_seeds",
     "collect_local_object_seeds",
     "edge_affinity",
     "fuzzy_connectedness_map",

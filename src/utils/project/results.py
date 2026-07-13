@@ -23,13 +23,10 @@ RESULT_COLUMNS = [
     "fc_candidate_voxels_final",
     "threshold_mode",
     "fuzzy_mask_strategy",
-    "fuzzy_dense_membership_threshold",
     "min_threshold",
     "max_threshold",
     "lower_threshold_method",
     "lower_threshold_percentile",
-    "lower_threshold_object_percentile",
-    "lower_threshold_object_center_hu",
     "threshold_voxels",
     "lcc_voxels",
     "image_slice_count",
@@ -39,6 +36,8 @@ RESULT_COLUMNS = [
     "aorta_circle_first_slice",
     "aorta_circle_last_slice",
     "aorta_circle_coverage",
+    "aorta_recovered_initialization",
+    "aorta_mask_voxels",
     "ostia_found",
     "ostia_status",
     "segmentation_attempted",
@@ -82,13 +81,10 @@ READABLE_COLUMN_NAMES = {
     "fc_candidate_voxels_final": "fc_candidate_voxels_final",
     "threshold_mode": "threshold_mode",
     "fuzzy_mask_strategy": "fuzzy_mask_strategy",
-    "fuzzy_dense_membership_threshold": "fuzzy_dense_membership_threshold",
     "min_threshold": "min_threshold_hu",
     "max_threshold": "max_threshold_hu",
     "lower_threshold_method": "lower_threshold_method",
     "lower_threshold_percentile": "lower_threshold_percentile",
-    "lower_threshold_object_percentile": "lower_threshold_object_percentile",
-    "lower_threshold_object_center_hu": "lower_threshold_object_center_hu",
     "threshold_voxels": "threshold_voxel_count",
     "lcc_voxels": "lcc_voxel_count",
     "image_slice_count": "image_slice_count",
@@ -98,6 +94,8 @@ READABLE_COLUMN_NAMES = {
     "aorta_circle_first_slice": "aorta_circle_first_slice",
     "aorta_circle_last_slice": "aorta_circle_last_slice",
     "aorta_circle_coverage": "aorta_circle_coverage",
+    "aorta_recovered_initialization": "aorta_recovered_initialization",
+    "aorta_mask_voxels": "aorta_mask_voxel_count",
     "ostia_found": "ostia_detected",
     "ostia_status": "ostia_detection_status",
     "segmentation_attempted": "artery_segmentation_run",
@@ -120,8 +118,8 @@ READABLE_COLUMN_NAMES = {
     "lcc_per_slice": "lcc_per_slice",
     "lcc_mode": "lcc_mode",
     "configured_artery_segmentation_method": "configured_artery_segmentation_method",
+    "aorta_ostia_method": "aorta_ostia_method",
     "aorta_miss_count": "aorta_miss_count",
-    "aorta_out_of_tolerance_as_miss": "aorta_out_of_tolerance_as_miss",
     "aorta_interpolate_missed_circles": "aorta_interpolate_missed_circles",
 }
 
@@ -136,8 +134,8 @@ READABLE_BOOL_COLUMNS = {
     "left_ostium_correct",
     "right_ostium_correct",
     "lcc_per_slice",
-    "aorta_out_of_tolerance_as_miss",
     "aorta_interpolate_missed_circles",
+    "aorta_recovered_initialization",
 }
 
 OSTIA_STATUS_READABLE_LABELS = {
@@ -311,7 +309,7 @@ def _format_bool_readable(value: Any) -> str:
 
 def _lcc_mode(config: dict[str, Any]) -> str:
     """Retorna o modo textual da maior componente conectada usada no threshold."""
-    return "per_slice" if bool(config.get("LCC_PER_SLICE", True)) else "per_volume"
+    return "per_slice"
 
 
 def _configured_artery_segmentation_method(config: dict[str, Any]) -> str:
@@ -385,9 +383,6 @@ def build_result_row(result: dict[str, Any]) -> dict[str, Any]:
         ),
         "threshold_mode": _get_result_value(result, "threshold_mode"),
         "fuzzy_mask_strategy": _get_result_value(result, "fuzzy_mask_strategy"),
-        "fuzzy_dense_membership_threshold": _get_result_value(
-            result, "fuzzy_dense_membership_threshold"
-        ),
         "min_threshold": _get_result_value(result, "min_threshold"),
         "max_threshold": _get_result_value(result, "max_threshold"),
         "lower_threshold_method": _get_result_value(
@@ -395,12 +390,6 @@ def build_result_row(result: dict[str, Any]) -> dict[str, Any]:
         ),
         "lower_threshold_percentile": _get_result_value(
             result, "lower_threshold_percentile"
-        ),
-        "lower_threshold_object_percentile": _get_result_value(
-            result, "lower_threshold_object_percentile"
-        ),
-        "lower_threshold_object_center_hu": _get_result_value(
-            result, "lower_threshold_object_center_hu"
         ),
         "threshold_voxels": _get_result_value(result, "threshold_voxels"),
         "lcc_voxels": _get_result_value(result, "lcc_voxels"),
@@ -421,6 +410,10 @@ def build_result_row(result: dict[str, Any]) -> dict[str, Any]:
         "aorta_circle_coverage": _get_result_value(
             result, "aorta_circle_coverage"
         ),
+        "aorta_recovered_initialization": _as_bool_value(
+            _get_result_value(result, "aorta_recovered_initialization", False)
+        ),
+        "aorta_mask_voxels": _get_result_value(result, "aorta_mask_voxels"),
         "ostia_found": _as_bool_value(_get_result_value(result, "ostia_found", False)),
         "ostia_status": _get_result_value(result, "ostia_status"),
         "segmentation_attempted": _as_bool_value(
@@ -477,15 +470,15 @@ def add_config_columns(df: pd.DataFrame, config: dict[str, Any]) -> pd.DataFrame
     df["configured_lower_threshold_method"] = lower_threshold_config.get(
         "method", "fixed"
     )
-    df["lcc_per_slice"] = bool(config.get("LCC_PER_SLICE", True))
+    df["lcc_per_slice"] = True
     df["lcc_mode"] = _lcc_mode(config)
     df["configured_artery_segmentation_method"] = (
         _configured_artery_segmentation_method(config)
     )
-    df["aorta_miss_count"] = circle_config.get("max_slice_miss_threshold", "N/A")
-    df["aorta_out_of_tolerance_as_miss"] = circle_config.get(
-        "out_of_tolerance_as_miss", "N/A"
+    df["aorta_ostia_method"] = config.get("AORTA_OSTIA_METHOD", {}).get(
+        "method", "standard"
     )
+    df["aorta_miss_count"] = circle_config.get("max_slice_miss_threshold", "N/A")
     df["aorta_interpolate_missed_circles"] = circle_config.get(
         "interpolate_missed_circles", "N/A"
     )
@@ -585,7 +578,6 @@ def _vesselness_metadata(config: dict[str, Any], key: str) -> dict[str, Any]:
         "gamma": vesselness_config["gamma"],
         "normalization": vesselness_config.get("normalization", "none"),
         "smooth_sigma": vesselness_config.get("smooth_sigma", 0.0),
-        "modified": vesselness_config.get("modified"),
     }
 
 
@@ -604,19 +596,16 @@ def _runtime_config_metadata(config: dict[str, Any]) -> dict[str, Any]:
         "min_threshold": config.get("MIN_THRESHOLD"),
         "max_threshold_percentile": config.get("MAX_THRESHOLD_PERCENTILE"),
         "thresholding": config.get("THRESHOLDING"),
-        "lcc_per_slice": bool(config.get("LCC_PER_SLICE", True)),
+        "lcc_per_slice": True,
         "lcc_mode": _lcc_mode(config),
         "aorta_miss_count": circle_config.get("max_slice_miss_threshold"),
-        "aorta_out_of_tolerance_as_miss": circle_config.get(
-            "out_of_tolerance_as_miss"
-        ),
         "aorta_interpolate_missed_circles": circle_config.get(
             "interpolate_missed_circles"
         ),
-        "aorta_candidate_selection_strategy": circle_config.get(
-            "candidate_selection_strategy"
-        ),
         "artery_segmentation_method": _configured_artery_segmentation_method(config),
+        "aorta_ostia_method": config.get("AORTA_OSTIA_METHOD", {}).get(
+            "method", "standard"
+        ),
     }
 
 
@@ -676,7 +665,7 @@ def build_metadata(
             "min_threshold": config.get("MIN_THRESHOLD"),
             "max_threshold_percentile": config.get("MAX_THRESHOLD_PERCENTILE"),
             "thresholding": config.get("THRESHOLDING"),
-            "lcc_per_slice": bool(config.get("LCC_PER_SLICE", True)),
+            "lcc_per_slice": True,
             "lcc_mode": _lcc_mode(config),
         },
         "runtime_config": _runtime_config_metadata(config),
@@ -687,6 +676,7 @@ def build_metadata(
         "circle_detection_config": config.get("CIRCLE_DETECTION"),
         "level_set_config": config.get("LEVEL_SET"),
         "ostia_detection_config": config.get("OSTIA_DETECTION"),
+        "aorta_ostia_method_config": config.get("AORTA_OSTIA_METHOD"),
         "artery_segmentation_config": config.get("ARTERY_SEGMENTATION"),
         "thresholding_config": config.get("THRESHOLDING"),
         "region_growing_config": config.get("REGION_GROWING"),

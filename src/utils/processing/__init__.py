@@ -11,9 +11,6 @@ _SYMBOL_TO_MODULE = {
     "keep_largest_component": "binary_operations",
     "label": "binary_operations",
     # frangi
-    "get_gd": "frangi",
-    "get_gf": "frangi",
-    "get_modified_vesselness": "frangi",
     "get_vesselness": "frangi",
     "load_vesselness_cache": "frangi",
     "save_vesselness_cache": "frangi",

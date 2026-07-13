@@ -8,8 +8,6 @@ _SYMBOL_TO_MODULE = {
     "calculate_robust_diameter": "ostia_detection",
     "check_ostium_intersection": "ostia_detection",
     "find_ostia": "ostia_detection",
-    # artery_segmentation
-    "region_growing_article": "artery_segmentation",
     # aorta_segmentation
     "level_set_segmentation": "aorta_segmentation",
     "remove_leaks_morphology": "aorta_segmentation",

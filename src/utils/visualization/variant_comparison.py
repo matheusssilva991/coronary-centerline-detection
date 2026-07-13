@@ -13,6 +13,7 @@ de Dice, status dos óstios e deltas entre variantes em outros experimentos.
 from __future__ import annotations
 
 from pathlib import Path
+from itertools import combinations
 from typing import Any, Iterable, Sequence
 
 import matplotlib.patheffects as path_effects
@@ -434,20 +435,32 @@ def pair_summary(
 
 def build_pair_outcome_counts(
     results_df: pd.DataFrame,
-    pair_comparisons: Iterable[Sequence[str]],
+    pair_comparisons: Iterable[Sequence[str]] | None = None,
     *,
     pretty_names: dict[str, str] | None = None,
     min_delta: float = 0.02,
+    variant_order: Sequence[str] | None = None,
 ) -> pd.DataFrame:
     """Conta quantos exames melhoraram, pioraram ou ficaram estáveis por par.
 
     ``dice_delta`` é calculado como ``comparison - reference``. Portanto,
     valores positivos favorecem a variante de comparação e valores negativos
     favorecem a variante de referência.
+
+    Quando ``pair_comparisons`` não é informado, todos os pares possíveis entre
+    as variantes carregadas são gerados na ordem de ``variant_order``.
     """
     names = pretty_names or {}
     rows: list[dict[str, Any]] = []
     min_delta_label = str(min_delta).replace(".", "_")
+    if pair_comparisons is None:
+        available = list(pd.unique(results_df["folder_variant"].dropna()))
+        if variant_order is not None:
+            ordered = [variant for variant in variant_order if variant in available]
+            ordered.extend(variant for variant in available if variant not in ordered)
+        else:
+            ordered = sorted(available)
+        pair_comparisons = combinations(ordered, 2)
 
     for pair in pair_comparisons:
         reference_variant, comparison_variant = pair[:2]

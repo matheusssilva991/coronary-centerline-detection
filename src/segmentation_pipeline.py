@@ -13,7 +13,11 @@ import pandas as pd
 os.environ.setdefault("CUDA_VISIBLE_DEVICES", "0")
 
 from utils.processing.gpu_utils import use_gpu
-from utils.project.config import load_config_json, scale_config_to_resolution
+from utils.project.config import (
+    apply_aorta_ostia_method,
+    load_config_json,
+    scale_config_to_resolution,
+)
 from utils.project.dataset import get_data_splits
 from utils.project.results import (
     create_timestamped_output_dir,
@@ -144,15 +148,6 @@ def build_effective_config(args):
         effective_config["OPENCV_INTERPOLATION"] = args.opencv_interpolation
     if args.use_gpu is not None:
         effective_config["USE_GPU"] = args.use_gpu
-    if args.lcc_per_slice is not None:
-        effective_config["LCC_PER_SLICE"] = args.lcc_per_slice
-
-    circle_config = effective_config.setdefault("CIRCLE_DETECTION", {})
-    if args.out_of_tolerance_as_miss is not None:
-        circle_config["out_of_tolerance_as_miss"] = args.out_of_tolerance_as_miss
-    if args.aorta_miss_count is not None:
-        circle_config["max_slice_miss_threshold"] = args.aorta_miss_count
-
     if args.artery_segmentation_method is not None:
         effective_config.setdefault("ARTERY_SEGMENTATION", {})["method"] = (
             args.artery_segmentation_method
@@ -160,6 +155,17 @@ def build_effective_config(args):
     if args.rg_comparison_window is not None:
         effective_config.setdefault("REGION_GROWING", {})["comparison_window"] = (
             args.rg_comparison_window
+        )
+    configured_aorta_ostia_method = effective_config.get(
+        "AORTA_OSTIA_METHOD", {}
+    ).get("method", "standard")
+    if (
+        args.aorta_ostia_method is not None
+        or configured_aorta_ostia_method != "standard"
+    ):
+        effective_config = apply_aorta_ostia_method(
+            effective_config,
+            method=args.aorta_ostia_method,
         )
     thresholding_config = effective_config.setdefault("THRESHOLDING", {})
     if args.threshold_method is not None:
@@ -170,10 +176,10 @@ def build_effective_config(args):
         lower_threshold_config["method"] = args.lower_threshold_method
     if args.lower_threshold_percentile is not None:
         lower_threshold_config["percentile"] = args.lower_threshold_percentile
-    if args.lower_threshold_object_percentile is not None:
-        lower_threshold_config["object_percentile"] = (
-            args.lower_threshold_object_percentile
-        )
+        if thresholding_config.get("method") == "fuzzy":
+            thresholding_config.setdefault("fuzzy", {})["lower_percentile"] = (
+                args.lower_threshold_percentile
+            )
     if args.lower_threshold_clip_min is not None:
         lower_threshold_config["clip_min_hu"] = args.lower_threshold_clip_min
     if args.lower_threshold_clip_max is not None:
@@ -201,15 +207,11 @@ def print_run_settings(args, config, base_path, base_save_path):
         f"{'habilitada' if config.get('USE_GPU', False) else 'desabilitada'}"
     )
     circle_config = config.get("CIRCLE_DETECTION", {})
-    print(
-        "🔎 LCC: "
-        f"{'por fatia' if config.get('LCC_PER_SLICE', True) else 'por volume'}"
-    )
+    print("🔎 LCC: por fatia")
     print(
         "⭕ Localização da aorta: "
         f"miss_count={circle_config.get('max_slice_miss_threshold')}, "
-        "fora da tolerância conta como miss="
-        f"{circle_config.get('out_of_tolerance_as_miss', False)}"
+        f"recuperação inicial={circle_config.get('early_track_recovery', True)}"
     )
     artery_config = config.get("ARTERY_SEGMENTATION", {})
     thresholding_config = config.get("THRESHOLDING", {})
@@ -217,6 +219,10 @@ def print_run_settings(args, config, base_path, base_save_path):
     print(
         "🫀 Segmentação arterial: "
         f"{artery_config.get('method', 'region_growing')}"
+    )
+    print(
+        "🫁 Aorta/óstios: "
+        f"{config.get('AORTA_OSTIA_METHOD', {}).get('method', 'standard')}"
     )
     print(
         "🧩 Threshold: "

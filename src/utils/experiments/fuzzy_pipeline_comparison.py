@@ -14,7 +14,6 @@ from typing import Any
 import cv2
 import numpy as np
 import pandas as pd
-from scipy.ndimage import median_filter, uniform_filter
 
 from utils.experiments.sweep_common import (
     csv_safe,
@@ -27,6 +26,8 @@ from utils.project.config import load_config_json
 from utils.processing.preprocessing import build_lcc_image_from_mask, downscale_image
 from utils.segmentation.artery_segmentation import normal_region_growing_from_ostia
 from utils.segmentation.fuzzy_connectedness import segment_artery_fuzzy_connectedness
+from utils.segmentation.fuzzy_threshold import fuzzy_threshold_outputs
+from utils.segmentation.lower_threshold import resolve_lower_threshold
 from utils.segmentation.pipeline_arteries import postprocess_artery_mask
 from utils.segmentation.pipeline_detection import (
     detect_and_evaluate_ostia,
@@ -37,8 +38,6 @@ from utils.segmentation.pipeline_preprocessing import get_or_compute_vesselness
 from utils.utils.metrics import dice_score
 from utils.utils.nifti_io import load_raw_img_and_label
 
-
-MIN_HU = -300.0
 
 IMAGE_COLUMNS = [
     "variant",
@@ -80,10 +79,7 @@ PARAMETER_COLUMNS = [
     "fc.seed_min_vesselness",
     "fc.vesselness_weight",
     "fc.vesselness_floor",
-    "fc.edge_affinity_mode",
-    "fc.mask_strategy",
     "MAX_THRESHOLD_PERCENTILE",
-    "LCC_PER_SLICE",
     "REGION_GROWING.min_vesselness_fraction",
     "REGION_GROWING.threshold_divisor",
 ]
@@ -157,88 +153,13 @@ def load_downsampled_case(
     }
 
 
-def estimate_fuzzy_centers(
-    volume: np.ndarray,
-    min_hu: float,
-    soft_margin_hu: float,
-    object_percentile: float,
-    dense_percentile: float,
-) -> np.ndarray:
-    """Estima centros HU para fundo mole, objeto e fundo denso."""
-    values = np.asarray(volume, dtype=np.float32)
-    values = values[np.isfinite(values)]
-    valid = values[values >= min_hu]
-    if valid.size == 0:
-        valid = values
-
-    soft_center = float(min_hu - soft_margin_hu)
-    object_center = float(np.percentile(valid, object_percentile))
-    dense_center = float(np.percentile(valid, dense_percentile))
-    object_center = max(object_center, min_hu + np.finfo(np.float32).eps)
-    dense_center = max(dense_center, object_center + np.finfo(np.float32).eps)
-    return np.array([soft_center, object_center, dense_center], dtype=np.float32)
-
-
-def fuzzy_threshold_outputs(
-    volume: np.ndarray,
-    *,
-    min_hu: float,
-    soft_margin_hu: float = 160,
-    object_percentile: float = 99.8,
-    dense_percentile: float = 99.95,
-    smooth_radius: int = 1,
-    smooth_mode: str = "mean",
-) -> tuple[np.ndarray, dict[str, Any]]:
-    """Gera máscara fuzzy de objeto."""
-    centers = estimate_fuzzy_centers(
-        volume,
-        min_hu,
-        soft_margin_hu,
-        object_percentile,
-        dense_percentile,
-    )
-    soft_center, object_center, dense_center = map(float, centers)
-    soft_width = max(min_hu - soft_center, np.finfo(np.float32).eps)
-    dense_width = max(dense_center - object_center, np.finfo(np.float32).eps)
-
-    soft = np.clip((min_hu - volume) / soft_width, 0.0, 1.0)
-    dense = np.clip((volume - object_center) / dense_width, 0.0, 1.0)
-    obj = np.minimum(1.0 - soft, 1.0 - dense)
-    memberships = np.stack([soft, obj, dense], axis=0).astype(np.float32)
-    memberships /= np.maximum(
-        memberships.sum(axis=0, keepdims=True),
-        np.finfo(np.float32).eps,
-    )
-
-    if smooth_radius > 0:
-        size = 2 * int(smooth_radius) + 1
-        aggregated = np.empty_like(memberships)
-        for idx in range(memberships.shape[0]):
-            if smooth_mode == "median":
-                aggregated[idx] = median_filter(memberships[idx], size=size)
-            else:
-                aggregated[idx] = uniform_filter(memberships[idx], size=size)
-        memberships = aggregated / np.maximum(
-            aggregated.sum(axis=0, keepdims=True),
-            np.finfo(np.float32).eps,
-        )
-
-    object_mask = (np.argmax(memberships, axis=0) == 1) & (volume >= min_hu)
-
-    return object_mask.astype(bool), {
-        "soft_center_hu": soft_center,
-        "object_center_hu": object_center,
-        "dense_center_hu": dense_center,
-    }
-
-
 def build_preprocessed_inputs(
     down_image: np.ndarray,
     config: dict[str, Any],
     experiment: dict[str, Any],
 ) -> tuple[np.ndarray, np.ndarray, dict[str, Any]]:
     """Monta threshold/LCC para a variante."""
-    min_hu = float(config.get("MIN_THRESHOLD", MIN_HU))
+    min_hu, lower_details = resolve_lower_threshold(down_image, config)
     max_hu = float(np.percentile(down_image, float(config["MAX_THRESHOLD_PERCENTILE"])))
     threshold_mode = experiment.get("threshold_mode", "normal")
     fuzzy_cfg = experiment.get("fuzzy", {})
@@ -246,10 +167,10 @@ def build_preprocessed_inputs(
     fuzzy_mask, fuzzy_details = fuzzy_threshold_outputs(
         down_image,
         min_hu=min_hu,
-        soft_margin_hu=float(fuzzy_cfg.get("soft_margin_hu", 160)),
+        soft_margin_hu=float(fuzzy_cfg.get("soft_margin_hu", 100)),
         object_percentile=float(fuzzy_cfg.get("object_percentile", 99.8)),
-        dense_percentile=float(fuzzy_cfg.get("dense_percentile", 99.95)),
-        smooth_radius=int(fuzzy_cfg.get("smooth_radius", 1)),
+        dense_percentile=float(fuzzy_cfg.get("dense_percentile", 99.96)),
+        smooth_radius=int(fuzzy_cfg.get("smooth_radius", 0)),
         smooth_mode=str(fuzzy_cfg.get("smooth_mode", "mean")),
     )
 
@@ -262,10 +183,11 @@ def build_preprocessed_inputs(
         down_image,
         mask,
         offset=abs(int(min_hu)),
-        per_slice=bool(config.get("LCC_PER_SLICE", True)),
+        per_slice=True,
     )
     return lcc_image, lcc_mask, {
         "threshold_mode": threshold_mode,
+        **lower_details,
         "max_hu": max_hu,
         "threshold_voxels": int(mask.sum()),
         "lcc_voxels": int(lcc_mask.sum()),
@@ -557,7 +479,6 @@ __all__ = [
     "build_base_config",
     "build_preprocessed_inputs",
     "compute_vesselness_spacing",
-    "estimate_fuzzy_centers",
     "fuzzy_threshold_outputs",
     "load_downsampled_case",
     "parameter_row",

@@ -1,6 +1,0 @@
-variant,mean_delta_dice,median_delta_dice,images_better_dice,images_worse_dice,images_equal_dice,ostia_status_improved,ostia_status_worsened,mean_circle_delta,mean_detected_circle_delta,mean_interpolated_delta
-lcc_per_volume_out_stop_miss5_cand_closest,-0.010893018847120082,-4.760120596292161e-05,10,16,4,0,0,-2.1333333333333333,-2.1333333333333333,0.0
-lcc_per_slice_out_miss_miss2_cand_closest,-0.05445675010054878,0.0,0,6,24,0,4,33.766666666666666,31.666666666666668,2.1
-lcc_per_volume_out_miss_miss2_cand_score,-0.0683883225815885,-4.760120596292161e-05,10,16,4,0,4,31.666666666666668,29.733333333333334,1.9333333333333333
-lcc_per_slice_out_miss_miss2_cand_score,-0.10088639424173815,0.0,0,9,21,0,7,31.666666666666668,29.666666666666668,2.0
-lcc_per_slice_out_miss_miss3_cand_closest,-0.12957435747602766,0.0,0,10,20,0,8,68.8,63.0,5.8

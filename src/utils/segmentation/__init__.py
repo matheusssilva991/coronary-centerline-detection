@@ -13,10 +13,7 @@ _SYMBOL_TO_MODULE = {
     "check_ostium_intersection": "ostia_detection",
     "find_aorta_surface": "ostia_detection",
     "find_ostia": "ostia_detection",
-    # artery_segmentation
-    "region_growing_article": "artery_segmentation",
     # fuzzy_connectedness
-    "build_background_seeds": "fuzzy_connectedness",
     "collect_local_object_seeds": "fuzzy_connectedness",
     "edge_affinity": "fuzzy_connectedness",
     "fuzzy_connectedness_map": "fuzzy_connectedness",
@@ -27,8 +24,11 @@ _SYMBOL_TO_MODULE = {
     "valid_seed": "fuzzy_connectedness",
     "vesselness_affinity": "fuzzy_connectedness",
     # aorta_segmentation
+    "build_circle_trajectory_envelope": "aorta_segmentation",
+    "correct_anomalous_aorta_slices": "aorta_segmentation",
     "level_set_segmentation": "aorta_segmentation",
     "remove_leaks_morphology": "aorta_segmentation",
+    "restrict_mask_to_circle_trajectory": "aorta_segmentation",
     # aorta_localization
     "detect_aorta_circles": "aorta_localization",
     "detect_initial_circle": "aorta_localization",

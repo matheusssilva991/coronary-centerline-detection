@@ -38,20 +38,23 @@ Exemplos de uso:
   # Usar resolução média (downscale 2x)
   python segmentation_pipeline.py --resolution mid --split val
 
-  # Usar LCC por volume, permitir misses por tolerância e parar após 3 misses
-  python segmentation_pipeline.py --split val --lcc-per-volume --out-of-tolerance-as-miss --aorta-miss-count 3
-
   # Escolher método de segmentação arterial
   python segmentation_pipeline.py --split val --artery-method fc
+
+  # Usar a seleção bilateral com superfície fina e correção condicional da aorta
+  python segmentation_pipeline.py --split val --aorta-ostia-method bilateral_thin
+
+  # Manter/restaurar a abordagem histórica de aorta e óstios
+  python segmentation_pipeline.py --split val --aorta-ostia-method standard
 
   # Comparar candidatos do region growing com a média acumulada da região
   python segmentation_pipeline.py --split train --rg-comparison-window -1
 
   # Usar fuzzy threshold
-  python segmentation_pipeline.py --split val --threshold-method fuzzy
+  python segmentation_pipeline.py --split val --threshold-method fuzzy --lower-threshold-percentile 10.5
 
   # Testar limiar inferior adaptativo mantendo threshold normal + RG
-  python segmentation_pipeline.py --split train --threshold-method normal --artery-method rg --lower-threshold-method percentile --lower-threshold-percentile 5
+  python segmentation_pipeline.py --split train --threshold-method normal --artery-method rg --lower-threshold-method percentile --lower-threshold-percentile 10.75
 
   # PROCESSAMENTO EM LOTES (salvamento incremental):
     # Processar em 10 lotes (divide as imagens entre 10 blocos)
@@ -177,44 +180,6 @@ def build_parser(default_base_path, default_base_save_path, default_output_dir):
         action="store_false",
         help="Força CPU nas etapas compatíveis, mesmo se houver GPU disponível.",
     )
-    lcc_group = parser.add_mutually_exclusive_group()
-    lcc_group.add_argument(
-        "--lcc-per-slice",
-        dest="lcc_per_slice",
-        action="store_true",
-        default=None,
-        help="Calcula a maior componente conectada separadamente por fatia.",
-    )
-    lcc_group.add_argument(
-        "--lcc-per-volume",
-        "--no-lcc-per-slice",
-        dest="lcc_per_slice",
-        action="store_false",
-        help="Calcula a maior componente conectada no volume 3D inteiro.",
-    )
-    tolerance_group = parser.add_mutually_exclusive_group()
-    tolerance_group.add_argument(
-        "--out-of-tolerance-as-miss",
-        "--tolerance-as-miss",
-        dest="out_of_tolerance_as_miss",
-        action="store_true",
-        default=None,
-        help="Conta círculo fora da tolerância como miss, em vez de parar imediatamente.",
-    )
-    tolerance_group.add_argument(
-        "--stop-on-out-of-tolerance",
-        "--no-out-of-tolerance-as-miss",
-        "--no-tolerance-as-miss",
-        dest="out_of_tolerance_as_miss",
-        action="store_false",
-        help="Para a localização da aorta no primeiro círculo fora da tolerância.",
-    )
-    parser.add_argument(
-        "--aorta-miss-count",
-        type=int,
-        default=None,
-        help="Número de misses consecutivos permitidos na localização da aorta.",
-    )
     parser.add_argument(
         "--artery-segmentation-method",
         "--artery-method",
@@ -223,6 +188,20 @@ def build_parser(default_base_path, default_base_save_path, default_output_dir):
         help=(
             "Método de segmentação arterial: 'rg'/'region_growing' ou "
             "'fc'/'fuzzy_connectedness'."
+        ),
+    )
+    parser.add_argument(
+        "--aorta-ostia-method",
+        choices=[
+            "standard",
+            "bilateral_thin",
+            "bilateral_thin_conditional",
+        ],
+        default=None,
+        help=(
+            "Método conjunto de aorta/óstios: 'standard' mantém o pipeline "
+            "histórico; 'bilateral_thin' ativa superfície fina, seleção "
+            "bilateral e correção condicional da máscara da aorta."
         ),
     )
     parser.add_argument(
@@ -240,19 +219,17 @@ def build_parser(default_base_path, default_base_save_path, default_output_dir):
         choices=["normal", "fuzzy"],
         default=None,
         help=(
-            "Threshold inicial: 'normal' usa -300 HU até percentil; "
+            "Threshold inicial: 'normal' usa o piso configurado até percentil; "
             "'fuzzy' mantém voxels cuja maior pertinência é objeto."
         ),
     )
     parser.add_argument(
         "--lower-threshold-method",
-        choices=["fixed", "percentile", "object_relative_percentile"],
+        choices=["fixed", "percentile"],
         default=None,
         help=(
             "Método do limiar inferior HU: fixed usa MIN_THRESHOLD; "
-            "percentile usa percentil baixo dos voxels válidos; "
-            "object_relative_percentile calcula o percentil baixo abaixo "
-            "do centro de objeto."
+            "percentile usa percentil baixo dos voxels válidos."
         ),
     )
     parser.add_argument(
@@ -260,15 +237,6 @@ def build_parser(default_base_path, default_base_save_path, default_output_dir):
         type=float,
         default=None,
         help="Percentil baixo usado nos métodos adaptativos de limiar inferior.",
-    )
-    parser.add_argument(
-        "--lower-threshold-object-percentile",
-        type=float,
-        default=None,
-        help=(
-            "Percentil usado para estimar o centro de objeto no método "
-            "object_relative_percentile."
-        ),
     )
     parser.add_argument(
         "--lower-threshold-clip-min",
@@ -378,8 +346,6 @@ def parse_pipeline_args(default_base_path, default_base_save_path, default_outpu
         parser.error("--resume-batch deve ser 0 ou maior")
     if args.num_batches <= 0:
         parser.error("--num-batches deve ser maior que 0")
-    if args.aorta_miss_count is not None and args.aorta_miss_count <= 0:
-        parser.error("--aorta-miss-count deve ser maior que 0")
     if args.merge_only and not args.resume_dir:
         parser.error("--merge-only requer --resume-dir com a pasta de saída existente")
 

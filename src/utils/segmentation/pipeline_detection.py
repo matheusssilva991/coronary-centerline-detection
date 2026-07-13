@@ -6,7 +6,12 @@ from pathlib import Path
 import numpy as np
 
 from .aorta_localization import detect_aorta_circles
-from .aorta_segmentation import level_set_segmentation, remove_leaks_morphology
+from .aorta_segmentation import (
+    correct_anomalous_aorta_slices,
+    level_set_segmentation,
+    remove_leaks_morphology,
+    restrict_mask_to_circle_trajectory,
+)
 from .ostia_detection import check_ostium_intersection, find_ostia
 from ..processing.binary_operations import keep_largest_component
 from ..project.cache import load_json_cache, load_npy_cache
@@ -57,23 +62,18 @@ def get_or_detect_aorta_circles(
         canny_sigma=circle_config["canny_sigma"],
         use_local_roi=circle_config.get("use_local_roi", True),
         local_roi_padding=circle_config.get("local_roi_padding", 20),
-        out_of_tolerance_as_miss=circle_config.get(
-            "out_of_tolerance_as_miss", False
-        ),
         interpolate_missed_circles=circle_config.get(
             "interpolate_missed_circles", True
         ),
-        candidate_selection_strategy=circle_config.get(
-            "candidate_selection_strategy", "closest"
+        early_track_recovery=circle_config.get("early_track_recovery", True),
+        early_recovery_search_slices=circle_config.get(
+            "early_recovery_search_slices", 8
         ),
-        candidate_score_accum_weight=circle_config.get(
-            "candidate_score_accum_weight", 1.0
+        early_recovery_min_circles=circle_config.get(
+            "early_recovery_min_circles", 10
         ),
-        candidate_score_distance_weight=circle_config.get(
-            "candidate_score_distance_weight", 1.0
-        ),
-        candidate_score_radius_weight=circle_config.get(
-            "candidate_score_radius_weight", 1.0
+        early_recovery_require_min_circles=circle_config.get(
+            "early_recovery_require_min_circles", False
         ),
     )
     # Não salva cache novo dessa etapa: o cache persistente fica restrito ao
@@ -107,6 +107,11 @@ def get_or_segment_aorta(
         num_iter=level_set_config["num_iter"],
         balloon=level_set_config["balloon"],
         smoothing=level_set_config["smoothing"],
+        threshold=level_set_config.get("threshold", "auto"),
+        roi_margin=level_set_config.get("roi_margin", 10),
+        use_roi=level_set_config.get("use_roi", True),
+        alpha=level_set_config.get("alpha", 1000),
+        sigma=level_set_config.get("sigma", 2),
         use_gpu=False,
     )
     # Remove vazamentos e mantém apenas o maior componente da aorta.
@@ -115,6 +120,25 @@ def get_or_segment_aorta(
         radius=level_set_config["leak_removal_radius"],
         use_gpu=False,
     )
+    trajectory_radius_factor = level_set_config.get("trajectory_radius_factor")
+    if trajectory_radius_factor is not None:
+        # Limita vazamentos do level set ao tubo acompanhado pelos círculos.
+        aorta_mask = restrict_mask_to_circle_trajectory(
+            aorta_mask,
+            detected_circles,
+            radius_factor=float(trajectory_radius_factor),
+        )
+    area_ratio_threshold = level_set_config.get("trajectory_area_ratio_threshold")
+    if area_ratio_threshold is not None:
+        # Corrige somente fatias com área incompatível com o círculo rastreado.
+        aorta_mask = correct_anomalous_aorta_slices(
+            aorta_mask,
+            detected_circles,
+            area_ratio_threshold=float(area_ratio_threshold),
+            radius_factor=float(
+                level_set_config.get("trajectory_correction_radius_factor", 1.75)
+            ),
+        )
     aorta_mask = keep_largest_component(aorta_mask, gpu=False)
     aorta_mask = aorta_mask.astype(np.uint8)
 
@@ -128,6 +152,7 @@ def detect_and_evaluate_ostia(
     label: Any,
     scaled_spacing: Sequence[float],
     config: Dict[str, Any],
+    detected_circles: Sequence[Dict[str, Any]] | None = None,
 ) -> Dict[str, Any]:
     """Detecta os óstios e avalia correção/tolerância contra o label."""
     dx, dy, dz = scaled_spacing
@@ -143,6 +168,22 @@ def detect_and_evaluate_ostia(
         min_center_distance_factor=ostia_config["min_center_distance_factor"],
         min_lateral_factor=ostia_config["min_lateral_factor"],
         erosion_radius=ostia_config["erosion_radius"],
+        surface_mode=ostia_config.get("surface_mode", "erosion"),
+        surface_thickness_mm=ostia_config.get("surface_thickness_mm", 2.0),
+        candidate_score_mode=ostia_config.get("candidate_score_mode", "voxel"),
+        candidate_score_radius=ostia_config.get("candidate_score_radius", 2),
+        candidate_local_percentile=ostia_config.get(
+            "candidate_local_percentile", 90.0
+        ),
+        candidate_point_weight=ostia_config.get("candidate_point_weight", 0.7),
+        candidate_suppression_radius_mm=ostia_config.get(
+            "candidate_suppression_radius_mm", 0.0
+        ),
+        pair_selection_mode=ostia_config.get("pair_selection_mode", "greedy"),
+        joint_pair_top_k=ostia_config.get("joint_pair_top_k", 100),
+        bilateral_top_k_per_side=ostia_config.get("bilateral_top_k_per_side", 50),
+        detected_circles=detected_circles,
+        pair_distance_mode=ostia_config.get("pair_distance_mode", "voxel_xyz"),
     )
 
     # Extrai apenas a classe arterial do label para validar os óstios.

@@ -1,36 +1,39 @@
 # Analises de segmentacao
 
-Esta pasta guarda resultados exploratorios, comparacoes e figuras usadas para
-avaliar o pipeline. Ela nao segue a mesma estrutura das execucoes finais em
-`output/segmentation/runs`.
+Esta pasta guarda resultados derivados de experimentos, notebooks e figuras de
+apoio. Ela e diferente de `output/segmentation/runs/`, que guarda execucoes
+oficiais do pipeline.
 
-## Subpastas
+## Organizacao atual
 
-- `aorta_ostia_sweep/`: resultados dos sweeps focados em localização da aorta,
-  quantidade/cobertura de círculos e detecção dos óstios.
-- `fuzzy_comparison_eda/`: tabelas e figuras geradas pela análise comparativa
-  das variantes fuzzy/normal.
-- `fuzzy_membership_functions/`: figuras das funções de pertinência fuzzy.
-- `fuzzy_pipeline_comparison/`: resultados do notebook
-  `src/experiments/fuzzy_pipeline_comparison.ipynb`, comparando normal, fuzzy alpha-cut,
-  fuzzy threshold e fuzzy connectedness.
-- `threshold_sweep/`: tabelas consolidadas das varreduras de limiar HU. Os runs
-  individuais antigos foram removidos para manter apenas os CSVs resumidos.
-- `visual_examples/`: figuras e exemplos visuais para inspecao/documentos.
+- `threshold_pipeline_comparison/`: analise do notebook
+  `src/eda/threshold_pipeline_comparison_analysis.ipynb`.
+  - `tables/`: CSVs finais para leitura rapida.
+  - `figures/`: graficos em PNG.
+  - `qualitative_3d/`: exemplos HTML 3D e casos qualitativos selecionados.
+- `EXPERIMENTS_ARCHIVE.md`: decisões e métricas resumidas dos sweeps encerrados.
+- `aorta_mask_ostia_comparison/aorta_ostia_bilateral_final_val90/`: confirmação
+  final da nova opção bilateral em 90 imagens independentes de validação.
+- `fuzzy_membership_functions/`: figuras das funcoes de pertinencia fuzzy.
+- `visual_examples/`: exemplos visuais avulsos.
+
+## Arquivos principais
+
+### `threshold_pipeline_comparison/tables/`
+
+- `dice_stats_by_variant.csv`: media, mediana, minimo, maximo e desvio do Dice
+  por variante.
+- `pair_outcome_counts.csv`: contagem par-a-par de exames que melhoraram,
+  pioraram ou ficaram iguais em relacao a cada comparacao.
+
+O arquivo `pair_outcome_counts.csv` e gerado automaticamente com todas as
+combinacoes possiveis entre as variantes carregadas no notebook. Para 4
+variantes, o esperado e ter 6 comparacoes.
 
 ## Regra pratica
 
-Para escolher parametros, use primeiro os arquivos de resumo em
-`fuzzy_pipeline_comparison/<run_name>/summary` e os CSVs consolidados em
-`threshold_sweep/`. Abra arquivos detalhados apenas quando precisar entender um
-caso especifico.
-
-Arquivos principais em `threshold_sweep/`:
-
-- `threshold_sweep_summary_all.csv`: tabela consolidada de todos os runs de
-  threshold mantidos.
-- `threshold_sweep_ranking.csv`: ranking consolidado por desempenho.
-- `latest_best_pairwise.csv`: comparação par-a-par das melhores configurações
-  do treino.
-- `val_threshold_pairwise_comparison.csv`: comparação par-a-par dos melhores
-  thresholds na validação.
+Use os CSVs em `tables/` para a analise final. Consulte
+`EXPERIMENTS_ARCHIVE.md` para entender por que parâmetros e abordagens antigas
+foram retirados. Os resultados preliminares de aorta/ostios foram resumidos no
+arquivo historico e removidos para evitar que triagens sejam confundidas com a
+confirmacao final.

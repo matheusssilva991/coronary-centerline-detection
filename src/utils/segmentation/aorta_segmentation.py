@@ -144,6 +144,116 @@ def _initialize_level_set_from_circles(
     return init_level_set
 
 
+def build_circle_trajectory_envelope(
+    volume_shape: Sequence[int],
+    detected_circles: Sequence[Dict[str, Any]],
+    radius_factor: float = 1.5,
+) -> NDArray[np.uint8]:
+    """Cria um envelope 3D interpolado ao redor da trajetória dos círculos.
+
+    O envelope limita a máscara da aorta à região anatomicamente acompanhada
+    pelo rastreamento circular. Centros e raios são interpolados nas fatias sem
+    círculo explícito entre a primeira e a última detecção.
+    """
+    if radius_factor <= 0:
+        raise ValueError("radius_factor deve ser maior que zero")
+    if not detected_circles:
+        return np.zeros(volume_shape, dtype=np.uint8)
+
+    circles_by_slice: dict[int, Dict[str, Any]] = {}
+    for circle in detected_circles:
+        slice_index = int(circle["slice_index"])
+        if 0 <= slice_index < volume_shape[2]:
+            circles_by_slice[slice_index] = circle
+    if not circles_by_slice:
+        return np.zeros(volume_shape, dtype=np.uint8)
+
+    source_slices = np.array(sorted(circles_by_slice), dtype=float)
+    centers_x = np.array(
+        [circles_by_slice[int(z)]["center_x"] for z in source_slices], dtype=float
+    )
+    centers_y = np.array(
+        [circles_by_slice[int(z)]["center_y"] for z in source_slices], dtype=float
+    )
+    radii = np.array(
+        [circles_by_slice[int(z)]["radius"] for z in source_slices], dtype=float
+    )
+    target_slices = np.arange(int(source_slices[0]), int(source_slices[-1]) + 1)
+    interp_x = np.interp(target_slices, source_slices, centers_x)
+    interp_y = np.interp(target_slices, source_slices, centers_y)
+    interp_radii = np.interp(target_slices, source_slices, radii)
+
+    envelope = np.zeros(volume_shape, dtype=np.uint8)
+    height, width = volume_shape[:2]
+    for z, center_x, center_y, radius in zip(
+        target_slices, interp_x, interp_y, interp_radii
+    ):
+        rr, cc = disk(
+            (center_y, center_x),
+            max(1.0, radius * radius_factor),
+            shape=(height, width),
+        )
+        envelope[rr, cc, int(z)] = 1
+    return envelope
+
+
+def restrict_mask_to_circle_trajectory(
+    aorta_mask: NDArray[Any],
+    detected_circles: Sequence[Dict[str, Any]],
+    radius_factor: float,
+) -> NDArray[np.uint8]:
+    """Remove da máscara voxels fora do envelope da trajetória circular."""
+    envelope = build_circle_trajectory_envelope(
+        aorta_mask.shape,
+        detected_circles,
+        radius_factor=radius_factor,
+    )
+    return (aorta_mask.astype(bool) & envelope.astype(bool)).astype(np.uint8)
+
+
+def correct_anomalous_aorta_slices(
+    aorta_mask: NDArray[Any],
+    detected_circles: Sequence[Dict[str, Any]],
+    area_ratio_threshold: float,
+    radius_factor: float = 1.75,
+) -> NDArray[np.uint8]:
+    """Restringe somente fatias cuja área excede muito o círculo rastreado.
+
+    Ao contrário do envelope global, fatias compatíveis com a trajetória são
+    preservadas integralmente. A correção atua apenas quando a razão entre a
+    área segmentada e a área do círculo ultrapassa ``area_ratio_threshold``.
+    """
+    if area_ratio_threshold <= 0:
+        raise ValueError("area_ratio_threshold deve ser maior que zero")
+    if radius_factor <= 0:
+        raise ValueError("radius_factor deve ser maior que zero")
+
+    corrected = np.asarray(aorta_mask, dtype=np.uint8).copy()
+    height, width, depth = corrected.shape
+    for circle in detected_circles:
+        z = int(circle["slice_index"])
+        if not 0 <= z < depth:
+            continue
+        radius = max(float(circle["radius"]), 1.0)
+        expected_area = np.pi * radius**2
+        segmented_area = float(corrected[:, :, z].sum())
+        if segmented_area <= area_ratio_threshold * expected_area:
+            continue
+
+        # Recorta apenas a fatia anômala, preservando uma margem sobre o círculo.
+        allowed = np.zeros((height, width), dtype=bool)
+        rr, cc = disk(
+            (float(circle["center_y"]), float(circle["center_x"])),
+            radius * radius_factor,
+            shape=(height, width),
+        )
+        allowed[rr, cc] = True
+        corrected[:, :, z] = (
+            corrected[:, :, z].astype(bool) & allowed
+        ).astype(np.uint8)
+    return corrected
+
+
 # =============================================================================
 # Funções Públicas
 # =============================================================================

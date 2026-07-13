@@ -1,0 +1,91 @@
+IMG_ID,variant,baseline_dice,baseline_ostia_status,baseline_ostia_success,variant_dice,variant_ostia_status,variant_ostia_success,dice_delta,ostia_outcome
+451,bilateral_thin_conditional,0.656262702514372,both tolerable,True,0.656262702514372,both tolerable,True,0.0,unchanged_success
+207,bilateral_thin_conditional,0.5248235271113196,found but incorrect,False,0.5248235271113196,found but incorrect,False,0.0,unchanged_failure
+747,bilateral_thin_conditional,0.5953310846795669,both tolerable,True,0.5953310846795669,both tolerable,True,0.0,unchanged_success
+805,bilateral_thin_conditional,0.6433449614307473,both tolerable,True,0.6433449614307473,both tolerable,True,0.0,unchanged_success
+325,bilateral_thin_conditional,0.7261559892988871,both tolerable,True,0.7261559892988871,both tolerable,True,0.0,unchanged_success
+645,bilateral_thin_conditional,0.4512285643592623,found but incorrect,False,0.532345346356798,both tolerable,True,0.08111678199753569,improved
+296,bilateral_thin_conditional,0.6297693437383016,both tolerable,True,0.6297693437383016,both tolerable,True,0.0,unchanged_success
+694,bilateral_thin_conditional,0.6565309718519857,both tolerable,True,0.6565309718519857,both tolerable,True,0.0,unchanged_success
+891,bilateral_thin_conditional,0.7290910047897258,both tolerable,True,0.7290910047897258,both tolerable,True,0.0,unchanged_success
+804,bilateral_thin_conditional,0.6259911418386086,both tolerable,True,0.6259911418386086,both tolerable,True,0.0,unchanged_success
+72,bilateral_thin_conditional,0.7679221584495286,both tolerable,True,0.7679221584495286,both tolerable,True,0.0,unchanged_success
+540,bilateral_thin_conditional,0.5237729924533014,both tolerable,True,0.5237729924533014,both tolerable,True,0.0,unchanged_success
+942,bilateral_thin_conditional,0.6651496586732014,both tolerable,True,0.6651496586732014,both tolerable,True,0.0,unchanged_success
+279,bilateral_thin_conditional,0.753173766872397,both tolerable,True,0.753173766872397,both tolerable,True,0.0,unchanged_success
+35,bilateral_thin_conditional,0.5914776757808384,both tolerable,True,0.5914776757808384,both tolerable,True,0.0,unchanged_success
+602,bilateral_thin_conditional,0.5760172490048651,found but incorrect,False,0.5760172490048651,found but incorrect,False,0.0,unchanged_failure
+585,bilateral_thin_conditional,0.5008430123641814,both tolerable,True,0.5008430123641814,both tolerable,True,0.0,unchanged_success
+668,bilateral_thin_conditional,0.0,found but incorrect,False,6.66266906522753e-05,found but incorrect,False,6.66266906522753e-05,unchanged_failure
+46,bilateral_thin_conditional,0.3997940158977474,found but incorrect,False,0.7131551553309169,both tolerable,True,0.3133611394331695,improved
+193,bilateral_thin_conditional,0.4278885358378089,found but incorrect,False,0.4278885358378089,found but incorrect,False,0.0,unchanged_failure
+460,bilateral_thin_conditional,0.3314340435719415,both tolerable,True,0.3314340435719415,both tolerable,True,0.0,unchanged_success
+855,bilateral_thin_conditional,0.6915927265649078,both tolerable,True,0.6915927265649078,both tolerable,True,0.0,unchanged_success
+651,bilateral_thin_conditional,0.5667610433213901,both tolerable,True,0.5667610433213901,both tolerable,True,0.0,unchanged_success
+558,bilateral_thin_conditional,0.7358900973096737,both tolerable,True,0.7358900973096737,both tolerable,True,0.0,unchanged_success
+996,bilateral_thin_conditional,0.7257180629891038,both correct,True,0.7257180629891038,both correct,True,0.0,unchanged_success
+391,bilateral_thin_conditional,0.4998136414461424,both tolerable,True,0.4998136414461424,both tolerable,True,0.0,unchanged_success
+776,bilateral_thin_conditional,0.5415094008391412,both tolerable,True,0.5415094008391412,both tolerable,True,0.0,unchanged_success
+913,bilateral_thin_conditional,0.67814911061421,both tolerable,True,0.67814911061421,both tolerable,True,0.0,unchanged_success
+771,bilateral_thin_conditional,0.696036498431708,both tolerable,True,0.696036498431708,both tolerable,True,0.0,unchanged_success
+180,bilateral_thin_conditional,0.6350344268934791,both tolerable,True,0.6350344268934791,both tolerable,True,0.0,unchanged_success
+823,bilateral_thin_conditional,0.6935770312268759,both tolerable,True,0.6935770312268759,both tolerable,True,0.0,unchanged_success
+875,bilateral_thin_conditional,0.7115782118838977,both tolerable,True,0.7115782118838977,both tolerable,True,0.0,unchanged_success
+358,bilateral_thin_conditional,0.4522800474656721,both tolerable,True,0.4522800474656721,both tolerable,True,0.0,unchanged_success
+920,bilateral_thin_conditional,0.6409868208781118,both tolerable,True,0.6409868208781118,both tolerable,True,0.0,unchanged_success
+983,bilateral_thin_conditional,0.6086805770540524,both tolerable,True,0.6086805770540524,both tolerable,True,0.0,unchanged_success
+753,bilateral_thin_conditional,0.0350462266179316,found but incorrect,False,0.0350462266179316,found but incorrect,False,0.0,unchanged_failure
+772,bilateral_thin_conditional,0.7014676072326279,both tolerable,True,0.7014676072326279,both tolerable,True,0.0,unchanged_success
+283,bilateral_thin_conditional,0.4925292596245092,both tolerable,True,0.4925292596245092,both tolerable,True,0.0,unchanged_success
+604,bilateral_thin_conditional,0.6348037945155772,both tolerable,True,0.6348037945155772,both tolerable,True,0.0,unchanged_success
+594,bilateral_thin_conditional,0.4889262578586306,found but incorrect,False,0.7015952980688497,both tolerable,True,0.2126690402102191,improved
+316,bilateral_thin_conditional,0.3640904514830016,found but incorrect,False,0.3640904514830016,found but incorrect,False,0.0,unchanged_failure
+446,bilateral_thin_conditional,0.4228299300093802,found but incorrect,False,0.4228299300093802,found but incorrect,False,0.0,unchanged_failure
+294,bilateral_thin_conditional,0.6735027922202965,both tolerable,True,0.6735027922202965,both tolerable,True,0.0,unchanged_success
+675,bilateral_thin_conditional,0.7627087060226595,both tolerable,True,0.7627087060226595,both tolerable,True,0.0,unchanged_success
+789,bilateral_thin_conditional,0.6945419139125163,both tolerable,True,0.6945419139125163,both tolerable,True,0.0,unchanged_success
+814,bilateral_thin_conditional,0.7302007596310364,both tolerable,True,0.7302007596310364,both tolerable,True,0.0,unchanged_success
+926,bilateral_thin_conditional,0.6666666666666666,both tolerable,True,0.6666666666666666,both tolerable,True,0.0,unchanged_success
+663,bilateral_thin_conditional,0.6439198624986572,both tolerable,True,0.6439198624986572,both tolerable,True,0.0,unchanged_success
+599,bilateral_thin_conditional,0.7239500697723319,both tolerable,True,0.7239500697723319,both tolerable,True,0.0,unchanged_success
+914,bilateral_thin_conditional,0.5700499921615078,both tolerable,True,0.5700499921615078,both tolerable,True,0.0,unchanged_success
+674,bilateral_thin_conditional,0.7014719037163536,both tolerable,True,0.7014719037163536,both tolerable,True,0.0,unchanged_success
+783,bilateral_thin_conditional,0.651356919579426,both tolerable,True,0.651356919579426,both tolerable,True,0.0,unchanged_success
+992,bilateral_thin_conditional,0.7417176619539987,both tolerable,True,0.7417176619539987,both tolerable,True,0.0,unchanged_success
+515,bilateral_thin_conditional,0.7472020504058094,both tolerable,True,0.7472020504058094,both tolerable,True,0.0,unchanged_success
+523,bilateral_thin_conditional,0.7204214599578074,both correct,True,0.7204214599578074,both correct,True,0.0,unchanged_success
+547,bilateral_thin_conditional,0.6457752092467118,both tolerable,True,0.6457752092467118,both tolerable,True,0.0,unchanged_success
+162,bilateral_thin_conditional,0.3277493121250717,both tolerable,True,0.3277493121250717,both tolerable,True,0.0,unchanged_success
+101,bilateral_thin_conditional,0.512889398099678,found but incorrect,False,0.512889398099678,found but incorrect,False,0.0,unchanged_failure
+396,bilateral_thin_conditional,0.3300254512340346,both tolerable,True,0.3300254512340346,both tolerable,True,0.0,unchanged_success
+835,bilateral_thin_conditional,0.0482830385015608,found but incorrect,False,0.0482830385015608,found but incorrect,False,0.0,unchanged_failure
+974,bilateral_thin_conditional,0.7037907811051058,both tolerable,True,0.7037907811051058,both tolerable,True,0.0,unchanged_success
+660,bilateral_thin_conditional,0.4918904225437192,found but incorrect,False,0.7641085041618404,both tolerable,True,0.2722180816181212,improved
+853,bilateral_thin_conditional,0.2690598060344827,found but incorrect,False,0.2522669066242126,found but incorrect,False,-0.016792899410270123,unchanged_failure
+401,bilateral_thin_conditional,0.4763355201499531,both tolerable,True,0.6568320715872064,both tolerable,True,0.18049655143725324,unchanged_success
+490,bilateral_thin_conditional,0.3125207752884365,both tolerable,True,0.3125207752884365,both tolerable,True,0.0,unchanged_success
+145,bilateral_thin_conditional,0.3983132685250756,both tolerable,True,0.3983132685250756,both tolerable,True,0.0,unchanged_success
+522,bilateral_thin_conditional,0.6949575247447588,both tolerable,True,0.6949981489059059,both correct,True,4.062416114714029e-05,unchanged_success
+496,bilateral_thin_conditional,0.4484225075087047,found but incorrect,False,0.4484225075087047,found but incorrect,False,0.0,unchanged_failure
+824,bilateral_thin_conditional,0.6942574066948827,both correct,True,0.6942574066948827,both correct,True,0.0,unchanged_success
+382,bilateral_thin_conditional,0.6382060199064636,both tolerable,True,0.6382060199064636,both tolerable,True,0.0,unchanged_success
+716,bilateral_thin_conditional,0.6787156378202022,both tolerable,True,0.6787156378202022,both tolerable,True,0.0,unchanged_success
+276,bilateral_thin_conditional,0.5918266321984489,both tolerable,True,0.5918266321984489,both tolerable,True,0.0,unchanged_success
+439,bilateral_thin_conditional,0.6154706695956391,both tolerable,True,0.6154706695956391,both tolerable,True,0.0,unchanged_success
+407,bilateral_thin_conditional,0.6186220812914385,found but incorrect,False,0.6186220812914385,found but incorrect,False,0.0,unchanged_failure
+746,bilateral_thin_conditional,0.7617989841100596,both tolerable,True,0.7617989841100596,both tolerable,True,0.0,unchanged_success
+711,bilateral_thin_conditional,0.7240435600661383,both correct,True,0.7240435600661383,both correct,True,0.0,unchanged_success
+140,bilateral_thin_conditional,0.7463133565545753,both tolerable,True,0.7463133565545753,both tolerable,True,0.0,unchanged_success
+456,bilateral_thin_conditional,0.5567426643492486,both tolerable,True,0.5567426643492486,both tolerable,True,0.0,unchanged_success
+80,bilateral_thin_conditional,0.6444020527150112,both tolerable,True,0.6444020527150112,both tolerable,True,0.0,unchanged_success
+860,bilateral_thin_conditional,0.69141554159353,both tolerable,True,0.69141554159353,both tolerable,True,0.0,unchanged_success
+831,bilateral_thin_conditional,0.2685476469467742,both tolerable,True,0.2685476469467742,both tolerable,True,0.0,unchanged_success
+449,bilateral_thin_conditional,0.7689433853817416,both tolerable,True,0.7689433853817416,both tolerable,True,0.0,unchanged_success
+767,bilateral_thin_conditional,0.0108690330477356,found but incorrect,False,0.0285021398002853,found but incorrect,False,0.0176331067525497,unchanged_failure
+190,bilateral_thin_conditional,0.638578880031493,both tolerable,True,0.6385600267682284,both tolerable,True,-1.885326326456216e-05,unchanged_success
+961,bilateral_thin_conditional,0.6898786427804838,both tolerable,True,0.6898786427804838,both tolerable,True,0.0,unchanged_success
+89,bilateral_thin_conditional,0.7262804366078925,both tolerable,True,0.7262804366078925,both tolerable,True,0.0,unchanged_success
+707,bilateral_thin_conditional,0.6619224686925674,both tolerable,True,0.6619224686925674,both tolerable,True,0.0,unchanged_success
+727,bilateral_thin_conditional,0.6558212611186025,both tolerable,True,0.6558212611186025,both tolerable,True,0.0,unchanged_success
+959,bilateral_thin_conditional,0.6779646249019778,both tolerable,True,0.6779646249019778,both tolerable,True,0.0,unchanged_success
+618,bilateral_thin_conditional,0.672709094783079,both tolerable,True,0.672709094783079,both tolerable,True,0.0,unchanged_success
