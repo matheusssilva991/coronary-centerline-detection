@@ -4,17 +4,27 @@ Esta pasta guarda resultados derivados de experimentos, notebooks e figuras de
 apoio. Ela e diferente de `output/segmentation/runs/`, que guarda execucoes
 oficiais do pipeline.
 
+O catálogo dos notebooks que produzem estas análises está em
+[`src/eda/README.md`](../../../src/eda/README.md).
+
 ## Organizacao atual
 
 - `threshold_pipeline_comparison/`: analise do notebook
-  `src/eda/threshold_pipeline_comparison_analysis.ipynb`.
+  [`threshold_pipeline_comparison_analysis.ipynb`](../../../src/eda/threshold_pipeline_comparison_analysis.ipynb).
   - `tables/`: CSVs finais para leitura rapida.
   - `figures/`: graficos em PNG.
   - `qualitative_3d/`: exemplos HTML 3D e casos qualitativos selecionados.
 - `EXPERIMENTS_ARCHIVE.md`: decisões e métricas resumidas dos sweeps encerrados.
 - `aorta_mask_ostia_comparison/aorta_ostia_bilateral_final_val90/`: confirmação
   final da nova opção bilateral em 90 imagens independentes de validação.
+- `artery_vesselness_fc_sweep/`: runs de seleção do mapa de vesselness arterial,
+  refinamento de RG/FC e ablação do pós-processamento morfológico. Cada run
+  mantém seus parâmetros e tabelas na subpasta `results/`. O estágio mais novo
+  também compara dilatação condicionada por vesselness e recuperação local de
+  ramos subsegmentados.
 - `fuzzy_membership_functions/`: figuras das funcoes de pertinencia fuzzy.
+- `image_slices/`: fatias de CCTA exportadas para publicação.
+- `segmentation_results/`: figuras e tabelas da análise canônica de Dice.
 - `visual_examples/`: exemplos visuais avulsos.
 
 ## Arquivos principais

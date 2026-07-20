@@ -15,6 +15,7 @@ _SYMBOL_TO_MODULE = {
     "plot_image_dice_scatter_interactive": "comparison",
     "plot_ia_vs_math_scatter_interactive": "comparison",
     "plot_dice_distribution_by_subset": "comparison",
+    "plot_dice_distribution_for_publication": "comparison",
     # segmentation_eda
     "build_dice_summary_by_subset": "segmentation_eda",
     "plot_distance_distribution_by_subset": "segmentation_eda",

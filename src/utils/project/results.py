@@ -15,7 +15,12 @@ import pandas as pd
 RESULT_COLUMNS = [
     "IMG_ID",
     "dice_artery",
+    "dice_artery_before_morphology",
+    "dice_artery_after_morphology",
+    "dice_artery_morphology_delta",
     "artery_voxels",
+    "artery_voxels_before_morphology",
+    "artery_voxels_after_morphology",
     "artery_segmentation_method",
     "fc_processed_voxels",
     "fc_effective_alpha",
@@ -73,7 +78,12 @@ BATCH_TIMING_COLUMNS = [
 
 READABLE_COLUMN_NAMES = {
     "dice_artery": "artery_dice",
+    "dice_artery_before_morphology": "artery_dice_before_morphology",
+    "dice_artery_after_morphology": "artery_dice_after_morphology",
+    "dice_artery_morphology_delta": "artery_dice_morphology_delta",
     "artery_voxels": "artery_voxel_count",
+    "artery_voxels_before_morphology": "artery_voxel_count_before_morphology",
+    "artery_voxels_after_morphology": "artery_voxel_count_after_morphology",
     "artery_segmentation_method": "artery_segmentation_method",
     "fc_processed_voxels": "fc_processed_voxels",
     "fc_effective_alpha": "fc_effective_alpha",
@@ -144,6 +154,9 @@ OSTIA_STATUS_READABLE_LABELS = {
     "both_correct": "both correct",
     "both_tolerable": "both tolerable",
     "found_but_wrong": "found but incorrect",
+}
+OSTIA_STATUS_INTERNAL_LABELS = {
+    readable: internal for internal, readable in OSTIA_STATUS_READABLE_LABELS.items()
 }
 
 STATUS_LABELS = {
@@ -335,6 +348,31 @@ def make_readable_results_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     return readable_df
 
 
+def add_internal_result_aliases(df: pd.DataFrame) -> pd.DataFrame:
+    """Add legacy/internal aliases while preserving readable result columns.
+
+    Result CSVs use descriptive names such as ``artery_dice``. Analysis code
+    written before that schema change still expects names such as
+    ``dice_artery``. Keeping both aliases in memory lets both APIs coexist
+    without changing persisted files.
+    """
+    normalized_df = df.copy()
+    for readable_column, internal_column in CANONICAL_COLUMN_NAMES.items():
+        if (
+            internal_column not in normalized_df.columns
+            and readable_column in normalized_df.columns
+        ):
+            alias = normalized_df[readable_column]
+            if readable_column in READABLE_BOOL_COLUMNS:
+                alias = alias.map(_as_bool_value)
+            elif internal_column == "ostia_status":
+                alias = alias.map(
+                    lambda value: OSTIA_STATUS_INTERNAL_LABELS.get(value, value)
+                )
+            normalized_df[internal_column] = alias
+    return normalized_df
+
+
 def _series_from_aliases(df: pd.DataFrame, column: str, dtype=None) -> pd.Series:
     column_candidates = (column, _readable_column_name(column))
     for column_candidate in column_candidates:
@@ -371,7 +409,22 @@ def build_result_row(result: dict[str, Any]) -> dict[str, Any]:
     row = {
         "IMG_ID": result.get("IMG_ID"),
         "dice_artery": _get_result_value(result, "dice_artery"),
+        "dice_artery_before_morphology": _get_result_value(
+            result, "dice_artery_before_morphology"
+        ),
+        "dice_artery_after_morphology": _get_result_value(
+            result, "dice_artery_after_morphology"
+        ),
+        "dice_artery_morphology_delta": _get_result_value(
+            result, "dice_artery_morphology_delta"
+        ),
         "artery_voxels": _get_result_value(result, "artery_voxels"),
+        "artery_voxels_before_morphology": _get_result_value(
+            result, "artery_voxels_before_morphology"
+        ),
+        "artery_voxels_after_morphology": _get_result_value(
+            result, "artery_voxels_after_morphology"
+        ),
         "artery_segmentation_method": _get_result_value(
             result, "artery_segmentation_method", "region_growing"
         ),
@@ -520,6 +573,16 @@ def summarize_results_df(df: pd.DataFrame) -> dict[str, Any]:
     dice_series = pd.to_numeric(
         _series_from_aliases(df, "dice_artery", dtype=float), errors="coerce"
     )
+    dice_before_series = pd.to_numeric(
+        _series_from_aliases(
+            df, "dice_artery_before_morphology", dtype=float
+        ),
+        errors="coerce",
+    )
+    dice_delta_series = pd.to_numeric(
+        _series_from_aliases(df, "dice_artery_morphology_delta", dtype=float),
+        errors="coerce",
+    )
 
     total_success_series = both_correct_series | both_tolerable_series
     summary = {
@@ -553,6 +616,17 @@ def summarize_results_df(df: pd.DataFrame) -> dict[str, Any]:
                 "dice_artery_mean": float(dice_series.mean()),
                 "dice_artery_std": float(dice_series.std()),
                 "dice_artery_median": float(dice_series.median()),
+                "dice_artery_before_morphology_mean": (
+                    float(dice_before_series.mean())
+                    if dice_before_series.notna().any()
+                    else None
+                ),
+                "dice_artery_after_morphology_mean": float(dice_series.mean()),
+                "dice_artery_morphology_delta_mean": (
+                    float(dice_delta_series.mean())
+                    if dice_delta_series.notna().any()
+                    else None
+                ),
             }
         )
     else:
@@ -561,6 +635,9 @@ def summarize_results_df(df: pd.DataFrame) -> dict[str, Any]:
                 "dice_artery_mean": None,
                 "dice_artery_std": None,
                 "dice_artery_median": None,
+                "dice_artery_before_morphology_mean": None,
+                "dice_artery_after_morphology_mean": None,
+                "dice_artery_morphology_delta_mean": None,
             }
         )
     return summary

@@ -81,6 +81,7 @@ _LAZY_EXPORTS = {
     "get_or_compute_vesselness": ".segmentation.pipeline_preprocessing",
     "load_and_preprocess_image": ".segmentation.pipeline_preprocessing",
     "segment_arteries_from_ostia": ".segmentation.pipeline_arteries",
+    "get_artery_postprocessing_stages": ".segmentation.pipeline_arteries",
     # Comparison helpers
     "build_comparison_agg_df": ".comparison_utils.ia_math",
     "filter_to_common_ia_math_ids": ".comparison_utils.ia_math",

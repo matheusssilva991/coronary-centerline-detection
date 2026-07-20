@@ -2,6 +2,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from ..project.results import add_internal_result_aliases
 from ..utils import load_json_file
 
 
@@ -32,4 +33,4 @@ def load_split_summary(split_paths_by_resolution, resolution, subset_name):
     # Monta o caminho do summary desse subset.
     summary_path = Path(split_paths[subset_name]) / f"ostios_{subset_name}_summary.csv"
     # Retorna o DataFrame base usado nas analises.
-    return pd.read_csv(summary_path)
+    return add_internal_result_aliases(pd.read_csv(summary_path))

@@ -1,8 +1,10 @@
+from pathlib import Path
+from typing import Any, Optional
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from typing import Optional
 
 try:
     import plotly.graph_objects as go
@@ -12,6 +14,61 @@ except Exception:
     px = None
 
 from ..comparison_utils.ia_math import prettify_method_label
+
+
+def plot_dice_distribution_for_publication(
+    dice_values: pd.Series,
+    *,
+    output_path: str | Path | None = None,
+    dpi: int = 300,
+    color: str = "skyblue",
+    bins: int = 20,
+) -> tuple[Any, dict[str, float | int]]:
+    """Plota Dice, média e faixa de um desvio padrão para publicação."""
+    values = pd.to_numeric(dice_values, errors="coerce").dropna()
+    if values.empty:
+        raise ValueError("dice_values não contém valores numéricos válidos.")
+
+    mean = float(values.mean())
+    std = float(values.std())
+    fig, ax = plt.subplots(figsize=(7.2, 5.0), dpi=dpi)
+    sns.histplot(
+        values,
+        bins=bins,
+        kde=True,
+        color=color,
+        edgecolor="black",
+        ax=ax,
+    )
+    ax.axvline(mean, color="red", linewidth=2, label=f"Média = {mean:.3f}")
+    ax.axvline(
+        mean - std,
+        color="orange",
+        linestyle="--",
+        linewidth=2,
+        label=f"-1σ = {mean - std:.3f}",
+    )
+    ax.axvline(
+        mean + std,
+        color="orange",
+        linestyle="--",
+        linewidth=2,
+        label=f"+1σ = {mean + std:.3f}",
+    )
+    ax.axvspan(mean - std, mean + std, color="orange", alpha=0.15)
+    ax.set_xlabel("Dice Score", fontsize=16)
+    ax.set_ylabel("Frequência", fontsize=16)
+    ax.tick_params(axis="both", labelsize=13)
+    ax.grid(axis="y", alpha=0.3)
+    ax.legend(fontsize=12)
+    fig.tight_layout()
+
+    if output_path is not None:
+        destination = Path(output_path)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        fig.savefig(destination, dpi=dpi, bbox_inches="tight")
+
+    return fig, {"count": int(values.size), "mean": mean, "std": std}
 
 
 def plot_comparison_bar_by_resolution(

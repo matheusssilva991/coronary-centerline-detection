@@ -232,7 +232,12 @@ def run_image(
         "threshold_mode": experiment.get("threshold_mode", "normal"),
         "artery_method": experiment.get("artery_method", "region_growing"),
         "dice_artery": np.nan,
+        "dice_artery_before_morphology": np.nan,
+        "dice_artery_after_morphology": np.nan,
+        "dice_artery_morphology_delta": np.nan,
         "artery_voxels": 0,
+        "artery_voxels_before_morphology": 0,
+        "artery_voxels_after_morphology": 0,
         "ostia_success": False,
         "ostia_found": False,
         "ostia_status": "not_evaluated",
@@ -351,6 +356,7 @@ def run_image(
                 max_processed_voxels=experiment.get("max_processed_voxels", 500_000),
             )
             artery_mask = fc_result["artery_mask"]
+            raw_mask = fc_result["raw_mask"]
             row["fc_processed_voxels"] = fc_result["details"].get("processed_voxels")
             row["fc_effective_alpha"] = fc_result["details"].get("effective_alpha")
         else:
@@ -362,8 +368,19 @@ def run_image(
             )
             artery_mask = postprocess_artery_mask(raw_mask, config)
 
-        row["artery_voxels"] = int(np.sum(artery_mask))
-        row["dice_artery"] = float(dice_score(artery_mask, label_artery))
+        dice_before = float(dice_score(raw_mask, label_artery))
+        dice_after = float(dice_score(artery_mask, label_artery))
+        row.update(
+            {
+                "artery_voxels": int(np.sum(artery_mask)),
+                "artery_voxels_before_morphology": int(np.sum(raw_mask)),
+                "artery_voxels_after_morphology": int(np.sum(artery_mask)),
+                "dice_artery": dice_after,
+                "dice_artery_before_morphology": dice_before,
+                "dice_artery_after_morphology": dice_after,
+                "dice_artery_morphology_delta": dice_after - dice_before,
+            }
+        )
     except Exception as exc:
         row["error"] = f"{type(exc).__name__}: {exc}"
         if row["ostia_status"] == "not_evaluated":
@@ -382,6 +399,12 @@ def summarize_variant(
         return {"variant": variant_name, "images": 0}
 
     dice = pd.to_numeric(df["dice_artery"], errors="coerce")
+    dice_before = pd.to_numeric(
+        df["dice_artery_before_morphology"], errors="coerce"
+    )
+    morphology_delta = pd.to_numeric(
+        df["dice_artery_morphology_delta"], errors="coerce"
+    )
     success = df["ostia_success"].fillna(False).astype(bool)
     success_dice = dice[success]
     score_dice = success_dice.mean() if success_dice.notna().any() else dice.mean()
@@ -396,6 +419,17 @@ def summarize_variant(
             df["both_tolerable"].fillna(False).astype(bool).mean()
         ),
         "mean_dice": float(dice.mean()) if dice.notna().any() else None,
+        "mean_dice_before_morphology": (
+            float(dice_before.mean()) if dice_before.notna().any() else None
+        ),
+        "mean_dice_after_morphology": (
+            float(dice.mean()) if dice.notna().any() else None
+        ),
+        "mean_dice_morphology_delta": (
+            float(morphology_delta.mean())
+            if morphology_delta.notna().any()
+            else None
+        ),
         "median_dice": float(dice.median()) if dice.notna().any() else None,
         "mean_dice_success_ostia": (
             float(success_dice.mean()) if success_dice.notna().any() else None

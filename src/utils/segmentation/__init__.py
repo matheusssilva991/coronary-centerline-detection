@@ -47,7 +47,9 @@ _SYMBOL_TO_MODULE = {
     "load_and_preprocess_image": "pipeline_preprocessing",
     "normalize_lower_threshold_method": "lower_threshold",
     "normal_region_growing_from_ostia": "artery_segmentation",
+    "get_artery_postprocessing_stages": "pipeline_arteries",
     "postprocess_artery_mask": "pipeline_arteries",
+    "postprocess_artery_mask_conditioned": "pipeline_arteries",
     "resolve_lower_threshold": "lower_threshold",
     "segment_arteries_from_ostia": "pipeline_arteries",
 }

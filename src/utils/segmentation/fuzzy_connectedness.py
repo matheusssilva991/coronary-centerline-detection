@@ -422,6 +422,7 @@ def segment_artery_fuzzy_connectedness(
     params: dict[str, Any],
     max_candidate_voxels: int | None = 500_000,
     max_processed_voxels: int | None = 500_000,
+    apply_postprocessing: bool = True,
 ) -> dict[str, Any]:
     """Segmenta artérias com parâmetros externos de fuzzy connectedness.
 
@@ -443,6 +444,9 @@ def segment_artery_fuzzy_connectedness(
             `pipeline_config.json`.
         max_candidate_voxels: Limite máximo da região candidata.
         max_processed_voxels: Limite máximo de voxels processados pela FC.
+        apply_postprocessing: Quando verdadeiro, aplica a morfologia arterial
+            configurada. Experimentos podem desabilitá-la para reutilizar a
+            mesma máscara bruta em diferentes pós-processamentos.
 
     Returns:
         Dicionário com máscara bruta, máscara pós-processada, mapa de
@@ -463,48 +467,105 @@ def segment_artery_fuzzy_connectedness(
         min_candidate_vesselness=candidate_min,
     )
 
-    # Refina as sementes ao redor dos óstios detectados.
-    object_seeds, seed_details = collect_local_object_seeds(
-        ostia_seeds,
-        vesselness_norm,
-        candidate_mask,
-        search_radius=int(params.get("seed_search_radius", 2)),
-        max_seeds_per_ostium=int(params.get("max_seeds_per_ostium", 4)),
-        min_seed_vesselness=float(params.get("seed_min_vesselness", 0.02)),
-        min_seed_distance_voxels=float(params.get("min_seed_distance_voxels", 1.0)),
-    )
+    seed_groups = list(ostia_seeds)
+    grow_separately = bool(params.get("grow_each_ostium_separately", False))
+    search_radius = int(params.get("seed_search_radius", 2))
+    max_seeds = int(params.get("max_seeds_per_ostium", 4))
+    min_seed_vesselness = float(params.get("seed_min_vesselness", 0.02))
+    min_seed_distance = float(params.get("min_seed_distance_voxels", 1.0))
 
-    # Propaga conectividade fuzzy e gera a máscara bruta.
-    fc_result = fuzzy_connectedness_segmentation(
-        image,
-        vesselness_artery,
-        object_seeds,
-        alpha=float(params["alpha"]),
-        sigma_hu=float(params["sigma_hu"]),
-        neighborhood=int(params["neighborhood"]),
-        candidate_mask=candidate_mask,
-        max_processed_voxels=max_processed_voxels,
-        vesselness_floor=float(params.get("vesselness_floor", 0.02)),
-        vesselness_weight=float(params.get("vesselness_weight", 0.90)),
-    )
-    raw_mask = fc_result["mask"].astype(np.uint8)
+    def run_connectivity(local_seeds: list[tuple[int, int, int]]) -> dict[str, Any]:
+        return fuzzy_connectedness_segmentation(
+            image,
+            vesselness_artery,
+            local_seeds,
+            alpha=float(params["alpha"]),
+            sigma_hu=float(params["sigma_hu"]),
+            neighborhood=int(params["neighborhood"]),
+            candidate_mask=candidate_mask,
+            max_processed_voxels=max_processed_voxels,
+            vesselness_floor=float(params.get("vesselness_floor", 0.02)),
+            vesselness_weight=float(params.get("vesselness_weight", 0.90)),
+        )
 
-    # Aplica o mesmo pós-processamento morfológico da segmentação arterial.
-    artery_mask = postprocess_artery_mask(
-        raw_mask,
-        config,
+    if grow_separately:
+        # Propaga cada ramo a partir do seu próprio óstio e une os resultados.
+        connectivity = np.zeros(np.asarray(image).shape, dtype=np.float32)
+        raw_mask = np.zeros(np.asarray(image).shape, dtype=np.uint8)
+        processed_voxels = 0
+        object_seed_counts: list[int] = []
+        object_seed_count = 0
+
+        for ostium_seed in seed_groups:
+            local_seeds, local_seed_details = collect_local_object_seeds(
+                [ostium_seed],
+                vesselness_norm,
+                candidate_mask,
+                search_radius=search_radius,
+                max_seeds_per_ostium=max_seeds,
+                min_seed_vesselness=min_seed_vesselness,
+                min_seed_distance_voxels=min_seed_distance,
+            )
+            local_count = int(local_seed_details["object_seed_count"])
+            object_seed_counts.append(local_count)
+            object_seed_count += local_count
+            if not local_seeds:
+                continue
+
+            local_result = run_connectivity(local_seeds)
+            connectivity = np.maximum(connectivity, local_result["connectivity"])
+            raw_mask |= local_result["mask"].astype(np.uint8)
+            processed_voxels += int(local_result["details"]["processed_voxels"])
+
+        fc_details = {
+            "valid_seed_count": object_seed_count,
+            "processed_voxels": processed_voxels,
+            "max_connectivity": float(connectivity.max()),
+            "alpha": float(params["alpha"]),
+            "sigma_hu": float(params["sigma_hu"]),
+            "neighborhood": int(params["neighborhood"]),
+            "vesselness_floor": float(params.get("vesselness_floor", 0.02)),
+            "vesselness_weight": float(params.get("vesselness_weight", 0.90)),
+            "effective_alpha": float(params["alpha"]),
+        }
+        seed_details = {
+            "object_seed_count": object_seed_count,
+            "object_seed_counts_per_ostium": object_seed_counts,
+        }
+    else:
+        # Caminho validado: todas as sementes participam da mesma propagação.
+        object_seeds, seed_details = collect_local_object_seeds(
+            seed_groups,
+            vesselness_norm,
+            candidate_mask,
+            search_radius=search_radius,
+            max_seeds_per_ostium=max_seeds,
+            min_seed_vesselness=min_seed_vesselness,
+            min_seed_distance_voxels=min_seed_distance,
+        )
+        fc_result = run_connectivity(object_seeds)
+        connectivity = fc_result["connectivity"]
+        raw_mask = fc_result["mask"].astype(np.uint8)
+        fc_details = fc_result["details"]
+
+    # O pipeline usa a morfologia padrão; sweeps podem avaliar essa etapa fora.
+    artery_mask = (
+        postprocess_artery_mask(raw_mask, config)
+        if apply_postprocessing
+        else raw_mask.copy()
     )
     details = {
-        **fc_result["details"],
+        **fc_details,
         **candidate_details,
         **seed_details,
+        "grow_each_ostium_separately": grow_separately,
         "raw_artery_voxels": int(raw_mask.sum()),
         "artery_voxels": int(artery_mask.sum()),
     }
     return {
         "raw_mask": raw_mask,
         "artery_mask": artery_mask,
-        "connectivity": fc_result["connectivity"],
+        "connectivity": connectivity,
         "details": details,
     }
 

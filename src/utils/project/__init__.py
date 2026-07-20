@@ -26,6 +26,7 @@ from .notebook_env import (
     resolve_processed_imagecas_path,
 )
 from .results import (
+    add_internal_result_aliases,
     create_timestamped_output_dir,
     duration_breakdown,
     get_batch_result_file,
@@ -42,6 +43,7 @@ from .results import (
 )
 
 __all__ = [
+    "add_internal_result_aliases",
     "configure_notebook_environment",
     "create_timestamped_output_dir",
     "deep_update_dict",

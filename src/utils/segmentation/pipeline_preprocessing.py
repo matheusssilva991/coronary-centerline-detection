@@ -73,9 +73,22 @@ def _vesselness_cache_signature(
 
 
 def load_and_preprocess_image(
-    img_id: str, base_path: str, config: Dict[str, Any]
+    img_id: str,
+    base_path: str,
+    config: Dict[str, Any],
+    *,
+    include_intermediates: bool = False,
 ) -> Dict[str, Any]:
-    """Carrega imagem/label, reduz resolução e monta a maior componente conectada."""
+    """Carrega imagem/label, reduz resolução e monta a maior componente conectada.
+
+    Args:
+        img_id: Identificador do exame ImageCAS.
+        base_path: Diretório que contém os volumes e labels.
+        config: Configuração efetiva e já escalada para a resolução escolhida.
+        include_intermediates: Inclui imagem original, downsample, máscara de
+            threshold e máscara LCC no retorno. Deve permanecer falso no
+            pipeline em lote para não reter volumes extras em memória.
+    """
     # Carrega o volume CCTA e a máscara de referência do ImageCAS.
     nii_img, nii_label = load_raw_img_and_label(
         f"{base_path}/{img_id}.img.nii.gz", f"{base_path}/{img_id}.label.nii.gz"
@@ -200,7 +213,7 @@ def load_and_preprocess_image(
         spacing[2] * downscale_factors[2],
     )
 
-    return {
+    result = {
         "lcc_image": lcc_image,
         "label": label,
         "preprocessing_details": preprocessing_details,
@@ -208,6 +221,20 @@ def load_and_preprocess_image(
         "scaled_spacing": (dx, dy, dz),
         "downscale_factors": downscale_factors,
     }
+    if include_intermediates:
+        result.update(
+            {
+                "image": img,
+                "down_image": down_image,
+                "threshold_mask": (
+                    thresh_mask.astype(bool)
+                    if threshold_mode == "normal"
+                    else fuzzy_mask.astype(bool)
+                ),
+                "lcc_mask": lcc_mask.astype(bool),
+            }
+        )
+    return result
 
 
 def get_or_compute_vesselness(

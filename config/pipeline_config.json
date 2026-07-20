@@ -164,7 +164,8 @@
         "seed_min_vesselness": 0.018,
         "min_seed_distance_voxels": 1.0,
         "vesselness_floor": 0.018,
-        "vesselness_weight": 0.9
+        "vesselness_weight": 0.9,
+        "grow_each_ostium_separately": false
     },
     "POSTPROCESSING": {
         "closing_radius": 3,

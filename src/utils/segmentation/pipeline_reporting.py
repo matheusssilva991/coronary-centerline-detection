@@ -69,6 +69,16 @@ def print_split_summary(
     dice_series = pd.to_numeric(
         _series_from_aliases(df, "dice_artery", dtype=float), errors="coerce"
     )
+    dice_before_series = pd.to_numeric(
+        _series_from_aliases(
+            df, "dice_artery_before_morphology", dtype=float
+        ),
+        errors="coerce",
+    )
+    dice_delta_series = pd.to_numeric(
+        _series_from_aliases(df, "dice_artery_morphology_delta", dtype=float),
+        errors="coerce",
+    )
     tolerance_mm = config["OSTIA_VALIDATION"]["distance_threshold_mm"]
 
     print(f"\n📊 Estatísticas do conjunto {split_name}:")
@@ -94,7 +104,22 @@ def print_split_summary(
         f"   - Total sucesso (<= {tolerance_mm}mm): {(both_correct_series | both_tolerable_series).sum():3d} ({(both_correct_series | both_tolerable_series).mean() * 100:5.1f}%)"
     )
     if dice_series.notna().any():
-        print(f"   - Dice médio:       {dice_series.mean():.4f}")
+        if dice_before_series.notna().any():
+            print(
+                "   - Dice médio antes da morfologia: "
+                f"{dice_before_series.mean():.4f}"
+            )
+            print(
+                "   - Dice médio após a morfologia:   "
+                f"{dice_series.mean():.4f}"
+            )
+            if dice_delta_series.notna().any():
+                print(
+                    "   - Ganho médio da morfologia:      "
+                    f"{dice_delta_series.mean():+.4f}"
+                )
+        else:
+            print(f"   - Dice médio:       {dice_series.mean():.4f}")
     if execution_time:
         print(f"   - Tempo total conhecido: {_format_duration(execution_time)}")
     if current_run_execution_time and current_run_execution_time != execution_time:

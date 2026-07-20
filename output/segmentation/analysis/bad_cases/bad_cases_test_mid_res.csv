@@ -1,0 +1,162 @@
+image_id,bad_case_status,subset,resolution
+943,no ostium correct,test,mid_res
+784,no ostium correct,test,mid_res
+593,no ostium correct,test,mid_res
+19,one ostium correct,test,mid_res
+951,no ostium correct,test,mid_res
+548,no ostium correct,test,mid_res
+976,one ostium correct,test,mid_res
+348,no ostium correct,test,mid_res
+494,one ostium correct,test,mid_res
+837,one ostium correct,test,mid_res
+147,one ostium correct,test,mid_res
+287,one ostium correct,test,mid_res
+642,low_dice,test,mid_res
+695,no ostium correct,test,mid_res
+195,no ostium correct,test,mid_res
+766,low_dice,test,mid_res
+361,no ostium correct,test,mid_res
+359,no ostium correct,test,mid_res
+133,no ostium correct,test,mid_res
+629,no ostium correct,test,mid_res
+375,low_dice,test,mid_res
+592,no ostium correct,test,mid_res
+777,no ostium correct,test,mid_res
+807,one ostium correct,test,mid_res
+924,no ostium correct,test,mid_res
+574,no ostium correct,test,mid_res
+740,no ostium correct,test,mid_res
+601,no ostium correct,test,mid_res
+995,no ostium correct,test,mid_res
+163,low_dice,test,mid_res
+320,one ostium correct,test,mid_res
+902,no ostium correct,test,mid_res
+240,low_dice,test,mid_res
+634,low_dice,test,mid_res
+683,no ostium correct,test,mid_res
+327,one ostium correct,test,mid_res
+331,no ostium correct,test,mid_res
+701,no ostium correct,test,mid_res
+86,ostia not found,test,mid_res
+221,no ostium correct,test,mid_res
+418,no ostium correct,test,mid_res
+278,no ostium correct,test,mid_res
+398,no ostium correct,test,mid_res
+650,no ostium correct,test,mid_res
+169,low_dice,test,mid_res
+724,no ostium correct,test,mid_res
+635,no ostium correct,test,mid_res
+247,one ostium correct,test,mid_res
+925,no ostium correct,test,mid_res
+157,one ostium correct,test,mid_res
+931,one ostium correct,test,mid_res
+915,one ostium correct,test,mid_res
+736,no ostium correct,test,mid_res
+905,no ostium correct,test,mid_res
+306,no ostium correct,test,mid_res
+818,low_dice,test,mid_res
+174,no ostium correct,test,mid_res
+880,low_dice,test,mid_res
+171,low_dice,test,mid_res
+816,one ostium correct,test,mid_res
+815,no ostium correct,test,mid_res
+55,no ostium correct,test,mid_res
+516,no ostium correct,test,mid_res
+940,one ostium correct,test,mid_res
+479,no ostium correct,test,mid_res
+8,low_dice,test,mid_res
+576,no ostium correct,test,mid_res
+621,low_dice,test,mid_res
+501,no ostium correct,test,mid_res
+303,one ostium correct,test,mid_res
+554,no ostium correct,test,mid_res
+406,no ostium correct,test,mid_res
+739,one ostium correct,test,mid_res
+218,no ostium correct,test,mid_res
+383,no ostium correct,test,mid_res
+904,no ostium correct,test,mid_res
+216,low_dice,test,mid_res
+503,no ostium correct,test,mid_res
+246,no ostium correct,test,mid_res
+448,no ostium correct,test,mid_res
+103,no ostium correct,test,mid_res
+918,one ostium correct,test,mid_res
+830,no ostium correct,test,mid_res
+297,no ostium correct,test,mid_res
+990,no ostium correct,test,mid_res
+196,one ostium correct,test,mid_res
+149,no ostium correct,test,mid_res
+463,no ostium correct,test,mid_res
+519,one ostium correct,test,mid_res
+584,no ostium correct,test,mid_res
+577,one ostium correct,test,mid_res
+932,low_dice,test,mid_res
+555,low_dice,test,mid_res
+563,low_dice,test,mid_res
+834,ostia not found,test,mid_res
+738,no ostium correct,test,mid_res
+712,one ostium correct,test,mid_res
+500,low_dice,test,mid_res
+114,no ostium correct,test,mid_res
+343,no ostium correct,test,mid_res
+509,one ostium correct,test,mid_res
+109,no ostium correct,test,mid_res
+622,no ostium correct,test,mid_res
+321,no ostium correct,test,mid_res
+436,no ostium correct,test,mid_res
+165,low_dice,test,mid_res
+964,one ostium correct,test,mid_res
+45,no ostium correct,test,mid_res
+200,no ostium correct,test,mid_res
+571,no ostium correct,test,mid_res
+51,no ostium correct,test,mid_res
+632,low_dice,test,mid_res
+636,no ostium correct,test,mid_res
+189,one ostium correct,test,mid_res
+482,no ostium correct,test,mid_res
+963,low_dice,test,mid_res
+111,no ostium correct,test,mid_res
+419,no ostium correct,test,mid_res
+487,no ostium correct,test,mid_res
+595,low_dice,test,mid_res
+182,no ostium correct,test,mid_res
+268,ostia not found,test,mid_res
+841,one ostium correct,test,mid_res
+630,no ostium correct,test,mid_res
+202,no ostium correct,test,mid_res
+722,no ostium correct,test,mid_res
+34,low_dice,test,mid_res
+412,no ostium correct,test,mid_res
+85,one ostium correct,test,mid_res
+498,one ostium correct,test,mid_res
+387,no ostium correct,test,mid_res
+827,no ostium correct,test,mid_res
+826,no ostium correct,test,mid_res
+582,one ostium correct,test,mid_res
+657,ostia not found,test,mid_res
+132,no ostium correct,test,mid_res
+610,one ostium correct,test,mid_res
+212,no ostium correct,test,mid_res
+74,low_dice,test,mid_res
+75,one ostium correct,test,mid_res
+985,no ostium correct,test,mid_res
+865,low_dice,test,mid_res
+141,one ostium correct,test,mid_res
+973,one ostium correct,test,mid_res
+562,no ostium correct,test,mid_res
+353,no ostium correct,test,mid_res
+968,one ostium correct,test,mid_res
+97,no ostium correct,test,mid_res
+856,no ostium correct,test,mid_res
+62,one ostium correct,test,mid_res
+970,no ostium correct,test,mid_res
+916,no ostium correct,test,mid_res
+199,no ostium correct,test,mid_res
+301,no ostium correct,test,mid_res
+191,one ostium correct,test,mid_res
+800,one ostium correct,test,mid_res
+703,low_dice,test,mid_res
+105,no ostium correct,test,mid_res
+685,low_dice,test,mid_res
+66,no ostium correct,test,mid_res
+900,one ostium correct,test,mid_res

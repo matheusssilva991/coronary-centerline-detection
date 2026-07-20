@@ -96,6 +96,17 @@ execucao.
 
 Guarda os CSVs e metadados numéricos do pipeline.
 
+Os CSVs novos também registram o efeito do pós-processamento arterial:
+
+- `artery_dice_before_morphology`: Dice produzido diretamente pelo RG ou FC;
+- `artery_dice_after_morphology`: Dice após fechamento e dilatação;
+- `artery_dice_morphology_delta`: diferença entre os dois resultados;
+- `artery_voxel_count_before_morphology` e
+  `artery_voxel_count_after_morphology`: tamanho da máscara em cada etapa.
+
+`artery_dice` e `artery_voxel_count` continuam representando o resultado após
+a morfologia para manter compatibilidade com análises anteriores.
+
 ```text
 numeric/
   ostios_<split>_summary.csv
@@ -195,6 +206,7 @@ Estrutura atual:
 analysis/
   EXPERIMENTS_ARCHIVE.md
   aorta_mask_ostia_comparison/
+  artery_vesselness_fc_sweep/
   threshold_pipeline_comparison/
   fuzzy_membership_functions/
   visual_examples/

@@ -74,59 +74,82 @@ def resolve_processed_imagecas_path() -> Path:
     )
 
 
-def _first_existing_path(*candidates: Path) -> Path:
-    """Return the first existing path, or the first candidate as a stable default."""
-    return next((path for path in candidates if path.exists()), candidates[0])
-
-
 def _numeric_result_dir(path: Path) -> Path:
     """Return the numeric subdir for new runs, otherwise keep legacy paths."""
     numeric_dir = path / "numeric"
     return numeric_dir if numeric_dir.exists() else path
 
 
+def _latest_split_result_dir(parent: Path, split: str) -> Path | None:
+    """Find the newest consolidated result below a split/run directory."""
+    summary_name = f"ostios_{split}_summary.csv"
+    candidates = []
+
+    # Supports both ``<split>/numeric`` and ``<split>/<timestamp>/numeric``.
+    for run_dir in (parent, *sorted(parent.glob("*"))):
+        if not run_dir.is_dir():
+            continue
+        numeric_dir = _numeric_result_dir(run_dir)
+        if (numeric_dir / summary_name).is_file():
+            candidates.append(numeric_dir)
+
+    return max(candidates, key=lambda path: str(path)) if candidates else None
+
+
+def _resolve_split_result_dir(
+    repo_root: Path,
+    resolution: str,
+    split: str,
+    legacy_candidates: tuple[Path, ...],
+) -> Path | None:
+    """Resolve one split, preferring canonical, legacy and standard runs."""
+    canonical_parent = (
+        repo_root / "output/segmentation/canonical" / resolution / split
+    )
+    canonical_result = _latest_split_result_dir(canonical_parent, split)
+    if canonical_result is not None:
+        return canonical_result
+
+    summary_name = f"ostios_{split}_summary.csv"
+    for candidate in legacy_candidates:
+        numeric_dir = _numeric_result_dir(candidate)
+        if (numeric_dir / summary_name).is_file():
+            return numeric_dir
+
+    # Only inspect direct timestamped runs, avoiding experiment subdirectories.
+    runs_parent = repo_root / "output/segmentation/runs" / resolution
+    return _latest_split_result_dir(runs_parent, split)
+
+
 def get_default_split_paths(repo_root: Path) -> dict[str, dict[str, Path]]:
-    """Return the current canonical final-result folders used by EDA notebooks."""
+    """Return available consolidated result folders used by EDA notebooks.
+
+    Canonical folders may contain a timestamp level between the split and its
+    ``numeric`` directory. Missing resolution/split combinations are omitted.
+    """
     legacy_dir = repo_root / "output/segmentation/8.final_results"
-    canonical_dir = repo_root / "output/segmentation/canonical"
-
-    mid_train = _first_existing_path(
-        canonical_dir / "mid_res/train/numeric",
-        legacy_dir / "mid_res/2026-04-30_14-33-37",
-    )
-    mid_val = _first_existing_path(
-        canonical_dir / "mid_res/val/numeric",
-        legacy_dir / "mid_res/2026-04-30_13-24-40",
-    )
-    mid_test = _first_existing_path(
-        canonical_dir / "mid_res/test/numeric",
-        legacy_dir / "mid_res/2026-05-02_10-48-13",
-    )
-    high_train = _first_existing_path(
-        canonical_dir / "high_res/train/numeric",
-        legacy_dir / "high_res/2026-04-21_08-42-13",
-    )
-    high_val = _first_existing_path(
-        canonical_dir / "high_res/val/numeric",
-        legacy_dir / "high_res/2026-04-21_08-42-13",
-    )
-    high_test = _first_existing_path(
-        canonical_dir / "high_res/test/numeric",
-        legacy_dir / "high_res/2026-04-28_14-28-44",
-    )
-
-    return {
-        "mid_res": {
-            "train": _numeric_result_dir(mid_train),
-            "val": _numeric_result_dir(mid_val),
-            "test": _numeric_result_dir(mid_test),
-        },
-        "high_res": {
-            "train": _numeric_result_dir(high_train),
-            "val": _numeric_result_dir(high_val),
-            "test": _numeric_result_dir(high_test),
-        },
+    legacy_paths = {
+        ("mid_res", "train"): (legacy_dir / "mid_res/2026-04-30_14-33-37",),
+        ("mid_res", "val"): (legacy_dir / "mid_res/2026-04-30_13-24-40",),
+        ("mid_res", "test"): (legacy_dir / "mid_res/2026-05-02_10-48-13",),
+        ("high_res", "train"): (legacy_dir / "high_res/2026-04-21_08-42-13",),
+        ("high_res", "val"): (legacy_dir / "high_res/2026-04-21_08-42-13",),
+        ("high_res", "test"): (legacy_dir / "high_res/2026-04-28_14-28-44",),
     }
+
+    result: dict[str, dict[str, Path]] = {"mid_res": {}, "high_res": {}}
+    for resolution in result:
+        for split in ("train", "val", "test"):
+            resolved = _resolve_split_result_dir(
+                repo_root,
+                resolution,
+                split,
+                legacy_paths[(resolution, split)],
+            )
+            if resolved is not None:
+                result[resolution][split] = resolved
+
+    return result
 
 
 def get_bad_cases_export_dir(repo_root: Path) -> Path:

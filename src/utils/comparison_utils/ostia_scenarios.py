@@ -2,6 +2,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from ..project.results import add_internal_result_aliases
 from .bad_cases import filter_correct_ostia_cases
 from .ia_math import filter_to_common_ia_math_ids, get_common_ia_math_keys
 
@@ -25,7 +26,7 @@ def load_math_results_for_ostia_scenario(math_paths, scenario):
                 )
                 continue
 
-            df_math = pd.read_csv(summary_path)
+            df_math = add_internal_result_aliases(pd.read_csv(summary_path))
             if scenario == "correct":
                 df_math = filter_correct_ostia_cases(df_math)
             elif scenario == "incorrect":

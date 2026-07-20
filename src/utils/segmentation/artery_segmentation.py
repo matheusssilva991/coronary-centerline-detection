@@ -26,6 +26,22 @@ NEIGHBORS_26 = tuple(
 )
 
 
+def _neighbor_offsets(neighborhood: int) -> tuple[tuple[int, int, int], ...]:
+    """Retorna os deslocamentos da vizinhanca 3D solicitada."""
+    if neighborhood not in {6, 18, 26}:
+        raise ValueError("neighborhood deve ser 6, 18 ou 26")
+
+    offsets = []
+    for offset in NEIGHBORS_26:
+        manhattan = sum(abs(value) for value in offset)
+        if neighborhood == 6 and manhattan != 1:
+            continue
+        if neighborhood == 18 and manhattan > 2:
+            continue
+        offsets.append(offset)
+    return tuple(offsets)
+
+
 def _validate_seed(
     seed_point: Sequence[int] | None,
     volume_shape: Sequence[int],
@@ -123,6 +139,53 @@ def _collect_seed_candidates_by_score(
     return selected
 
 
+def _vesselness_reference(
+    vesselness_map: NDArray[Any],
+    ostia: Iterable[Sequence[int] | None],
+    *,
+    scope: str,
+    radius: int,
+    percentile: float,
+) -> float:
+    """Calcula a referencia global ou local usada pelos limiares do RG."""
+    global_max = float(np.max(vesselness_map))
+    if scope == "global":
+        return global_max
+    if scope != "ostia_local":
+        raise ValueError("reference_scope deve ser 'global' ou 'ostia_local'")
+    if not 0 <= percentile <= 100:
+        raise ValueError("reference_percentile deve estar em [0, 100]")
+
+    local_values = []
+    local_radius = max(int(radius), 0)
+    for ostium in ostia:
+        coord = _validate_seed(ostium, vesselness_map.shape)
+        if coord is None:
+            continue
+        y, x, z = coord
+        local_values.append(
+            vesselness_map[
+                max(0, y - local_radius) : min(
+                    vesselness_map.shape[0], y + local_radius + 1
+                ),
+                max(0, x - local_radius) : min(
+                    vesselness_map.shape[1], x + local_radius + 1
+                ),
+                max(0, z - local_radius) : min(
+                    vesselness_map.shape[2], z + local_radius + 1
+                ),
+            ].ravel()
+        )
+
+    if not local_values:
+        return global_max
+    values = np.concatenate(local_values)
+    positive = values[np.isfinite(values) & (values > 0)]
+    if positive.size == 0:
+        return global_max
+    return float(np.percentile(positive, percentile))
+
+
 def _region_growing_from_seeds(
     vesselness_map: NDArray[Any],
     seeds: Iterable[Sequence[int]],
@@ -134,6 +197,7 @@ def _region_growing_from_seeds(
     switch_at_voxels: int,
     comparison_window: int,
     smooth_relaxation: bool,
+    neighborhood: int = 26,
     verbose: bool = False,
 ) -> NDArray[np.uint8]:
     """Cresce uma região usando uma ou mais sementes iniciais."""
@@ -185,6 +249,7 @@ def _region_growing_from_seeds(
 
     count = running_count
     dims = vesselness_map.shape
+    neighbor_offsets = _neighbor_offsets(int(neighborhood))
     while queue:
         if count >= int(max_volume):
             if verbose:
@@ -209,8 +274,8 @@ def _region_growing_from_seeds(
             bool(smooth_relaxation),
         )
 
-        # Testa a vizinhança 26 para seguir ramos arteriais em 3D.
-        for dy, dx, dz in NEIGHBORS_26:
+        # Testa a vizinhança configurada para seguir ramos arteriais em 3D.
+        for dy, dx, dz in neighbor_offsets:
             ny, nx, nz = cy + dy, cx + dx, cz + dz
             if not (0 <= ny < dims[0] and 0 <= nx < dims[1] and 0 <= nz < dims[2]):
                 continue
@@ -258,12 +323,19 @@ def normal_region_growing_from_ostia(
             f"vesselness_artery deve ser 3D, recebido shape={vesselness_artery.shape}"
         )
 
-    max_vesselness = float(np.max(vesselness_artery))
+    rg_config = config["REGION_GROWING"]
+    ostia = [ostia_left, ostia_right]
+    max_vesselness = _vesselness_reference(
+        vesselness_artery,
+        ostia,
+        scope=str(rg_config.get("reference_scope", "global")),
+        radius=int(rg_config.get("reference_radius", 3)),
+        percentile=float(rg_config.get("reference_percentile", 95.0)),
+    )
     min_vesselness_map = float(np.min(vesselness_artery))
     if max_vesselness <= 0:
         return np.zeros_like(vesselness_artery, dtype=np.uint8)
 
-    rg_config = config["REGION_GROWING"]
     params = {
         "threshold": (max_vesselness - min_vesselness_map)
         / float(rg_config["threshold_divisor"]),
@@ -274,6 +346,7 @@ def normal_region_growing_from_ostia(
         "switch_at_voxels": int(rg_config["switch_at_voxels"]),
         "comparison_window": rg_config["comparison_window"],
         "smooth_relaxation": bool(rg_config["smooth_relaxation"]),
+        "neighborhood": int(rg_config.get("neighborhood", 26)),
         "verbose": bool(rg_config.get("verbose", False)),
     }
 

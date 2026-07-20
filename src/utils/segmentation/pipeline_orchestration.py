@@ -46,7 +46,12 @@ def process_image(img_id, config, base_path, base_save_path):
         "ostia_left": None,
         "ostia_right": None,
         "artery_voxels": None,
+        "artery_voxels_before_morphology": None,
+        "artery_voxels_after_morphology": None,
         "dice_artery": None,
+        "dice_artery_before_morphology": None,
+        "dice_artery_after_morphology": None,
+        "dice_artery_morphology_delta": None,
         "ostia_found": False,
         "ostia_status": "not_evaluated",
         "segmentation_attempted": False,
@@ -246,6 +251,7 @@ def process_image(img_id, config, base_path, base_save_path):
             scaled_spacing=scaled_spacing,
         )
         artery_metrics.pop("artery_mask", None)
+        artery_metrics.pop("raw_artery_mask", None)
         result.update(artery_metrics)
 
     except Exception as exc:

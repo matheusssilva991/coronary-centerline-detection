@@ -543,6 +543,9 @@ combina afinidade geométrica de vesselness com similaridade Gaussiana em HU.
   das sementes ao redor de cada óstio.
 - `max_candidate_voxels` e `max_processed_voxels`: limites de segurança de
   memória/tempo.
+- `grow_each_ostium_separately`: quando `true`, propaga cada ramo a partir do
+  respectivo óstio e une as duas máscaras. Permanece `false` no pipeline base e
+  está disponível para comparação experimental.
 
 As afinidades alternativas, sementes de fundo e corte por percentil foram
 retirados após não melhorarem o resultado.

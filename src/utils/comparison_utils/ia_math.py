@@ -3,6 +3,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from ..project.results import add_internal_result_aliases
+
 
 def map_ia_resolution_to_target(ia_resolution):
     """Map IA resolution bucket to the target mathematical resolution."""
@@ -159,7 +161,7 @@ def load_math_results_for_comparison(math_paths):
                 continue
 
             # Valida colunas mínimas do summary matemático.
-            df_math = pd.read_csv(summary_path, usecols=["IMG_ID", "dice_artery"])
+            df_math = add_internal_result_aliases(pd.read_csv(summary_path))
             if "IMG_ID" not in df_math.columns or "dice_artery" not in df_math.columns:
                 # Schema inválido: não entra no comparativo.
                 missing_math_files.append(

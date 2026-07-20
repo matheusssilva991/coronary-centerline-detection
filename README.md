@@ -34,14 +34,18 @@ coronary-centerline-detection/
 │   ├── segmentation_pipeline.py    # Pipeline principal de processamento
 │   ├── main.ipynb                  # Notebook de execução principal
 │   ├── eda/                        # Notebooks de análise exploratória
-│   │   ├── eda_imgs.ipynb              # Análise exploratória de imagens
-│   │   ├── eda_segmentacao.ipynb       # Análise de segmentações
-│   │   ├── eda_tests.ipynb             # Testes comparativos
-│   │   ├── eda_tests_subsets.ipynb     # Subsets e grupos de casos
-│   │   ├── eda_tests_casos_ruins.ipynb # Análise de casos ruins
-│   │   ├── cases_analysis.ipynb        # Análise de casos
-│   │   └── viz_imgs.ipynb              # Análise visual de imagens
-│   ├── segmentacao_arteria.ipynb   # Notebook de segmentação de artérias
+│   │   ├── README.md                        # Catálogo e instruções de execução
+│   │   ├── image_intensity_eda.ipynb        # Intensidades HU e percentis
+│   │   ├── preprocessing_visualization.ipynb # Pré-processamento, Hough e vesselness
+│   │   ├── segmentation_results_eda.ipynb   # Resultados de segmentação
+│   │   ├── split_resolution_analysis.ipynb  # Comparação de splits/resoluções
+│   │   ├── ia_vs_pipeline_analysis.ipynb    # IA versus pipeline matemático
+│   │   ├── bad_cases_results_analysis.ipynb # Casos ruins quantitativos
+│   │   ├── bad_cases_qualitative_analysis.ipynb # Casos ruins em 3D
+│   │   ├── threshold_pipeline_comparison_analysis.ipynb # Variantes do pipeline
+│   │   ├── aorta_circle_slice_analysis.ipynb # Fatias e círculos da aorta
+│   │   ├── fuzzy_membership_functions.ipynb # Funções de pertinência fuzzy
+│   │   └── morphological_operations_example.ipynb # Operações morfológicas
 │   └── utils/                      # Módulos utilitários
 │       ├── preprocessing.py        # Pré-processamento de imagens
 │       ├── frangi.py              # Filtro de Frangi para detecção de vasos
@@ -324,16 +328,12 @@ results = run_pipeline(ids, split_name="train")
 Execute os notebooks para análise exploratória e visualização:
 
 ```bash
-# Iniciar Jupyter
-jupyter notebook
-
-# Abrir:
-# - src/main.ipynb: Pipeline principal
-# - src/eda/eda_imgs.ipynb: Exploração de imagens
-# - src/eda/eda_segmentacao.ipynb: Análise de segmentações
-# - src/eda/viz_imgs.ipynb: Análise visual de imagens
-# - src/segmentacao_arteria.ipynb: Análise de segmentação
+uv run jupyter lab
 ```
+
+O pipeline interativo está em [`src/main.ipynb`](src/main.ipynb). Consulte o
+[`src/eda/README.md`](src/eda/README.md) para o catálogo completo das análises,
+suas entradas, saídas e custos aproximados.
 
 ## 📊 Resultados
 

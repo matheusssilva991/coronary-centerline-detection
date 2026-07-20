@@ -1,0 +1,1111 @@
+{
+  "stage": "optimization",
+  "split": "train",
+  "sample_size": 30,
+  "start_index": 0,
+  "ids": [
+    28,
+    380,
+    854,
+    937,
+    315,
+    428,
+    752,
+    13,
+    538,
+    965,
+    447,
+    836,
+    603,
+    676,
+    44,
+    129,
+    518,
+    793,
+    550,
+    631,
+    330,
+    90,
+    608,
+    887,
+    175,
+    760,
+    696,
+    194,
+    305,
+    344
+  ],
+  "resolution": "mid",
+  "threshold_method": "normal",
+  "aorta_ostia_method": "bilateral_thin",
+  "use_gpu": true,
+  "profiles": {
+    "current": {
+      "sigmas": [
+        1.5,
+        2.0,
+        2.5,
+        3.0
+      ],
+      "gamma": 55
+    },
+    "gamma65": {
+      "sigmas": [
+        1.5,
+        2.0,
+        2.5,
+        3.0
+      ],
+      "gamma": 65
+    }
+  },
+  "variants": [
+    {
+      "name": "rg_gamma55_current",
+      "vesselness_profile": "current",
+      "artery_method": "region_growing",
+      "fc_overrides": {},
+      "fc_branch_overrides": null,
+      "rg_overrides": {},
+      "rg_branch_overrides": null,
+      "recovery": null,
+      "morphology_profiles": [
+        {
+          "name": "current_c3_d2",
+          "closing_radius": 3,
+          "dilation_radius": 2,
+          "append_to_variant": true
+        },
+        {
+          "name": "conditioned_p10_f025",
+          "mode": "vesselness_conditioned",
+          "closing_radius": 3,
+          "base_dilation_radius": 1,
+          "max_dilation_radius": 2,
+          "support_percentile": 10,
+          "support_factor": 0.25,
+          "local_max_radius": 1,
+          "append_to_variant": true
+        },
+        {
+          "name": "conditioned_p10_f050",
+          "mode": "vesselness_conditioned",
+          "closing_radius": 3,
+          "base_dilation_radius": 1,
+          "max_dilation_radius": 2,
+          "support_percentile": 10,
+          "support_factor": 0.5,
+          "local_max_radius": 1,
+          "append_to_variant": true
+        }
+      ]
+    },
+    {
+      "name": "rg_gamma65_current",
+      "vesselness_profile": "gamma65",
+      "artery_method": "region_growing",
+      "fc_overrides": {},
+      "fc_branch_overrides": null,
+      "rg_overrides": {},
+      "rg_branch_overrides": null,
+      "recovery": null,
+      "morphology_profiles": [
+        {
+          "name": "current_c3_d2",
+          "closing_radius": 3,
+          "dilation_radius": 2,
+          "append_to_variant": true
+        },
+        {
+          "name": "conditioned_p10_f025",
+          "mode": "vesselness_conditioned",
+          "closing_radius": 3,
+          "base_dilation_radius": 1,
+          "max_dilation_radius": 2,
+          "support_percentile": 10,
+          "support_factor": 0.25,
+          "local_max_radius": 1,
+          "append_to_variant": true
+        },
+        {
+          "name": "conditioned_p10_f050",
+          "mode": "vesselness_conditioned",
+          "closing_radius": 3,
+          "base_dilation_radius": 1,
+          "max_dilation_radius": 2,
+          "support_percentile": 10,
+          "support_factor": 0.5,
+          "local_max_radius": 1,
+          "append_to_variant": true
+        }
+      ]
+    },
+    {
+      "name": "rg_gamma65_relax094",
+      "vesselness_profile": "gamma65",
+      "artery_method": "region_growing",
+      "fc_overrides": {},
+      "fc_branch_overrides": null,
+      "rg_overrides": {
+        "relaxed_floor_factor": 0.94
+      },
+      "rg_branch_overrides": null,
+      "recovery": null,
+      "morphology_profiles": [
+        {
+          "name": "current_c3_d2",
+          "closing_radius": 3,
+          "dilation_radius": 2,
+          "append_to_variant": true
+        },
+        {
+          "name": "conditioned_p10_f025",
+          "mode": "vesselness_conditioned",
+          "closing_radius": 3,
+          "base_dilation_radius": 1,
+          "max_dilation_radius": 2,
+          "support_percentile": 10,
+          "support_factor": 0.25,
+          "local_max_radius": 1,
+          "append_to_variant": true
+        },
+        {
+          "name": "conditioned_p10_f050",
+          "mode": "vesselness_conditioned",
+          "closing_radius": 3,
+          "base_dilation_radius": 1,
+          "max_dilation_radius": 2,
+          "support_percentile": 10,
+          "support_factor": 0.5,
+          "local_max_radius": 1,
+          "append_to_variant": true
+        }
+      ]
+    },
+    {
+      "name": "rg_gamma65_switch1000",
+      "vesselness_profile": "gamma65",
+      "artery_method": "region_growing",
+      "fc_overrides": {},
+      "fc_branch_overrides": null,
+      "rg_overrides": {
+        "switch_at_voxels": 1000
+      },
+      "rg_branch_overrides": null,
+      "recovery": null,
+      "morphology_profiles": [
+        {
+          "name": "current_c3_d2",
+          "closing_radius": 3,
+          "dilation_radius": 2,
+          "append_to_variant": true
+        },
+        {
+          "name": "conditioned_p10_f025",
+          "mode": "vesselness_conditioned",
+          "closing_radius": 3,
+          "base_dilation_radius": 1,
+          "max_dilation_radius": 2,
+          "support_percentile": 10,
+          "support_factor": 0.25,
+          "local_max_radius": 1,
+          "append_to_variant": true
+        },
+        {
+          "name": "conditioned_p10_f050",
+          "mode": "vesselness_conditioned",
+          "closing_radius": 3,
+          "base_dilation_radius": 1,
+          "max_dilation_radius": 2,
+          "support_percentile": 10,
+          "support_factor": 0.5,
+          "local_max_radius": 1,
+          "append_to_variant": true
+        }
+      ]
+    },
+    {
+      "name": "rg_gamma65_switch4000",
+      "vesselness_profile": "gamma65",
+      "artery_method": "region_growing",
+      "fc_overrides": {},
+      "fc_branch_overrides": null,
+      "rg_overrides": {
+        "switch_at_voxels": 4000
+      },
+      "rg_branch_overrides": null,
+      "recovery": null,
+      "morphology_profiles": [
+        {
+          "name": "current_c3_d2",
+          "closing_radius": 3,
+          "dilation_radius": 2,
+          "append_to_variant": true
+        },
+        {
+          "name": "conditioned_p10_f025",
+          "mode": "vesselness_conditioned",
+          "closing_radius": 3,
+          "base_dilation_radius": 1,
+          "max_dilation_radius": 2,
+          "support_percentile": 10,
+          "support_factor": 0.25,
+          "local_max_radius": 1,
+          "append_to_variant": true
+        },
+        {
+          "name": "conditioned_p10_f050",
+          "mode": "vesselness_conditioned",
+          "closing_radius": 3,
+          "base_dilation_radius": 1,
+          "max_dilation_radius": 2,
+          "support_percentile": 10,
+          "support_factor": 0.5,
+          "local_max_radius": 1,
+          "append_to_variant": true
+        }
+      ]
+    },
+    {
+      "name": "rg_gamma65_floor072",
+      "vesselness_profile": "gamma65",
+      "artery_method": "region_growing",
+      "fc_overrides": {},
+      "fc_branch_overrides": null,
+      "rg_overrides": {
+        "min_vesselness_fraction": 0.072
+      },
+      "rg_branch_overrides": null,
+      "recovery": null,
+      "morphology_profiles": [
+        {
+          "name": "current_c3_d2",
+          "closing_radius": 3,
+          "dilation_radius": 2,
+          "append_to_variant": true
+        },
+        {
+          "name": "conditioned_p10_f025",
+          "mode": "vesselness_conditioned",
+          "closing_radius": 3,
+          "base_dilation_radius": 1,
+          "max_dilation_radius": 2,
+          "support_percentile": 10,
+          "support_factor": 0.25,
+          "local_max_radius": 1,
+          "append_to_variant": true
+        },
+        {
+          "name": "conditioned_p10_f050",
+          "mode": "vesselness_conditioned",
+          "closing_radius": 3,
+          "base_dilation_radius": 1,
+          "max_dilation_radius": 2,
+          "support_percentile": 10,
+          "support_factor": 0.5,
+          "local_max_radius": 1,
+          "append_to_variant": true
+        }
+      ]
+    },
+    {
+      "name": "rg_gamma65_floor084",
+      "vesselness_profile": "gamma65",
+      "artery_method": "region_growing",
+      "fc_overrides": {},
+      "fc_branch_overrides": null,
+      "rg_overrides": {
+        "min_vesselness_fraction": 0.084
+      },
+      "rg_branch_overrides": null,
+      "recovery": null,
+      "morphology_profiles": [
+        {
+          "name": "current_c3_d2",
+          "closing_radius": 3,
+          "dilation_radius": 2,
+          "append_to_variant": true
+        },
+        {
+          "name": "conditioned_p10_f025",
+          "mode": "vesselness_conditioned",
+          "closing_radius": 3,
+          "base_dilation_radius": 1,
+          "max_dilation_radius": 2,
+          "support_percentile": 10,
+          "support_factor": 0.25,
+          "local_max_radius": 1,
+          "append_to_variant": true
+        },
+        {
+          "name": "conditioned_p10_f050",
+          "mode": "vesselness_conditioned",
+          "closing_radius": 3,
+          "base_dilation_radius": 1,
+          "max_dilation_radius": 2,
+          "support_percentile": 10,
+          "support_factor": 0.5,
+          "local_max_radius": 1,
+          "append_to_variant": true
+        }
+      ]
+    },
+    {
+      "name": "rg_gamma65_no_smooth",
+      "vesselness_profile": "gamma65",
+      "artery_method": "region_growing",
+      "fc_overrides": {},
+      "fc_branch_overrides": null,
+      "rg_overrides": {
+        "smooth_relaxation": false
+      },
+      "rg_branch_overrides": null,
+      "recovery": null,
+      "morphology_profiles": [
+        {
+          "name": "current_c3_d2",
+          "closing_radius": 3,
+          "dilation_radius": 2,
+          "append_to_variant": true
+        },
+        {
+          "name": "conditioned_p10_f025",
+          "mode": "vesselness_conditioned",
+          "closing_radius": 3,
+          "base_dilation_radius": 1,
+          "max_dilation_radius": 2,
+          "support_percentile": 10,
+          "support_factor": 0.25,
+          "local_max_radius": 1,
+          "append_to_variant": true
+        },
+        {
+          "name": "conditioned_p10_f050",
+          "mode": "vesselness_conditioned",
+          "closing_radius": 3,
+          "base_dilation_radius": 1,
+          "max_dilation_radius": 2,
+          "support_percentile": 10,
+          "support_factor": 0.5,
+          "local_max_radius": 1,
+          "append_to_variant": true
+        }
+      ]
+    },
+    {
+      "name": "rg_gamma65_neighborhood18",
+      "vesselness_profile": "gamma65",
+      "artery_method": "region_growing",
+      "fc_overrides": {},
+      "fc_branch_overrides": null,
+      "rg_overrides": {
+        "neighborhood": 18
+      },
+      "rg_branch_overrides": null,
+      "recovery": null,
+      "morphology_profiles": [
+        {
+          "name": "current_c3_d2",
+          "closing_radius": 3,
+          "dilation_radius": 2,
+          "append_to_variant": true
+        },
+        {
+          "name": "conditioned_p10_f025",
+          "mode": "vesselness_conditioned",
+          "closing_radius": 3,
+          "base_dilation_radius": 1,
+          "max_dilation_radius": 2,
+          "support_percentile": 10,
+          "support_factor": 0.25,
+          "local_max_radius": 1,
+          "append_to_variant": true
+        },
+        {
+          "name": "conditioned_p10_f050",
+          "mode": "vesselness_conditioned",
+          "closing_radius": 3,
+          "base_dilation_radius": 1,
+          "max_dilation_radius": 2,
+          "support_percentile": 10,
+          "support_factor": 0.5,
+          "local_max_radius": 1,
+          "append_to_variant": true
+        }
+      ]
+    },
+    {
+      "name": "fc_floor020",
+      "vesselness_profile": "current",
+      "artery_method": "fuzzy_connectedness",
+      "fc_overrides": {
+        "candidate_min_vesselness": 0.02,
+        "seed_min_vesselness": 0.02,
+        "vesselness_floor": 0.02
+      },
+      "fc_branch_overrides": null,
+      "rg_overrides": {},
+      "rg_branch_overrides": null,
+      "recovery": null,
+      "morphology_profiles": [
+        {
+          "name": "current_c3_d2",
+          "closing_radius": 3,
+          "dilation_radius": 2,
+          "append_to_variant": true
+        },
+        {
+          "name": "conditioned_p10_f025",
+          "mode": "vesselness_conditioned",
+          "closing_radius": 3,
+          "base_dilation_radius": 1,
+          "max_dilation_radius": 2,
+          "support_percentile": 10,
+          "support_factor": 0.25,
+          "local_max_radius": 1,
+          "append_to_variant": true
+        },
+        {
+          "name": "conditioned_p10_f050",
+          "mode": "vesselness_conditioned",
+          "closing_radius": 3,
+          "base_dilation_radius": 1,
+          "max_dilation_radius": 2,
+          "support_percentile": 10,
+          "support_factor": 0.5,
+          "local_max_radius": 1,
+          "append_to_variant": true
+        }
+      ]
+    },
+    {
+      "name": "fc_floor020_alpha018",
+      "vesselness_profile": "current",
+      "artery_method": "fuzzy_connectedness",
+      "fc_overrides": {
+        "alpha": 0.18,
+        "candidate_min_vesselness": 0.02,
+        "seed_min_vesselness": 0.02,
+        "vesselness_floor": 0.02
+      },
+      "fc_branch_overrides": null,
+      "rg_overrides": {},
+      "rg_branch_overrides": null,
+      "recovery": null,
+      "morphology_profiles": [
+        {
+          "name": "current_c3_d2",
+          "closing_radius": 3,
+          "dilation_radius": 2,
+          "append_to_variant": true
+        },
+        {
+          "name": "conditioned_p10_f025",
+          "mode": "vesselness_conditioned",
+          "closing_radius": 3,
+          "base_dilation_radius": 1,
+          "max_dilation_radius": 2,
+          "support_percentile": 10,
+          "support_factor": 0.25,
+          "local_max_radius": 1,
+          "append_to_variant": true
+        },
+        {
+          "name": "conditioned_p10_f050",
+          "mode": "vesselness_conditioned",
+          "closing_radius": 3,
+          "base_dilation_radius": 1,
+          "max_dilation_radius": 2,
+          "support_percentile": 10,
+          "support_factor": 0.5,
+          "local_max_radius": 1,
+          "append_to_variant": true
+        }
+      ]
+    },
+    {
+      "name": "fc_floor020_sigma090",
+      "vesselness_profile": "current",
+      "artery_method": "fuzzy_connectedness",
+      "fc_overrides": {
+        "sigma_hu": 90,
+        "candidate_min_vesselness": 0.02,
+        "seed_min_vesselness": 0.02,
+        "vesselness_floor": 0.02
+      },
+      "fc_branch_overrides": null,
+      "rg_overrides": {},
+      "rg_branch_overrides": null,
+      "recovery": null,
+      "morphology_profiles": [
+        {
+          "name": "current_c3_d2",
+          "closing_radius": 3,
+          "dilation_radius": 2,
+          "append_to_variant": true
+        },
+        {
+          "name": "conditioned_p10_f025",
+          "mode": "vesselness_conditioned",
+          "closing_radius": 3,
+          "base_dilation_radius": 1,
+          "max_dilation_radius": 2,
+          "support_percentile": 10,
+          "support_factor": 0.25,
+          "local_max_radius": 1,
+          "append_to_variant": true
+        },
+        {
+          "name": "conditioned_p10_f050",
+          "mode": "vesselness_conditioned",
+          "closing_radius": 3,
+          "base_dilation_radius": 1,
+          "max_dilation_radius": 2,
+          "support_percentile": 10,
+          "support_factor": 0.5,
+          "local_max_radius": 1,
+          "append_to_variant": true
+        }
+      ]
+    },
+    {
+      "name": "fc_floor020_sigma110",
+      "vesselness_profile": "current",
+      "artery_method": "fuzzy_connectedness",
+      "fc_overrides": {
+        "sigma_hu": 110,
+        "candidate_min_vesselness": 0.02,
+        "seed_min_vesselness": 0.02,
+        "vesselness_floor": 0.02
+      },
+      "fc_branch_overrides": null,
+      "rg_overrides": {},
+      "rg_branch_overrides": null,
+      "recovery": null,
+      "morphology_profiles": [
+        {
+          "name": "current_c3_d2",
+          "closing_radius": 3,
+          "dilation_radius": 2,
+          "append_to_variant": true
+        },
+        {
+          "name": "conditioned_p10_f025",
+          "mode": "vesselness_conditioned",
+          "closing_radius": 3,
+          "base_dilation_radius": 1,
+          "max_dilation_radius": 2,
+          "support_percentile": 10,
+          "support_factor": 0.25,
+          "local_max_radius": 1,
+          "append_to_variant": true
+        },
+        {
+          "name": "conditioned_p10_f050",
+          "mode": "vesselness_conditioned",
+          "closing_radius": 3,
+          "base_dilation_radius": 1,
+          "max_dilation_radius": 2,
+          "support_percentile": 10,
+          "support_factor": 0.5,
+          "local_max_radius": 1,
+          "append_to_variant": true
+        }
+      ]
+    },
+    {
+      "name": "fc_floor020_weight088",
+      "vesselness_profile": "current",
+      "artery_method": "fuzzy_connectedness",
+      "fc_overrides": {
+        "vesselness_weight": 0.88,
+        "candidate_min_vesselness": 0.02,
+        "seed_min_vesselness": 0.02,
+        "vesselness_floor": 0.02
+      },
+      "fc_branch_overrides": null,
+      "rg_overrides": {},
+      "rg_branch_overrides": null,
+      "recovery": null,
+      "morphology_profiles": [
+        {
+          "name": "current_c3_d2",
+          "closing_radius": 3,
+          "dilation_radius": 2,
+          "append_to_variant": true
+        },
+        {
+          "name": "conditioned_p10_f025",
+          "mode": "vesselness_conditioned",
+          "closing_radius": 3,
+          "base_dilation_radius": 1,
+          "max_dilation_radius": 2,
+          "support_percentile": 10,
+          "support_factor": 0.25,
+          "local_max_radius": 1,
+          "append_to_variant": true
+        },
+        {
+          "name": "conditioned_p10_f050",
+          "mode": "vesselness_conditioned",
+          "closing_radius": 3,
+          "base_dilation_radius": 1,
+          "max_dilation_radius": 2,
+          "support_percentile": 10,
+          "support_factor": 0.5,
+          "local_max_radius": 1,
+          "append_to_variant": true
+        }
+      ]
+    },
+    {
+      "name": "fc_floor020_weight092",
+      "vesselness_profile": "current",
+      "artery_method": "fuzzy_connectedness",
+      "fc_overrides": {
+        "vesselness_weight": 0.92,
+        "candidate_min_vesselness": 0.02,
+        "seed_min_vesselness": 0.02,
+        "vesselness_floor": 0.02
+      },
+      "fc_branch_overrides": null,
+      "rg_overrides": {},
+      "rg_branch_overrides": null,
+      "recovery": null,
+      "morphology_profiles": [
+        {
+          "name": "current_c3_d2",
+          "closing_radius": 3,
+          "dilation_radius": 2,
+          "append_to_variant": true
+        },
+        {
+          "name": "conditioned_p10_f025",
+          "mode": "vesselness_conditioned",
+          "closing_radius": 3,
+          "base_dilation_radius": 1,
+          "max_dilation_radius": 2,
+          "support_percentile": 10,
+          "support_factor": 0.25,
+          "local_max_radius": 1,
+          "append_to_variant": true
+        },
+        {
+          "name": "conditioned_p10_f050",
+          "mode": "vesselness_conditioned",
+          "closing_radius": 3,
+          "base_dilation_radius": 1,
+          "max_dilation_radius": 2,
+          "support_percentile": 10,
+          "support_factor": 0.5,
+          "local_max_radius": 1,
+          "append_to_variant": true
+        }
+      ]
+    },
+    {
+      "name": "fc_floor020_neighborhood18",
+      "vesselness_profile": "current",
+      "artery_method": "fuzzy_connectedness",
+      "fc_overrides": {
+        "neighborhood": 18,
+        "candidate_min_vesselness": 0.02,
+        "seed_min_vesselness": 0.02,
+        "vesselness_floor": 0.02
+      },
+      "fc_branch_overrides": null,
+      "rg_overrides": {},
+      "rg_branch_overrides": null,
+      "recovery": null,
+      "morphology_profiles": [
+        {
+          "name": "current_c3_d2",
+          "closing_radius": 3,
+          "dilation_radius": 2,
+          "append_to_variant": true
+        },
+        {
+          "name": "conditioned_p10_f025",
+          "mode": "vesselness_conditioned",
+          "closing_radius": 3,
+          "base_dilation_radius": 1,
+          "max_dilation_radius": 2,
+          "support_percentile": 10,
+          "support_factor": 0.25,
+          "local_max_radius": 1,
+          "append_to_variant": true
+        },
+        {
+          "name": "conditioned_p10_f050",
+          "mode": "vesselness_conditioned",
+          "closing_radius": 3,
+          "base_dilation_radius": 1,
+          "max_dilation_radius": 2,
+          "support_percentile": 10,
+          "support_factor": 0.5,
+          "local_max_radius": 1,
+          "append_to_variant": true
+        }
+      ]
+    },
+    {
+      "name": "rg_gamma65_branch_local_p90",
+      "vesselness_profile": "gamma65",
+      "artery_method": "region_growing",
+      "fc_overrides": {},
+      "fc_branch_overrides": null,
+      "rg_overrides": {},
+      "rg_branch_overrides": {
+        "left": {
+          "reference_scope": "ostia_local",
+          "reference_radius": 3,
+          "reference_percentile": 90.0
+        },
+        "right": {
+          "reference_scope": "ostia_local",
+          "reference_radius": 3,
+          "reference_percentile": 90.0
+        }
+      },
+      "recovery": null,
+      "morphology_profiles": [
+        {
+          "name": "current_c3_d2",
+          "closing_radius": 3,
+          "dilation_radius": 2,
+          "append_to_variant": true
+        },
+        {
+          "name": "conditioned_p10_f025",
+          "mode": "vesselness_conditioned",
+          "closing_radius": 3,
+          "base_dilation_radius": 1,
+          "max_dilation_radius": 2,
+          "support_percentile": 10,
+          "support_factor": 0.25,
+          "local_max_radius": 1,
+          "append_to_variant": true
+        },
+        {
+          "name": "conditioned_p10_f050",
+          "mode": "vesselness_conditioned",
+          "closing_radius": 3,
+          "base_dilation_radius": 1,
+          "max_dilation_radius": 2,
+          "support_percentile": 10,
+          "support_factor": 0.5,
+          "local_max_radius": 1,
+          "append_to_variant": true
+        }
+      ]
+    },
+    {
+      "name": "rg_gamma65_branch_local_p95",
+      "vesselness_profile": "gamma65",
+      "artery_method": "region_growing",
+      "fc_overrides": {},
+      "fc_branch_overrides": null,
+      "rg_overrides": {},
+      "rg_branch_overrides": {
+        "left": {
+          "reference_scope": "ostia_local",
+          "reference_radius": 3,
+          "reference_percentile": 95.0
+        },
+        "right": {
+          "reference_scope": "ostia_local",
+          "reference_radius": 3,
+          "reference_percentile": 95.0
+        }
+      },
+      "recovery": null,
+      "morphology_profiles": [
+        {
+          "name": "current_c3_d2",
+          "closing_radius": 3,
+          "dilation_radius": 2,
+          "append_to_variant": true
+        },
+        {
+          "name": "conditioned_p10_f025",
+          "mode": "vesselness_conditioned",
+          "closing_radius": 3,
+          "base_dilation_radius": 1,
+          "max_dilation_radius": 2,
+          "support_percentile": 10,
+          "support_factor": 0.25,
+          "local_max_radius": 1,
+          "append_to_variant": true
+        },
+        {
+          "name": "conditioned_p10_f050",
+          "mode": "vesselness_conditioned",
+          "closing_radius": 3,
+          "base_dilation_radius": 1,
+          "max_dilation_radius": 2,
+          "support_percentile": 10,
+          "support_factor": 0.5,
+          "local_max_radius": 1,
+          "append_to_variant": true
+        }
+      ]
+    },
+    {
+      "name": "rg_gamma65_left_permissive",
+      "vesselness_profile": "gamma65",
+      "artery_method": "region_growing",
+      "fc_overrides": {},
+      "fc_branch_overrides": null,
+      "rg_overrides": {},
+      "rg_branch_overrides": {
+        "left": {
+          "relaxed_floor_factor": 0.9
+        },
+        "right": {}
+      },
+      "recovery": null,
+      "morphology_profiles": [
+        {
+          "name": "current_c3_d2",
+          "closing_radius": 3,
+          "dilation_radius": 2,
+          "append_to_variant": true
+        },
+        {
+          "name": "conditioned_p10_f025",
+          "mode": "vesselness_conditioned",
+          "closing_radius": 3,
+          "base_dilation_radius": 1,
+          "max_dilation_radius": 2,
+          "support_percentile": 10,
+          "support_factor": 0.25,
+          "local_max_radius": 1,
+          "append_to_variant": true
+        },
+        {
+          "name": "conditioned_p10_f050",
+          "mode": "vesselness_conditioned",
+          "closing_radius": 3,
+          "base_dilation_radius": 1,
+          "max_dilation_radius": 2,
+          "support_percentile": 10,
+          "support_factor": 0.5,
+          "local_max_radius": 1,
+          "append_to_variant": true
+        }
+      ]
+    },
+    {
+      "name": "rg_gamma65_right_permissive",
+      "vesselness_profile": "gamma65",
+      "artery_method": "region_growing",
+      "fc_overrides": {},
+      "fc_branch_overrides": null,
+      "rg_overrides": {},
+      "rg_branch_overrides": {
+        "left": {},
+        "right": {
+          "relaxed_floor_factor": 0.9
+        }
+      },
+      "recovery": null,
+      "morphology_profiles": [
+        {
+          "name": "current_c3_d2",
+          "closing_radius": 3,
+          "dilation_radius": 2,
+          "append_to_variant": true
+        },
+        {
+          "name": "conditioned_p10_f025",
+          "mode": "vesselness_conditioned",
+          "closing_radius": 3,
+          "base_dilation_radius": 1,
+          "max_dilation_radius": 2,
+          "support_percentile": 10,
+          "support_factor": 0.25,
+          "local_max_radius": 1,
+          "append_to_variant": true
+        },
+        {
+          "name": "conditioned_p10_f050",
+          "mode": "vesselness_conditioned",
+          "closing_radius": 3,
+          "base_dilation_radius": 1,
+          "max_dilation_radius": 2,
+          "support_percentile": 10,
+          "support_factor": 0.5,
+          "local_max_radius": 1,
+          "append_to_variant": true
+        }
+      ]
+    },
+    {
+      "name": "fc_left_permissive",
+      "vesselness_profile": "current",
+      "artery_method": "fuzzy_connectedness",
+      "fc_overrides": {
+        "candidate_min_vesselness": 0.02,
+        "seed_min_vesselness": 0.02,
+        "vesselness_floor": 0.02
+      },
+      "fc_branch_overrides": {
+        "left": {
+          "vesselness_floor": 0.022
+        },
+        "right": {}
+      },
+      "rg_overrides": {},
+      "rg_branch_overrides": null,
+      "recovery": null,
+      "morphology_profiles": [
+        {
+          "name": "current_c3_d2",
+          "closing_radius": 3,
+          "dilation_radius": 2,
+          "append_to_variant": true
+        },
+        {
+          "name": "conditioned_p10_f025",
+          "mode": "vesselness_conditioned",
+          "closing_radius": 3,
+          "base_dilation_radius": 1,
+          "max_dilation_radius": 2,
+          "support_percentile": 10,
+          "support_factor": 0.25,
+          "local_max_radius": 1,
+          "append_to_variant": true
+        },
+        {
+          "name": "conditioned_p10_f050",
+          "mode": "vesselness_conditioned",
+          "closing_radius": 3,
+          "base_dilation_radius": 1,
+          "max_dilation_radius": 2,
+          "support_percentile": 10,
+          "support_factor": 0.5,
+          "local_max_radius": 1,
+          "append_to_variant": true
+        }
+      ]
+    },
+    {
+      "name": "fc_right_permissive",
+      "vesselness_profile": "current",
+      "artery_method": "fuzzy_connectedness",
+      "fc_overrides": {
+        "candidate_min_vesselness": 0.02,
+        "seed_min_vesselness": 0.02,
+        "vesselness_floor": 0.02
+      },
+      "fc_branch_overrides": {
+        "left": {},
+        "right": {
+          "vesselness_floor": 0.022
+        }
+      },
+      "rg_overrides": {},
+      "rg_branch_overrides": null,
+      "recovery": null,
+      "morphology_profiles": [
+        {
+          "name": "current_c3_d2",
+          "closing_radius": 3,
+          "dilation_radius": 2,
+          "append_to_variant": true
+        },
+        {
+          "name": "conditioned_p10_f025",
+          "mode": "vesselness_conditioned",
+          "closing_radius": 3,
+          "base_dilation_radius": 1,
+          "max_dilation_radius": 2,
+          "support_percentile": 10,
+          "support_factor": 0.25,
+          "local_max_radius": 1,
+          "append_to_variant": true
+        },
+        {
+          "name": "conditioned_p10_f050",
+          "mode": "vesselness_conditioned",
+          "closing_radius": 3,
+          "base_dilation_radius": 1,
+          "max_dilation_radius": 2,
+          "support_percentile": 10,
+          "support_factor": 0.5,
+          "local_max_radius": 1,
+          "append_to_variant": true
+        }
+      ]
+    }
+  ],
+  "output_variants": [
+    "fc_floor020__conditioned_p10_f025",
+    "fc_floor020__conditioned_p10_f050",
+    "fc_floor020__current_c3_d2",
+    "fc_floor020_alpha018__conditioned_p10_f025",
+    "fc_floor020_alpha018__conditioned_p10_f050",
+    "fc_floor020_alpha018__current_c3_d2",
+    "fc_floor020_neighborhood18__conditioned_p10_f025",
+    "fc_floor020_neighborhood18__conditioned_p10_f050",
+    "fc_floor020_neighborhood18__current_c3_d2",
+    "fc_floor020_sigma090__conditioned_p10_f025",
+    "fc_floor020_sigma090__conditioned_p10_f050",
+    "fc_floor020_sigma090__current_c3_d2",
+    "fc_floor020_sigma110__conditioned_p10_f025",
+    "fc_floor020_sigma110__conditioned_p10_f050",
+    "fc_floor020_sigma110__current_c3_d2",
+    "fc_floor020_weight088__conditioned_p10_f025",
+    "fc_floor020_weight088__conditioned_p10_f050",
+    "fc_floor020_weight088__current_c3_d2",
+    "fc_floor020_weight092__conditioned_p10_f025",
+    "fc_floor020_weight092__conditioned_p10_f050",
+    "fc_floor020_weight092__current_c3_d2",
+    "fc_left_permissive__conditioned_p10_f025",
+    "fc_left_permissive__conditioned_p10_f050",
+    "fc_left_permissive__current_c3_d2",
+    "fc_right_permissive__conditioned_p10_f025",
+    "fc_right_permissive__conditioned_p10_f050",
+    "fc_right_permissive__current_c3_d2",
+    "rg_gamma55_current__conditioned_p10_f025",
+    "rg_gamma55_current__conditioned_p10_f050",
+    "rg_gamma55_current__current_c3_d2",
+    "rg_gamma65_branch_local_p90__conditioned_p10_f025",
+    "rg_gamma65_branch_local_p90__conditioned_p10_f050",
+    "rg_gamma65_branch_local_p90__current_c3_d2",
+    "rg_gamma65_branch_local_p95__conditioned_p10_f025",
+    "rg_gamma65_branch_local_p95__conditioned_p10_f050",
+    "rg_gamma65_branch_local_p95__current_c3_d2",
+    "rg_gamma65_current__conditioned_p10_f025",
+    "rg_gamma65_current__conditioned_p10_f050",
+    "rg_gamma65_current__current_c3_d2",
+    "rg_gamma65_floor072__conditioned_p10_f025",
+    "rg_gamma65_floor072__conditioned_p10_f050",
+    "rg_gamma65_floor072__current_c3_d2",
+    "rg_gamma65_floor084__conditioned_p10_f025",
+    "rg_gamma65_floor084__conditioned_p10_f050",
+    "rg_gamma65_floor084__current_c3_d2",
+    "rg_gamma65_left_permissive__conditioned_p10_f025",
+    "rg_gamma65_left_permissive__conditioned_p10_f050",
+    "rg_gamma65_left_permissive__current_c3_d2",
+    "rg_gamma65_neighborhood18__conditioned_p10_f025",
+    "rg_gamma65_neighborhood18__conditioned_p10_f050",
+    "rg_gamma65_neighborhood18__current_c3_d2",
+    "rg_gamma65_no_smooth__conditioned_p10_f025",
+    "rg_gamma65_no_smooth__conditioned_p10_f050",
+    "rg_gamma65_no_smooth__current_c3_d2",
+    "rg_gamma65_relax094__conditioned_p10_f025",
+    "rg_gamma65_relax094__conditioned_p10_f050",
+    "rg_gamma65_relax094__current_c3_d2",
+    "rg_gamma65_right_permissive__conditioned_p10_f025",
+    "rg_gamma65_right_permissive__conditioned_p10_f050",
+    "rg_gamma65_right_permissive__current_c3_d2",
+    "rg_gamma65_switch1000__conditioned_p10_f025",
+    "rg_gamma65_switch1000__conditioned_p10_f050",
+    "rg_gamma65_switch1000__current_c3_d2",
+    "rg_gamma65_switch4000__conditioned_p10_f025",
+    "rg_gamma65_switch4000__conditioned_p10_f050",
+    "rg_gamma65_switch4000__current_c3_d2"
+  ],
+  "definitions": "/home/matheus/workspace/coronary-centerline-detection/src/experiments/artery_vesselness_fc_variants.json"
+}

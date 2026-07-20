@@ -1,0 +1,186 @@
+{
+  "stage": "fc",
+  "split": "train",
+  "sample_size": 30,
+  "start_index": 0,
+  "ids": [
+    28,
+    380,
+    854,
+    937,
+    315,
+    428,
+    752,
+    13,
+    538,
+    965,
+    447,
+    836,
+    603,
+    676,
+    44,
+    129,
+    518,
+    793,
+    550,
+    631,
+    330,
+    90,
+    608,
+    887,
+    175,
+    760,
+    696,
+    194,
+    305,
+    344
+  ],
+  "resolution": "mid",
+  "threshold_method": "normal",
+  "aorta_ostia_method": "bilateral_thin",
+  "use_gpu": true,
+  "profiles": {
+    "current": {
+      "sigmas": [
+        1.5,
+        2.0,
+        2.5,
+        3.0
+      ],
+      "gamma": 55
+    }
+  },
+  "variants": [
+    {
+      "name": "fc_current",
+      "vesselness_profile": "current",
+      "artery_method": "fuzzy_connectedness",
+      "fc_overrides": {}
+    },
+    {
+      "name": "fc_alpha_014",
+      "vesselness_profile": "current",
+      "artery_method": "fuzzy_connectedness",
+      "fc_overrides": {
+        "alpha": 0.14
+      }
+    },
+    {
+      "name": "fc_alpha_018",
+      "vesselness_profile": "current",
+      "artery_method": "fuzzy_connectedness",
+      "fc_overrides": {
+        "alpha": 0.18
+      }
+    },
+    {
+      "name": "fc_sigma_080",
+      "vesselness_profile": "current",
+      "artery_method": "fuzzy_connectedness",
+      "fc_overrides": {
+        "sigma_hu": 80
+      }
+    },
+    {
+      "name": "fc_sigma_120",
+      "vesselness_profile": "current",
+      "artery_method": "fuzzy_connectedness",
+      "fc_overrides": {
+        "sigma_hu": 120
+      }
+    },
+    {
+      "name": "fc_floor_014",
+      "vesselness_profile": "current",
+      "artery_method": "fuzzy_connectedness",
+      "fc_overrides": {
+        "candidate_min_vesselness": 0.014,
+        "seed_min_vesselness": 0.014,
+        "vesselness_floor": 0.014
+      }
+    },
+    {
+      "name": "fc_floor_022",
+      "vesselness_profile": "current",
+      "artery_method": "fuzzy_connectedness",
+      "fc_overrides": {
+        "candidate_min_vesselness": 0.022,
+        "seed_min_vesselness": 0.022,
+        "vesselness_floor": 0.022
+      }
+    },
+    {
+      "name": "fc_candidates_350k",
+      "vesselness_profile": "current",
+      "artery_method": "fuzzy_connectedness",
+      "fc_overrides": {
+        "max_candidate_voxels": 350000
+      }
+    },
+    {
+      "name": "fc_candidates_750k",
+      "vesselness_profile": "current",
+      "artery_method": "fuzzy_connectedness",
+      "fc_overrides": {
+        "max_candidate_voxels": 750000
+      }
+    },
+    {
+      "name": "fc_weight_085",
+      "vesselness_profile": "current",
+      "artery_method": "fuzzy_connectedness",
+      "fc_overrides": {
+        "vesselness_weight": 0.85
+      }
+    },
+    {
+      "name": "fc_weight_095",
+      "vesselness_profile": "current",
+      "artery_method": "fuzzy_connectedness",
+      "fc_overrides": {
+        "vesselness_weight": 0.95
+      }
+    },
+    {
+      "name": "fc_seed_radius_1",
+      "vesselness_profile": "current",
+      "artery_method": "fuzzy_connectedness",
+      "fc_overrides": {
+        "seed_search_radius": 1
+      }
+    },
+    {
+      "name": "fc_seed_radius_3",
+      "vesselness_profile": "current",
+      "artery_method": "fuzzy_connectedness",
+      "fc_overrides": {
+        "seed_search_radius": 3
+      }
+    },
+    {
+      "name": "fc_seeds_2",
+      "vesselness_profile": "current",
+      "artery_method": "fuzzy_connectedness",
+      "fc_overrides": {
+        "max_seeds_per_ostium": 2
+      }
+    },
+    {
+      "name": "fc_seeds_6",
+      "vesselness_profile": "current",
+      "artery_method": "fuzzy_connectedness",
+      "fc_overrides": {
+        "max_seeds_per_ostium": 6
+      }
+    },
+    {
+      "name": "fc_separate_ostia",
+      "vesselness_profile": "current",
+      "artery_method": "fuzzy_connectedness",
+      "fc_overrides": {
+        "grow_each_ostium_separately": true
+      }
+    }
+  ],
+  "definitions": "/home/matheus/workspace/coronary-centerline-detection/src/experiments/artery_vesselness_fc_variants.json"
+}
