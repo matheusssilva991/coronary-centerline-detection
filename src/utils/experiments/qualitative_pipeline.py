@@ -36,7 +36,12 @@ def run_qualitative_pipeline_case(
     cache_path = Path(cache_dir)
     backend = "gpu" if config.get("USE_GPU", False) else "cpu"
 
-    image_data = load_and_preprocess_image(image_id, str(imagecas_path), config)
+    image_data = load_and_preprocess_image(
+        image_id,
+        str(imagecas_path),
+        config,
+        include_intermediates=True,
+    )
     lcc_image = image_data["lcc_image"]
     label = image_data["label"]
     scaled_spacing = image_data["scaled_spacing"]
@@ -98,15 +103,21 @@ def run_qualitative_pipeline_case(
 
     return {
         "img_id": image_id,
+        "image": image_data.get("image"),
+        "down_image": image_data.get("down_image"),
+        "threshold_mask": image_data.get("threshold_mask"),
+        "lcc_mask": image_data.get("lcc_mask"),
         "lcc_image": lcc_image,
         "label": label,
         "label_artery": ostia_results["label_artery"],
         "detected_circles": detected_circles,
         "aorta_mask": aorta_mask,
+        "vesselness_ostia": vesselness_ostia,
         "ostia_left": ostia_results["ostia_left"],
         "ostia_right": ostia_results["ostia_right"],
         "ostia_results": ostia_results,
         "artery_mask": artery_results["artery_mask"],
+        "raw_artery_mask": artery_results.get("raw_artery_mask"),
         "artery_results": artery_results,
         "scaled_spacing": scaled_spacing,
         "downscale_factors": downscale_factors,

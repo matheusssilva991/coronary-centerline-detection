@@ -205,10 +205,12 @@ Estrutura atual:
 ```text
 analysis/
   EXPERIMENTS_ARCHIVE.md
+  aorta_circle_slices/
   aorta_mask_ostia_comparison/
-  artery_vesselness_fc_sweep/
-  threshold_pipeline_comparison/
+  bad_cases/
   fuzzy_membership_functions/
+  image_slices/
+  threshold_pipeline_comparison/
   visual_examples/
 ```
 

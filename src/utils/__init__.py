@@ -109,6 +109,7 @@ _LAZY_EXPORTS = {
     "plot_hough_refined_circle": ".visualization.hough",
     "plot_hough_refinement_candidates": ".visualization.hough",
     "plot_mip_projection": ".visualization.image_slices",
+    "save_volume_slice_figure": ".visualization.image_slices",
     "plot_preprocessing_grid": ".visualization.preprocessing_views",
     "plot_spaced_detected_circles": ".visualization.hough",
     "plot_stage": ".visualization.preprocessing_views",

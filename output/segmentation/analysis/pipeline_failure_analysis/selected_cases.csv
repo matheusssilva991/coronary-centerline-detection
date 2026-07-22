@@ -1,0 +1,7 @@
+case_type,IMG_ID,reason,normal_rg_dice,fuzzy_rg_dice,normal_fc_dice,fuzzy_fc_dice,normal_ostia_status,fuzzy_ostia_status,normal_rg_predicted_voxels,normal_fc_predicted_voxels
+fuzzy_threshold_rescue,401,Fuzzy threshold recupera a detecção dos óstios.,0.0,0.6614977800992426,0.0,0.6229125647196091,found but incorrect,both tolerable,45809.0,5095.0
+fuzzy_threshold_regression,87,Fuzzy threshold perde um caso do baseline.,0.6918347665354014,0.0,0.672549295491548,0.0,both tolerable,found but incorrect,26106.0,26085.0
+fc_prevents_rg_leakage,813,FC reduz uma expansão excessiva do RG.,0.5358525099616785,0.709461640017603,0.6939295644114921,0.6956115507022103,both tolerable,both tolerable,37221.0,19298.0
+fc_undersegmentation,556,FC para cedo e produz máscara menor que o RG.,0.6571369237159075,0.0070375780108883,0.0254926188463289,0.0129338788438696,both tolerable,both tolerable,13893.0,378.0
+shared_low_dice_good_ostia,396,Todos os métodos falham apesar de óstios aceitáveis.,0.3311007911133929,0.329969798422026,0.2881009205591544,0.2355973317161916,both tolerable,both tolerable,10234.0,8445.0
+shared_ostia_failure,23,Ambos os thresholds falham antes da segmentação arterial.,0.0,0.0,0.0,0.0,found but incorrect,found but incorrect,7192.0,7928.0

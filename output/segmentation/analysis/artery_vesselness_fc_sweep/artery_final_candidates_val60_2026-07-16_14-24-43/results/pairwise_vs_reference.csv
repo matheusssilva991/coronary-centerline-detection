@@ -1,3 +1,0 @@
-reference,variant,paired_images,mean_dice_delta,median_dice_delta,improved_gt_0_01,worsened_lt_minus_0_01
-validation_baseline_rg__current_c3_d2,validation_rg_gamma65__conditioned_p10_f025,60,-0.013204418423541881,-0.001463183356447656,17,21
-validation_baseline_rg__current_c3_d2,validation_fc_floor020_sigma090__conditioned_p10_f050,60,-0.01847362290480044,-0.003947444174907222,14,24

@@ -43,10 +43,17 @@ IMAGE_COLUMNS = [
     "variant",
     "split",
     "IMG_ID",
+    "cohort_kind",
+    "cohort_roles",
     "threshold_mode",
     "artery_method",
     "dice_artery",
+    "dice_artery_before_morphology",
+    "dice_artery_after_morphology",
+    "dice_artery_morphology_delta",
     "artery_voxels",
+    "artery_voxels_before_morphology",
+    "artery_voxels_after_morphology",
     "ostia_success",
     "ostia_found",
     "ostia_status",
@@ -79,9 +86,13 @@ PARAMETER_COLUMNS = [
     "fc.seed_min_vesselness",
     "fc.vesselness_weight",
     "fc.vesselness_floor",
+    "fc.seed_search_radius",
+    "fc.max_seeds_per_ostium",
     "MAX_THRESHOLD_PERCENTILE",
     "REGION_GROWING.min_vesselness_fraction",
     "REGION_GROWING.threshold_divisor",
+    "REGION_GROWING.seed_candidate_radius",
+    "REGION_GROWING.max_seed_candidates",
 ]
 
 EXPERIMENT_KEYS = {
@@ -304,6 +315,7 @@ def run_image(
             case["down_label"],
             spacing,
             config,
+            detected_circles=detected_circles,
         )
         both_correct = bool(ostia_eval["both_correct"])
         both_tolerable = bool(ostia_eval["both_tolerable"])

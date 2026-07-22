@@ -78,7 +78,9 @@ def plot_vesselness_mip_grid(
     """Plota MIP axial dos mapas de vesselness para uma lista de IDs."""
     if ids_to_plot is None:
         ids_to_plot = sorted(vessel_maps.keys())
-    if not ids_to_plot:
+    else:
+        ids_to_plot = list(ids_to_plot)
+    if len(ids_to_plot) == 0:
         raise ValueError("ids_to_plot não pode ser vazio.")
 
     fig, axes = plt.subplots(
@@ -90,7 +92,7 @@ def plot_vesselness_mip_grid(
     for idx, img_id in enumerate(ids_to_plot):
         mip = np.max(vessel_maps[img_id][map_key], axis=2)
         ax = axes[idx]
-        im = ax.imshow(mip, cmap=cmap, origin="lower")
+        im = ax.imshow(mip, cmap=cmap, origin="upper")
         ax.set_title(f"ID {img_id}")
         ax.axis("off")
         plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
@@ -116,7 +118,7 @@ def plot_vesselness_mip(
     mip = np.max(vessel_maps[img_id][map_key], axis=2)
 
     plt.figure(figsize=(7, 5), dpi=dpi)
-    im = plt.imshow(mip, cmap=cmap, origin="lower")
+    im = plt.imshow(mip, cmap=cmap, origin="upper")
 
     if show_subtitle:
         plt.title(f"ID {img_id}")
@@ -134,4 +136,3 @@ def plot_vesselness_mip(
 
     plt.show()
     plt.close()
-

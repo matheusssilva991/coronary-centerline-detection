@@ -34,7 +34,7 @@ def plot_stage(
     image_to_show, mode_text = _resolve_stage_image(volume, center_slice, mode)
 
     plt.figure(figsize=(6, 5), dpi=dpi)
-    plt.imshow(image_to_show, cmap=cmap)
+    plt.imshow(image_to_show, cmap=cmap, origin="upper")
 
     if show_subtitle:
         plt.title(f"ID {img_id} - {mode_text}")
@@ -63,7 +63,9 @@ def plot_preprocessing_grid(
     """Plota grid das etapas de pre-processamento em fatia, MIP ou ambos."""
     if ids_to_plot is None:
         ids_to_plot = sorted(preprocessed.keys())
-    if not ids_to_plot:
+    else:
+        ids_to_plot = list(ids_to_plot)
+    if len(ids_to_plot) == 0:
         raise ValueError("ids_to_plot não pode ser vazio.")
 
     stages = [
@@ -100,7 +102,7 @@ def plot_preprocessing_grid(
                     volume, center_slice, current_mode
                 )
                 ax = axes[row, col]
-                ax.imshow(image_to_show, cmap=cmap)
+                ax.imshow(image_to_show, cmap=cmap, origin="upper")
 
                 if show_subtitle:
                     ax.set_title(f"ID {img_id} - {stage_title} - {mode_text}")
@@ -122,4 +124,3 @@ def plot_preprocessing_grid(
 
     plt.show()
     plt.close(fig)
-

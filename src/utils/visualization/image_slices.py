@@ -1,11 +1,89 @@
 """Visualizações básicas de volumes, fatias e círculos detectados."""
 
+from pathlib import Path
+
 from typing import Any, Literal, Optional, Sequence
 
 import matplotlib.patches as patches
 import matplotlib.pyplot as plt
 import numpy as np
 from numpy.typing import NDArray
+
+
+def save_volume_slice_figure(
+    image_volume: NDArray,
+    slice_index: int,
+    output_path: str | Path,
+    *,
+    axis: int = 2,
+    cmap: str = "gray",
+    vmin: Optional[float] = None,
+    vmax: Optional[float] = None,
+    origin: Literal["upper", "lower"] = "upper",
+    dpi: int = 300,
+    figure_width: float = 7.0,
+    padding_fraction: float = 0.0,
+    output_size_px: tuple[int, int] | None = None,
+) -> Path:
+    """Salva uma fatia 2D completa, sem recorte automático do Matplotlib.
+
+    O tamanho da figura acompanha a proporção real da fatia e os limites dos
+    eixos incluem explicitamente todos os pixels. Isso evita que o backend do
+    notebook ou ``bbox_inches='tight'`` remova parte da imagem.
+    """
+    if image_volume.ndim != 3:
+        raise ValueError("image_volume deve ser 3D.")
+    if axis not in (0, 1, 2):
+        raise ValueError("axis deve ser 0, 1 ou 2.")
+    if padding_fraction < 0:
+        raise ValueError("padding_fraction deve ser >= 0.")
+    if output_size_px is not None and any(size <= 0 for size in output_size_px):
+        raise ValueError("output_size_px deve conter largura e altura positivas.")
+
+    axis_size = image_volume.shape[axis]
+    if not -axis_size <= slice_index < axis_size:
+        raise IndexError(
+            f"slice_index={slice_index} fora do eixo {axis}, que possui "
+            f"{axis_size} fatias."
+        )
+    normalized_index = slice_index % axis_size
+    image_slice = np.take(image_volume, normalized_index, axis=axis)
+    height, width = image_slice.shape
+    padding = max(height, width) * padding_fraction
+    canvas_height = height + 2 * padding
+    canvas_width = width + 2 * padding
+    if output_size_px is None:
+        figure_height = figure_width * canvas_height / canvas_width
+    else:
+        output_width, output_height = output_size_px
+        figure_width = output_width / dpi
+        figure_height = output_height / dpi
+
+    output = Path(output_path)
+    output.parent.mkdir(parents=True, exist_ok=True)
+
+    fig, ax = plt.subplots(figsize=(figure_width, figure_height), dpi=dpi)
+    ax.imshow(
+        image_slice,
+        cmap=cmap,
+        vmin=vmin,
+        vmax=vmax,
+        origin=origin,
+        interpolation="none",
+        aspect="equal",
+    )
+    ax.set_xlim(-0.5 - padding, width - 0.5 + padding)
+    if origin == "upper":
+        ax.set_ylim(height - 0.5 + padding, -0.5 - padding)
+    else:
+        ax.set_ylim(-0.5 - padding, height - 0.5 + padding)
+    ax.set_facecolor("black")
+    ax.margins(0)
+    ax.axis("off")
+    ax.set_position([0, 0, 1, 1])
+    fig.savefig(output, dpi=dpi, pad_inches=0, facecolor="black")
+    plt.close(fig)
+    return output
 
 
 def plot_mip_projection(
@@ -125,6 +203,7 @@ def visualize_circles_on_slices(
     num_samples: int = 6,
     vmin: Optional[float] = None,
     vmax: Optional[float] = None,
+    dpi: int = 100,
 ) -> None:
     """Sobrepõe círculos detectados em fatias amostradas do volume."""
     if not detected_circles:
@@ -134,7 +213,7 @@ def visualize_circles_on_slices(
     step = max(1, len(slice_indices) // num_samples)
     selected_slices = slice_indices[::step][:num_samples]
 
-    fig, axes = plt.subplots(2, 3, figsize=(15, 10))
+    fig, axes = plt.subplots(2, 3, figsize=(9, 6), dpi=dpi)
     axes = axes.flatten()
 
     for i, slice_idx in enumerate(selected_slices):
@@ -166,4 +245,3 @@ def visualize_circles_on_slices(
     plt.tight_layout()
     plt.show()
     plt.close(fig)
-

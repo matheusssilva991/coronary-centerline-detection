@@ -23,7 +23,7 @@ def get_or_detect_aorta_circles(
     downscale_factors: Sequence[int],
     scaled_spacing: Sequence[float],
     circle_config: Dict[str, Any],
-    base_save_path: str,
+    base_save_path: str | Path | None,
     load_cache: bool = False,
     save_cache: bool = False,
 ) -> List[Dict[str, Any]]:
@@ -32,10 +32,15 @@ def get_or_detect_aorta_circles(
         Path(base_save_path)
         / "detected_circles_cpu"
         / f"{img_id}_detected_circles.json"
+        if base_save_path is not None
+        else None
     )
 
     # Reutiliza círculos salvos quando a execução está com cache habilitado.
-    cached_circles = load_json_cache(json_path, enabled=load_cache)
+    cached_circles = load_json_cache(
+        json_path,
+        enabled=load_cache and json_path is not None,
+    )
     if cached_circles is not None:
         return cached_circles
 
@@ -86,16 +91,23 @@ def get_or_segment_aorta(
     lcc_image: Any,
     detected_circles: List[Dict[str, Any]],
     level_set_config: Dict[str, Any],
-    base_save_path: str,
+    base_save_path: str | Path | None,
     load_cache: bool = False,
     save_cache: bool = False,
     use_gpu: bool = False,
 ) -> Any:
     """Carrega ou segmenta a aorta com level set + pós-processamento."""
-    mask_path = Path(base_save_path) / "segmented_aorta" / f"{img_id}_mask_aorta.npy"
+    mask_path = (
+        Path(base_save_path) / "segmented_aorta" / f"{img_id}_mask_aorta.npy"
+        if base_save_path is not None
+        else None
+    )
 
     # Reutiliza a máscara da aorta quando disponível.
-    cached_mask = load_npy_cache(mask_path, enabled=load_cache)
+    cached_mask = load_npy_cache(
+        mask_path,
+        enabled=load_cache and mask_path is not None,
+    )
     if cached_mask is not None:
         return cached_mask
 

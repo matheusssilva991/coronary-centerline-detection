@@ -31,7 +31,7 @@ def plot_hough_initial_diagnostics(
     cmap_to_use = _resolve_cmap(cmap, invert_cmap)
     fig, axes = plt.subplots(1, 2, figsize=(12, 5), dpi=dpi)
 
-    axes[0].imshow(img_slice, cmap=cmap_to_use)
+    axes[0].imshow(img_slice, cmap=cmap_to_use, origin="upper")
     if initial_circle is not None:
         axes[0].scatter(
             [initial_circle["center_x"]],
@@ -56,7 +56,7 @@ def plot_hough_initial_diagnostics(
     if initial_circle is not None and show_subtitle:
         axes[0].legend(loc="lower right")
 
-    axes[1].imshow(img_slice, cmap=cmap_to_use)
+    axes[1].imshow(img_slice, cmap=cmap_to_use, origin="upper")
     for candidate in candidates:
         axes[1].add_patch(
             patches.Circle(
@@ -128,7 +128,7 @@ def plot_hough_initial_circle(
 
     cmap_to_use = _resolve_cmap(cmap, invert_cmap)
     plt.figure(figsize=(6, 6), dpi=dpi)
-    plt.imshow(img_slice, cmap=cmap_to_use)
+    plt.imshow(img_slice, cmap=cmap_to_use, origin="upper")
 
     if initial_circle is not None:
         plt.scatter(
@@ -180,7 +180,7 @@ def plot_hough_refinement_candidates(
 
     cmap_to_use = _resolve_cmap(cmap, invert_cmap)
     plt.figure(figsize=(6, 6), dpi=dpi)
-    plt.imshow(img_slice, cmap=cmap_to_use)
+    plt.imshow(img_slice, cmap=cmap_to_use, origin="upper")
 
     for candidate in refinement_candidates:
         plt.gca().add_patch(
@@ -231,7 +231,7 @@ def plot_hough_refined_circle(
 
     cmap_to_use = _resolve_cmap(cmap, invert_cmap)
     plt.figure(figsize=(6, 6), dpi=dpi)
-    plt.imshow(img_slice, cmap=cmap_to_use)
+    plt.imshow(img_slice, cmap=cmap_to_use, origin="upper")
 
     if refined_circle is not None:
         plt.gca().add_patch(
@@ -297,7 +297,7 @@ def plot_spaced_detected_circles(
     for ax, circle_idx in zip(axes, sample_indices, strict=False):
         circle = detected_circles[circle_idx]
         slice_idx = int(circle["slice_index"])
-        ax.imshow(image_volume[:, :, slice_idx], cmap=cmap_to_use)
+        ax.imshow(image_volume[:, :, slice_idx], cmap=cmap_to_use, origin="upper")
         ax.add_patch(
             patches.Circle(
                 (circle["center_x"], circle["center_y"]),
@@ -322,4 +322,3 @@ def plot_spaced_detected_circles(
 
     plt.show()
     plt.close(fig)
-

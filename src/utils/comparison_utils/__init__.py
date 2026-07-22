@@ -4,6 +4,7 @@ from importlib import import_module
 
 _SUBMODULES = {
     "bad_cases",
+    "failure_analysis",
     "ia_math",
     "io",
     "metadata",
@@ -25,6 +26,11 @@ _SYMBOL_TO_MODULE = {
     "prepare_bad_cases_for_subset": "bad_cases",
     "save_bad_cases_artifacts": "bad_cases",
     "summarize_bad_dice_with_threshold": "bad_cases",
+    # failure_analysis
+    "build_failure_case_catalog": "failure_analysis",
+    "select_focused_failure_cohort": "failure_analysis",
+    "select_representative_failure_cases": "failure_analysis",
+    "summarize_failure_categories": "failure_analysis",
     # ia_math
     "build_comparison_agg_df": "ia_math",
     "filter_to_common_ia_math_ids": "ia_math",

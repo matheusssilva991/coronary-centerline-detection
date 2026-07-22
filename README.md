@@ -36,7 +36,7 @@ coronary-centerline-detection/
 │   ├── eda/                        # Notebooks de análise exploratória
 │   │   ├── README.md                        # Catálogo e instruções de execução
 │   │   ├── image_intensity_eda.ipynb        # Intensidades HU e percentis
-│   │   ├── preprocessing_visualization.ipynb # Pré-processamento, Hough e vesselness
+│   │   ├── preprocessing_visualization.ipynb # Fatias, pré-processamento, Hough e vesselness
 │   │   ├── segmentation_results_eda.ipynb   # Resultados de segmentação
 │   │   ├── split_resolution_analysis.ipynb  # Comparação de splits/resoluções
 │   │   ├── ia_vs_pipeline_analysis.ipynb    # IA versus pipeline matemático

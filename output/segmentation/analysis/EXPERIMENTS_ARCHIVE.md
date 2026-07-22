@@ -69,3 +69,52 @@ reprodutibilidade com os runs históricos.
 Os valores acima servem como histórico de seleção, não como resultado final do
 artigo. Comparações finais devem usar os mesmos IDs, resolução e ambiente para
 as quatro abordagens mantidas.
+
+## Otimização arterial encerrada
+
+Os resultados brutos de `artery_vesselness_fc_sweep` foram removidos após a
+validação, pois nenhuma variante superou o pipeline de referência. Na seleção
+de treino, algumas combinações chegaram a aproximadamente 0,607 de Dice médio,
+mas o ganho não se confirmou em validação.
+
+No bloco final com 60 imagens de validação:
+
+| Variante | Dice médio | Decisão |
+|---|---:|---|
+| Baseline RG, morfologia atual | 0,6137 | mantido como referência |
+| RG gamma 65 + dilatação condicionada | 0,6005 | descartado |
+| FC piso 0,020, sigma HU 90 + dilatação condicionada | 0,5952 | descartado |
+
+Também foram descartados ajustes por ramo, recuperação de ramos pequenos,
+dilatação condicionada e grades alternativas de vesselness/FC. As opções RG e
+FC continuam no pipeline; somente as grades experimentais sem ganho foram
+retiradas.
+
+## Diagnóstico focado de falhas
+
+Os resultados antigos de `pipeline_failure_improvement` foram removidos, mas o
+runner e a coorte de validação foram restaurados para continuar as variantes
+`corrections`. A primeira execução (`baseline_val_2026-07-20_14-41-38`) era
+inválida: os 46 exames de cada variante falharam porque a seleção bilateral não
+recebia os círculos detectados. O erro foi corrigido no comparador principal.
+
+A repetição válida em 46 casos difíceis confirmou apenas o comportamento já
+medido pelas quatro abordagens, sem uma correção nova para promover:
+
+| Variante | Sucesso dos óstios | Dice médio |
+|---|---:|---:|
+| Threshold normal + RG | 80,4% | 0,5272 |
+| Threshold fuzzy + RG | 82,6% | 0,5171 |
+| Threshold normal + FC | 80,4% | 0,4836 |
+| Threshold fuzzy + FC | 82,6% | 0,4676 |
+
+Como a coorte é intencionalmente concentrada em falhas, esses números não devem
+ser usados como estimativa global. Ela serve apenas para selecionar correções
+antes de uma validação mais ampla.
+
+## Código experimental removido
+
+Foram removidos os scripts e runners encerrados de recuperação/rastreamento da
+aorta, seleção de óstios e otimização arterial. Além dos três comparadores
+principais e do runner de threshold, permanece o diagnóstico focado de falhas
+com seu runner de correções.

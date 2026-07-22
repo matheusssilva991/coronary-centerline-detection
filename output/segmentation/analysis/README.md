@@ -17,11 +17,10 @@ O catálogo dos notebooks que produzem estas análises está em
 - `EXPERIMENTS_ARCHIVE.md`: decisões e métricas resumidas dos sweeps encerrados.
 - `aorta_mask_ostia_comparison/aorta_ostia_bilateral_final_val90/`: confirmação
   final da nova opção bilateral em 90 imagens independentes de validação.
-- `artery_vesselness_fc_sweep/`: runs de seleção do mapa de vesselness arterial,
-  refinamento de RG/FC e ablação do pós-processamento morfológico. Cada run
-  mantém seus parâmetros e tabelas na subpasta `results/`. O estágio mais novo
-  também compara dilatação condicionada por vesselness e recuperação local de
-  ramos subsegmentados.
+- `pipeline_failure_analysis/`: catálogo e coorte focada de validação usada
+  pelo runner de correções.
+- `pipeline_failure_improvement/`: novas execuções `baseline` ou `corrections`;
+  resultados antigos inválidos foram removidos.
 - `fuzzy_membership_functions/`: figuras das funcoes de pertinencia fuzzy.
 - `image_slices/`: fatias de CCTA exportadas para publicação.
 - `segmentation_results/`: figuras e tabelas da análise canônica de Dice.
@@ -42,8 +41,9 @@ variantes, o esperado e ter 6 comparacoes.
 
 ## Regra pratica
 
-Use os CSVs em `tables/` para a analise final. Consulte
+Use os CSVs em `tables/` para a análise final. Consulte
 `EXPERIMENTS_ARCHIVE.md` para entender por que parâmetros e abordagens antigas
-foram retirados. Os resultados preliminares de aorta/ostios foram resumidos no
-arquivo historico e removidos para evitar que triagens sejam confundidas com a
-confirmacao final.
+foram retirados. Grades sem ganho, execuções inválidas e diagnósticos
+temporários são resumidos no histórico e removidos para não serem confundidos
+com confirmações positivas. A exceção é a coorte focada de falhas, mantida para
+continuar o teste de correções em validação.

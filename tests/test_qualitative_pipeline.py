@@ -65,6 +65,7 @@ class QualitativePipelineTest(TestCase):
         self.assertIs(result["artery_mask"], volume)
         self.assertEqual(result["ostia_left"], (1, 1, 1))
         self.assertEqual(result["scaled_spacing"], (0.6, 0.7, 0.8))
+        self.assertTrue(load_image.call_args.kwargs["include_intermediates"])
         compute_vesselness.assert_called_once()
         self.assertTrue(compute_vesselness.call_args.kwargs["load_cache"])
         self.assertFalse(compute_vesselness.call_args.kwargs["save_cache"])

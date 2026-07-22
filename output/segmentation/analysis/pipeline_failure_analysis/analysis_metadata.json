@@ -1,0 +1,9 @@
+{
+  "split": "val",
+  "image_count": 270,
+  "low_dice_threshold": 0.4,
+  "meaningful_delta": 0.05,
+  "volume_ratio": 1.5,
+  "test_analysis_only": false,
+  "focused_cohort_size": 46
+}

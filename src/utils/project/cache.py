@@ -9,10 +9,17 @@ from typing import Any
 import numpy as np
 
 
-def load_json_cache(path: str | Path, enabled: bool = True) -> Any | None:
+def load_json_cache(
+    path: str | Path | None,
+    enabled: bool = True,
+) -> Any | None:
     """Carrega um cache JSON quando habilitado e existente."""
+    if not enabled:
+        return None
+    if path is None:
+        raise ValueError("Um caminho de cache é obrigatório quando enabled=True.")
     path = Path(path)
-    if not enabled or not path.exists():
+    if not path.exists():
         return None
     with path.open("r", encoding="utf-8") as file_handle:
         return json.load(file_handle)
@@ -28,10 +35,17 @@ def save_json_cache(data: Any, path: str | Path, enabled: bool = True) -> None:
         json.dump(data, file_handle, indent=4)
 
 
-def load_npy_cache(path: str | Path, enabled: bool = True) -> Any | None:
+def load_npy_cache(
+    path: str | Path | None,
+    enabled: bool = True,
+) -> Any | None:
     """Carrega um cache NumPy quando habilitado e existente."""
+    if not enabled:
+        return None
+    if path is None:
+        raise ValueError("Um caminho de cache é obrigatório quando enabled=True.")
     path = Path(path)
-    if not enabled or not path.exists():
+    if not path.exists():
         return None
     return np.load(path)
 

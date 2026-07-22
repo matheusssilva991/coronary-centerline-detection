@@ -27,8 +27,8 @@ export IMAGECAS_PROCESSED_PATH=/caminho/para/Processed_ImageCAS
 
 | Notebook | Objetivo | Entrada principal | Saída | Custo |
 |---|---|---|---|---|
-| [image_intensity_eda.ipynb](image_intensity_eda.ipynb) | Fatias, distribuição HU e percentis da ROI | Volumes ImageCAS | `analysis/image_slices/` e figuras exibidas | Baixo para uma fatia; médio para KDE |
-| [preprocessing_visualization.ipynb](preprocessing_visualization.ipynb) | MIP, downscale, threshold, LCC, Hough e vesselness | ImageCAS e `pipeline_config.json` | Figuras exibidas | Médio; alto com vesselness |
+| [image_intensity_eda.ipynb](image_intensity_eda.ipynb) | Distribuição HU e percentis da ROI | Volumes ImageCAS | Figuras e tabelas exibidas | Médio para KDE |
+| [preprocessing_visualization.ipynb](preprocessing_visualization.ipynb) | Fatias axiais completas, MIP, downscale, threshold, LCC, Hough e vesselness | ImageCAS e `pipeline_config.json` | `analysis/image_slices/` e figuras exibidas | Baixo para fatias; médio, ou alto com vesselness |
 
 ### Resultados quantitativos
 

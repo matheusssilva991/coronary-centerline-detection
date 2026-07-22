@@ -24,6 +24,7 @@ _SYMBOL_TO_MODULE = {
     # image_slices
     "plot_mip_projection": "image_slices",
     "plot_slices": "image_slices",
+    "save_volume_slice_figure": "image_slices",
     "visualize_circles_on_slices": "image_slices",
     # preprocessing_views
     "plot_preprocessing_grid": "preprocessing_views",

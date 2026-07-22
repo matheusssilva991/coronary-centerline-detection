@@ -1,0 +1,10 @@
+category,count,percent
+shared_ostia_failure,36,13.333333333333334
+fc_undersegments_normal,16,5.925925925925926
+fc_undersegments_fuzzy,15,5.555555555555555
+fuzzy_threshold_rescue,14,5.185185185185185
+fuzzy_threshold_regression,11,4.074074074074074
+threshold_changes_segmentation_with_same_ostia,9,3.3333333333333335
+shared_low_dice_with_good_ostia,6,2.2222222222222223
+fc_prevents_rg_leakage_normal,2,0.7407407407407407
+fc_recovers_rg_undersegmentation_normal,0,0.0
