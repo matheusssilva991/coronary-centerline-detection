@@ -1,10 +1,8 @@
 import numpy as np
 from skimage.filters import ridges, gaussian
-import os
-import pickle
 import warnings
-from typing import Any, Optional, Sequence
-from numpy.typing import NDArray
+from typing import Any, Optional, Sequence, cast
+from numpy.typing import ArrayLike, NDArray
 
 # Importa utilitários de GPU centralizados
 from .gpu_utils import (
@@ -30,11 +28,8 @@ if GPU_AVAILABLE:
         gpu_filters = None
 
 
-def _as_sigma_sequence(sigmas: Sequence[float]) -> list[float]:
-    if np.isscalar(sigmas):
-        sigma_values = [float(sigmas)]
-    else:
-        sigma_values = [float(sigma) for sigma in sigmas]
+def _as_sigma_sequence(sigmas: ArrayLike) -> list[float]:
+    sigma_values = np.atleast_1d(np.asarray(sigmas, dtype=float)).tolist()
 
     if not sigma_values:
         raise ValueError("sigmas deve conter pelo menos um valor.")
@@ -63,7 +58,7 @@ def _apply_normalization(array: Any, normalization: str) -> Any:
 
 def get_vesselness(
     image: Any,
-    sigmas: Sequence[float] = np.arange(1.0, 4.0, 0.5),
+    sigmas: Sequence[float] = (1.0, 1.5, 2.0, 2.5, 3.0, 3.5),
     alpha: float = 0.5,
     beta: float = 0.5,
     gamma: Optional[float] = None,
@@ -100,11 +95,13 @@ def get_vesselness(
     _validate_normalization_method(normalization)
     use_gpu_flag = gpu if gpu is not None else GPU_AVAILABLE
 
+    # O caminho GPU mantém os dados no dispositivo até a normalização final.
     if use_gpu_flag and GPU_AVAILABLE and gpu_filters is not None:
         try:
+            filters_gpu = cast(Any, gpu_filters)
             image_gpu = to_gpu(image)
             frangi_input = (
-                gpu_filters.gaussian(
+                filters_gpu.gaussian(
                     image_gpu,
                     sigma=smooth_sigma,
                     preserve_range=True,
@@ -112,7 +109,7 @@ def get_vesselness(
                 if smooth_sigma > 0
                 else image_gpu
             )
-            vesselness = gpu_filters.frangi(
+            vesselness = filters_gpu.frangi(
                 frangi_input,
                 sigmas=sigma_values,
                 alpha=alpha,
@@ -123,18 +120,22 @@ def get_vesselness(
             vesselness = _apply_normalization(vesselness, normalization)
             return to_cpu(vesselness) if return_cpu else vesselness
         except Exception as e:
+            # Falhas do backend não devem interromper a execução do pipeline.
             warnings.warn(
                 f"Frangi GPU falhou ({type(e).__name__}: {e}). Usando CPU.",
                 UserWarning,
             )
 
+    # O fallback CPU reproduz suavização e parâmetros usados no backend GPU.
     img_cpu = image if isinstance(image, np.ndarray) else to_cpu(image)
+    gaussian_filter = cast(Any, gaussian)
+    frangi_filter = cast(Any, ridges.frangi)
     frangi_input = (
-        gaussian(img_cpu, sigma=smooth_sigma, preserve_range=True)
+        gaussian_filter(img_cpu, sigma=smooth_sigma, preserve_range=True)
         if smooth_sigma > 0
         else img_cpu
     )
-    vesselness = ridges.frangi(
+    vesselness = frangi_filter(
         frangi_input,
         sigmas=sigma_values,
         alpha=alpha,
@@ -142,52 +143,4 @@ def get_vesselness(
         gamma=gamma,
         black_ridges=black_ridges,
     )
-    return _apply_normalization(vesselness, normalization)
-
-
-def save_vesselness_cache(
-    vesselness_i: Any, img_id: Any, cache_dir: str = "../cache"
-) -> None:
-    """
-    Salva o mapa de vesselness em cache comprimido sem alterar dtype.
-
-    O formato atual usa ``.npz`` com compressão lossless. Isso reduz uso de
-    disco sem converter para float16, então evita pequenas diferenças numéricas
-    nos resultados.
-
-    Args:
-        vesselness_i: Mapa de vesselness (NumPy ou CuPy array)
-        img_id: ID da imagem
-        cache_dir: Diretório para salvar o cache
-    """
-    os.makedirs(cache_dir, exist_ok=True)
-    # Converte para NumPy se necessário
-    vesselness_i = np.asarray(to_cpu(vesselness_i))
-    cache_path = os.path.join(cache_dir, f"vesselness_{img_id}.npz")
-    np.savez_compressed(cache_path, vesselness=vesselness_i)
-
-
-def load_vesselness_cache(
-    img_id: Any, cache_dir: str = "../cache"
-) -> Optional[NDArray[Any]]:
-    """
-    Carrega o mapa de vesselness do cache se disponível.
-
-    Args:
-        img_id: ID da imagem
-        cache_dir: Diretório do cache
-
-    Returns:
-        vesselness_i como NumPy array, ou None se não encontrado
-    """
-    compressed_cache_path = os.path.join(cache_dir, f"vesselness_{img_id}.npz")
-    if os.path.exists(compressed_cache_path):
-        with np.load(compressed_cache_path) as data:
-            return data["vesselness"]
-
-    # Compatibilidade com caches antigos gerados em pickle.
-    legacy_cache_path = os.path.join(cache_dir, f"vesselness_{img_id}.pkl")
-    if os.path.exists(legacy_cache_path):
-        with open(legacy_cache_path, "rb") as f:
-            return pickle.load(f)
-    return None
+    return np.asarray(_apply_normalization(vesselness, normalization))

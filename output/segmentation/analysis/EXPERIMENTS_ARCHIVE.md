@@ -118,3 +118,50 @@ Foram removidos os scripts e runners encerrados de recuperação/rastreamento da
 aorta, seleção de óstios e otimização arterial. Além dos três comparadores
 principais e do runner de threshold, permanece o diagnóstico focado de falhas
 com seu runner de correções.
+
+## Sensibilidade dos parâmetros do artigo
+
+A primeira execução de sensibilidade,
+`sensitivity_canonical_val_30`, foi removida porque sua configuração de
+referência não reproduzia o baseline histórico: obteve sucesso dos óstios de
+70,0% e Dice médio de 0,5237 nas primeiras 30 imagens de validação.
+
+Ela foi substituída por `sensitivity_normal_rg_val_30`, cuja referência foi
+comparada imagem a imagem com
+`fuzzy_comparison/val/normal_rg/2026-06-23_14-47-01`. As duas execuções obtiveram
+22/30 sucessos dos óstios (73,3%), e a diferença entre os Dice médios foi de
+apenas 0,00012. Esse run corrigido foi mantido como triagem da análise OFAT.
+
+Na triagem, o percentil superior foi o parâmetro mais sensível: P99,5 reduziu
+o Dice médio para 0,4947, enquanto P99,9 o elevou para 0,5579. Os limites em z
+de 30 e 50 mm reproduziram a referência nesse bloco; os divisores 5 e 9 do RG
+tiveram variação inferior a 0,0002 no Dice médio; e os pisos de vesselness de
+5% e 9% reduziram o Dice para 0,5318 e 0,5256, respectivamente.
+
+O CSV de AUC da comparação por imagem também foi removido. AUC não representa
+uma métrica adequada para a curva de Dice ordenada por exame e deixou de fazer
+parte das figuras e conclusões do notebook.
+
+## Limpeza dos artefatos de análise
+
+O comparativo qualitativo acumulava HTMLs de seleções antigas. Foram mantidos
+somente os três casos registrados em `selected_qualitative_cases.csv`, cada um
+com o pipeline original e a melhor variante: óstios iguais (imagem 997),
+óstios diferentes (imagem 327) e Dice próximo das médias (imagem 178).
+
+As cópias completas dos runs internos da confirmação bilateral da aorta foram
+removidas. Permaneceram os CSVs consolidados, as configurações das duas
+variantes e os arquivos de identificação da amostra, suficientes para consultar
+o resultado e reproduzir o experimento. Exemplos visuais gerais, casos ruins,
+figuras metodológicas e resultados compactos das análises ativas foram
+preservados.
+
+Posteriormente, o diretório consolidado `aorta_mask_ostia_comparison` também foi
+removido; suas métricas finais permanecem documentadas neste histórico. Os PNGs
+e CSVs de `fuzzy_membership_functions` foram excluídos porque a figura e a
+tabela já ficam incorporadas ao notebook correspondente.
+
+O último `pipeline_failure_improvement` também foi removido: ele era apenas a
+saída do runner de correções e suas métricas já estavam registradas neste
+histórico. O catálogo `pipeline_failure_analysis` foi preservado porque seu
+`focused_cohort.csv` é uma entrada direta do runner.

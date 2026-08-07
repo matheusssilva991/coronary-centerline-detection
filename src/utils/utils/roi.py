@@ -51,14 +51,13 @@ def extract_circular_region(
     """
     h, w, _ = image.shape
 
-    if center is None:
-        center = (h // 2, w // 2)
+    resolved_center = center if center is not None else (h // 2, w // 2)
+    resolved_radius = radius if radius is not None else min(h, w) // 4
 
-    if radius is None:
-        radius = min(h, w) // 4
-
-    x_min, x_max = max(0, center[0] - radius), min(h, center[0] + radius)
-    y_min, y_max = max(0, center[1] - radius), min(w, center[1] + radius)
+    x_min = max(0, resolved_center[0] - resolved_radius)
+    x_max = min(h, resolved_center[0] + resolved_radius)
+    y_min = max(0, resolved_center[1] - resolved_radius)
+    y_max = min(w, resolved_center[1] + resolved_radius)
     sub_volume = image[x_min:x_max, y_min:y_max, :]
 
     if mask_background:
@@ -67,7 +66,7 @@ def extract_circular_region(
 
         y, x = np.ogrid[:sub_h, :sub_w]
         dist_from_center = (x - sub_center[1]) ** 2 + (y - sub_center[0]) ** 2
-        mask = dist_from_center <= radius**2
+        mask = dist_from_center <= resolved_radius**2
 
         masked_volume = np.zeros_like(sub_volume)
         for z in range(sub_volume.shape[2]):

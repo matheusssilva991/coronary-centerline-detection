@@ -1,6 +1,6 @@
 """Visualizações e cálculo auxiliar de mapas de vesselness."""
 
-from typing import Any, Literal, Optional, Sequence
+from typing import Any, Iterable, Literal, Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -9,7 +9,7 @@ from numpy.typing import NDArray
 
 def compute_vesselness_maps(
     preprocessed: dict[int, dict[str, Any]],
-    ids_to_plot: Optional[Sequence[int]] = None,
+    ids_to_plot: Optional[Iterable[int]] = None,
     ostia_config: Optional[dict[str, Any]] = None,
     artery_config: Optional[dict[str, Any]] = None,
 ) -> dict[int, dict[str, NDArray]]:
@@ -69,7 +69,7 @@ def compute_vesselness_maps(
 
 def plot_vesselness_mip_grid(
     vessel_maps: dict[int, dict[str, NDArray]],
-    ids_to_plot: Optional[Sequence[int]] = None,
+    ids_to_plot: Optional[Iterable[int]] = None,
     map_key: Literal["vesselness_ostia", "vesselness_artery"] = "vesselness_artery",
     title: str = "Mapa de vasos (MIP axial)",
     cmap: str = "gray",
@@ -98,7 +98,7 @@ def plot_vesselness_mip_grid(
         plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
 
     plt.suptitle(title, fontsize=14)
-    plt.tight_layout(rect=[0, 0, 1, 0.95])
+    plt.tight_layout(rect=(0, 0, 1, 0.95))
     plt.show()
     plt.close(fig)
 
@@ -130,7 +130,7 @@ def plot_vesselness_mip(
 
     if show_title:
         plt.suptitle(title, fontsize=13)
-        plt.tight_layout(rect=[0, 0, 1, 0.95])
+        plt.tight_layout(rect=(0, 0, 1, 0.95))
     else:
         plt.tight_layout()
 

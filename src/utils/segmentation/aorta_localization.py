@@ -7,8 +7,8 @@ usando Canny + transformada de Hough com restrições de continuidade geométric
 import numpy as np
 from skimage import feature
 from skimage.transform import hough_circle, hough_circle_peaks
-from typing import Any, Optional, Sequence, Tuple
-from numpy.typing import NDArray
+from typing import Any, Optional, Sequence, Tuple, cast
+from numpy.typing import ArrayLike, NDArray
 
 # Utilitários de GPU usados apenas no pré-processamento da fatia.
 # A transformada de Hough continua na CPU para manter o mesmo backend do skimage.
@@ -60,7 +60,7 @@ def _interpolate_missing_circles(
 
 
 def _calculate_distances_vectorized(
-    cx: NDArray[Any], cy: NDArray[Any], ref_x: float, ref_y: float
+    cx: ArrayLike, cy: ArrayLike, ref_x: float, ref_y: float
 ) -> NDArray[Any]:
     """Calcula distâncias euclidianas de forma vetorizada usando NumPy broadcasting."""
     cx_arr = np.asarray(cx)
@@ -81,13 +81,13 @@ def _detect_circles_in_slice(
     na GPU. O mapa binário de bordas volta para CPU porque `hough_circle` é do
     scikit-image.
     """
-    if use_gpu and GPU_AVAILABLE:
+    if use_gpu and GPU_AVAILABLE and cu_ndi is not None and cp is not None:
         # Calcula bordas por blur + Sobel na GPU antes da etapa Hough.
         img_gpu = to_gpu(img_slice.astype(np.float32))
         blurred = cu_ndi.gaussian_filter(img_gpu, sigma=canny_sigma)
-        gx = cu_ndi.sobel(blurred, axis=1)
-        gy = cu_ndi.sobel(blurred, axis=0)
-        gmag = cp.sqrt(gx ** 2 + gy ** 2)
+        gx = cast(Any, cu_ndi.sobel(blurred, axis=1))
+        gy = cast(Any, cu_ndi.sobel(blurred, axis=0))
+        gmag = cp.sqrt(gx**2 + gy**2)
         try:
             thr = float(cp.percentile(gmag, 75))
         except Exception:
@@ -103,8 +103,8 @@ def _detect_circles_in_slice(
 
 
 def _select_initial_circle_candidate(
-    cx: Sequence[float],
-    cy: Sequence[float],
+    cx: ArrayLike,
+    cy: ArrayLike,
     img_shape: Sequence[int],
     quadrant_offset: Sequence[int],
 ) -> int | None:
@@ -124,9 +124,9 @@ def _select_initial_circle_candidate(
 
 
 def _select_circle_candidate(
-    cx: Sequence[float],
-    cy: Sequence[float],
-    radii: Sequence[float],
+    cx: ArrayLike,
+    cy: ArrayLike,
+    radii: ArrayLike,
     ref_x: float,
     ref_y: float,
     ref_radius: float,
@@ -239,7 +239,7 @@ def _process_slice(
     local_roi_padding: int = 20,
     use_gpu: bool = False,
     verbose: bool = True,
-) -> Optional[dict]:
+) -> dict[str, Any] | str | None:
     """Processa uma fatia e retorna o melhor círculo rastreado (evita detecção duplicada)."""
     ref_x = reference_circle["center_x"]
     ref_y = reference_circle["center_y"]
@@ -313,7 +313,7 @@ def _process_slice(
         radii[min_idx], min_dist, ref_radius, radius_tolerance, distance_tolerance
     ):
         # Candidato fora da tolerância pode parar o rastreamento ou contar como miss.
-        slice_idx = reference_circle.get("slice_index", "N/A")
+        slice_idx = int(reference_circle.get("slice_index", -1))
         if verbose:
             print(
                 f"Parada na fatia {slice_idx - 1}: Δr={abs(radii[min_idx] - ref_radius):.2f} ou dist={min_dist:.2f}"
@@ -474,9 +474,9 @@ def get_initial_circle_diagnostics(
 
 
 def refine_circle_with_neighbors(
-    cx: Sequence[float],
-    cy: Sequence[float],
-    radii: Sequence[float],
+    cx: ArrayLike,
+    cy: ArrayLike,
+    radii: ArrayLike,
     ref_x: float,
     ref_y: float,
     distance_threshold: float = 5,
@@ -606,7 +606,7 @@ def detect_aorta_circles(
                 break
             continue
 
-        if result == OUT_OF_TOLERANCE:
+        if result == OUT_OF_TOLERANCE or not isinstance(result, dict):
             break
 
         next_circle = {"slice_index": slice_idx, **result, "interpolated": False}

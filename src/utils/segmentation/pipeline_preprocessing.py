@@ -4,18 +4,12 @@ Este módulo concentra as etapas que transformam um caso ImageCAS bruto em
 volumes prontos para detecção de aorta/óstios e segmentação arterial.
 """
 
-import hashlib
-import json
 from typing import Any, Dict
 
 import cv2
 import numpy as np
 
-from ..processing.frangi import (
-    get_vesselness,
-    load_vesselness_cache,
-    save_vesselness_cache,
-)
+from ..processing.frangi import get_vesselness
 from ..processing.preprocessing import (
     build_lcc_image_from_mask,
     downscale_image_ndi,
@@ -23,53 +17,13 @@ from ..processing.preprocessing import (
     largest_connected_component,
     threshold_image_with_offset,
 )
-from .lower_threshold import resolve_lower_threshold
 from ..utils.nifti_io import load_raw_img_and_label
 from .fuzzy_threshold import (
     fuzzy_threshold_from_config,
     get_thresholding_config,
     normalize_threshold_mode,
 )
-
-
-def _json_safe_cache_value(value: Any) -> Any:
-    """Converte valores comuns para montar uma assinatura estável de cache."""
-    if isinstance(value, dict):
-        return {
-            str(key): _json_safe_cache_value(item)
-            for key, item in sorted(value.items())
-        }
-    if isinstance(value, (list, tuple)):
-        return [_json_safe_cache_value(item) for item in value]
-    if hasattr(value, "tolist"):
-        return _json_safe_cache_value(value.tolist())
-    if hasattr(value, "item"):
-        try:
-            return value.item()
-        except ValueError:
-            pass
-    return value
-
-
-def _vesselness_cache_signature(
-    image: Any,
-    vesselness_config: Dict[str, Any],
-    use_gpu: bool,
-    spacing: Any,
-) -> str:
-    """Gera hash curto para separar caches por parâmetros e resolução."""
-    payload = {
-        "version": 2,
-        "shape": list(np.asarray(image).shape),
-        "dtype": str(np.asarray(image).dtype),
-        "use_gpu": bool(use_gpu),
-        "spacing": _json_safe_cache_value(spacing),
-        "vesselness_config": _json_safe_cache_value(vesselness_config),
-    }
-    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode(
-        "utf-8"
-    )
-    return hashlib.sha1(encoded).hexdigest()[:12]
+from .lower_threshold import resolve_lower_threshold
 
 
 def load_and_preprocess_image(
@@ -93,6 +47,8 @@ def load_and_preprocess_image(
     nii_img, nii_label = load_raw_img_and_label(
         f"{base_path}/{img_id}.img.nii.gz", f"{base_path}/{img_id}.label.nii.gz"
     )
+    if nii_label is None:
+        raise ValueError(f"Label não carregado para o exame {img_id}.")
     spacing = nii_img.header.get_zooms()
     img = np.array(nii_img.get_fdata(), dtype=np.float32)
     label = np.array(nii_label.get_fdata()).astype(np.uint8)
@@ -114,21 +70,22 @@ def load_and_preprocess_image(
     thresholding_config = get_thresholding_config(config)
     threshold_mode = normalize_threshold_mode(thresholding_config.get("method"))
 
-    preprocessing_details = {
+    preprocessing_details: Dict[str, Any] = {
         "threshold_mode": threshold_mode,
     }
 
+    # A redução é idêntica para os thresholds normal e fuzzy.
+    if use_opencv:
+        down_image = downscale_image_opencv(
+            img,
+            downscale_factors,
+            interpolation=opencv_interpolation,
+        )
+    else:
+        down_image = downscale_image_ndi(img, downscale_factors, order=3)
+
     if threshold_mode == "normal":
         # Caminho histórico: threshold HU superior por percentil + LCC.
-        if use_opencv:
-            down_image = downscale_image_opencv(
-                img,
-                downscale_factors,
-                interpolation=opencv_interpolation,
-            )
-        else:
-            down_image = downscale_image_ndi(img, downscale_factors, order=3)
-
         min_threshold, lower_threshold_details = resolve_lower_threshold(
             down_image,
             config,
@@ -164,14 +121,6 @@ def load_and_preprocess_image(
         )
     else:
         # Fuzzy threshold: mantém apenas voxels cuja classe dominante é objeto.
-        if use_opencv:
-            down_image = downscale_image_opencv(
-                img,
-                downscale_factors,
-                interpolation=opencv_interpolation,
-            )
-        else:
-            down_image = downscale_image_ndi(img, downscale_factors, order=3)
         fuzzy_config = dict(config)
         fuzzy_threshold_config = dict(thresholding_config.get("fuzzy", {}))
         fuzzy_lower_config = dict(config.get("LOWER_THRESHOLD", {}))
@@ -187,7 +136,10 @@ def load_and_preprocess_image(
             fuzzy_config,
         )
         fuzzy_config["MIN_THRESHOLD"] = float(min_threshold)
-        fuzzy_mask, fuzzy_details = fuzzy_threshold_from_config(down_image, fuzzy_config)
+        fuzzy_mask, fuzzy_details = fuzzy_threshold_from_config(
+            down_image,
+            fuzzy_config,
+        )
         lcc_image, lcc_mask = build_lcc_image_from_mask(
             down_image,
             fuzzy_mask,
@@ -237,31 +189,12 @@ def load_and_preprocess_image(
     return result
 
 
-def get_or_compute_vesselness(
-    img_id: str,
+def compute_vesselness(
     image: Any,
-    cache_dir: str,
     vesselness_config: Dict[str, Any],
-    load_cache: bool = False,
-    save_cache: bool = False,
     use_gpu: bool = False,
-    spacing: Any = None,
 ) -> Any:
-    """Carrega ou calcula o mapa de vasos (Frangi) para um volume 3D."""
-    cache_signature = _vesselness_cache_signature(
-        image,
-        vesselness_config,
-        use_gpu,
-        spacing,
-    )
-    cache_dir = f"{cache_dir}/{cache_signature}"
-
-    # Reutiliza cache quando disponível para evitar recalcular Frangi.
-    if load_cache:
-        cache = load_vesselness_cache(img_id, cache_dir=cache_dir)
-        if cache is not None:
-            return cache
-
+    """Calcula o mapa de vasos (Frangi) para um volume 3D."""
     # Monta os parâmetros do Frangi validado para aorta e artérias.
     vesselness_kwargs = {
         "sigmas": vesselness_config["sigmas"],
@@ -274,7 +207,4 @@ def get_or_compute_vesselness(
         "gpu": bool(use_gpu),
     }
     # Calcula o mapa de vasos usado na detecção dos óstios ou segmentação arterial.
-    vesselness = get_vesselness(image, **vesselness_kwargs)
-    if save_cache:
-        save_vesselness_cache(vesselness, img_id, cache_dir=cache_dir)
-    return vesselness
+    return get_vesselness(image, **vesselness_kwargs)

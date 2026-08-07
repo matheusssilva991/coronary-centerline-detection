@@ -26,15 +26,11 @@ _SOURCE_COLUMNS = {
     "artery_dice": "dice",
     "artery_voxel_count": "predicted_voxels",
     "ostia_detection_status": "ostia_status",
-    "left_ostium_distance_mm": "left_distance_mm",
-    "right_ostium_distance_mm": "right_distance_mm",
     "left_ostium": "left_ostium",
     "right_ostium": "right_ostium",
-    "threshold_voxel_count": "threshold_voxels",
-    "lcc_voxel_count": "lcc_voxels",
-    "fc_processed_voxels": "fc_processed_voxels",
-    "fc_candidate_voxels_final": "fc_candidate_voxels",
 }
+
+FOCUSED_COHORT_COLUMNS = ["IMG_ID", "cohort_kind", "cohort_roles"]
 
 _CATEGORY_COLUMNS = [
     "fuzzy_threshold_rescue",
@@ -85,22 +81,20 @@ def _variant_table(
         raise ValueError(f"Variante ausente nos resultados: {variant}")
     if selected["IMG_ID"].duplicated().any():
         duplicated = selected.loc[selected["IMG_ID"].duplicated(), "IMG_ID"].tolist()
-        raise ValueError(f"A variante {variant} possui IDs duplicados: {duplicated[:5]}")
+        raise ValueError(
+            f"A variante {variant} possui IDs duplicados: {duplicated[:5]}"
+        )
 
     table = selected[["IMG_ID"]].copy()
     for source, target in _SOURCE_COLUMNS.items():
         table[f"{prefix}_{target}"] = (
             selected[source] if source in selected.columns else np.nan
         )
-    table[f"{prefix}_dice"] = pd.to_numeric(
-        table[f"{prefix}_dice"], errors="coerce"
-    )
+    table[f"{prefix}_dice"] = pd.to_numeric(table[f"{prefix}_dice"], errors="coerce")
     table[f"{prefix}_predicted_voxels"] = pd.to_numeric(
         table[f"{prefix}_predicted_voxels"], errors="coerce"
     )
-    table[f"{prefix}_ostia_success"] = _success_status(
-        table[f"{prefix}_ostia_status"]
-    )
+    table[f"{prefix}_ostia_success"] = _success_status(table[f"{prefix}_ostia_status"])
     return table.set_index("IMG_ID")
 
 
@@ -136,12 +130,13 @@ def build_failure_case_catalog(
     if missing_roles:
         raise ValueError(f"Papéis de variantes ausentes: {sorted(missing_roles)}")
 
+    # Alinha as quatro abordagens pelo mesmo IMG_ID antes de comparar resultados.
     tables = [
-        _variant_table(results_df, names[role], role)
-        for role in DEFAULT_VARIANTS
+        _variant_table(results_df, names[role], role) for role in DEFAULT_VARIANTS
     ]
     catalog = pd.concat(tables, axis=1, join="inner").reset_index()
 
+    # Calcula deltas que separam efeito do threshold e efeito do segmentador.
     catalog["same_ostia_between_thresholds"] = _same_ostia(
         catalog, "normal_rg", "fuzzy_rg"
     )
@@ -162,6 +157,7 @@ def build_failure_case_catalog(
     rg_volume = catalog["normal_rg_predicted_voxels"]
     fc_volume = catalog["normal_fc_predicted_voxels"]
 
+    # Cada flag representa uma hipótese de falha útil para inspeção qualitativa.
     catalog["fuzzy_threshold_rescue"] = ~normal_success & fuzzy_success
     catalog["fuzzy_threshold_regression"] = normal_success & ~fuzzy_success
     catalog["shared_ostia_failure"] = ~normal_success & ~fuzzy_success
@@ -198,16 +194,16 @@ def build_failure_case_catalog(
             < catalog["fuzzy_rg_predicted_voxels"]
         )
     )
-    catalog["threshold_changes_segmentation_with_same_ostia"] = (
-        catalog["same_ostia_between_thresholds"]
-        & (catalog["fuzzy_rg_delta_vs_normal_rg"].abs() > meaningful_delta)
-    )
+    catalog["threshold_changes_segmentation_with_same_ostia"] = catalog[
+        "same_ostia_between_thresholds"
+    ] & (catalog["fuzzy_rg_delta_vs_normal_rg"].abs() > meaningful_delta)
 
+    # Uma imagem pode pertencer a mais de uma categoria simultaneamente.
     catalog["failure_categories"] = catalog.apply(
-        lambda row: ";".join(
-            category for category in _CATEGORY_COLUMNS if bool(row[category])
-        )
-        or "no_flag",
+        lambda row: (
+            ";".join(category for category in _CATEGORY_COLUMNS if bool(row[category]))
+            or "no_flag"
+        ),
         axis=1,
     )
     return catalog.sort_values("IMG_ID").reset_index(drop=True)
@@ -229,47 +225,6 @@ def summarize_failure_categories(catalog: pd.DataFrame) -> pd.DataFrame:
             }
         )
     return pd.DataFrame(rows).sort_values("count", ascending=False)
-
-
-def select_representative_failure_cases(catalog: pd.DataFrame) -> pd.DataFrame:
-    """Seleciona casos distintos que representam os principais padrões."""
-    selections = [
-        ("fuzzy_threshold_rescue", "fuzzy_threshold_rescue", "fuzzy_rg_delta_vs_normal_rg", False, "Fuzzy threshold recupera a detecção dos óstios."),
-        ("fuzzy_threshold_regression", "fuzzy_threshold_regression", "fuzzy_rg_delta_vs_normal_rg", True, "Fuzzy threshold perde um caso do baseline."),
-        ("fc_prevents_rg_leakage", "fc_prevents_rg_leakage_normal", "normal_fc_delta_vs_rg", False, "FC reduz uma expansão excessiva do RG."),
-        ("fc_recovers_rg_undersegmentation", "fc_recovers_rg_undersegmentation_normal", "normal_fc_delta_vs_rg", False, "FC recupera volume arterial ausente no RG."),
-        ("fc_undersegmentation", "fc_undersegments_normal", "normal_fc_delta_vs_rg", True, "FC para cedo e produz máscara menor que o RG."),
-        ("shared_low_dice_good_ostia", "shared_low_dice_with_good_ostia", "normal_rg_dice", True, "Todos os métodos falham apesar de óstios aceitáveis."),
-        ("shared_ostia_failure", "shared_ostia_failure", "normal_rg_dice", True, "Ambos os thresholds falham antes da segmentação arterial."),
-    ]
-    used_ids: set[int] = set()
-    rows = []
-    for case_type, flag, metric, ascending, reason in selections:
-        candidates = catalog.loc[catalog[flag].fillna(False)].sort_values(
-            metric, ascending=ascending, na_position="last"
-        )
-        candidates = candidates.loc[~candidates["IMG_ID"].isin(used_ids)]
-        if candidates.empty:
-            continue
-        selected = candidates.iloc[0]
-        image_id = int(selected["IMG_ID"])
-        used_ids.add(image_id)
-        rows.append(
-            {
-                "case_type": case_type,
-                "IMG_ID": image_id,
-                "reason": reason,
-                "normal_rg_dice": selected["normal_rg_dice"],
-                "fuzzy_rg_dice": selected["fuzzy_rg_dice"],
-                "normal_fc_dice": selected["normal_fc_dice"],
-                "fuzzy_fc_dice": selected["fuzzy_fc_dice"],
-                "normal_ostia_status": selected["normal_rg_ostia_status"],
-                "fuzzy_ostia_status": selected["fuzzy_rg_ostia_status"],
-                "normal_rg_predicted_voxels": selected["normal_rg_predicted_voxels"],
-                "normal_fc_predicted_voxels": selected["normal_fc_predicted_voxels"],
-            }
-        )
-    return pd.DataFrame(rows)
 
 
 def _evenly_spaced_rows(df: pd.DataFrame, count: int) -> pd.DataFrame:
@@ -299,6 +254,7 @@ def select_focused_failure_cohort(
         for image_id in rows["IMG_ID"].astype(int):
             roles_by_id.setdefault(image_id, set()).add(role)
 
+    # Retém os casos mais representativos de cada mecanismo de falha.
     for flag, metric, ascending in _FOCUSED_CATEGORY_SPECS:
         if flag not in catalog or metric not in catalog:
             continue
@@ -317,8 +273,14 @@ def select_focused_failure_cohort(
         "shared_ostia_failure",
     )
 
-    dice_columns = ["normal_rg_dice", "fuzzy_rg_dice", "normal_fc_dice", "fuzzy_fc_dice"]
+    dice_columns = [
+        "normal_rg_dice",
+        "fuzzy_rg_dice",
+        "normal_fc_dice",
+        "fuzzy_fc_dice",
+    ]
     dice = catalog[dice_columns].apply(pd.to_numeric, errors="coerce")
+    # Controles estáveis ajudam a detectar regressões durante novos ajustes.
     stable_mask = (
         catalog["normal_rg_ostia_success"].fillna(False)
         & catalog["fuzzy_rg_ostia_success"].fillna(False)
@@ -334,9 +296,11 @@ def select_focused_failure_cohort(
         1,
         "cohort_kind",
         cohort["IMG_ID"].map(
-            lambda image_id: "control"
-            if roles_by_id[int(image_id)] == {"stable_control"}
-            else "failure"
+            lambda image_id: (
+                "control"
+                if roles_by_id[int(image_id)] == {"stable_control"}
+                else "failure"
+            )
         ),
     )
     cohort.insert(
@@ -349,10 +313,19 @@ def select_focused_failure_cohort(
     return cohort.sort_values(["cohort_kind", "IMG_ID"]).reset_index(drop=True)
 
 
+def compact_focused_failure_cohort(cohort: pd.DataFrame) -> pd.DataFrame:
+    """Mantém somente as colunas usadas pelos experimentos subsequentes."""
+    missing = set(FOCUSED_COHORT_COLUMNS) - set(cohort.columns)
+    if missing:
+        raise ValueError(f"Colunas obrigatórias da coorte ausentes: {sorted(missing)}")
+    return cohort[FOCUSED_COHORT_COLUMNS].copy()
+
+
 __all__ = [
     "DEFAULT_VARIANTS",
+    "FOCUSED_COHORT_COLUMNS",
     "build_failure_case_catalog",
+    "compact_focused_failure_cohort",
     "select_focused_failure_cohort",
-    "select_representative_failure_cases",
     "summarize_failure_categories",
 ]

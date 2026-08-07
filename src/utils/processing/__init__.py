@@ -12,8 +12,6 @@ _SYMBOL_TO_MODULE = {
     "label": "binary_operations",
     # frangi
     "get_vesselness": "frangi",
-    "load_vesselness_cache": "frangi",
-    "save_vesselness_cache": "frangi",
     # gpu_utils
     "ensure_cpu": "gpu_utils",
     "ensure_gpu": "gpu_utils",

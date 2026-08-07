@@ -1,7 +1,6 @@
 """Etapas de detecção/segmentação da aorta e avaliação dos óstios."""
 
 from typing import Any, Dict, List, Sequence
-from pathlib import Path
 
 import numpy as np
 
@@ -14,36 +13,15 @@ from .aorta_segmentation import (
 )
 from .ostia_detection import check_ostium_intersection, find_ostia
 from ..processing.binary_operations import keep_largest_component
-from ..project.cache import load_json_cache, load_npy_cache
 
 
-def get_or_detect_aorta_circles(
-    img_id: str,
+def locate_aorta_circles(
     lcc_image: Any,
     downscale_factors: Sequence[int],
     scaled_spacing: Sequence[float],
     circle_config: Dict[str, Any],
-    base_save_path: str | Path | None,
-    load_cache: bool = False,
-    save_cache: bool = False,
 ) -> List[Dict[str, Any]]:
-    """Carrega ou detecta círculos da aorta sempre na CPU."""
-    json_path = (
-        Path(base_save_path)
-        / "detected_circles_cpu"
-        / f"{img_id}_detected_circles.json"
-        if base_save_path is not None
-        else None
-    )
-
-    # Reutiliza círculos salvos quando a execução está com cache habilitado.
-    cached_circles = load_json_cache(
-        json_path,
-        enabled=load_cache and json_path is not None,
-    )
-    if cached_circles is not None:
-        return cached_circles
-
+    """Detecta círculos da aorta sempre na CPU."""
     # Constrói os raios da Hough em pixels já compatíveis com a resolução atual.
     dx, dy, _ = scaled_spacing
     radii_start = circle_config["radii_start_px"]
@@ -74,43 +52,21 @@ def get_or_detect_aorta_circles(
         early_recovery_search_slices=circle_config.get(
             "early_recovery_search_slices", 8
         ),
-        early_recovery_min_circles=circle_config.get(
-            "early_recovery_min_circles", 10
-        ),
+        early_recovery_min_circles=circle_config.get("early_recovery_min_circles", 10),
         early_recovery_require_min_circles=circle_config.get(
             "early_recovery_require_min_circles", False
         ),
     )
-    # Não salva cache novo dessa etapa: o cache persistente fica restrito ao
-    # vesselness, que é a parte cara e reutilizável do pipeline.
     return detected_circles
 
 
-def get_or_segment_aorta(
-    img_id: str,
+def segment_aorta(
     lcc_image: Any,
     detected_circles: List[Dict[str, Any]],
     level_set_config: Dict[str, Any],
-    base_save_path: str | Path | None,
-    load_cache: bool = False,
-    save_cache: bool = False,
     use_gpu: bool = False,
 ) -> Any:
-    """Carrega ou segmenta a aorta com level set + pós-processamento."""
-    mask_path = (
-        Path(base_save_path) / "segmented_aorta" / f"{img_id}_mask_aorta.npy"
-        if base_save_path is not None
-        else None
-    )
-
-    # Reutiliza a máscara da aorta quando disponível.
-    cached_mask = load_npy_cache(
-        mask_path,
-        enabled=load_cache and mask_path is not None,
-    )
-    if cached_mask is not None:
-        return cached_mask
-
+    """Segmenta a aorta com level set e pós-processamento."""
     # Segmenta a aorta usando os círculos como inicialização do level set.
     mask_refined = level_set_segmentation(
         lcc_image,
@@ -154,7 +110,6 @@ def get_or_segment_aorta(
     aorta_mask = keep_largest_component(aorta_mask, gpu=False)
     aorta_mask = aorta_mask.astype(np.uint8)
 
-    # Não salva cache novo dessa etapa para evitar acúmulo de máscaras 3D.
     return aorta_mask
 
 
@@ -184,9 +139,7 @@ def detect_and_evaluate_ostia(
         surface_thickness_mm=ostia_config.get("surface_thickness_mm", 2.0),
         candidate_score_mode=ostia_config.get("candidate_score_mode", "voxel"),
         candidate_score_radius=ostia_config.get("candidate_score_radius", 2),
-        candidate_local_percentile=ostia_config.get(
-            "candidate_local_percentile", 90.0
-        ),
+        candidate_local_percentile=ostia_config.get("candidate_local_percentile", 90.0),
         candidate_point_weight=ostia_config.get("candidate_point_weight", 0.7),
         candidate_suppression_radius_mm=ostia_config.get(
             "candidate_suppression_radius_mm", 0.0
@@ -200,12 +153,16 @@ def detect_and_evaluate_ostia(
 
     # Extrai apenas a classe arterial do label para validar os óstios.
     label_artery = (label == 1).astype(np.uint8)
+    left_coords = tuple(int(value) for value in ostia_left)
+    right_coords = (
+        tuple(int(value) for value in ostia_right) if ostia_right is not None else None
+    )
     # Mede se cada óstio intersecta a artéria ou fica dentro da tolerância em mm.
     left_info = check_ostium_intersection(
-        ostia_left, label_artery, spacing=(dy, dx, dz), ostium_name="Óstio esquerdo"
+        left_coords, label_artery, spacing=(dy, dx, dz), ostium_name="Óstio esquerdo"
     )
     right_info = check_ostium_intersection(
-        ostia_right, label_artery, spacing=(dy, dx, dz), ostium_name="Óstio direito"
+        right_coords, label_artery, spacing=(dy, dx, dz), ostium_name="Óstio direito"
     )
 
     # Consolida o status dos óstios em critérios estrito e tolerável.

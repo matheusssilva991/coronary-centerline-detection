@@ -46,12 +46,14 @@ def save_volume_slice_figure(
             f"slice_index={slice_index} fora do eixo {axis}, que possui "
             f"{axis_size} fatias."
         )
+    # Índices negativos são convertidos para a posição positiva equivalente.
     normalized_index = slice_index % axis_size
     image_slice = np.take(image_volume, normalized_index, axis=axis)
     height, width = image_slice.shape
     padding = max(height, width) * padding_fraction
     canvas_height = height + 2 * padding
     canvas_width = width + 2 * padding
+    # Mantém a proporção real ou respeita exatamente o tamanho solicitado em pixels.
     if output_size_px is None:
         figure_height = figure_width * canvas_height / canvas_width
     else:
@@ -72,6 +74,7 @@ def save_volume_slice_figure(
         interpolation="none",
         aspect="equal",
     )
+    # Limites explícitos impedem que o Matplotlib recorte pixels das bordas.
     ax.set_xlim(-0.5 - padding, width - 0.5 + padding)
     if origin == "upper":
         ax.set_ylim(height - 0.5 + padding, -0.5 - padding)
@@ -80,7 +83,7 @@ def save_volume_slice_figure(
     ax.set_facecolor("black")
     ax.margins(0)
     ax.axis("off")
-    ax.set_position([0, 0, 1, 1])
+    ax.set_position((0, 0, 1, 1))
     fig.savefig(output, dpi=dpi, pad_inches=0, facecolor="black")
     plt.close(fig)
     return output
@@ -115,6 +118,7 @@ def plot_mip_projection(
         upper = window_level + window_width // 2
         image_volume = np.clip(image_volume, lower, upper)
 
+    # Traduz cada vista anatômica para o eixo reduzido pela projeção.
     axis_map = {"axial": 2, "coronal": 1, "sagittal": 0}
     proj_func = {"max": np.max, "min": np.min, "mean": np.mean}[projection]
 
@@ -124,7 +128,7 @@ def plot_mip_projection(
         axes = [axes]
 
     cmap_to_use = plt.get_cmap(cmap).reversed() if invert_cmap else cmap
-    imshow_kwargs = {"cmap": cmap_to_use}
+    imshow_kwargs: dict[str, Any] = {"cmap": cmap_to_use}
     if vmin is not None:
         imshow_kwargs["vmin"] = vmin
     if vmax is not None:
@@ -145,7 +149,7 @@ def plot_mip_projection(
 
     if show_title:
         plt.suptitle(title, fontsize=16, y=0.96)
-        plt.tight_layout(rect=[0, 0, 1, 0.94])
+        plt.tight_layout(rect=(0, 0, 1, 0.94))
     else:
         plt.tight_layout()
 
@@ -209,6 +213,7 @@ def visualize_circles_on_slices(
     if not detected_circles:
         raise ValueError("detected_circles não pode ser vazio.")
 
+    # Amostra uniformemente somente entre fatias que possuem círculos detectados.
     slice_indices = sorted(set([c["slice_index"] for c in detected_circles]))
     step = max(1, len(slice_indices) // num_samples)
     selected_slices = slice_indices[::step][:num_samples]

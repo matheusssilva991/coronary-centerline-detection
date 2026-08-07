@@ -1,9 +1,15 @@
 {
+  "result_root": "output/segmentation/runs/mid_res/fuzzy_comparison",
   "split": "val",
   "image_count": 270,
   "low_dice_threshold": 0.4,
   "meaningful_delta": 0.05,
   "volume_ratio": 1.5,
   "test_analysis_only": false,
-  "focused_cohort_size": 46
+  "focused_cohort_size": 46,
+  "focused_selection": {
+    "max_per_category": 6,
+    "shared_ostia_cases": 6,
+    "stable_controls": 10
+  }
 }

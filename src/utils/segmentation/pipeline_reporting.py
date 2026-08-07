@@ -4,20 +4,7 @@ from __future__ import annotations
 
 import pandas as pd
 
-from ..project.results import _as_bool_value, _readable_column_name
-
-
-def _series_from_aliases(df, column, dtype=None):
-    """Busca uma coluna pelo nome interno ou pelo nome legível exportado."""
-    for column_candidate in (column, _readable_column_name(column)):
-        if column_candidate in df.columns:
-            return df[column_candidate]
-    return pd.Series(index=df.index, dtype=dtype)
-
-
-def _bool_series(df, column):
-    """Lê uma coluna booleana aceitando valores textuais/númericos comuns."""
-    return _series_from_aliases(df, column, dtype=bool).map(_as_bool_value)
+from ..project.results import summarize_results_df
 
 
 def print_statistics(train_ids, val_ids, test_ids, all_ids):
@@ -26,13 +13,16 @@ def print_statistics(train_ids, val_ids, test_ids, all_ids):
     print("ESTATÍSTICAS DOS CONJUNTOS")
     print("=" * 50)
     print(
-        f"Treino:    {len(train_ids):3d} imagens ({len(train_ids) / len(all_ids) * 100:5.1f}%)"
+        f"Treino:    {len(train_ids):3d} imagens "
+        f"({len(train_ids) / len(all_ids) * 100:5.1f}%)"
     )
     print(
-        f"Validação: {len(val_ids):3d} imagens ({len(val_ids) / len(all_ids) * 100:5.1f}%)"
+        f"Validação: {len(val_ids):3d} imagens "
+        f"({len(val_ids) / len(all_ids) * 100:5.1f}%)"
     )
     print(
-        f"Teste:     {len(test_ids):3d} imagens ({len(test_ids) / len(all_ids) * 100:5.1f}%)"
+        f"Teste:     {len(test_ids):3d} imagens "
+        f"({len(test_ids) / len(all_ids) * 100:5.1f}%)"
     )
     print(f"Total:     {len(all_ids):3d} imagens")
     print("=" * 50 + "\n")
@@ -57,75 +47,64 @@ def print_split_summary(
     if df.empty:
         return
 
-    both_correct_series = _bool_series(df, "both_correct")
-    both_tolerable_series = _bool_series(df, "both_tolerable")
-    ostia_found_series = _bool_series(df, "ostia_found")
-    segmentation_attempted_series = _bool_series(df, "segmentation_attempted")
-    proceeded_with_bad_ostia_series = _bool_series(df, "proceeded_with_bad_ostia")
-    ostia_status_series = _series_from_aliases(df, "ostia_status")
-    ostia_not_found_series = ostia_status_series.fillna("").astype(str).str.lower().isin(
-        {"not_found", "not found", "não encontrados", "óstios não encontrados"}
-    )
-    dice_series = pd.to_numeric(
-        _series_from_aliases(df, "dice_artery", dtype=float), errors="coerce"
-    )
-    dice_before_series = pd.to_numeric(
-        _series_from_aliases(
-            df, "dice_artery_before_morphology", dtype=float
-        ),
-        errors="coerce",
-    )
-    dice_delta_series = pd.to_numeric(
-        _series_from_aliases(df, "dice_artery_morphology_delta", dtype=float),
-        errors="coerce",
-    )
+    # Centraliza os cálculos no mesmo agregador usado pelos metadados.
+    summary = summarize_results_df(df)
     tolerance_mm = config["OSTIA_VALIDATION"]["distance_threshold_mm"]
 
     print(f"\n📊 Estatísticas do conjunto {split_name}:")
     print(
-        f"   - Óstios encontrados:         {ostia_found_series.sum():3d} ({ostia_found_series.mean() * 100:5.1f}%)"
+        f"   - Óstios encontrados:         {summary['ostia_found']:3d} "
+        f"({summary['ostia_found_percent']:5.1f}%)"
     )
     print(
-        f"   - Óstios não encontrados:     {ostia_not_found_series.sum():3d} ({ostia_not_found_series.mean() * 100:5.1f}%)"
+        f"   - Óstios não encontrados:     {summary['ostia_status_not_found']:3d} "
+        f"({summary['ostia_status_not_found_percent']:5.1f}%)"
     )
     print(
-        f"   - Ambos corretos (estrito): {both_correct_series.sum():3d} ({both_correct_series.mean() * 100:5.1f}%)"
+        f"   - Ambos corretos (estrito): {summary['both_correct']:3d} "
+        f"({summary['both_correct_percent']:5.1f}%)"
     )
     print(
-        f"   - Tolerável apenas:         {both_tolerable_series.sum():3d} ({both_tolerable_series.mean() * 100:5.1f}%)"
+        f"   - Tolerável apenas:         {summary['both_tolerable']:3d} "
+        f"({summary['both_tolerable_percent']:5.1f}%)"
     )
     print(
-        f"   - Segmentação tentada:      {segmentation_attempted_series.sum():3d} ({segmentation_attempted_series.mean() * 100:5.1f}%)"
+        f"   - Segmentação tentada:      {summary['segmentation_attempted']:3d} "
+        f"({summary['segmentation_attempted_percent']:5.1f}%)"
     )
     print(
-        f"   - Prosseguiu com óstio ruim:{proceeded_with_bad_ostia_series.sum():3d} ({proceeded_with_bad_ostia_series.mean() * 100:5.1f}%)"
+        f"   - Prosseguiu com óstio ruim:{summary['proceeded_with_bad_ostia']:3d} "
+        f"({summary['proceeded_with_bad_ostia_percent']:5.1f}%)"
     )
     print(
-        f"   - Total sucesso (<= {tolerance_mm}mm): {(both_correct_series | both_tolerable_series).sum():3d} ({(both_correct_series | both_tolerable_series).mean() * 100:5.1f}%)"
+        f"   - Total sucesso (<= {tolerance_mm}mm): {summary['total_success']:3d} "
+        f"({summary['total_success_percent']:5.1f}%)"
     )
-    if dice_series.notna().any():
-        if dice_before_series.notna().any():
+    # Exibe o efeito da morfologia somente em runs que salvaram a métrica prévia.
+    if summary["dice_artery_mean"] is not None:
+        if summary["dice_artery_before_morphology_mean"] is not None:
             print(
                 "   - Dice médio antes da morfologia: "
-                f"{dice_before_series.mean():.4f}"
+                f"{summary['dice_artery_before_morphology_mean']:.4f}"
             )
             print(
                 "   - Dice médio após a morfologia:   "
-                f"{dice_series.mean():.4f}"
+                f"{summary['dice_artery_mean']:.4f}"
             )
-            if dice_delta_series.notna().any():
+            if summary["dice_artery_morphology_delta_mean"] is not None:
                 print(
                     "   - Ganho médio da morfologia:      "
-                    f"{dice_delta_series.mean():+.4f}"
+                    f"{summary['dice_artery_morphology_delta_mean']:+.4f}"
                 )
         else:
-            print(f"   - Dice médio:       {dice_series.mean():.4f}")
+            print(f"   - Dice médio:       {summary['dice_artery_mean']:.4f}")
     if execution_time:
         print(f"   - Tempo total conhecido: {_format_duration(execution_time)}")
     if current_run_execution_time and current_run_execution_time != execution_time:
         print(
             f"   - Tempo desta execução: {_format_duration(current_run_execution_time)}"
         )
+    # Em retomadas, destaca lotes antigos que não tinham manifest de duração.
     if timing_summary:
         missing_batches = timing_summary.get("missing_timing_batches") or []
         if missing_batches:

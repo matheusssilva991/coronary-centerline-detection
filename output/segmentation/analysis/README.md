@@ -9,41 +9,43 @@ O catálogo dos notebooks que produzem estas análises está em
 
 ## Organizacao atual
 
-- `threshold_pipeline_comparison/`: analise do notebook
-  [`threshold_pipeline_comparison_analysis.ipynb`](../../../src/eda/threshold_pipeline_comparison_analysis.ipynb).
-  - `tables/`: CSVs finais para leitura rapida.
-  - `figures/`: graficos em PNG.
-  - `qualitative_3d/`: exemplos HTML 3D e casos qualitativos selecionados.
 - `EXPERIMENTS_ARCHIVE.md`: decisões e métricas resumidas dos sweeps encerrados.
-- `aorta_mask_ostia_comparison/aorta_ostia_bilateral_final_val90/`: confirmação
-  final da nova opção bilateral em 90 imagens independentes de validação.
+- `aorta_circle_slices/`: métricas entre número de fatias e círculos da aorta.
+- `bad_cases/`: catálogo compacto de casos ruins usado pelas EDAs qualitativas.
 - `pipeline_failure_analysis/`: catálogo e coorte focada de validação usada
   pelo runner de correções.
-- `pipeline_failure_improvement/`: novas execuções `baseline` ou `corrections`;
-  resultados antigos inválidos foram removidos.
-- `fuzzy_membership_functions/`: figuras das funcoes de pertinencia fuzzy.
-- `image_slices/`: fatias de CCTA exportadas para publicação.
-- `segmentation_results/`: figuras e tabelas da análise canônica de Dice.
-- `visual_examples/`: exemplos visuais avulsos.
-
-## Arquivos principais
-
-### `threshold_pipeline_comparison/tables/`
-
-- `dice_stats_by_variant.csv`: media, mediana, minimo, maximo e desvio do Dice
-  por variante.
-- `pair_outcome_counts.csv`: contagem par-a-par de exames que melhoraram,
-  pioraram ou ficaram iguais em relacao a cada comparacao.
-
-O arquivo `pair_outcome_counts.csv` e gerado automaticamente com todas as
-combinacoes possiveis entre as variantes carregadas no notebook. Para 4
-variantes, o esperado e ter 6 comparacoes.
+- `pipeline_parameter_validation/`: análise OFAT de sensibilidade dos parâmetros
+  do artigo. Em `runs/`, somente execuções cuja referência foi conferida contra
+  um run histórico equivalente devem ser mantidas.
 
 ## Regra pratica
 
-Use os CSVs em `tables/` para a análise final. Consulte
-`EXPERIMENTS_ARCHIVE.md` para entender por que parâmetros e abordagens antigas
-foram retirados. Grades sem ganho, execuções inválidas e diagnósticos
+Consulte `EXPERIMENTS_ARCHIVE.md` para entender por que parâmetros e abordagens
+antigas foram retirados. Grades sem ganho, execuções inválidas e diagnósticos
 temporários são resumidos no histórico e removidos para não serem confundidos
-com confirmações positivas. A exceção é a coorte focada de falhas, mantida para
-continuar o teste de correções em validação.
+com confirmações positivas.
+
+## Política de armazenamento
+
+`analysis/` deve guardar apenas artefatos usados para interpretação ou
+reprodução compacta:
+
+- tabelas consolidadas que servem de entrada para outras análises;
+- configurações e comandos necessários para reproduzir o experimento;
+- catálogos de casos ruins e métricas de círculos da aorta;
+- pequenos catálogos de diagnóstico ainda ativos.
+
+Figuras, tabelas derivadas e visualizações 3D que já aparecem em notebooks não
+são persistidas nesta pasta. Elas permanecem como outputs das células e podem
+ser regeneradas a partir dos runs oficiais.
+
+Runs completos do pipeline, caches, lotes intermediários, dry runs e grades já
+descartadas não devem permanecer aqui. Runs oficiais pertencem a
+`output/segmentation/runs/`. O sweep de threshold remove por padrão seus runs
+internos depois de copiar o summary por imagem; use `--keep-pipeline-runs`
+somente quando precisar investigar uma falha.
+
+O runner de correções pode criar temporariamente `pipeline_failure_improvement/`.
+Depois da interpretação, seus resultados devem ser resumidos em
+`EXPERIMENTS_ARCHIVE.md` e removidos; apenas a coorte de entrada em
+`pipeline_failure_analysis/` é persistente.

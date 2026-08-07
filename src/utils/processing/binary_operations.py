@@ -8,7 +8,7 @@ disponível.
 
 import numpy as np
 import scipy.ndimage as ndi
-from typing import Any, Optional, Tuple
+from typing import Any, Optional, Tuple, cast
 from numpy.typing import NDArray
 
 from .gpu_utils import (
@@ -57,7 +57,7 @@ def binary_closing(
     """
     use_gpu_flag = gpu if gpu is not None else GPU_AVAILABLE
 
-    if use_gpu_flag and GPU_AVAILABLE:
+    if use_gpu_flag and GPU_AVAILABLE and cu_ndi is not None:
         # GPU version
         mask_gpu = to_gpu(mask)
 
@@ -109,7 +109,7 @@ def binary_dilation(
     """
     use_gpu_flag = gpu if gpu is not None else GPU_AVAILABLE
 
-    if use_gpu_flag and GPU_AVAILABLE:
+    if use_gpu_flag and GPU_AVAILABLE and cu_ndi is not None:
         # GPU version
         mask_gpu = to_gpu(mask)
 
@@ -210,11 +210,15 @@ def label(mask: NDArray[Any], gpu: Optional[bool] = None) -> Tuple[NDArray[Any],
     if use_gpu_flag and GPU_AVAILABLE:
         # GPU version
         mask_gpu = to_gpu(mask)
-        labeled_gpu, num_features = cu_ndi.label(mask_gpu)
+        labeled_gpu, num_features = cast(
+            tuple[Any, int],
+            cu_ndi.label(mask_gpu),
+        )
         return to_cpu(labeled_gpu), int(num_features)
     else:
         # CPU version
-        return ndi.label(mask)
+        labeled, count = cast(tuple[NDArray[Any], int], ndi.label(mask))
+        return labeled, int(count)
 
 
 def keep_largest_component(
@@ -249,10 +253,10 @@ def keep_largest_component(
     """
     use_gpu_flag = gpu if gpu is not None else GPU_AVAILABLE
 
-    if use_gpu_flag and GPU_AVAILABLE:
+    if use_gpu_flag and GPU_AVAILABLE and cu_ndi is not None:
         # GPU version
         mask_gpu = to_gpu(mask)
-        labeled_gpu, num = cu_ndi.label(mask_gpu)
+        labeled_gpu, num = cast(tuple[Any, int], cu_ndi.label(mask_gpu))
 
         if num == 0:
             return to_cpu(mask_gpu).astype(np.uint8)
@@ -261,7 +265,7 @@ def keep_largest_component(
         mask_cpu = to_cpu(mask_gpu)
     else:
         # CPU version
-        labeled, num = ndi.label(mask)
+        labeled, num = cast(tuple[NDArray[Any], int], ndi.label(mask))
         mask_cpu = mask
 
         if num == 0:

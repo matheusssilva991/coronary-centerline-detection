@@ -105,7 +105,7 @@ def plot_hough_initial_diagnostics(
 
     if show_title:
         plt.suptitle(title, fontsize=14)
-        plt.tight_layout(rect=[0, 0, 1, 0.94])
+        plt.tight_layout(rect=(0, 0, 1, 0.94))
     else:
         plt.tight_layout()
 
@@ -157,7 +157,7 @@ def plot_hough_initial_circle(
 
     if show_title:
         plt.suptitle(title, fontsize=14)
-        plt.tight_layout(rect=[0, 0, 1, 0.94])
+        plt.tight_layout(rect=(0, 0, 1, 0.94))
     else:
         plt.tight_layout()
 
@@ -208,7 +208,7 @@ def plot_hough_refinement_candidates(
 
     if show_title:
         plt.suptitle(title, fontsize=14)
-        plt.tight_layout(rect=[0, 0, 1, 0.94])
+        plt.tight_layout(rect=(0, 0, 1, 0.94))
     else:
         plt.tight_layout()
 
@@ -260,7 +260,7 @@ def plot_hough_refined_circle(
 
     if show_title:
         plt.suptitle(title, fontsize=14)
-        plt.tight_layout(rect=[0, 0, 1, 0.94])
+        plt.tight_layout(rect=(0, 0, 1, 0.94))
     else:
         plt.tight_layout()
 
@@ -316,7 +316,7 @@ def plot_spaced_detected_circles(
 
     if show_title:
         plt.suptitle(title, fontsize=14)
-        plt.tight_layout(rect=[0, 0, 1, 0.94])
+        plt.tight_layout(rect=(0, 0, 1, 0.94))
     else:
         plt.tight_layout()
 

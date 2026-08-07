@@ -49,9 +49,9 @@ class RunImageTest(TestCase):
     @patch("utils.experiments.fuzzy_pipeline_comparison.postprocess_artery_mask")
     @patch("utils.experiments.fuzzy_pipeline_comparison.normal_region_growing_from_ostia")
     @patch("utils.experiments.fuzzy_pipeline_comparison.detect_and_evaluate_ostia")
-    @patch("utils.experiments.fuzzy_pipeline_comparison.get_or_segment_aorta")
-    @patch("utils.experiments.fuzzy_pipeline_comparison.get_or_detect_aorta_circles")
-    @patch("utils.experiments.fuzzy_pipeline_comparison.get_or_compute_vesselness")
+    @patch("utils.experiments.fuzzy_pipeline_comparison.segment_aorta")
+    @patch("utils.experiments.fuzzy_pipeline_comparison.locate_aorta_circles")
+    @patch("utils.experiments.fuzzy_pipeline_comparison.compute_vesselness")
     @patch("utils.experiments.fuzzy_pipeline_comparison.build_preprocessed_inputs")
     @patch("utils.experiments.fuzzy_pipeline_comparison.load_downsampled_case")
     def test_passes_detected_circles_to_bilateral_ostia_selection(
@@ -90,8 +90,6 @@ class RunImageTest(TestCase):
         region_growing.return_value = label
         postprocess.return_value = label
         config = {
-            "LOAD_CACHE": False,
-            "SAVE_CACHE": False,
             "USE_GPU": False,
             "VESSELNESS_AORTA": {},
             "VESSELNESS_ARTERY": {},
@@ -104,7 +102,6 @@ class RunImageTest(TestCase):
             "normal_rg",
             "val",
             Path("/unused"),
-            Path("/tmp/cache"),
             config,
             {"threshold_mode": "normal", "artery_method": "region_growing"},
         )

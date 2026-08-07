@@ -14,14 +14,14 @@ Exemplos:
       --max-threshold-percentiles 99.7 \\
       --object-percentiles 99.5 \\
       --num-batches 5 \\
-      --gpu \\
-      --no-save-cache
+      --gpu
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import shutil
 import subprocess
 import sys
 import time
@@ -451,10 +451,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--clip-min-hu", type=float, default=-400.0)
     parser.add_argument("--clip-max-hu", type=float, default=500.0)
-    parser.add_argument("--cache", action="store_true")
-    parser.add_argument("--no-save-cache", action="store_true")
     parser.add_argument("--base-path", type=Path, default=None)
-    parser.add_argument("--base-save-path", type=Path, default=None)
     parser.add_argument("--downscale-method", choices=["scipy", "opencv"], default=None)
     parser.add_argument(
         "--opencv-interpolation",
@@ -473,6 +470,14 @@ def build_parser() -> argparse.ArgumentParser:
         "--stop-on-error",
         action="store_true",
         help="Interrompe o sweep se uma variante falhar.",
+    )
+    parser.add_argument(
+        "--keep-pipeline-runs",
+        action="store_true",
+        help=(
+            "Preserva os runs completos de cada variante. Por padrão, apenas "
+            "os CSVs consolidados e as configurações são mantidos em analysis."
+        ),
     )
     return parser
 
@@ -499,18 +504,12 @@ def pipeline_command(
         "--output-dir",
         str(variant_output_root),
     ]
-    if args.cache:
-        command.append("--cache")
-    if args.no_save_cache:
-        command.append("--no-save-cache")
     if args.use_gpu is True:
         command.append("--gpu")
     elif args.use_gpu is False:
         command.append("--no-gpu")
     if args.base_path is not None:
         command.extend(["--base-path", str(args.base_path)])
-    if args.base_save_path is not None:
-        command.extend(["--base-save-path", str(args.base_save_path)])
     if args.downscale_method is not None:
         command.extend(["--downscale-method", args.downscale_method])
     if args.opencv_interpolation is not None:
@@ -582,6 +581,7 @@ def main() -> None:
             "clip_min_hu": args.clip_min_hu,
             "clip_max_hu": args.clip_max_hu,
             "config_path": str(resolve_repo_path(args.config_path)),
+            "keep_pipeline_runs": args.keep_pipeline_runs,
             "dry_run": args.dry_run,
         },
     )
@@ -589,6 +589,7 @@ def main() -> None:
     variant_rows = []
     run_rows = []
     summary_rows = []
+    image_frames = []
     for index, variant in enumerate(variants, start=1):
         variant_dir = variants_root / variant["name"]
         config_file = configs_dir / f"{variant['name']}.json"
@@ -631,6 +632,9 @@ def main() -> None:
         completed = subprocess.run(command, cwd=REPO_ROOT, check=False)
         duration = time.perf_counter() - start
         pipeline_run_dir = latest_pipeline_run(variant_dir, args.resolution)
+        preserve_pipeline_run = bool(
+            args.keep_pipeline_runs or completed.returncode != 0
+        )
         run_rows.append(
             {
                 "variant": variant["name"],
@@ -638,22 +642,35 @@ def main() -> None:
                 "duration_seconds": duration,
                 "run_dir": (
                     None
-                    if pipeline_run_dir is None
+                    if pipeline_run_dir is None or not preserve_pipeline_run
                     else display_path(pipeline_run_dir)
                 ),
+                "pipeline_run_preserved": preserve_pipeline_run,
                 "command": command_text,
             }
         )
-        summary_rows.append(
-            summarize_run(
-                variant,
-                pipeline_run_dir,
-                args.split,
-                duration,
-                completed.returncode,
-            )
+        summary_row = summarize_run(
+            variant,
+            pipeline_run_dir,
+            args.split,
+            duration,
+            completed.returncode,
         )
+        if not preserve_pipeline_run:
+            summary_row["run_dir"] = None
+        summary_rows.append(summary_row)
+        if pipeline_run_dir is not None and completed.returncode == 0:
+            image_df = read_split_summary(pipeline_run_dir, args.split)
+            if not image_df.empty:
+                image_df.insert(0, "variant", variant["name"])
+                image_frames.append(image_df)
+                pd.concat(image_frames, ignore_index=True).to_csv(
+                    results_dir / "image_results.csv",
+                    index=False,
+                )
         pd.DataFrame(summary_rows).to_csv(results_dir / "summary.csv", index=False)
+        if not preserve_pipeline_run and variant_dir.exists():
+            shutil.rmtree(variant_dir)
         if completed.returncode != 0 and args.stop_on_error:
             raise SystemExit(completed.returncode)
 

@@ -28,6 +28,7 @@ def _load_fixed_splits(
             f"Arquivo de splits {split_config_path} sem chaves: {missing_keys}"
         )
 
+    # Converte os IDs uma única vez antes das validações de integridade.
     train_ids = [int(img_id) for img_id in splits["train"]]
     val_ids = [int(img_id) for img_id in splits["val"]]
     test_ids = [int(img_id) for img_id in splits["test"]]
@@ -39,6 +40,7 @@ def _load_fixed_splits(
             f"Arquivo de splits {split_config_path} contém IDs duplicados."
         )
 
+    # Exige correspondência exata para evitar mudanças silenciosas na coorte.
     available_set = set(available_ids)
     split_set = set(split_ids)
     missing_from_dataset = sorted(split_set - available_set)
@@ -86,15 +88,20 @@ def get_data_splits(
     Returns:
         (train_ids, val_ids, test_ids, all_ids)
     """
-    base_path = Path(base_path)
+    dataset_path = Path(base_path)
+    # A ordenação numérica evita que o ID 10 apareça antes do ID 2.
     img_files = sorted(
-        base_path.glob("*.img.nii.gz"), key=lambda path: int(path.name.split(".")[0])
+        dataset_path.glob("*.img.nii.gz"),
+        key=lambda path: int(path.name.split(".")[0]),
     )
     if not img_files:
-        raise FileNotFoundError(f"Nenhuma imagem *.img.nii.gz encontrada em {base_path}")
+        raise FileNotFoundError(
+            f"Nenhuma imagem *.img.nii.gz encontrada em {dataset_path}"
+        )
 
     all_ids = [int(path.name.split(".")[0]) for path in img_files]
 
+    # Um arquivo explícito tem precedência sobre o split canônico do projeto.
     fixed_split_path = Path(split_config_path) if split_config_path else None
     if fixed_split_path is None and _should_use_default_fixed_splits(
         test_size, val_size, random_state
@@ -105,6 +112,7 @@ def get_data_splits(
         train_ids, val_ids, test_ids = _load_fixed_splits(fixed_split_path, all_ids)
         return train_ids, val_ids, test_ids, all_ids
 
+    # Parâmetros não canônicos usam divisão reproduzível em duas etapas.
     train_val_ids, test_ids = train_test_split(
         all_ids, test_size=test_size, random_state=random_state
     )

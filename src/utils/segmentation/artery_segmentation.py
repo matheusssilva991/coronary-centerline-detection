@@ -87,6 +87,8 @@ def _comparison_mean(
         return current_value
     if use_running_mean:
         return running_sum / max(running_count, 1)
+    if value_history is None:
+        return current_value
     return float(np.mean(value_history))
 
 
@@ -116,6 +118,7 @@ def _collect_seed_candidates_by_score(
 
     y, x, z = validated_seed
     radius = max(int(search_radius), 0)
+    # Recorta uma vizinhança limitada pelo volume ao redor do óstio detectado.
     y0, y1 = max(0, y - radius), min(score_map.shape[0], y + radius + 1)
     x0, x1 = max(0, x - radius), min(score_map.shape[1], x + radius + 1)
     z0, z1 = max(0, z - radius), min(score_map.shape[2], z + radius + 1)
@@ -126,6 +129,7 @@ def _collect_seed_candidates_by_score(
         seed_score = float(score_map[validated_seed])
         return [validated_seed] if seed_score >= float(min_seed_score) else []
 
+    # Ordena por vesselness para iniciar o crescimento pelos candidatos mais fortes.
     candidate_indices = np.argwhere(candidate_mask)
     candidate_scores = local_scores[candidate_mask]
     order = np.argsort(candidate_scores)[::-1]
@@ -156,6 +160,7 @@ def _vesselness_reference(
     if not 0 <= percentile <= 100:
         raise ValueError("reference_percentile deve estar em [0, 100]")
 
+    # Reúne respostas em torno de cada óstio para evitar referência global excessiva.
     local_values = []
     local_radius = max(int(radius), 0)
     for ostium in ostia:
@@ -216,6 +221,7 @@ def _region_growing_from_seeds(
     else:
         comparison_window = 1
 
+    # O piso pode relaxar gradualmente depois que a região ganha suporte suficiente.
     min_start = float(min_vesselness)
     min_end = min_start * float(relaxed_floor_factor)
     mask = np.zeros_like(vesselness_map, dtype=np.uint8)
@@ -258,6 +264,7 @@ def _region_growing_from_seeds(
 
         cy, cx, cz = queue.popleft()
         current_value = float(vesselness_map[cy, cx, cz])
+        # Atualiza a referência e o piso usados para aceitar a próxima fronteira.
         reference = _comparison_mean(
             comparison_window,
             use_running_mean,
@@ -336,12 +343,12 @@ def normal_region_growing_from_ostia(
     if max_vesselness <= 0:
         return np.zeros_like(vesselness_artery, dtype=np.uint8)
 
+    # Converte as frações configuradas em limiares absolutos deste exame.
     params = {
         "threshold": (max_vesselness - min_vesselness_map)
         / float(rg_config["threshold_divisor"]),
         "max_volume": int(rg_config["max_volume"]),
-        "min_vesselness": max_vesselness
-        * float(rg_config["min_vesselness_fraction"]),
+        "min_vesselness": max_vesselness * float(rg_config["min_vesselness_fraction"]),
         "relaxed_floor_factor": float(rg_config["relaxed_floor_factor"]),
         "switch_at_voxels": int(rg_config["switch_at_voxels"]),
         "comparison_window": rg_config["comparison_window"],
@@ -379,6 +386,7 @@ def normal_region_growing_from_ostia(
             candidate_count,
         )
 
+    # Mantém as sementes de cada coronária separadas até escolher a estratégia de RG.
     seed_groups = [
         seeds_for_ostium(ostia_left),
         seeds_for_ostium(ostia_right),
@@ -388,6 +396,7 @@ def normal_region_growing_from_ostia(
         return np.zeros_like(vesselness_artery, dtype=np.uint8)
 
     if grow_each_ostium_separately:
+        # Evita que um ramo mais forte domine a expansão iniciada no outro óstio.
         combined = np.zeros_like(vesselness_artery, dtype=np.uint8)
         for seed_group in seed_groups:
             combined |= _region_growing_from_seeds(

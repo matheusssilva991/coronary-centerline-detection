@@ -24,7 +24,6 @@ uv run python src/experiments/threshold_parameter_sweep.py \
   --max-threshold-percentiles 99.8 \
   --num-batches 5 \
   --gpu \
-  --no-save-cache \
   --downscale-method opencv \
   --opencv-interpolation linear
 
@@ -42,6 +41,5 @@ uv run python src/experiments/threshold_parameter_sweep.py \
   --fuzzy-smooth-radii 0 \
   --num-batches 5 \
   --gpu \
-  --no-save-cache \
   --downscale-method opencv \
   --opencv-interpolation linear

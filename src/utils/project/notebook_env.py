@@ -36,7 +36,9 @@ def resolve_existing_path(
         path = Path(env_value).expanduser()
         if path.exists():
             return path
-        raise FileNotFoundError(f"{description} definido em {env_var} não existe: {path}")
+        raise FileNotFoundError(
+            f"{description} definido em {env_var} não existe: {path}"
+        )
 
     resolved = next((path for path in candidates if path.exists()), None)
     if resolved is not None:
@@ -56,21 +58,9 @@ def resolve_imagecas_base_path() -> Path:
         [
             Path("/media/matheus/HD/DatasetsCCTA/ImageCAS/1-1000"),
             Path("/data04/home/mpmaia/ImageCAS/database/1-1000"),
-            Path("/home/matheus/DatasetsCCTA/ImageCAS/1-1000")
+            Path("/home/matheus/DatasetsCCTA/ImageCAS/1-1000"),
         ],
         "ImageCAS",
-    )
-
-
-def resolve_processed_imagecas_path() -> Path:
-    """Resolve o diretório de caches/resultados processados do ImageCAS."""
-    return resolve_existing_path(
-        "IMAGECAS_PROCESSED_PATH",
-        [
-            Path("/media/matheus/HD/DatasetsCCTA/Processed_ImageCAS"),
-            Path("/data04/home/mpmaia/ImageCAS/Processed_ImageCAS"),
-        ],
-        "Processed ImageCAS",
     )
 
 
@@ -100,21 +90,12 @@ def _resolve_split_result_dir(
     repo_root: Path,
     resolution: str,
     split: str,
-    legacy_candidates: tuple[Path, ...],
 ) -> Path | None:
-    """Resolve one split, preferring canonical, legacy and standard runs."""
-    canonical_parent = (
-        repo_root / "output/segmentation/canonical" / resolution / split
-    )
+    """Resolve one split, preferring canonical and standard runs."""
+    canonical_parent = repo_root / "output/segmentation/canonical" / resolution / split
     canonical_result = _latest_split_result_dir(canonical_parent, split)
     if canonical_result is not None:
         return canonical_result
-
-    summary_name = f"ostios_{split}_summary.csv"
-    for candidate in legacy_candidates:
-        numeric_dir = _numeric_result_dir(candidate)
-        if (numeric_dir / summary_name).is_file():
-            return numeric_dir
 
     # Only inspect direct timestamped runs, avoiding experiment subdirectories.
     runs_parent = repo_root / "output/segmentation/runs" / resolution
@@ -127,16 +108,6 @@ def get_default_split_paths(repo_root: Path) -> dict[str, dict[str, Path]]:
     Canonical folders may contain a timestamp level between the split and its
     ``numeric`` directory. Missing resolution/split combinations are omitted.
     """
-    legacy_dir = repo_root / "output/segmentation/8.final_results"
-    legacy_paths = {
-        ("mid_res", "train"): (legacy_dir / "mid_res/2026-04-30_14-33-37",),
-        ("mid_res", "val"): (legacy_dir / "mid_res/2026-04-30_13-24-40",),
-        ("mid_res", "test"): (legacy_dir / "mid_res/2026-05-02_10-48-13",),
-        ("high_res", "train"): (legacy_dir / "high_res/2026-04-21_08-42-13",),
-        ("high_res", "val"): (legacy_dir / "high_res/2026-04-21_08-42-13",),
-        ("high_res", "test"): (legacy_dir / "high_res/2026-04-28_14-28-44",),
-    }
-
     result: dict[str, dict[str, Path]] = {"mid_res": {}, "high_res": {}}
     for resolution in result:
         for split in ("train", "val", "test"):
@@ -144,7 +115,6 @@ def get_default_split_paths(repo_root: Path) -> dict[str, dict[str, Path]]:
                 repo_root,
                 resolution,
                 split,
-                legacy_paths[(resolution, split)],
             )
             if resolved is not None:
                 result[resolution][split] = resolved
@@ -160,8 +130,3 @@ def get_bad_cases_export_dir(repo_root: Path) -> Path:
 def get_cases_analysis_output_dir(repo_root: Path) -> Path:
     """Return the HTML output directory for cases-analysis notebooks."""
     return repo_root / "output/segmentation/analysis/cases_analysis/visual"
-
-
-def get_cases_analysis_cache_dir(repo_root: Path) -> Path:
-    """Return the cache directory for cases-analysis notebooks."""
-    return repo_root / "output/segmentation/analysis/cases_analysis/cache"

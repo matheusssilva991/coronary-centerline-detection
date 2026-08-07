@@ -15,14 +15,11 @@ if str(SRC_DIR) not in sys.path:
 
 from utils.comparison_utils.failure_analysis import (  # noqa: E402
     build_failure_case_catalog,
+    compact_focused_failure_cohort,
     select_focused_failure_cohort,
-    select_representative_failure_cases,
     summarize_failure_categories,
 )
-from utils.visualization.variant_comparison import (  # noqa: E402
-    build_ranking_table,
-    load_variant_results,
-)
+from utils.visualization.variant_comparison import load_variant_results  # noqa: E402
 
 
 DEFAULT_RESULTS = REPO_ROOT / "output/segmentation/runs/mid_res/fuzzy_comparison"
@@ -34,6 +31,11 @@ PRETTY_NAMES = {
     "normal_fc": "Normal threshold + FC",
     "th_fuzzy_fc": "Fuzzy threshold + FC",
 }
+LEGACY_DETAIL_FILES = (
+    "case_catalog.csv",
+    "selected_cases.csv",
+    "variant_summary.csv",
+)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -61,7 +63,7 @@ def main() -> None:
             "Use validação ou informe --allow-test-analysis somente para descrição."
         )
 
-    results_df, summary_df = load_variant_results(
+    results_df, _ = load_variant_results(
         args.result_root,
         split=args.split,
         preferred_order=VARIANT_ORDER,
@@ -75,24 +77,28 @@ def main() -> None:
         volume_ratio=args.volume_ratio,
     )
     category_summary = summarize_failure_categories(catalog)
-    selected_cases = select_representative_failure_cases(catalog)
-    focused_cohort = select_focused_failure_cohort(
-        catalog,
-        max_per_category=args.focused_max_per_category,
-        shared_ostia_cases=args.focused_shared_ostia,
-        stable_controls=args.focused_controls,
+    focused_cohort = compact_focused_failure_cohort(
+        select_focused_failure_cohort(
+            catalog,
+            max_per_category=args.focused_max_per_category,
+            shared_ostia_cases=args.focused_shared_ostia,
+            stable_controls=args.focused_controls,
+        )
     )
-    ranking = build_ranking_table(summary_df)
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
-    catalog.to_csv(args.output_dir / "case_catalog.csv", index=False)
     category_summary.to_csv(args.output_dir / "category_summary.csv", index=False)
-    selected_cases.to_csv(args.output_dir / "selected_cases.csv", index=False)
     focused_cohort.to_csv(args.output_dir / "focused_cohort.csv", index=False)
-    ranking.to_csv(args.output_dir / "variant_summary.csv", index=False)
+    for filename in LEGACY_DETAIL_FILES:
+        (args.output_dir / filename).unlink(missing_ok=True)
     with (args.output_dir / "analysis_metadata.json").open("w", encoding="utf-8") as handle:
         json.dump(
             {
+                "result_root": str(
+                    args.result_root.resolve().relative_to(REPO_ROOT.resolve())
+                    if args.result_root.resolve().is_relative_to(REPO_ROOT.resolve())
+                    else args.result_root.resolve()
+                ),
                 "split": args.split,
                 "image_count": len(catalog),
                 "low_dice_threshold": args.low_dice_threshold,
@@ -100,6 +106,11 @@ def main() -> None:
                 "volume_ratio": args.volume_ratio,
                 "test_analysis_only": args.split == "test",
                 "focused_cohort_size": len(focused_cohort),
+                "focused_selection": {
+                    "max_per_category": args.focused_max_per_category,
+                    "shared_ostia_cases": args.focused_shared_ostia,
+                    "stable_controls": args.focused_controls,
+                },
             },
             handle,
             indent=2,

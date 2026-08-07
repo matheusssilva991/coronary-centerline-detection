@@ -1,0 +1,40 @@
+{
+  "include": [
+    "src",
+    "tests"
+  ],
+  "exclude": [
+    "**/__pycache__",
+    "**/node_modules",
+    "**/.*",
+    ".venv",
+    "output"
+  ],
+  "ignore": [
+    "src/experiments/fuzzy_pipeline_comparison.py",
+    "src/experiments/pipeline_parameter_validation.py",
+    "src/experiments/threshold_parameter_sweep.py",
+    "src/utils/comparison_utils/bad_cases.py",
+    "src/utils/comparison_utils/failure_analysis.py",
+    "src/utils/comparison_utils/ia_math.py",
+    "src/utils/comparison_utils/ostia_scenarios.py",
+    "src/utils/experiments/fuzzy_pipeline_comparison.py",
+    "src/utils/experiments/parameter_validation.py",
+    "src/utils/experiments/sweep_common.py",
+    "src/utils/project/results.py",
+    "src/utils/visualization/bad_cases.py",
+    "src/utils/visualization/category.py",
+    "src/utils/visualization/comparison.py",
+    "src/utils/visualization/segmentation_eda.py",
+    "src/utils/visualization/subset.py",
+    "src/utils/visualization/variant_comparison.py"
+  ],
+  "venvPath": ".",
+  "venv": ".venv",
+  "extraPaths": [
+    "src"
+  ],
+  "typeCheckingMode": "basic",
+  "reportMissingTypeStubs": false,
+  "reportUnsupportedDunderAll": false
+}

@@ -64,6 +64,7 @@ _SYMBOL_TO_MODULE = {
     "build_dice_stats_by_variant": "variant_comparison",
     "build_delta_summary_vs_reference": "variant_comparison",
     "build_pair_outcome_counts": "variant_comparison",
+    "build_pair_curve_auc": "variant_comparison",
     "build_ranking_table": "variant_comparison",
     "largest_pair_changes": "variant_comparison",
     "load_variant_results": "variant_comparison",
@@ -71,6 +72,8 @@ _SYMBOL_TO_MODULE = {
     "normalize_ostia_status_group": "variant_comparison",
     "pair_summary": "variant_comparison",
     "plot_largest_pair_changes": "variant_comparison",
+    "plot_pair_delta_by_image": "variant_comparison",
+    "plot_pair_dice_by_image": "variant_comparison",
     "plot_ostia_status_by_variant": "variant_comparison",
     "select_qualitative_pair_cases": "variant_comparison",
 }

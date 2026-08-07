@@ -77,6 +77,6 @@ A seguir, são apresentados alguns resultados obtidos até o momento com a abord
 
 Na pasta [detected_circles](https://github.com/igorssant/codigos-imageCAS/tree/centerline/tests/output/detected_circles), estão disponíveis as imagens com os círculos detectados sobrepostos às fatias axiais correspondentes. Na pasta, além da imagem MIP (Maximum Intensity Projection) com os círculos detectados, também estão presentes as imagens das fatias axiais individuais, cada uma exibindo o círculo identificado pela Transformada de Hough.
 
-### Bordas e Círculos Detectados na primeira e última fatia detectada.
+### Bordas e Círculos Detectados na primeira e última fatia detectada
 
 Na pasta [detected_edges](https://github.com/igorssant/codigos-imageCAS/tree/centerline/tests/output/detected_edges), encontram-se as imagens das bordas detectadas utilizando o operador Canny, juntamente com os círculos identificados pela Transformada de Hough, especificamente para a primeira e última fatia onde a Aorta Ascendente foi localizada. Na imagem, apresenta os 10 círculos com maior pontuação.

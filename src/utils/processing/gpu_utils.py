@@ -78,7 +78,7 @@ def to_gpu(arr: Any) -> Any:
         >>> arr_cpu = np.array([1, 2, 3])
         >>> arr_gpu = to_gpu(arr_cpu)  # cp.ndarray se GPU disponível
     """
-    if GPU_AVAILABLE and isinstance(arr, np.ndarray):
+    if GPU_AVAILABLE and cp is not None and isinstance(arr, np.ndarray):
         return cp.asarray(arr)
     return arr
 
@@ -99,7 +99,7 @@ def to_cpu(arr: Any) -> Any:
         >>> arr_gpu = cp.array([1, 2, 3])  # Na GPU
         >>> arr_cpu = to_cpu(arr_gpu)  # np.ndarray na CPU
     """
-    if GPU_AVAILABLE and isinstance(arr, cp.ndarray):
+    if GPU_AVAILABLE and cp is not None and isinstance(arr, cp.ndarray):
         return cp.asnumpy(arr)
     return arr
 
@@ -121,7 +121,7 @@ def get_array_module(arr: Any) -> Any:
         >>> xp = get_array_module(arr)
         >>> result = xp.sum(arr)  # Usa cp.sum() automaticamente
     """
-    if GPU_AVAILABLE and isinstance(arr, cp.ndarray):
+    if GPU_AVAILABLE and cp is not None and isinstance(arr, cp.ndarray):
         return cp
     return np
 

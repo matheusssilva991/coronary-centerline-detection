@@ -1,9 +1,9 @@
 """Análise e visualização de variantes do pipeline de segmentação.
 
-As funções deste módulo são genéricas para qualquer comparação organizada como:
+As funções deste módulo são genéricas para comparações organizadas como:
 
 ```
-<result_root>/<variant>/<timestamp>/numeric/ostios_<split>_summary.csv
+<result_root>/<split>/<variant>/<timestamp>/numeric/ostios_<split>_summary.csv
 ```
 
 Elas foram extraídas do notebook de comparação fuzzy para reutilizar o resumo
@@ -12,8 +12,8 @@ de Dice, status dos óstios e deltas entre variantes em outros experimentos.
 
 from __future__ import annotations
 
-from pathlib import Path
 from itertools import combinations
+from pathlib import Path
 from typing import Any, Iterable, Sequence
 
 import matplotlib.patheffects as path_effects
@@ -109,7 +109,9 @@ def add_variant_labels(
     """Adiciona/atualiza a coluna legível ``variant_label``."""
     out = df.copy()
     names = pretty_names or {}
-    out["variant_label"] = out["folder_variant"].map(names).fillna(out["folder_variant"])
+    out["variant_label"] = (
+        out["folder_variant"].map(names).fillna(out["folder_variant"])
+    )
     return out
 
 
@@ -122,7 +124,10 @@ def prepare_variant_for_plot(
     out = add_variant_labels(df, pretty_names)
     out = order_variants(out, preferred_order)
     if preferred_order:
-        labels = [pretty_names.get(name, name) if pretty_names else name for name in preferred_order]
+        labels = [
+            pretty_names.get(name, name) if pretty_names else name
+            for name in preferred_order
+        ]
         out["variant_label"] = pd.Categorical(
             out["variant_label"],
             categories=labels,
@@ -155,12 +160,14 @@ def load_variant_run(
     run_dir = summary_path.parents[1]
     names = pretty_names or {}
 
+    # Anexa a identidade da execução a cada linha para permitir concatenação posterior.
     df = pd.read_csv(summary_path)
     df["folder_variant"] = variant
     df["variant_label"] = names.get(variant, variant)
     df["run_timestamp"] = run_dir.name
     df["run_dir"] = _safe_relative_path(run_dir, repo_root)
 
+    # Aceita tanto o schema persistido atual quanto o alias técnico anterior.
     if "artery_dice" not in df.columns and "dice_artery" in df.columns:
         df["artery_dice"] = df["dice_artery"]
     df["artery_dice"] = pd.to_numeric(df.get("artery_dice"), errors="coerce")
@@ -218,10 +225,13 @@ def load_variant_results(
     result_root = Path(result_root)
     all_frames: list[pd.DataFrame] = []
     summary_rows: list[dict[str, Any]] = []
+    split_root = result_root / split
+    search_root = split_root if split_root.is_dir() else result_root
     pattern = f"*/*/numeric/ostios_{split}_summary.csv"
 
     allowed = set(preferred_order or [])
-    for summary_path in sorted(result_root.glob(pattern)):
+    # Cada variante pode apontar para uma execução independente do mesmo split.
+    for summary_path in sorted(search_root.glob(pattern)):
         variant = summary_path.parents[2].name
         if allowed and variant not in allowed:
             continue
@@ -236,7 +246,7 @@ def load_variant_results(
 
     if not all_frames:
         raise FileNotFoundError(
-            f"Nenhum ostios_{split}_summary.csv encontrado em {result_root}"
+            f"Nenhum ostios_{split}_summary.csv encontrado em {search_root}"
         )
 
     results_df = pd.concat(all_frames, ignore_index=True)
@@ -274,15 +284,14 @@ def build_dice_stats_by_variant(
     preferred_order: Sequence[str] | None = None,
 ) -> pd.DataFrame:
     """Calcula média, máximo, mínimo, desvio padrão e mediana do Dice."""
-    stats = (
-        results_df.groupby(["folder_variant", "variant_label"], as_index=False)["artery_dice"]
-        .agg(
-            mean_dice="mean",
-            max_dice="max",
-            min_dice="min",
-            std_dice="std",
-            median_dice="median",
-        )
+    stats = results_df.groupby(["folder_variant", "variant_label"], as_index=False)[
+        "artery_dice"
+    ].agg(
+        mean_dice="mean",
+        max_dice="max",
+        min_dice="min",
+        std_dice="std",
+        median_dice="median",
     )
     return order_variants(stats, preferred_order)
 
@@ -322,6 +331,7 @@ def make_pair_delta(
         "left_ostium_correct",
         "right_ostium_correct",
     ]
+    # Renomeia os lados antes do merge para preservar ambas as medições.
     reference = df.loc[
         df["folder_variant"] == reference_variant,
         base_columns,
@@ -520,9 +530,8 @@ def select_qualitative_pair_cases(
     pair_df = add_pair_ostia_status_groups(
         make_pair_delta(results_df, reference_variant, comparison_variant)
     )
-    valid_mask = (
-        (pair_df["reference_dice"].fillna(0) > min_dice)
-        & (pair_df["comparison_dice"].fillna(0) > min_dice)
+    valid_mask = (pair_df["reference_dice"].fillna(0) > min_dice) & (
+        pair_df["comparison_dice"].fillna(0) > min_dice
     )
 
     reference_mean_dice = results_df.loc[
@@ -539,11 +548,17 @@ def select_qualitative_pair_cases(
 
     same_mask = valid_mask & pair_df["same_ostia_status_group"]
     if same_status_require_both_correct:
-        same_mask &= pair_df["reference_ostia_status"].astype(str).str.lower().isin(
-            CORRECT_LABELS
+        same_mask &= (
+            pair_df["reference_ostia_status"]
+            .astype(str)
+            .str.lower()
+            .isin(CORRECT_LABELS)
         )
-        same_mask &= pair_df["comparison_ostia_status"].astype(str).str.lower().isin(
-            CORRECT_LABELS
+        same_mask &= (
+            pair_df["comparison_ostia_status"]
+            .astype(str)
+            .str.lower()
+            .isin(CORRECT_LABELS)
         )
     if same_status_min_delta is not None:
         same_mask &= pair_df["dice_delta"] > same_status_min_delta
@@ -699,9 +714,7 @@ def build_delta_summary_vs_reference(
                 "variant_label": names.get(variant, variant),
                 "mean_delta": pair_df["dice_delta"].mean(),
                 "median_delta": pair_df["dice_delta"].median(),
-                "variant_better_by_0_02_n": int(
-                    (pair_df["dice_delta"] >= 0.02).sum()
-                ),
+                "variant_better_by_0_02_n": int((pair_df["dice_delta"] >= 0.02).sum()),
                 "reference_better_by_0_02_n": int(
                     (pair_df["dice_delta"] <= -0.02).sum()
                 ),
@@ -736,6 +749,7 @@ def plot_ostia_status_by_variant(
     save_path: Path | None = None,
 ) -> Any:
     """Plota status dos óstios por variante em barras empilhadas."""
+    # Ordena e rotula as variantes antes de construir as barras empilhadas.
     plot_df = prepare_variant_for_plot(summary_df, preferred_order, pretty_names)
     label_outline = [path_effects.withStroke(linewidth=3.2, foreground="white")]
 
@@ -744,6 +758,7 @@ def plot_ostia_status_by_variant(
 
     x_labels = plot_df["variant_label"].astype(str)
     bottom = np.zeros(len(plot_df))
+    # Cada status é empilhado sobre o acumulado das categorias anteriores.
     for column, label, color in zip(
         OSTIA_STATUS_COLUMNS,
         OSTIA_STATUS_LABELS,
@@ -853,6 +868,212 @@ def plot_largest_pair_changes(
     return ax
 
 
+def _curve_auc(values: Sequence[float]) -> tuple[float, float]:
+    """Calcula AUC bruta e normalizada para uma sequência ordenada."""
+    array = np.asarray(values, dtype=float)
+    array = array[np.isfinite(array)]
+    if array.size == 0:
+        return float("nan"), float("nan")
+    if array.size == 1:
+        return 0.0, float(array[0])
+    auc = float(np.trapezoid(array, dx=1.0))
+    return auc, auc / float(array.size - 1)
+
+
+def build_pair_curve_auc(
+    results_df: pd.DataFrame,
+    reference_variant: str,
+    comparison_variant: str,
+    *,
+    pretty_names: dict[str, str] | None = None,
+) -> pd.DataFrame:
+    """Resume as AUCs das curvas de Dice e do delta entre duas variantes.
+
+    Os exames são ordenados por ``IMG_ID`` e recebem posições consecutivas no
+    eixo x. A AUC normalizada divide a integral por ``n_exames - 1`` e pode ser
+    interpretada na mesma escala do Dice. A AUC do delta é assinada.
+    """
+    pair_df = make_pair_delta(
+        results_df,
+        reference_variant,
+        comparison_variant,
+    ).sort_values("IMG_ID")
+    pair_df = pair_df.dropna(subset=["reference_dice", "comparison_dice"])
+    names = pretty_names or {}
+
+    rows = []
+    curves = [
+        (reference_variant, "reference", pair_df["reference_dice"]),
+        (comparison_variant, "comparison", pair_df["comparison_dice"]),
+        (
+            f"{comparison_variant}_minus_{reference_variant}",
+            "delta",
+            pair_df["dice_delta"],
+        ),
+    ]
+    for variant, curve_type, values in curves:
+        auc, normalized_auc = _curve_auc(values)
+        rows.append(
+            {
+                "curve": curve_type,
+                "variant": variant,
+                "variant_label": (
+                    f"{names.get(comparison_variant, comparison_variant)} - "
+                    f"{names.get(reference_variant, reference_variant)}"
+                    if curve_type == "delta"
+                    else names.get(variant, variant)
+                ),
+                "n_images": len(values),
+                "auc": auc,
+                "normalized_auc": normalized_auc,
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def _set_image_ticks(ax: Any, image_ids: Sequence[int], max_ticks: int = 20) -> None:
+    """Mostra IDs distribuídos no eixo x sem sobrepor todos os exames."""
+    if not image_ids:
+        return
+    count = len(image_ids)
+    tick_count = min(max_ticks, count)
+    positions = np.unique(np.linspace(0, count - 1, tick_count, dtype=int))
+    ax.set_xticks(positions)
+    ax.set_xticklabels(
+        [str(image_ids[position]) for position in positions],
+        rotation=60,
+        ha="right",
+    )
+
+
+def plot_pair_dice_by_image(
+    results_df: pd.DataFrame,
+    reference_variant: str,
+    comparison_variant: str,
+    *,
+    pretty_names: dict[str, str] | None = None,
+    axes: Sequence[Any] | None = None,
+    figsize: tuple[float, float] = (15, 8),
+    save_path: Path | None = None,
+) -> np.ndarray:
+    """Plota a série de Dice por exame em dois painéis verticais."""
+    pair_df = make_pair_delta(
+        results_df,
+        reference_variant,
+        comparison_variant,
+    ).sort_values("IMG_ID")
+    pair_df = pair_df.dropna(subset=["reference_dice", "comparison_dice"])
+    names = pretty_names or {}
+    x = np.arange(len(pair_df))
+
+    if axes is None:
+        _, axes_array = plt.subplots(
+            2,
+            1,
+            figsize=figsize,
+            sharex=True,
+            sharey=True,
+            constrained_layout=True,
+            gridspec_kw={"hspace": 0.06},
+        )
+    else:
+        axes_array = np.asarray(axes, dtype=object)
+        if axes_array.size != 2:
+            raise ValueError("axes deve conter exatamente dois eixos.")
+        axes_array = axes_array.reshape(2)
+
+    comparison_ax, reference_ax = axes_array
+    panels = [
+        (
+            comparison_ax,
+            names.get(comparison_variant, comparison_variant),
+            pair_df["comparison_dice"],
+            "#f58518",
+        ),
+        (
+            reference_ax,
+            names.get(reference_variant, reference_variant),
+            pair_df["reference_dice"],
+            "#4c78a8",
+        ),
+    ]
+    for panel_ax, title, values, color in panels:
+        panel_ax.plot(
+            x,
+            values,
+            color=color,
+            linewidth=0.85,
+            alpha=0.9,
+        )
+        panel_ax.set_ylim(0, 1)
+        panel_ax.set_ylabel("Dice", fontsize=22, labelpad=10)
+        panel_ax.set_title(title, fontsize=18)
+        panel_ax.tick_params(axis="y", labelsize=16)
+        panel_ax.grid(axis="y", alpha=0.25)
+
+    comparison_ax.tick_params(axis="x", labelbottom=False)
+    reference_ax.set_xlabel(
+        "Exames",
+        fontsize=22,
+        labelpad=14,
+    )
+    _set_image_ticks(reference_ax, pair_df["IMG_ID"].astype(int).tolist())
+    reference_ax.tick_params(axis="x", labelsize=16)
+    if save_path is not None:
+        save_path = Path(save_path)
+        save_path.parent.mkdir(parents=True, exist_ok=True)
+        axes_array[0].figure.savefig(save_path, dpi=300, bbox_inches="tight")
+    return axes_array
+
+
+def plot_pair_delta_by_image(
+    results_df: pd.DataFrame,
+    reference_variant: str,
+    comparison_variant: str,
+    *,
+    pretty_names: dict[str, str] | None = None,
+    ax: Any | None = None,
+    figsize: tuple[float, float] = (15, 5.5),
+    save_path: Path | None = None,
+) -> Any:
+    """Plota o delta de Dice ``comparação - referência`` por exame."""
+    pair_df = make_pair_delta(
+        results_df,
+        reference_variant,
+        comparison_variant,
+    ).sort_values("IMG_ID")
+    pair_df = pair_df.dropna(subset=["reference_dice", "comparison_dice"])
+    x = np.arange(len(pair_df))
+    delta = pair_df["dice_delta"].to_numpy(dtype=float)
+
+    if ax is None:
+        _, ax = plt.subplots(figsize=figsize)
+    ax.plot(x, delta, color="#444444", linewidth=1.1)
+    ax.fill_between(x, 0, delta, where=delta >= 0, color="#2ca02c", alpha=0.55)
+    ax.fill_between(x, 0, delta, where=delta < 0, color="#d62728", alpha=0.55)
+    ax.axhline(0, color="black", linewidth=1)
+    ax.set_ylabel(
+        "Delta Dice",
+        fontsize=22,
+        labelpad=10,
+    )
+    ax.set_xlabel(
+        "Exames",
+        fontsize=22,
+        labelpad=14,
+    )
+    ax.set_ylim(-1, 1)
+    _set_image_ticks(ax, pair_df["IMG_ID"].astype(int).tolist())
+    ax.tick_params(axis="both", labelsize=16)
+    ax.grid(axis="y", alpha=0.25)
+    plt.tight_layout()
+    if save_path is not None:
+        save_path = Path(save_path)
+        save_path.parent.mkdir(parents=True, exist_ok=True)
+        ax.figure.savefig(save_path, dpi=300, bbox_inches="tight")
+    return ax
+
+
 __all__ = [
     "CORRECT_LABELS",
     "OSTIA_STATUS_COLORS",
@@ -868,6 +1089,7 @@ __all__ = [
     "build_dice_stats_by_variant",
     "build_delta_summary_vs_reference",
     "build_pair_outcome_counts",
+    "build_pair_curve_auc",
     "build_ranking_table",
     "first_existing_value",
     "largest_pair_changes",
@@ -878,6 +1100,8 @@ __all__ = [
     "order_variants",
     "pair_summary",
     "plot_largest_pair_changes",
+    "plot_pair_delta_by_image",
+    "plot_pair_dice_by_image",
     "plot_ostia_status_by_variant",
     "prepare_variant_for_plot",
     "select_qualitative_pair_cases",

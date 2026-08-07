@@ -1,16 +1,16 @@
-"""Tests for cache-independent aorta detection helpers."""
+"""Tests for aorta detection helpers."""
 
 from unittest import TestCase
 from unittest.mock import patch
 
 import numpy as np
 
-from utils.segmentation.pipeline_detection import get_or_detect_aorta_circles
+from utils.segmentation.pipeline_detection import locate_aorta_circles
 
 
 class AortaCircleDetectionTest(TestCase):
     @patch("utils.segmentation.pipeline_detection.detect_aorta_circles")
-    def test_allows_missing_cache_path_when_cache_is_disabled(self, detect_circles):
+    def test_locates_circles_with_scaled_spacing(self, detect_circles):
         expected = [{"slice_index": 2, "center": (4, 4), "radius": 2}]
         detect_circles.return_value = expected
         config = {
@@ -27,15 +27,11 @@ class AortaCircleDetectionTest(TestCase):
             "canny_sigma": 2.0,
         }
 
-        result = get_or_detect_aorta_circles(
-            "90",
+        result = locate_aorta_circles(
             np.zeros((8, 8, 3), dtype=np.float32),
             (2, 2, 1),
             (1.0, 1.0, 1.0),
             config,
-            base_save_path=None,
-            load_cache=False,
-            save_cache=False,
         )
 
         self.assertEqual(result, expected)

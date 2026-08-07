@@ -10,7 +10,7 @@ import warnings
 import cv2
 import numpy as np
 import scipy.ndimage as ndi
-from typing import Any, Optional, Tuple, Sequence
+from typing import Any, Optional, Sequence, Tuple, cast
 from numpy.typing import NDArray
 
 from .gpu_utils import GPU_AVAILABLE, cu_ndi, to_cpu, to_gpu
@@ -24,7 +24,7 @@ def _find_largest_component_label(labeled_array: NDArray[Any]) -> Optional[int]:
     if len(comp_sizes) <= 1:
         return None
 
-    return np.argmax(comp_sizes)
+    return int(np.argmax(comp_sizes))
 
 
 def downscale_image_ndi(
@@ -32,7 +32,7 @@ def downscale_image_ndi(
 ) -> NDArray[Any]:
     """Reduz a resolução da imagem usando scipy.ndimage.zoom."""
     zoom_factors = tuple(1.0 / f for f in factors)
-    return ndi.zoom(image, zoom=zoom_factors, order=order)
+    return np.asarray(ndi.zoom(image, zoom=zoom_factors, order=order))
 
 
 def downscale_image_opencv(
@@ -54,6 +54,7 @@ def downscale_image_opencv(
         )
         new_shape_z = int(image.shape[2] / factor_z)
 
+        # Redimensiona primeiro cada plano axial para preservar a organização 3D.
         volume_resized_xy = np.zeros(
             (new_shape_xy[1], new_shape_xy[0], image.shape[2]), dtype=image.dtype
         )
@@ -64,6 +65,7 @@ def downscale_image_opencv(
             )
 
         if factor_z != 1:
+            # A segunda passagem ajusta a profundidade sem misturar os eixos XY.
             volume_final = np.zeros(
                 (new_shape_xy[1], new_shape_xy[0], new_shape_z), dtype=image.dtype
             )
@@ -99,13 +101,15 @@ def downscale_image(
             image, factors, interpolation=opencv_interpolation
         )
 
-    if GPU_AVAILABLE:
+    # Tenta GPU apenas no caminho SciPy; OpenCV já foi tratado acima.
+    if GPU_AVAILABLE and cu_ndi is not None:
         try:
             img_gpu = to_gpu(image)
             zoom_factors = tuple(1.0 / f for f in factors)
             result_gpu = cu_ndi.zoom(img_gpu, zoom=zoom_factors, order=order)
             return to_cpu(result_gpu)
         except Exception as e:
+            # Mantém o pipeline funcional quando a operação não é suportada na GPU.
             warnings.warn(
                 f"GPU downscaling falhou ({type(e).__name__}), usando CPU.", UserWarning
             )
@@ -115,7 +119,7 @@ def downscale_image(
 
 
 def threshold_image(
-    image: NDArray[Any], min_val: int = -300, max_val: int = 675
+    image: NDArray[Any], min_val: float = -300, max_val: float = 675
 ) -> Tuple[NDArray[Any], NDArray[Any]]:
     """Aplica máscara de threshold por faixa inclusiva de HU/intensidade."""
     thresh_mask = (image >= min_val) & (image <= max_val)
@@ -124,8 +128,8 @@ def threshold_image(
 
 
 def threshold_image_with_offset(
-    image: NDArray[Any], min_val: int = -300, max_val: int = 675
-) -> Tuple[NDArray[Any], NDArray[Any], int]:
+    image: NDArray[Any], min_val: float = -300, max_val: float = 675
+) -> Tuple[NDArray[Any], NDArray[Any], float]:
     offset = np.abs(min_val)
 
     # 1. Cria a máscara binária
@@ -144,7 +148,11 @@ def largest_connected_component(
     image: NDArray[Any], mask: NDArray[Any]
 ) -> Tuple[NDArray[Any], NDArray[Any]]:
     """Mantém apenas o maior componente conectado e o aplica à imagem."""
-    labeled_array, num_features = ndi.label(mask)
+    # Rotula os componentes para selecionar aquele com maior número de voxels.
+    labeled_array, num_features = cast(
+        tuple[NDArray[Any], int],
+        ndi.label(mask),
+    )
     if num_features == 0:
         return image, mask
 
@@ -222,6 +230,7 @@ def run_core_preprocessing_pipeline(
     else:
         down_image = downscale_image_ndi(image, downscale_factors, order=order)
 
+    # O limite superior acompanha a distribuição de intensidades de cada exame.
     thresh_vals = (
         min_threshold,
         int(np.percentile(down_image, max_threshold_percentile)),
@@ -231,6 +240,7 @@ def run_core_preprocessing_pipeline(
         down_image, *thresh_vals
     )
 
+    # Permite comparar o comportamento histórico por fatia com uma LCC 3D global.
     if lcc_per_slice:
         lcc_image = np.zeros_like(thresh_image, dtype=thresh_image.dtype)
         for z in range(thresh_image.shape[2]):

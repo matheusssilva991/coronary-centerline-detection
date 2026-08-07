@@ -11,11 +11,11 @@ import numpy as np
 from scipy import ndimage as ndi
 from skimage.morphology import ball
 
-from .artery_segmentation import normal_region_growing_from_ostia
-from .pipeline_preprocessing import get_or_compute_vesselness
 from ..processing.binary_operations import binary_closing, binary_dilation
 from ..utils.metrics import dice_score
 from ..utils.normalization import normalize_vesselness
+from .artery_segmentation import normal_region_growing_from_ostia
+from .pipeline_preprocessing import compute_vesselness
 
 
 def _normalize_artery_segmentation_method(method: Any) -> str:
@@ -47,20 +47,28 @@ def get_artery_postprocessing_stages(
 ) -> Dict[str, np.ndarray]:
     """Retorna as máscaras bruta, fechada e dilatada do pós-processamento."""
     post_config = config["POSTPROCESSING"]
-    close_radius = post_config["closing_radius"] if closing_radius is None else int(closing_radius)
-    dilate_radius = post_config["dilation_radius"] if dilation_radius is None else int(dilation_radius)
+    close_radius = (
+        post_config["closing_radius"] if closing_radius is None else int(closing_radius)
+    )
+    dilate_radius = (
+        post_config["dilation_radius"]
+        if dilation_radius is None
+        else int(dilation_radius)
+    )
 
     raw_mask = (np.asarray(mask) > 0).astype(np.uint8)
+    closing_structure = np.asarray(ball(close_radius))
+    dilation_structure = np.asarray(ball(dilate_radius))
     closed_mask = binary_closing(
         raw_mask > 0,
-        structure=ball(close_radius),
+        structure=closing_structure,
         # Mantém a morfologia final na CPU para reduzir diferenças discretas
         # entre execuções CPU/GPU.
         gpu=False,
     )
     final_mask = binary_dilation(
         closed_mask,
-        structure=ball(dilate_radius),
+        structure=dilation_structure,
         gpu=False,
     )
     return {
@@ -107,28 +115,34 @@ def postprocess_artery_mask_conditioned(
     quando o maior vesselness local ultrapassa um limiar adaptativo calculado
     sobre os voxels já segmentados.
     """
+    # Normaliza máscara e vesselness antes de construir as camadas morfológicas.
     raw_mask = np.asarray(mask) > 0
     vesselness_norm = normalize_vesselness(vesselness)
     if raw_mask.shape != vesselness_norm.shape:
         raise ValueError("mask e vesselness devem possuir o mesmo shape.")
 
+    closing_structure = np.asarray(ball(int(closing_radius)))
+    base_dilation_structure = np.asarray(ball(int(base_dilation_radius)))
+    max_dilation_structure = np.asarray(ball(int(max_dilation_radius)))
     closed_mask = binary_closing(
         raw_mask,
-        structure=ball(int(closing_radius)),
+        structure=closing_structure,
         gpu=False,
     ).astype(bool)
     base_mask = binary_dilation(
         closed_mask,
-        structure=ball(int(base_dilation_radius)),
+        structure=base_dilation_structure,
         gpu=False,
     ).astype(bool)
     maximum_mask = binary_dilation(
         closed_mask,
-        structure=ball(int(max_dilation_radius)),
+        structure=max_dilation_structure,
         gpu=False,
     ).astype(bool)
+    # Apenas a camada adicional será condicionada pelo suporte vascular.
     outer_shell = maximum_mask & ~base_mask
 
+    # O suporte mínimo se adapta às respostas já aceitas pela segmentação bruta.
     segmented_values = vesselness_norm[raw_mask]
     positive_values = segmented_values[segmented_values > 0]
     if positive_values.size:
@@ -144,6 +158,7 @@ def postprocess_artery_mask_conditioned(
         if radius > 0
         else vesselness_norm
     )
+    # Aceita a expansão somente onde existe vesselness local suficiente.
     supported_shell = outer_shell & (local_vesselness >= support_threshold)
     if candidate_mask is not None:
         candidate = np.asarray(candidate_mask) > 0
@@ -221,36 +236,21 @@ def _segment_with_fuzzy_connectedness(
 
 
 def segment_arteries_from_ostia(
-    img_id: str,
     lcc_image: Any,
     label_artery: Any,
     ostia_left: Optional[Sequence[int]],
     ostia_right: Optional[Sequence[int]],
     config: Dict[str, Any],
-    base_save_path: str,
-    scaled_spacing: Optional[Sequence[float]] = None,
 ) -> Dict[str, Any]:
     """Calcula vesselness arterial, segmenta artérias e avalia Dice."""
-    vesselness_spacing = (
-        (scaled_spacing[1], scaled_spacing[0], scaled_spacing[2])
-        if scaled_spacing is not None
-        else None
-    )
     # Calcula o mapa de vasos usado pela segmentação arterial.
-    vesselness_artery = get_or_compute_vesselness(
-        img_id,
+    vesselness_artery = compute_vesselness(
         lcc_image,
-        cache_dir=(
-            f"{base_save_path}/vesselness_artery_cache_"
-            f"{'gpu' if config.get('USE_GPU', False) else 'cpu'}"
-        ),
         vesselness_config=config["VESSELNESS_ARTERY"],
-        load_cache=config["LOAD_CACHE"],
-        save_cache=config["SAVE_CACHE"],
         use_gpu=config.get("USE_GPU", False),
-        spacing=vesselness_spacing,
     )
 
+    # Despacha RG ou FC mantendo o mesmo contrato de máscaras e métricas.
     method = _normalize_artery_segmentation_method(
         config.get("ARTERY_SEGMENTATION", {}).get("method", "region_growing")
     )
@@ -270,16 +270,19 @@ def segment_arteries_from_ostia(
             config,
         )
 
+    # Mede separadamente o método de crescimento e o efeito da morfologia final.
     dice_before = float(dice_score(raw_artery_mask, label_artery))
     dice_after = float(dice_score(artery_mask, label_artery))
+    raw_artery_voxels = int(np.sum(raw_artery_mask))
+    artery_voxels = int(np.sum(artery_mask))
 
     return {
         # As máscaras são removidas pela orquestração antes da persistência.
         "artery_mask": artery_mask,
         "raw_artery_mask": raw_artery_mask,
-        "artery_voxels_before_morphology": int(np.sum(raw_artery_mask)),
-        "artery_voxels_after_morphology": int(np.sum(artery_mask)),
-        "artery_voxels": int(np.sum(artery_mask)),
+        "artery_voxels_before_morphology": raw_artery_voxels,
+        "artery_voxels_after_morphology": artery_voxels,
+        "artery_voxels": artery_voxels,
         "dice_artery_before_morphology": dice_before,
         "dice_artery_after_morphology": dice_after,
         "dice_artery_morphology_delta": dice_after - dice_before,

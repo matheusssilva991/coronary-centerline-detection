@@ -12,11 +12,11 @@ from utils.experiments.qualitative_pipeline import run_qualitative_pipeline_case
 class QualitativePipelineTest(TestCase):
     @patch("utils.experiments.qualitative_pipeline.segment_arteries_from_ostia")
     @patch("utils.experiments.qualitative_pipeline.detect_and_evaluate_ostia")
-    @patch("utils.experiments.qualitative_pipeline.get_or_segment_aorta")
-    @patch("utils.experiments.qualitative_pipeline.get_or_detect_aorta_circles")
-    @patch("utils.experiments.qualitative_pipeline.get_or_compute_vesselness")
+    @patch("utils.experiments.qualitative_pipeline.segment_aorta")
+    @patch("utils.experiments.qualitative_pipeline.locate_aorta_circles")
+    @patch("utils.experiments.qualitative_pipeline.compute_vesselness")
     @patch("utils.experiments.qualitative_pipeline.load_and_preprocess_image")
-    def test_returns_intermediate_masks_and_propagates_cache_options(
+    def test_returns_intermediate_masks(
         self,
         load_image,
         compute_vesselness,
@@ -55,9 +55,6 @@ class QualitativePipelineTest(TestCase):
             90,
             config,
             Path("dataset"),
-            Path("cache"),
-            load_cache=True,
-            save_cache=False,
         )
 
         self.assertEqual(result["img_id"], 90)
@@ -67,6 +64,4 @@ class QualitativePipelineTest(TestCase):
         self.assertEqual(result["scaled_spacing"], (0.6, 0.7, 0.8))
         self.assertTrue(load_image.call_args.kwargs["include_intermediates"])
         compute_vesselness.assert_called_once()
-        self.assertTrue(compute_vesselness.call_args.kwargs["load_cache"])
-        self.assertFalse(compute_vesselness.call_args.kwargs["save_cache"])
         segment_arteries.assert_called_once()

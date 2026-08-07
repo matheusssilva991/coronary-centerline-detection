@@ -16,15 +16,18 @@ from scipy.ndimage import (
     uniform_filter,
 )
 from skimage.morphology import ball
-from typing import Any, Optional, Sequence, Tuple
-from numpy.typing import NDArray
+from typing import Any, Optional, Sequence, Tuple, cast
+from numpy.typing import ArrayLike, NDArray
 
 from ..processing.binary_operations import binary_erosion
 
 
-def _validate_coordinates(coords: Sequence[int], volume_shape: Sequence[int]) -> bool:
+def _validate_coordinates(coords: ArrayLike, volume_shape: Sequence[int]) -> bool:
     """Valida se uma coordenada (y, x, z) está dentro dos limites do volume."""
-    y, x, z = map(int, coords)
+    coords_array = np.asarray(coords).ravel()
+    if coords_array.size != 3:
+        raise ValueError(f"Coordenada deve ter três elementos: {coords_array}")
+    y, x, z = (int(coords_array[index]) for index in range(3))
     height, width, depth = volume_shape
 
     if y < 0 or x < 0 or z < 0 or y >= height or x >= width or z >= depth:
@@ -113,7 +116,10 @@ def _candidate_score_map(
 
     filter_size = 2 * int(radius) + 1
     if mode == "local_mean":
-        return uniform_filter(vesselness, size=filter_size, mode="nearest")
+        return np.asarray(
+            uniform_filter(vesselness, size=filter_size, mode="nearest"),
+            dtype=np.float32,
+        )
     if mode == "robust_percentile":
         if not 0 <= local_percentile <= 100:
             raise ValueError("candidate_local_percentile deve estar em [0, 100]")
@@ -124,7 +130,9 @@ def _candidate_score_map(
         coords = np.argwhere(evaluation_mask)
         lower = np.maximum(coords.min(axis=0) - radius, 0)
         upper = np.minimum(coords.max(axis=0) + radius + 1, vesselness.shape)
-        slices = tuple(slice(int(start), int(stop)) for start, stop in zip(lower, upper))
+        slices = tuple(
+            slice(int(start), int(stop)) for start, stop in zip(lower, upper)
+        )
         vesselness_roi = vesselness[slices]
         local_score_roi = percentile_filter(
             vesselness_roi,
@@ -134,8 +142,7 @@ def _candidate_score_map(
         )
         score = np.zeros_like(vesselness)
         score[slices] = (
-            point_weight * vesselness_roi
-            + (1.0 - point_weight) * local_score_roi
+            point_weight * vesselness_roi + (1.0 - point_weight) * local_score_roi
         ).astype(np.float32)
         return score
     if mode == "external_mean":
@@ -159,8 +166,8 @@ def _candidate_score_map(
 
 
 def _validate_ostium_pair(
-    ostium_1: Sequence[float],
-    ostium_2: Sequence[float],
+    ostium_1: ArrayLike,
+    ostium_2: ArrayLike,
     min_center_dist: float,
     max_z_diff_mm: float,
     min_lateral_sep: float,
@@ -168,20 +175,22 @@ def _validate_ostium_pair(
     distance_mode: str,
 ) -> bool:
     """Verifica restrições anatômicas para um par candidato de óstios."""
-    delta = np.asarray(ostium_1, dtype=float) - np.asarray(ostium_2, dtype=float)
+    first = np.asarray(ostium_1, dtype=float)
+    second = np.asarray(ostium_2, dtype=float)
+    delta = first - second
     if distance_mode == "voxel_xyz":
         dist = np.linalg.norm(delta)
     elif distance_mode == "physical_xy":
         dist = np.linalg.norm(delta[:2] * np.asarray(spacing[:2], dtype=float))
     else:
         raise ValueError("pair_distance_mode deve ser 'voxel_xyz' ou 'physical_xy'")
-    z_diff_voxels = abs(ostium_1[2] - ostium_2[2])
+    z_diff_voxels = abs(first[2] - second[2])
     z_diff_mm = z_diff_voxels * spacing[2]
-    x_diff = abs(ostium_1[1] - ostium_2[1])
+    x_diff = abs(first[1] - second[1])
     if distance_mode == "physical_xy":
         x_diff *= spacing[1]
 
-    return (
+    return bool(
         dist >= min_center_dist
         and z_diff_mm <= max_z_diff_mm
         and x_diff >= min_lateral_sep
@@ -233,9 +242,7 @@ def _find_best_ostium_pair(
 
     for index, first in enumerate(limited[:-1]):
         for second in limited[index + 1 :]:
-            diameter_first = calculate_robust_diameter(
-                aorta_mask[:, :, int(first[2])]
-            )
+            diameter_first = calculate_robust_diameter(aorta_mask[:, :, int(first[2])])
             diameter_second = calculate_robust_diameter(
                 aorta_mask[:, :, int(second[2])]
             )
@@ -277,8 +284,7 @@ def _aorta_center_x_at_slices(
     circles_by_slice = {
         int(circle["slice_index"]): float(circle["center_x"])
         for circle in detected_circles
-        if circle.get("slice_index") is not None
-        and circle.get("center_x") is not None
+        if circle.get("slice_index") is not None and circle.get("center_x") is not None
     }
     if not circles_by_slice:
         raise ValueError("Seleção bilateral requer círculos válidos da aorta")
@@ -355,7 +361,7 @@ def _find_best_bilateral_pair(
 
 
 def _classify_left_right(
-    ostium_1: Sequence[float], ostium_2: Sequence[float]
+    ostium_1: NDArray[Any], ostium_2: NDArray[Any]
 ) -> Tuple[NDArray[Any], NDArray[Any]]:
     """Classifica o óstio esquerdo/direito com base na convenção da coordenada x."""
     if ostium_1[1] < ostium_2[1]:
@@ -375,12 +381,12 @@ def find_aorta_surface(
     if surface_mode == "physical_distance":
         if surface_thickness_mm <= 0:
             raise ValueError("surface_thickness_mm deve ser maior que zero")
-        distance_inside = distance_transform_edt(mask, sampling=spacing)
+        distance_inside = np.asarray(distance_transform_edt(mask, sampling=spacing))
         return (mask & (distance_inside <= surface_thickness_mm)).astype(np.uint8)
     if surface_mode != "erosion":
         raise ValueError("surface_mode deve ser 'erosion' ou 'physical_distance'")
 
-    struct_elem = ball(erosion_radius)
+    struct_elem = np.asarray(ball(erosion_radius))
     eroded = binary_erosion(
         mask,
         structure=struct_elem,
@@ -401,7 +407,7 @@ def calculate_robust_diameter(mask_slice: NDArray[Any]) -> float:
 
 
 def check_ostium_intersection(
-    ostium_coords: Optional[Sequence[int]],
+    ostium_coords: Optional[ArrayLike],
     label_mask: NDArray[Any],
     spacing: Sequence[float],
     ostium_name: str = "Óstio",
@@ -420,7 +426,8 @@ def check_ostium_intersection(
         }
 
     _validate_coordinates(ostium_coords, label_mask.shape)
-    y, x, z = map(int, ostium_coords)
+    coords_array = np.asarray(ostium_coords).ravel()
+    y, x, z = (int(coords_array[index]) for index in range(3))
     dy, dx, dz = spacing
 
     if label_mask[y, x, z] == 1:
@@ -437,10 +444,13 @@ def check_ostium_intersection(
     if not np.any(label_mask > 0):
         raise ValueError("label_mask não possui voxels positivos")
 
-    dist_mm, indices = distance_transform_edt(
-        label_mask == 0,
-        sampling=(dy, dx, dz),
-        return_indices=True,
+    dist_mm, indices = cast(
+        tuple[NDArray[Any], NDArray[Any]],
+        distance_transform_edt(
+            label_mask == 0,
+            sampling=(dy, dx, dz),
+            return_indices=True,
+        ),
     )
 
     physical_dist = float(dist_mm[y, x, z])

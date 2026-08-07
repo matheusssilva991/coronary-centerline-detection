@@ -11,7 +11,7 @@ Este arquivo documenta todos os parametros de `config/pipeline_config.json`, com
 
 O `pipeline_config.json` organiza os parametros por etapas do pipeline:
 
-1. Configuracoes globais de execucao (GPU, cache, downscale)
+1. Configuracoes globais de execucao (GPU e downscale)
 2. Vesselness para aorta e arterias
 3. Deteccao de circulos para sementes/estrutura inicial
 4. Evolucao por level set
@@ -34,26 +34,6 @@ Quando ajustar:
 
 - Use `true` em ambientes com GPU compativel e memoria suficiente.
 - Use `false` para depuracao, reprodutibilidade entre maquinas ou ausencia de GPU.
-
-### `LOAD_CACHE` (bool)
-
-- Valor atual: `false`
-- Carrega resultados intermediarios previamente salvos.
-
-Impacto:
-
-- Reduz tempo de execucao quando ha cache valido.
-- Pode mascarar mudancas de parametros se cache nao for invalidado corretamente.
-
-### `SAVE_CACHE` (bool)
-
-- Valor atual: `false`
-- Salva resultados intermediarios para reutilizacao futura.
-
-Impacto:
-
-- Aumenta uso de disco.
-- Diminui custo de experimentos repetidos.
 
 ### `DOWNSCALE_METHOD` (string)
 
@@ -581,7 +561,7 @@ Trade-off:
 
 ## Roteiro Recomendado de Experimento
 
-1. Congele seed/dados e desative cache para linha de base (`LOAD_CACHE=false`).
+1. Congele seed e dados para estabelecer a linha de base.
 2. Rode baseline e salve metricas.
 3. Varie apenas 1-2 parametros por vez.
 4. Registre efeito em:
@@ -591,7 +571,6 @@ Trade-off:
 - tempo de execucao
 - memoria
 
-1. Se encontrar melhor configuracao, ative `SAVE_CACHE` para acelerar iteracoes futuras.
 
 ---
 

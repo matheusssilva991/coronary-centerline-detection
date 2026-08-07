@@ -9,6 +9,7 @@ import numpy as np
 
 def get_lower_threshold_config(config: dict[str, Any]) -> dict[str, Any]:
     """Retorna a configuração do limiar inferior com defaults compatíveis."""
+    # Trabalha sobre uma cópia para não alterar a configuração efetiva da execução.
     lower_config = dict(config.get("LOWER_THRESHOLD", {}))
     lower_config.setdefault("method", "fixed")
     lower_config.setdefault("fixed_hu", config.get("MIN_THRESHOLD", -300))
@@ -42,6 +43,7 @@ def _finite_clipped_values(
     clip_max_hu: float | None,
 ) -> np.ndarray:
     """Seleciona voxels finitos dentro da faixa HU configurada."""
+    # Remove NaN/inf antes de restringir a distribuição à faixa HU relevante.
     values = np.asarray(volume, dtype=np.float32)
     values = values[np.isfinite(values)]
     if clip_min_hu is not None:
@@ -72,6 +74,7 @@ def resolve_lower_threshold(
         "lower_threshold_clip_max_hu": lower_config.get("clip_max_hu"),
     }
 
+    # O método fixo preserva o comportamento histórico de -300 HU.
     if method == "fixed":
         details["min_threshold"] = fixed_hu
         return fixed_hu, details
@@ -89,6 +92,7 @@ def resolve_lower_threshold(
     percentile = float(lower_config.get("percentile", 5.0))
     details["lower_threshold_percentile"] = percentile
 
+    # No modo adaptativo, cada exame obtém seu próprio piso pela distribuição HU.
     threshold = float(np.percentile(values, percentile))
 
     details["min_threshold"] = threshold

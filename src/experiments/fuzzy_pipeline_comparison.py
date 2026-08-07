@@ -400,8 +400,6 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Run only the first N variants, useful for smoke tests.",
     )
-    parser.add_argument("--cache", dest="load_cache", action="store_true")
-    parser.add_argument("--save-cache", action="store_true")
     gpu_group = parser.add_mutually_exclusive_group()
     gpu_group.add_argument("--gpu", dest="use_gpu", action="store_true", default=None)
     gpu_group.add_argument("--no-gpu", dest="use_gpu", action="store_false")
@@ -564,15 +562,12 @@ def main() -> None:
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     run_name = sanitize_name(args.run_name or timestamp)
     run_dir = args.output_root / run_name
-    cache_dir = run_dir / "cache"
     run_dir.mkdir(parents=True, exist_ok=True)
 
     base_path = resolve_imagecas_base_path()
     base_config_args = SimpleNamespace(
         config_path=args.config_path,
         resolution=args.resolution,
-        load_cache=args.load_cache,
-        save_cache=args.save_cache,
         use_gpu=args.use_gpu,
     )
     base_config = build_base_config(base_config_args)
@@ -630,8 +625,6 @@ def main() -> None:
             "variant_set": args.variant_set,
             "config_path": str(args.config_path),
             "base_path": str(base_path),
-            "load_cache": args.load_cache,
-            "save_cache": args.save_cache,
             "use_gpu": base_config.get("USE_GPU"),
             "variants": variants,
             "effective_base_config": base_config,
@@ -670,7 +663,6 @@ def main() -> None:
                 variant_name,
                 split_name,
                 base_path,
-                cache_dir,
                 config,
                 experiment,
             )

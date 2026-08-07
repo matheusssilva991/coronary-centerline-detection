@@ -1,10 +1,13 @@
 """Funções auxiliares de I/O NIfTI e NumPy para volumes de imagem médica."""
 
 import logging
+from typing import Any, Optional, Tuple, cast
 
-import nibabel as nib
 import numpy as np
-from typing import Any, Optional, Tuple
+from nibabel.loadsave import load as load_nifti
+from nibabel.loadsave import save as save_nifti
+from nibabel.nifti1 import Nifti1Image
+from nibabel.spatialimages import SpatialImage
 from numpy.typing import NDArray
 
 logger = logging.getLogger(__name__)
@@ -12,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 def load_img_and_label(
     img_path: str, label_path: Optional[str] = None
-) -> Tuple[Optional[NDArray[Any]], Optional[NDArray[Any]]]:
+) -> Tuple[NDArray[Any], Optional[NDArray[Any]]]:
     """Carrega imagem NIfTI e rótulo opcional como arrays NumPy.
 
     Args:
@@ -22,31 +25,29 @@ def load_img_and_label(
     Returns:
         Tupla (img, label) com arrays NumPy ou None quando não informado.
     """
-    img: Optional[NDArray[Any]] = None
+    img_object = cast(SpatialImage, load_nifti(img_path))
+    img = np.asarray(img_object.get_fdata())
     label: Optional[NDArray[Any]] = None
 
-    if img_path:
-        img = nib.load(img_path).get_fdata()
     if label_path:
-        label = nib.load(label_path).get_fdata()
+        label_object = cast(SpatialImage, load_nifti(label_path))
+        label = np.asarray(label_object.get_fdata())
 
     return img, label
 
 
 def load_raw_img_and_label(
     img_path: str, label_path: Optional[str] = None
-) -> Tuple[Optional[Any], Optional[Any]]:
+) -> Tuple[SpatialImage, Optional[SpatialImage]]:
     """Carrega imagem NIfTI e rótulo opcional como objetos nibabel.
 
     Retorna objetos nibabel (ex.: Nifti1Image) ou None quando não informado.
     """
-    img: Optional[Any] = None
-    label: Optional[Any] = None
+    img = cast(SpatialImage, load_nifti(img_path))
+    label: Optional[SpatialImage] = None
 
-    if img_path:
-        img = nib.load(img_path)
     if label_path:
-        label = nib.load(label_path)
+        label = cast(SpatialImage, load_nifti(label_path))
 
     return img, label
 
@@ -61,10 +62,10 @@ def save_nii_image(
         affine: Matriz afin para o NIfTI.
         path_to_save: Caminho de saída.
     """
-    nifti_img = nib.Nifti1Image(image, affine)
+    nifti_img = Nifti1Image(image, affine)
 
     try:
-        nib.save(nifti_img, path_to_save)
+        save_nifti(nifti_img, path_to_save)
         logger.info("Imagem salva em: %s", path_to_save)
     except Exception:
         logger.exception("Erro ao salvar a imagem em: %s", path_to_save)

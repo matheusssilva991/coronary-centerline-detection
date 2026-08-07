@@ -39,8 +39,6 @@ fi
 
 EXTRA_ARGS=()
 [[ "${DRY_RUN:-0}" == "1" ]] && EXTRA_ARGS+=(--dry-run)
-[[ "${LOAD_CACHE:-0}" == "1" ]] && EXTRA_ARGS+=(--cache)
-[[ "${SAVE_CACHE:-0}" == "1" ]] && EXTRA_ARGS+=(--save-cache)
 
 echo "Mode: $MODE"
 echo "Split: $SPLIT"

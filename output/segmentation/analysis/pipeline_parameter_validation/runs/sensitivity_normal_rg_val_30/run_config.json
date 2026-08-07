@@ -1,0 +1,345 @@
+{
+  "split": "val",
+  "sample_size": 30,
+  "start_index": 0,
+  "ids": [
+    867,
+    450,
+    788,
+    362,
+    10,
+    605,
+    23,
+    553,
+    922,
+    682,
+    934,
+    737,
+    510,
+    2,
+    420,
+    881,
+    11,
+    906,
+    251,
+    409,
+    134,
+    822,
+    248,
+    907,
+    873,
+    376,
+    821,
+    988,
+    750,
+    459
+  ],
+  "resolution": "mid",
+  "aorta_ostia_method": "standard",
+  "config_path": "config/article_sensitivity_reference.json",
+  "base_path": "/media/matheus/HD/DatasetsCCTA/ImageCAS/1-1000",
+  "load_cache": false,
+  "save_cache": false,
+  "use_gpu": true,
+  "variants": [
+    {
+      "name": "baseline",
+      "parameter_group": "baseline",
+      "description": "Referência normal_rg de 2026-06-29: P99.7, z=40 mm, D=7 e piso 7.8%.",
+      "overrides": {
+        "threshold_mode": "normal",
+        "artery_method": "region_growing",
+        "MAX_THRESHOLD_PERCENTILE": 99.7,
+        "OSTIA_DETECTION.max_z_diff_mm": 40.0,
+        "REGION_GROWING.threshold_divisor": 7.0,
+        "REGION_GROWING.min_vesselness_fraction": 0.078,
+        "REGION_GROWING.relaxed_floor_factor": 0.98
+      }
+    },
+    {
+      "name": "upper_p995",
+      "parameter_group": "upper_percentile",
+      "description": "Percentil superior do threshold = 99.5.",
+      "overrides": {
+        "threshold_mode": "normal",
+        "artery_method": "region_growing",
+        "MAX_THRESHOLD_PERCENTILE": 99.5,
+        "OSTIA_DETECTION.max_z_diff_mm": 40.0,
+        "REGION_GROWING.threshold_divisor": 7.0,
+        "REGION_GROWING.min_vesselness_fraction": 0.078,
+        "REGION_GROWING.relaxed_floor_factor": 0.98
+      }
+    },
+    {
+      "name": "upper_p999",
+      "parameter_group": "upper_percentile",
+      "description": "Percentil superior do threshold = 99.9.",
+      "overrides": {
+        "threshold_mode": "normal",
+        "artery_method": "region_growing",
+        "MAX_THRESHOLD_PERCENTILE": 99.9,
+        "OSTIA_DETECTION.max_z_diff_mm": 40.0,
+        "REGION_GROWING.threshold_divisor": 7.0,
+        "REGION_GROWING.min_vesselness_fraction": 0.078,
+        "REGION_GROWING.relaxed_floor_factor": 0.98
+      }
+    },
+    {
+      "name": "ostia_z30",
+      "parameter_group": "ostia_z_limit",
+      "description": "Diferença máxima em z entre óstios = 30 mm.",
+      "overrides": {
+        "threshold_mode": "normal",
+        "artery_method": "region_growing",
+        "MAX_THRESHOLD_PERCENTILE": 99.7,
+        "OSTIA_DETECTION.max_z_diff_mm": 30.0,
+        "REGION_GROWING.threshold_divisor": 7.0,
+        "REGION_GROWING.min_vesselness_fraction": 0.078,
+        "REGION_GROWING.relaxed_floor_factor": 0.98
+      }
+    },
+    {
+      "name": "ostia_z50",
+      "parameter_group": "ostia_z_limit",
+      "description": "Diferença máxima em z entre óstios = 50 mm.",
+      "overrides": {
+        "threshold_mode": "normal",
+        "artery_method": "region_growing",
+        "MAX_THRESHOLD_PERCENTILE": 99.7,
+        "OSTIA_DETECTION.max_z_diff_mm": 50.0,
+        "REGION_GROWING.threshold_divisor": 7.0,
+        "REGION_GROWING.min_vesselness_fraction": 0.078,
+        "REGION_GROWING.relaxed_floor_factor": 0.98
+      }
+    },
+    {
+      "name": "rg_divisor_5",
+      "parameter_group": "rg_threshold_divisor",
+      "description": "Divisor do limiar global do RG = 5.",
+      "overrides": {
+        "threshold_mode": "normal",
+        "artery_method": "region_growing",
+        "MAX_THRESHOLD_PERCENTILE": 99.7,
+        "OSTIA_DETECTION.max_z_diff_mm": 40.0,
+        "REGION_GROWING.threshold_divisor": 5.0,
+        "REGION_GROWING.min_vesselness_fraction": 0.078,
+        "REGION_GROWING.relaxed_floor_factor": 0.98
+      }
+    },
+    {
+      "name": "rg_divisor_9",
+      "parameter_group": "rg_threshold_divisor",
+      "description": "Divisor do limiar global do RG = 9.",
+      "overrides": {
+        "threshold_mode": "normal",
+        "artery_method": "region_growing",
+        "MAX_THRESHOLD_PERCENTILE": 99.7,
+        "OSTIA_DETECTION.max_z_diff_mm": 40.0,
+        "REGION_GROWING.threshold_divisor": 9.0,
+        "REGION_GROWING.min_vesselness_fraction": 0.078,
+        "REGION_GROWING.relaxed_floor_factor": 0.98
+      }
+    },
+    {
+      "name": "rg_vessel_05",
+      "parameter_group": "rg_vesselness_floor",
+      "description": "Fração mínima de vesselness do RG = 5%.",
+      "overrides": {
+        "threshold_mode": "normal",
+        "artery_method": "region_growing",
+        "MAX_THRESHOLD_PERCENTILE": 99.7,
+        "OSTIA_DETECTION.max_z_diff_mm": 40.0,
+        "REGION_GROWING.threshold_divisor": 7.0,
+        "REGION_GROWING.min_vesselness_fraction": 0.05,
+        "REGION_GROWING.relaxed_floor_factor": 0.98
+      }
+    },
+    {
+      "name": "rg_vessel_09",
+      "parameter_group": "rg_vesselness_floor",
+      "description": "Fração mínima de vesselness do RG = 9%.",
+      "overrides": {
+        "threshold_mode": "normal",
+        "artery_method": "region_growing",
+        "MAX_THRESHOLD_PERCENTILE": 99.7,
+        "OSTIA_DETECTION.max_z_diff_mm": 40.0,
+        "REGION_GROWING.threshold_divisor": 7.0,
+        "REGION_GROWING.min_vesselness_fraction": 0.09,
+        "REGION_GROWING.relaxed_floor_factor": 0.98
+      }
+    }
+  ],
+  "effective_base_config": {
+    "USE_GPU": true,
+    "LOAD_CACHE": false,
+    "SAVE_CACHE": false,
+    "DOWNSCALE_METHOD": "opencv",
+    "OPENCV_INTERPOLATION": "linear",
+    "LCC_PER_SLICE": true,
+    "DOWNSCALE_FACTORS": [
+      2,
+      2,
+      1
+    ],
+    "MIN_THRESHOLD": -300,
+    "MAX_THRESHOLD_PERCENTILE": 99.7,
+    "LOWER_THRESHOLD": {
+      "method": "fixed",
+      "fixed_hu": -300,
+      "percentile": 5.0,
+      "clip_min_hu": -700.0,
+      "clip_max_hu": 500.0,
+      "object_percentile": 99.5
+    },
+    "THRESHOLDING": {
+      "method": "normal",
+      "fuzzy": {
+        "soft_margin_hu": 160,
+        "object_percentile": 99.5,
+        "dense_percentile": 99.9,
+        "smooth_radius": 2,
+        "smooth_mode": "mean"
+      }
+    },
+    "VESSELNESS_AORTA": {
+      "method": "normal",
+      "sigmas": [
+        2.5,
+        3.0
+      ],
+      "black_ridges": false,
+      "alpha": 0.5,
+      "beta": 1.0,
+      "gamma": 30,
+      "normalization": "none",
+      "smooth_sigma": 0.0,
+      "modified": {
+        "smooth_sigma": 1.0,
+        "gd_epsilon": 1e-06,
+        "gf_center_percentile": 50.0,
+        "gf_scale_percentile": 99.5,
+        "gd_clip_percentiles": [
+          1.0,
+          99.0
+        ],
+        "ratio_clip": [
+          0.0,
+          10.0
+        ],
+        "use_spacing": true
+      }
+    },
+    "VESSELNESS_ARTERY": {
+      "method": "normal",
+      "sigmas": [
+        1.5,
+        2.0,
+        2.5,
+        3.0
+      ],
+      "black_ridges": false,
+      "alpha": 0.5,
+      "beta": 0.5,
+      "gamma": 55,
+      "normalization": "none",
+      "smooth_sigma": 0.0,
+      "modified": {
+        "smooth_sigma": 1.0,
+        "gd_epsilon": 1e-06,
+        "gf_center_percentile": 50.0,
+        "gf_scale_percentile": 99.5,
+        "gd_clip_percentiles": [
+          1.0,
+          99.0
+        ],
+        "ratio_clip": [
+          0.0,
+          10.0
+        ],
+        "use_spacing": true
+      }
+    },
+    "CIRCLE_DETECTION": {
+      "radii_start_px": 18,
+      "radii_end_px": 31,
+      "radius_step_px": 1,
+      "tol_radius_mm": 9.0,
+      "tol_distance_mm": 20.0,
+      "quadrant_offset": [
+        30,
+        30
+      ],
+      "max_slice_miss_threshold": 5,
+      "neighbor_distance_threshold": 5,
+      "total_num_peaks_initial": 15,
+      "total_num_peaks": 15,
+      "canny_sigma": 3,
+      "use_local_roi": true,
+      "local_roi_padding": 30,
+      "out_of_tolerance_as_miss": false,
+      "interpolate_missed_circles": true,
+      "candidate_selection_strategy": "closest",
+      "candidate_score_accum_weight": 1.0,
+      "candidate_score_distance_weight": 1.0,
+      "candidate_score_radius_weight": 1.0,
+      "early_track_recovery": false
+    },
+    "LEVEL_SET": {
+      "radius_reduction_factor": 0.15,
+      "num_iter": 31,
+      "balloon": 0.8,
+      "smoothing": 2,
+      "threshold": "auto",
+      "roi_margin": 10,
+      "use_roi": true,
+      "alpha": 1000,
+      "sigma": 2,
+      "leak_removal_radius": 2,
+      "trajectory_radius_factor": null,
+      "trajectory_area_ratio_threshold": null
+    },
+    "OSTIA_DETECTION": {
+      "top_n": 2000,
+      "max_z_diff_mm": 40.0,
+      "lower_fraction": 0.85,
+      "min_center_distance_factor": 0.85,
+      "min_lateral_factor": 0.4,
+      "erosion_radius": 4,
+      "pair_selection_mode": "greedy"
+    },
+    "AORTA_OSTIA_METHOD": {
+      "method": "standard",
+      "profiles": {
+        "standard": {}
+      }
+    },
+    "OSTIA_VALIDATION": {
+      "distance_threshold_mm": 7.0
+    },
+    "ARTERY_SEGMENTATION": {
+      "method": "region_growing"
+    },
+    "REGION_GROWING": {
+      "max_volume": 100000,
+      "switch_at_voxels": 2000,
+      "min_vesselness_fraction": 0.078,
+      "threshold_divisor": 7,
+      "relaxed_floor_factor": 0.98,
+      "comparison_window": 1,
+      "smooth_relaxation": true,
+      "use_seed_refinement": true,
+      "use_multi_seed": true,
+      "grow_each_ostium_separately": true,
+      "seed_search_radius": 2,
+      "seed_candidate_radius": 1,
+      "max_seed_candidates": 6,
+      "seed_min_vesselness_fraction": 0.02,
+      "verbose": false
+    },
+    "POSTPROCESSING": {
+      "closing_radius": 3,
+      "dilation_radius": 2
+    },
+    "NUM_BATCHES": 5
+  }
+}

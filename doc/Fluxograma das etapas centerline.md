@@ -17,6 +17,7 @@ IU(x, y, z) = m \cdot I(x, y, z) + b
 $$
 
 Onde:
+
 - $IU(x, y, z)$ é o valor Hounsfield do voxel na posição $(x, y, z)$.
 - $I(x, y, z)$ é o valor original do voxel na posição $(x, y, z)$.
 - $m$ é a inclinação (*slope*) do scanner.
@@ -51,6 +52,7 @@ Aprimorar os vasos sanguíneos na imagem 3D e outras regiões tubulares, especia
 Esse filtro é baseado na **análise dos autovalores da matriz Hessiana**, que descreve a curvatura local da imagem.
 
 O retorno do filtro é um mapa de vasos de mesma dimensão da imagem de entrada.
+
 - Valores próximos a **1** indicam alta probabilidade de ser um vaso.
 - Valores próximos a **0** indicam baixa probabilidade.
 
@@ -59,6 +61,7 @@ O retorno do filtro é um mapa de vasos de mesma dimensão da imagem de entrada.
 ### 3. Identificação da Aorta e Óstios coronarianos
 
 A aorta e os óstios são identificados com base em dois fatos:
+
 - a aorta é circular ou elíptica em forma;
 - os óstios estão localizados na circunferência da aorta com maior medida de vaso.
 

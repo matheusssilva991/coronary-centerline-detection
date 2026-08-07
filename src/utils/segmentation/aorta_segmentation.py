@@ -12,7 +12,7 @@ from skimage.segmentation import (
     morphological_geodesic_active_contour,
 )
 from skimage.morphology import ball
-from typing import Any, Dict, Sequence
+from typing import Any, Dict, Sequence, cast
 from numpy.typing import NDArray
 
 # Operação morfológica reutilizada do pacote de processamento.
@@ -248,9 +248,9 @@ def correct_anomalous_aorta_slices(
             shape=(height, width),
         )
         allowed[rr, cc] = True
-        corrected[:, :, z] = (
-            corrected[:, :, z].astype(bool) & allowed
-        ).astype(np.uint8)
+        corrected[:, :, z] = (corrected[:, :, z].astype(bool) & allowed).astype(
+            np.uint8
+        )
     return corrected
 
 
@@ -366,26 +366,29 @@ def level_set_segmentation(
     )
 
     # Calcula o mapa de bordas que guia a evolução do contorno.
-    if use_gpu and GPU_AVAILABLE:
+    if use_gpu and GPU_AVAILABLE and cu_ndi is not None and cp is not None:
         # Acelera blur + Sobel na GPU e transfere uma única vez para CPU.
         vol_gpu = to_gpu(work_volume.astype(np.float32))
         blurred = cu_ndi.gaussian_filter(vol_gpu, sigma=sigma)
-        gx = cu_ndi.sobel(blurred, axis=1)
-        gy = cu_ndi.sobel(blurred, axis=0)
-        gmag = cp.sqrt(gx ** 2 + gy ** 2)
-        g_gpu = 1.0 / (1.0 + alpha * (gmag ** 2))
+        gx = cast(Any, cu_ndi.sobel(blurred, axis=1))
+        gy = cast(Any, cu_ndi.sobel(blurred, axis=0))
+        gmag = cp.sqrt(gx**2 + gy**2)
+        g_gpu = 1.0 / (1.0 + alpha * (gmag**2))
         gimage = to_cpu(g_gpu)
     else:
         gimage = inverse_gaussian_gradient(work_volume, alpha=alpha, sigma=sigma)
 
     # Evolui o contorno ativo até a máscara refinada da aorta.
-    refined_segmentation = morphological_geodesic_active_contour(
-        gimage,
-        num_iter=num_iter,
-        init_level_set=init_level_set,
-        smoothing=smoothing,
-        balloon=balloon,
-        threshold=threshold,
+    active_contour = cast(Any, morphological_geodesic_active_contour)
+    refined_segmentation = np.asarray(
+        active_contour(
+            gimage,
+            num_iter=num_iter,
+            init_level_set=init_level_set,
+            smoothing=smoothing,
+            balloon=balloon,
+            threshold=threshold,
+        )
     )
 
     # Reinsere a máscara da ROI no volume completo.
@@ -396,9 +399,9 @@ def level_set_segmentation(
             roi_bounds["x_min"] : roi_bounds["x_max"],
             roi_bounds["z_min"] : roi_bounds["z_max"],
         ] = refined_segmentation
-        return full_mask
+        return np.asarray(full_mask)
 
-    return refined_segmentation
+    return np.asarray(refined_segmentation)
 
 
 def remove_leaks_morphology(
@@ -446,7 +449,7 @@ def remove_leaks_morphology(
     if radius <= 0:
         return mask_3d.copy()
 
-    kernel = ball(radius)
+    kernel = np.asarray(ball(radius))
 
     # Remove conexões finas/vazamentos com abertura morfológica.
     mask_cleaned = binary_opening(mask_3d, structure=kernel, gpu=bool(use_gpu))

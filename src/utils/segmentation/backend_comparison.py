@@ -12,7 +12,17 @@ import json
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Tuple, TypeVar
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+    TypeVar,
+)
 
 import numpy as np
 import pandas as pd
@@ -29,10 +39,10 @@ from .ostia_detection import (
     find_ostia,
 )
 from .pipeline_detection import (
-    get_or_detect_aorta_circles,
-    get_or_segment_aorta,
+    locate_aorta_circles,
+    segment_aorta,
 )
-from .pipeline_preprocessing import get_or_compute_vesselness, load_and_preprocess_image
+from .pipeline_preprocessing import compute_vesselness, load_and_preprocess_image
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -40,7 +50,6 @@ DEFAULT_CONFIG_PATH = REPO_ROOT / "config" / "pipeline_config.json"
 DEFAULT_SPLIT_CONFIG_PATH = REPO_ROOT / "config" / "imagecas_splits.json"
 DEFAULT_BASE_PATH = Path("/media/matheus/HD/DatasetsCCTA/ImageCAS/1-1000")
 DEFAULT_BASE_PATH_FALLBACK = Path("/data04/home/mpmaia/ImageCAS/database/1-1000")
-DEFAULT_BASE_SAVE_PATH = Path("/media/matheus/HD/DatasetsCCTA/Processed_ImageCAS")
 DEFAULT_OUTPUT_ROOT = REPO_ROOT / "output" / "segmentation" / "backend_comparison"
 T = TypeVar("T")
 
@@ -75,7 +84,9 @@ def resolve_base_path(base_path: Path) -> Path:
     """Resolve o caminho do dataset usando fallback para o caminho padrão."""
     if has_imagecas_images(base_path):
         return base_path
-    if base_path == DEFAULT_BASE_PATH and has_imagecas_images(DEFAULT_BASE_PATH_FALLBACK):
+    if base_path == DEFAULT_BASE_PATH and has_imagecas_images(
+        DEFAULT_BASE_PATH_FALLBACK
+    ):
         return DEFAULT_BASE_PATH_FALLBACK
     return base_path
 
@@ -87,8 +98,8 @@ def load_comparison_config(config_path: Path, resolution: str) -> Dict[str, Any]
         config = copy.deepcopy(config)
         config["DOWNSCALE_FACTORS"] = (1, 1, 1)
     config = scale_config_to_resolution(config)
-    config["LOAD_CACHE"] = False
-    config["SAVE_CACHE"] = False
+    config.pop("LOAD_CACHE", None)
+    config.pop("SAVE_CACHE", None)
     return config
 
 
@@ -109,7 +120,10 @@ def _coord_tuple(value: Optional[Sequence[int]]) -> Optional[Tuple[int, int, int
     """Converte coordenadas para tupla inteira ou mantém None."""
     if value is None:
         return None
-    return tuple(map(int, value))
+    coords = tuple(map(int, value))
+    if len(coords) != 3:
+        raise ValueError(f"Coordenada deve ter três elementos: {coords}")
+    return coords[0], coords[1], coords[2]
 
 
 def _coord_distance(
@@ -327,43 +341,26 @@ def _evaluate_ostia(
 
 
 def _artery_steps(
-    img_id: int,
     lcc_image: Any,
     label_artery: Any,
     ostia_left: Optional[Sequence[int]],
     ostia_right: Optional[Sequence[int]],
     config: Dict[str, Any],
-    base_save_path: Path,
     use_gpu: bool,
-    scaled_spacing: Optional[Sequence[float]] = None,
 ) -> Dict[str, Any]:
     """Executa as etapas arteriais para um backend e retorna máscaras/tempos."""
     config = copy.deepcopy(config)
     config["USE_GPU"] = use_gpu
     timings: Dict[str, float] = {}
-    vesselness_spacing = (
-        (scaled_spacing[1], scaled_spacing[0], scaled_spacing[2])
-        if scaled_spacing is not None
-        else None
-    )
-
     # Calcula o mapa de vasos arterial no backend em teste.
     vesselness_artery = _time_call(
         timings,
         "vesselness_artery",
         use_gpu,
-        lambda: get_or_compute_vesselness(
-            img_id,
+        lambda: compute_vesselness(
             lcc_image,
-            cache_dir=str(
-                base_save_path
-                / f"debug_vesselness_artery_cache_{'gpu' if use_gpu else 'cpu'}"
-            ),
             vesselness_config=config["VESSELNESS_ARTERY"],
-            load_cache=False,
-            save_cache=False,
             use_gpu=use_gpu,
-            spacing=vesselness_spacing,
         ),
     )
 
@@ -391,12 +388,12 @@ def _artery_steps(
         """Aplica fechamento e dilatação finais, sempre na CPU."""
         closed = binary_closing(
             raw_mask > 0,
-            structure=ball(post_config["closing_radius"]),
+            structure=np.asarray(ball(post_config["closing_radius"])),
             gpu=False,
         )
         final = binary_dilation(
             closed,
-            structure=ball(post_config["dilation_radius"]),
+            structure=np.asarray(ball(post_config["dilation_radius"])),
             gpu=False,
         )
         return closed, final
@@ -424,14 +421,12 @@ def _run_steps_for_backend(
     img_id: int,
     image_data: Dict[str, Any],
     config: Dict[str, Any],
-    base_save_path: Path,
     use_gpu: bool,
 ) -> Dict[str, Any]:
     """Roda todas as etapas do pipeline para um backend específico."""
     lcc_image = image_data["lcc_image"]
     label = image_data["label"]
     scaled_spacing = image_data["scaled_spacing"]
-    vesselness_spacing = (scaled_spacing[1], scaled_spacing[0], scaled_spacing[2])
     downscale_factors = image_data["downscale_factors"]
 
     backend_config = copy.deepcopy(config)
@@ -444,18 +439,10 @@ def _run_steps_for_backend(
         timings,
         "vesselness_ostios",
         use_gpu,
-        lambda: get_or_compute_vesselness(
-            img_id,
+        lambda: compute_vesselness(
             lcc_image,
-            cache_dir=str(
-                base_save_path
-                / f"debug_vesselness_ostios_cache_{'gpu' if use_gpu else 'cpu'}"
-            ),
             vesselness_config=backend_config["VESSELNESS_AORTA"],
-            load_cache=False,
-            save_cache=False,
             use_gpu=use_gpu,
-            spacing=vesselness_spacing,
         ),
     )
     # Detecta os círculos usados para localizar/segmentar a aorta.
@@ -463,15 +450,11 @@ def _run_steps_for_backend(
         timings,
         "aorta_circles",
         use_gpu,
-        lambda: get_or_detect_aorta_circles(
-            img_id,
+        lambda: locate_aorta_circles(
             lcc_image,
             downscale_factors,
             scaled_spacing,
             backend_config["CIRCLE_DETECTION"],
-            str(base_save_path),
-            load_cache=False,
-            save_cache=False,
         ),
     )
     # Segmenta a aorta a partir dos círculos detectados.
@@ -479,14 +462,10 @@ def _run_steps_for_backend(
         timings,
         "aorta_mask",
         use_gpu,
-        lambda: get_or_segment_aorta(
-            img_id,
+        lambda: segment_aorta(
             lcc_image,
             detected_circles,
             backend_config["LEVEL_SET"],
-            str(base_save_path),
-            load_cache=False,
-            save_cache=False,
             use_gpu=use_gpu,
         ),
     )
@@ -515,15 +494,12 @@ def _run_steps_for_backend(
     )
     # Segmenta as artérias a partir dos óstios selecionados.
     artery = _artery_steps(
-        img_id,
         lcc_image,
         ostia_eval["label_artery"],
         ostia_eval["ostia_left"],
         ostia_eval["ostia_right"],
         backend_config,
-        base_save_path,
         use_gpu=use_gpu,
-        scaled_spacing=scaled_spacing,
     )
     artery_timings = artery.pop("__timings__")
     timings.update(artery_timings)
@@ -608,20 +584,15 @@ def compare_image_cpu_gpu(
     img_id: int,
     config: Dict[str, Any],
     base_path: Path,
-    base_save_path: Path,
     float_tolerance: float = 1e-6,
 ) -> Tuple[List[Dict[str, Any]], Dict[str, Any], Dict[str, Any]]:
     """Compara uma imagem nas execuções CPU e GPU."""
     # O pré-processamento é compartilhado para isolar diferenças do backend.
     preprocess_start = time.perf_counter()
-    image_data = load_and_preprocess_image(img_id, str(base_path), config)
+    image_data = load_and_preprocess_image(str(img_id), str(base_path), config)
     preprocess_seconds = time.perf_counter() - preprocess_start
-    cpu = _run_steps_for_backend(
-        img_id, image_data, config, base_save_path, use_gpu=False
-    )
-    gpu = _run_steps_for_backend(
-        img_id, image_data, config, base_save_path, use_gpu=True
-    )
+    cpu = _run_steps_for_backend(img_id, image_data, config, use_gpu=False)
+    gpu = _run_steps_for_backend(img_id, image_data, config, use_gpu=True)
 
     # Compara mapas contínuos, máscaras binárias, círculos e segmentação final.
     rows = [
@@ -693,7 +664,6 @@ def compare_images_cpu_gpu(
     img_ids: Iterable[int],
     config: Dict[str, Any],
     base_path: Path,
-    base_save_path: Path,
     output_dir: Path,
     float_tolerance: float = 1e-6,
 ) -> Dict[str, Path]:
@@ -709,7 +679,6 @@ def compare_images_cpu_gpu(
             int(img_id),
             config,
             base_path,
-            base_save_path,
             float_tolerance=float_tolerance,
         )
         stage_rows.extend(rows)
@@ -729,7 +698,6 @@ def compare_images_cpu_gpu(
             {
                 "gpu_available": GPU_AVAILABLE,
                 "base_path": str(base_path),
-                "base_save_path": str(base_save_path),
                 "float_tolerance": float_tolerance,
                 "config": _json_safe(config),
             },
@@ -809,12 +777,6 @@ def build_parser() -> argparse.ArgumentParser:
         help=f"Caminho do dataset ImageCAS. Padrão: {DEFAULT_BASE_PATH}",
     )
     parser.add_argument(
-        "--base-save-path",
-        type=Path,
-        default=DEFAULT_BASE_SAVE_PATH,
-        help=f"Caminho base de artefatos/cache. Padrão: {DEFAULT_BASE_SAVE_PATH}",
-    )
-    parser.add_argument(
         "--output-dir",
         type=Path,
         default=None,
@@ -853,7 +815,6 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
         img_ids,
         config,
         base_path,
-        args.base_save_path,
         output_dir,
         float_tolerance=args.float_tolerance,
     )

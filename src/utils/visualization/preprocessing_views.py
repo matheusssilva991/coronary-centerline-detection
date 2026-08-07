@@ -1,6 +1,6 @@
 """Visualizações das etapas de pré-processamento."""
 
-from typing import Any, Literal, Optional, Sequence
+from typing import Any, Iterable, Literal, Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -43,7 +43,7 @@ def plot_stage(
 
     if show_title:
         plt.suptitle(f"{stage_title} - {mode_text}", fontsize=13)
-        plt.tight_layout(rect=[0, 0, 1, 0.95])
+        plt.tight_layout(rect=(0, 0, 1, 0.95))
     else:
         plt.tight_layout()
 
@@ -53,7 +53,7 @@ def plot_stage(
 
 def plot_preprocessing_grid(
     preprocessed: dict[int, dict[str, Any]],
-    ids_to_plot: Optional[Sequence[int]] = None,
+    ids_to_plot: Optional[Iterable[int]] = None,
     mode: Literal["slice", "mip", "both"] = "slice",
     show_title: bool = True,
     show_subtitle: bool = True,
@@ -118,7 +118,7 @@ def plot_preprocessing_grid(
         else:
             header = "Grid das etapas de pre-processamento (fatia central + MIP axial)"
         plt.suptitle(header, fontsize=15)
-        plt.tight_layout(rect=[0, 0, 1, 0.95])
+        plt.tight_layout(rect=(0, 0, 1, 0.95))
     else:
         plt.tight_layout()
 

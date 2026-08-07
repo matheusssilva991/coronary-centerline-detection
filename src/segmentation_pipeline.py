@@ -6,6 +6,7 @@ import json
 import logging
 import os
 from pathlib import Path
+from typing import Any, cast
 
 import pandas as pd
 
@@ -32,7 +33,6 @@ from utils.segmentation.pipeline_cli import parse_pipeline_args
 from utils.segmentation.pipeline_orchestration import run_pipeline
 from utils.segmentation.pipeline_reporting import print_split_summary, print_statistics
 
-
 # ============================================================================
 # CONFIGURAÇÕES GLOBAIS
 # ============================================================================
@@ -50,7 +50,6 @@ else:
 REPO_ROOT = Path(__file__).resolve().parent.parent
 BASE_PATH = Path("/media/matheus/HD/DatasetsCCTA/ImageCAS/1-1000")
 BASE_PATH_FALLBACK = Path("/data04/home/mpmaia/ImageCAS/database/1-1000")
-BASE_SAVE_PATH = Path("/media/matheus/HD/DatasetsCCTA/Processed_ImageCAS")
 OUTPUT_DIR = REPO_ROOT / "output"
 PIPELINE_CONFIG_PATH = REPO_ROOT / "config" / "pipeline_config.json"
 
@@ -109,7 +108,8 @@ def select_resolution_config(args):
     if args.resolution == "high":
         print(
             "🔍 Resolução: HIGH "
-            f"(sem downscaling, DOWNSCALE_FACTORS = {CONFIG_HIGH_RES['DOWNSCALE_FACTORS']})"
+            "(sem downscaling, DOWNSCALE_FACTORS = "
+            f"{CONFIG_HIGH_RES['DOWNSCALE_FACTORS']})"
         )
         return CONFIG_HIGH_RES
 
@@ -120,6 +120,69 @@ def select_resolution_config(args):
     return CONFIG_MID_RES
 
 
+def _apply_execution_overrides(config, args):
+    """Aplica opções operacionais da CLI à configuração efetiva."""
+    # Configurações antigas podem conter opções de cache já removidas.
+    config.pop("SAVE_CACHE", None)
+    config.pop("LOAD_CACHE", None)
+
+    direct_overrides = {
+        "DOWNSCALE_METHOD": args.downscale_method,
+        "OPENCV_INTERPOLATION": args.opencv_interpolation,
+        "USE_GPU": args.use_gpu,
+    }
+    for config_key, value in direct_overrides.items():
+        if value is not None:
+            config[config_key] = value
+
+    nested_overrides = (
+        ("ARTERY_SEGMENTATION", "method", args.artery_segmentation_method),
+        ("REGION_GROWING", "comparison_window", args.rg_comparison_window),
+    )
+    for section, config_key, value in nested_overrides:
+        if value is not None:
+            config.setdefault(section, {})[config_key] = value
+
+
+def _apply_aorta_ostia_override(config, args):
+    """Aplica o perfil de aorta/óstios configurado ou informado pela CLI."""
+    configured_method = config.get("AORTA_OSTIA_METHOD", {}).get(
+        "method",
+        "standard",
+    )
+    if args.aorta_ostia_method is None and configured_method == "standard":
+        return config
+    return apply_aorta_ostia_method(config, method=args.aorta_ostia_method)
+
+
+def _apply_threshold_overrides(config, args):
+    """Aplica opções de threshold normal/fuzzy e piso inferior."""
+    thresholding_config = config.setdefault("THRESHOLDING", {})
+    if args.threshold_method is not None:
+        thresholding_config["method"] = args.threshold_method
+    if args.upper_threshold_percentile is not None:
+        config["MAX_THRESHOLD_PERCENTILE"] = args.upper_threshold_percentile
+
+    lower_threshold_config = config.setdefault("LOWER_THRESHOLD", {})
+    lower_overrides = {
+        "method": args.lower_threshold_method,
+        "percentile": args.lower_threshold_percentile,
+        "clip_min_hu": args.lower_threshold_clip_min,
+        "clip_max_hu": args.lower_threshold_clip_max,
+    }
+    for config_key, value in lower_overrides.items():
+        if value is not None:
+            lower_threshold_config[config_key] = value
+
+    if (
+        args.lower_threshold_percentile is not None
+        and thresholding_config.get("method") == "fuzzy"
+    ):
+        thresholding_config.setdefault("fuzzy", {})["lower_percentile"] = (
+            args.lower_threshold_percentile
+        )
+
+
 def build_effective_config(args):
     """Aplica resolução, arquivo extra, flags CLI e escala espacial da configuração."""
     effective_config = copy.deepcopy(select_resolution_config(args))
@@ -128,68 +191,15 @@ def build_effective_config(args):
         effective_config = load_config_json(args.config_file, effective_config)
         print(f"⚙️  Configuração carregada de: {args.config_file}")
 
-    if args.cache:
-        effective_config["LOAD_CACHE"] = True
-        print("⚙️  Carregamento de cache habilitado")
-
-    if args.no_save_cache:
-        effective_config["SAVE_CACHE"] = False
-    elif "SAVE_CACHE" not in effective_config:
-        effective_config["SAVE_CACHE"] = True
-
-    if effective_config.get("SAVE_CACHE"):
-        print("💾 Salvamento de cache habilitado")
-    else:
-        print("⚠️  Salvamento de cache desabilitado")
-
-    if args.downscale_method is not None:
-        effective_config["DOWNSCALE_METHOD"] = args.downscale_method
-    if args.opencv_interpolation is not None:
-        effective_config["OPENCV_INTERPOLATION"] = args.opencv_interpolation
-    if args.use_gpu is not None:
-        effective_config["USE_GPU"] = args.use_gpu
-    if args.artery_segmentation_method is not None:
-        effective_config.setdefault("ARTERY_SEGMENTATION", {})["method"] = (
-            args.artery_segmentation_method
-        )
-    if args.rg_comparison_window is not None:
-        effective_config.setdefault("REGION_GROWING", {})["comparison_window"] = (
-            args.rg_comparison_window
-        )
-    configured_aorta_ostia_method = effective_config.get(
-        "AORTA_OSTIA_METHOD", {}
-    ).get("method", "standard")
-    if (
-        args.aorta_ostia_method is not None
-        or configured_aorta_ostia_method != "standard"
-    ):
-        effective_config = apply_aorta_ostia_method(
-            effective_config,
-            method=args.aorta_ostia_method,
-        )
-    thresholding_config = effective_config.setdefault("THRESHOLDING", {})
-    if args.threshold_method is not None:
-        thresholding_config["method"] = args.threshold_method
-
-    lower_threshold_config = effective_config.setdefault("LOWER_THRESHOLD", {})
-    if args.lower_threshold_method is not None:
-        lower_threshold_config["method"] = args.lower_threshold_method
-    if args.lower_threshold_percentile is not None:
-        lower_threshold_config["percentile"] = args.lower_threshold_percentile
-        if thresholding_config.get("method") == "fuzzy":
-            thresholding_config.setdefault("fuzzy", {})["lower_percentile"] = (
-                args.lower_threshold_percentile
-            )
-    if args.lower_threshold_clip_min is not None:
-        lower_threshold_config["clip_min_hu"] = args.lower_threshold_clip_min
-    if args.lower_threshold_clip_max is not None:
-        lower_threshold_config["clip_max_hu"] = args.lower_threshold_clip_max
+    _apply_execution_overrides(effective_config, args)
+    effective_config = _apply_aorta_ostia_override(effective_config, args)
+    _apply_threshold_overrides(effective_config, args)
 
     effective_config["NUM_BATCHES"] = args.num_batches
     return scale_config_to_resolution(effective_config)
 
 
-def print_run_settings(args, config, base_path, base_save_path):
+def print_run_settings(args, config, base_path):
     """Mostra as configurações operacionais principais da execução."""
     if config["DOWNSCALE_METHOD"] == "opencv":
         print(
@@ -201,7 +211,6 @@ def print_run_settings(args, config, base_path, base_save_path):
         print(f"🔧 Método de downscale: {config['DOWNSCALE_METHOD']}")
 
     print(f"🗂️  Dataset: {base_path}")
-    print(f"💽 Cache/artefatos: {base_save_path}")
     print(
         "🖥️  GPU nas etapas compatíveis: "
         f"{'habilitada' if config.get('USE_GPU', False) else 'desabilitada'}"
@@ -216,18 +225,12 @@ def print_run_settings(args, config, base_path, base_save_path):
     artery_config = config.get("ARTERY_SEGMENTATION", {})
     thresholding_config = config.get("THRESHOLDING", {})
     lower_threshold_config = config.get("LOWER_THRESHOLD", {})
-    print(
-        "🫀 Segmentação arterial: "
-        f"{artery_config.get('method', 'region_growing')}"
-    )
+    print(f"🫀 Segmentação arterial: {artery_config.get('method', 'region_growing')}")
     print(
         "🫁 Aorta/óstios: "
         f"{config.get('AORTA_OSTIA_METHOD', {}).get('method', 'standard')}"
     )
-    print(
-        "🧩 Threshold: "
-        f"{thresholding_config.get('method', 'normal')}"
-    )
+    print(f"🧩 Threshold: {thresholding_config.get('method', 'normal')}")
     print(
         "🧱 Piso inferior: "
         f"{lower_threshold_config.get('method', 'fixed')} "
@@ -343,9 +346,7 @@ def save_run_snapshots(output_dirs, config, splits_to_run, split_config_path=Non
         json.dump(make_json_safe(config), file_handle, indent=2, ensure_ascii=False)
 
     split_ids = {
-        split_name: ids
-        for split_name, ids in splits_to_run
-        if ids is not None
+        split_name: ids for split_name, ids in splits_to_run if ids is not None
     }
     if split_ids:
         split_payload = {
@@ -396,7 +397,6 @@ def save_split_metadata(
     details,
     execution_time,
     base_path,
-    base_save_path,
     output_root_dir,
     current_run_execution_time=None,
     batch_timings=None,
@@ -414,7 +414,6 @@ def save_split_metadata(
         batch_timings=batch_timings,
         batch_timing_summary=batch_timing_summary,
         base_path=base_path,
-        base_save_path=base_save_path,
         root_output_dir=output_root_dir,
     )
     logger.info("Metadados salvos em: %s", metadata_path)
@@ -426,7 +425,6 @@ def run_merge_only_split(
     output_dir,
     config,
     base_path,
-    base_save_path,
     output_root_dir,
 ):
     """Consolida lotes já existentes e recria metadata/summary."""
@@ -436,7 +434,7 @@ def run_merge_only_split(
         raise SystemExit(1)
 
     df = pd.read_csv(final_path)
-    details = df.to_dict("records")
+    details = cast(list[dict[str, Any]], df.to_dict("records"))
     metadata_ids = df["IMG_ID"].dropna().tolist() if "IMG_ID" in df.columns else []
     batch_timings = load_batch_timing_records(output_dir, split_name)
     batch_timing_summary = summarize_batch_timing_records(batch_timings)
@@ -452,7 +450,6 @@ def run_merge_only_split(
         batch_timings=batch_timings,
         batch_timing_summary=batch_timing_summary,
         base_path=base_path,
-        base_save_path=base_save_path,
         output_root_dir=output_root_dir,
     )
     print_split_summary(
@@ -471,7 +468,6 @@ def run_processing_split(
     config,
     args,
     base_path,
-    base_save_path,
     output_root_dir,
 ):
     """Processa um split e salva CSV final + metadata."""
@@ -480,7 +476,6 @@ def run_processing_split(
         split_name,
         config,
         base_path,
-        base_save_path,
         output_dir,
         resume_from_batch=args.resume_batches_by_split.get(
             split_name, args.resume_batch
@@ -498,10 +493,14 @@ def run_processing_split(
     output_path = Path(output_dir) / f"ostios_{split_name}_summary.csv"
     logger.info("Resumo final salvo em: %s", output_path)
 
-    if summary.get("details") is None:
-        details = pd.read_csv(output_path).to_dict("records")
+    summary_details = summary.get("details")
+    if summary_details is None:
+        details = cast(
+            list[dict[str, Any]],
+            pd.read_csv(output_path).to_dict("records"),
+        )
     else:
-        details = summary["details"]
+        details = cast(list[dict[str, Any]], summary_details)
 
     save_split_metadata(
         split_name,
@@ -511,14 +510,17 @@ def run_processing_split(
         details,
         execution_time=execution_time,
         base_path=base_path,
-        base_save_path=base_save_path,
         output_root_dir=output_root_dir,
         current_run_execution_time=current_run_execution_time,
         batch_timings=summary.get("batch_timings"),
         batch_timing_summary=batch_timing_summary,
     )
 
-    df = pd.read_csv(output_path) if summary.get("details") is None else make_result_dataframe(details)
+    df = (
+        pd.read_csv(output_path)
+        if summary_details is None
+        else make_result_dataframe(details)
+    )
     print_split_summary(
         df,
         split_name,
@@ -535,7 +537,6 @@ def run_requested_splits(
     output_dir,
     config,
     base_path,
-    base_save_path,
     output_root_dir,
 ):
     """Executa ou consolida todos os splits solicitados."""
@@ -551,7 +552,6 @@ def run_requested_splits(
                 output_dir,
                 config,
                 base_path,
-                base_save_path,
                 output_root_dir,
             )
         else:
@@ -562,24 +562,22 @@ def run_requested_splits(
                 config,
                 args,
                 base_path,
-                base_save_path,
                 output_root_dir,
             )
 
 
 def main():
     """Função principal com argumentos de linha de comando."""
-    args = parse_pipeline_args(BASE_PATH, BASE_SAVE_PATH, OUTPUT_DIR)
+    args = parse_pipeline_args(BASE_PATH, OUTPUT_DIR)
     if args.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
         logger.debug("Logging verbose habilitado (DEBUG)")
 
     base_path = resolve_base_path(args.base_path)
-    base_save_path = args.base_save_path
     output_root_dir = args.output_dir
     effective_config = build_effective_config(args)
 
-    print_run_settings(args, effective_config, base_path, base_save_path)
+    print_run_settings(args, effective_config, base_path)
     output_dirs = resolve_output_dir(args, output_root_dir)
     setup_file_logging(output_dirs["logs_dir"])
     splits_to_run = build_splits_to_run(args, base_path)
@@ -596,7 +594,6 @@ def main():
         output_dirs["numeric_dir"],
         effective_config,
         base_path,
-        base_save_path,
         output_root_dir,
     )
 

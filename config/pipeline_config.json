@@ -1,7 +1,5 @@
 {
     "USE_GPU": true,
-    "LOAD_CACHE": false,
-    "SAVE_CACHE": false,
     "DOWNSCALE_METHOD": "opencv",
     "OPENCV_INTERPOLATION": "linear",
     "DOWNSCALE_FACTORS": [

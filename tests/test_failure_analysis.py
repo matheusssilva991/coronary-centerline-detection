@@ -6,6 +6,7 @@ import pandas as pd
 
 from utils.comparison_utils.failure_analysis import (
     build_failure_case_catalog,
+    compact_focused_failure_cohort,
     select_focused_failure_cohort,
 )
 
@@ -48,3 +49,21 @@ class FailureAnalysisTest(TestCase):
         self.assertEqual(set(cohort.index), {1, 2})
         self.assertEqual(cohort.loc[1, "cohort_kind"], "control")
         self.assertIn("fuzzy_threshold_rescue", cohort.loc[2, "cohort_roles"])
+
+    def test_compacts_cohort_to_runner_contract(self):
+        cohort = pd.DataFrame(
+            {
+                "IMG_ID": [10],
+                "cohort_kind": ["failure"],
+                "cohort_roles": ["shared_ostia_failure"],
+                "normal_rg_dice": [0.2],
+            }
+        )
+
+        compact = compact_focused_failure_cohort(cohort)
+
+        self.assertEqual(
+            compact.columns.tolist(),
+            ["IMG_ID", "cohort_kind", "cohort_roles"],
+        )
+        self.assertEqual(compact.iloc[0].to_dict()["IMG_ID"], 10)

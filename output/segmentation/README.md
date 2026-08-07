@@ -45,6 +45,9 @@ Alguns estudos podem ficar agrupados por tema antes do timestamp, por exemplo:
 output/segmentation/runs/mid_res/train_diff/<timestamp>/
 output/segmentation/runs/mid_res/downscale_method/<timestamp>/
 output/segmentation/runs/mid_res/circle_detection_gpu_diff/<timestamp>/
+output/segmentation/runs/mid_res/article_p99_9/<split>/<timestamp>/
+output/segmentation/runs/mid_res/current_baseline/<split>/<timestamp>/
+output/segmentation/runs/mid_res/fuzzy_comparison/<split>/<variant>/<timestamp>/
 ```
 
 Use esses agrupamentos quando quiser comparar muitas execucoes do mesmo tipo sem
@@ -153,8 +156,8 @@ visual/
   hough_examples/
 ```
 
-Use `visual/` quando a figura depende daquela run especifica. Exemplos soltos ou
-mais exploratorios devem ir para `analysis/visual_examples/`.
+Use `visual/` quando a figura precisa ser preservada junto daquela run
+especifica. Exemplos exploratorios devem permanecer apenas no notebook.
 
 ## `canonical/`: resultados oficiais de referencia
 
@@ -178,10 +181,43 @@ canonical/
 Exemplos atuais em `mid_res`:
 
 ```text
-canonical/mid_res/train/2026-06-03_09-31-08/
-canonical/mid_res/val/2026-06-05_14-46-06/
-canonical/mid_res/test/2026-06-05_20-00-43/
+canonical/mid_res/train/2026-08-06_18-43-37/
+canonical/mid_res/val/2026-08-06_22-43-14/
+canonical/mid_res/test/2026-08-06_10-04-22/
 ```
+
+Essas entradas apontam para os arquivos reais agrupados em:
+
+```text
+runs/mid_res/article_p99_9/train/2026-08-06_18-43-37/
+runs/mid_res/article_p99_9/val/2026-08-06_22-43-14/
+runs/mid_res/article_p99_9/test/2026-08-06_10-04-22/
+```
+
+A configuração promovida usa resolução média, threshold normal, limite inferior
+fixo de `-300 HU`, percentil superior `99.9`, segmentação arterial por region
+growing e perfil padrão de aorta/óstios. No conjunto de teste, obteve Dice médio
+de `0.5930` considerando os 700 exames e `0.6558` considerando somente casos com
+ambos os óstios corretos ou toleráveis.
+
+Os resultados que formavam o canonical anterior foram preservados em:
+
+```text
+runs/mid_res/previous_canonical/train/2026-06-17_10-40-05/
+runs/mid_res/previous_canonical/val/2026-06-05_14-46-06/
+runs/mid_res/previous_canonical/test/2026-06-05_20-00-43/
+```
+
+O baseline correspondente à configuração atual do projeto está organizado em:
+
+```text
+runs/mid_res/current_baseline/train/2026-08-07_01-43-41/
+runs/mid_res/current_baseline/val/2026-08-07_01-43-41/
+runs/mid_res/current_baseline/test/2026-08-07_01-43-41/
+```
+
+A comparação entre o baseline histórico do artigo, o baseline atual e a
+configuração P99.9 está em `runs/mid_res/baseline_results_comparison.csv`.
 
 Cada pasta canonica deve manter a mesma estrutura de uma run:
 
@@ -193,7 +229,9 @@ visual/        # se existir
 ```
 
 Regra pratica: `runs/` pode ter varias tentativas; `canonical/` deve apontar ou
-conter apenas o resultado escolhido como referencia.
+conter apenas o resultado escolhido como referencia. Links simbolicos sao
+preferiveis quando o mesmo resultado precisa permanecer organizado em `runs/`,
+pois evitam duplicar os arquivos.
 
 ## `analysis/`: experimentos e analises derivadas
 
@@ -206,41 +244,15 @@ Estrutura atual:
 analysis/
   EXPERIMENTS_ARCHIVE.md
   aorta_circle_slices/
-  aorta_mask_ostia_comparison/
   bad_cases/
-  fuzzy_membership_functions/
-  image_slices/
-  threshold_pipeline_comparison/
-  visual_examples/
+  pipeline_failure_analysis/
+  pipeline_parameter_validation/
 ```
 
-### `analysis/aorta_mask_ostia_comparison/`
-
-Mantem somente a confirmacao final da abordagem de aorta/ostios promovida ao
-pipeline. Triagens e variantes descartadas estao resumidas em
-`analysis/EXPERIMENTS_ARCHIVE.md`.
-
-### `analysis/threshold_pipeline_comparison/`
-
-Tabelas, figuras e exemplos qualitativos da comparacao entre threshold normal e
-fuzzy, combinados com region growing e fuzzy connectedness.
-
-```text
-threshold_pipeline_comparison/
-  tables/
-  figures/
-  qualitative_3d/
-```
-
-### `analysis/visual_examples/`
-
-Figuras e exemplos visuais que nao pertencem claramente a uma run especifica.
-
-Exemplo:
-
-```text
-analysis/visual_examples/ostia_3d/
-```
+Em `analysis/`, mantenha somente entradas compactas usadas por outras análises:
+catálogos de casos, métricas consolidadas, configurações reproduzíveis e runs
+compactos de experimentos ativos. Figuras e tabelas que já aparecem nos
+notebooks não são duplicadas nessa pasta.
 
 ## `backend_comparison/`: comparacao CPU/GPU
 
@@ -391,10 +403,10 @@ execucao, junto com os parametros efetivos.
 - Resultado oficial:
   `canonical/<resolucao>_res/<split>/<timestamp>/numeric/`
 - Comparacao atual de threshold/RG/FC:
-  `analysis/threshold_pipeline_comparison/`
+  `src/eda/threshold_pipeline_comparison_analysis.ipynb`
 - Historico dos experimentos removidos:
   `analysis/EXPERIMENTS_ARCHIVE.md`
-- Confirmacao final de aorta/ostios:
-  `analysis/aorta_mask_ostia_comparison/aorta_ostia_bilateral_final_val90/`
+- Métricas históricas da confirmação de aorta/óstios:
+  `analysis/EXPERIMENTS_ARCHIVE.md`
 - Comparacao CPU/GPU:
   `backend_comparison/<resolucao>_res/<timestamp>/`

@@ -31,10 +31,10 @@ from utils.segmentation.lower_threshold import resolve_lower_threshold
 from utils.segmentation.pipeline_arteries import postprocess_artery_mask
 from utils.segmentation.pipeline_detection import (
     detect_and_evaluate_ostia,
-    get_or_detect_aorta_circles,
-    get_or_segment_aorta,
+    locate_aorta_circles,
+    segment_aorta,
 )
-from utils.segmentation.pipeline_preprocessing import get_or_compute_vesselness
+from utils.segmentation.pipeline_preprocessing import compute_vesselness
 from utils.utils.metrics import dice_score
 from utils.utils.nifti_io import load_raw_img_and_label
 
@@ -64,6 +64,13 @@ IMAGE_COLUMNS = [
     "segmentation_attempted",
     "threshold_voxels",
     "lcc_voxels",
+    "volume_voxels",
+    "volume_slices",
+    "aorta_voxels",
+    "aorta_volume_fraction",
+    "detected_circle_count",
+    "label_artery_voxels",
+    "artery_volume_ratio",
     "fc_processed_voxels",
     "fc_effective_alpha",
     "error",
@@ -71,6 +78,8 @@ IMAGE_COLUMNS = [
 
 PARAMETER_COLUMNS = [
     "variant",
+    "parameter_group",
+    "description",
     "overrides_json",
     "threshold_mode",
     "fuzzy.soft_margin_hu",
@@ -89,7 +98,10 @@ PARAMETER_COLUMNS = [
     "fc.seed_search_radius",
     "fc.max_seeds_per_ostium",
     "MAX_THRESHOLD_PERCENTILE",
+    "OSTIA_DETECTION.max_z_diff_mm",
     "REGION_GROWING.min_vesselness_fraction",
+    "REGION_GROWING.relaxed_floor_factor",
+    "REGION_GROWING.seed_min_vesselness_fraction",
     "REGION_GROWING.threshold_divisor",
     "REGION_GROWING.seed_candidate_radius",
     "REGION_GROWING.max_seed_candidates",
@@ -207,23 +219,15 @@ def build_preprocessed_inputs(
 
 
 def build_base_config(args: Any) -> dict[str, Any]:
-    """Carrega a config base com ajustes simples de resolução/cache/GPU."""
+    """Carrega a config base com ajustes simples de resolução e GPU."""
     config = load_config_json(str(resolve_cli_path(args.config_path)), {})
+    config.pop("SAVE_CACHE", None)
+    config.pop("LOAD_CACHE", None)
     if args.resolution == "high":
         config["DOWNSCALE_FACTORS"] = [1, 1, 1]
-    config["LOAD_CACHE"] = bool(args.load_cache)
-    config["SAVE_CACHE"] = bool(args.save_cache)
     if args.use_gpu is not None:
         config["USE_GPU"] = bool(args.use_gpu)
     return config
-
-
-def compute_vesselness_spacing(
-    scaled_spacing: tuple[float, float, float],
-) -> tuple[float, float, float]:
-    """Converte spacing da imagem para a convenção usada pelo Frangi."""
-    dx, dy, dz = scaled_spacing
-    return (dy, dx, dz)
 
 
 def run_image(
@@ -231,7 +235,6 @@ def run_image(
     variant_name: str,
     split_name: str,
     base_path: Path,
-    cache_dir: Path,
     config: dict[str, Any],
     experiment: dict[str, Any],
 ) -> dict[str, Any]:
@@ -259,12 +262,21 @@ def run_image(
         "segmentation_attempted": False,
         "threshold_voxels": 0,
         "lcc_voxels": 0,
+        "volume_voxels": 0,
+        "volume_slices": 0,
+        "aorta_voxels": 0,
+        "aorta_volume_fraction": np.nan,
+        "detected_circle_count": 0,
+        "label_artery_voxels": 0,
+        "artery_volume_ratio": np.nan,
         "fc_processed_voxels": np.nan,
         "fc_effective_alpha": np.nan,
         "error": None,
     }
     try:
         case = load_downsampled_case(img_id, base_path, config)
+        row["volume_voxels"] = int(case["down_image"].size)
+        row["volume_slices"] = int(case["down_image"].shape[2])
         lcc_image, lcc_mask, prep_details = build_preprocessed_inputs(
             case["down_image"],
             config,
@@ -277,37 +289,30 @@ def run_image(
             }
         )
         spacing = case["scaled_spacing"]
-        vesselness_spacing = compute_vesselness_spacing(spacing)
 
-        vesselness_ostios = get_or_compute_vesselness(
-            str(img_id),
+        vesselness_ostios = compute_vesselness(
             lcc_image,
-            cache_dir=str(cache_dir / variant_name / "vesselness_ostios"),
             vesselness_config=config["VESSELNESS_AORTA"],
-            load_cache=config["LOAD_CACHE"],
-            save_cache=config["SAVE_CACHE"],
             use_gpu=config.get("USE_GPU", False),
-            spacing=vesselness_spacing,
         )
-        detected_circles = get_or_detect_aorta_circles(
-            str(img_id),
+        detected_circles = locate_aorta_circles(
             lcc_image,
             case["downscale_factors"],
             spacing,
             config["CIRCLE_DETECTION"],
-            str(cache_dir / variant_name),
-            load_cache=config["LOAD_CACHE"],
-            save_cache=False,
         )
-        aorta_mask = get_or_segment_aorta(
-            str(img_id),
+        row["detected_circle_count"] = len(detected_circles)
+        aorta_mask = segment_aorta(
             lcc_image,
             detected_circles,
             config["LEVEL_SET"],
-            str(cache_dir / variant_name),
-            load_cache=config["LOAD_CACHE"],
-            save_cache=False,
             use_gpu=config.get("USE_GPU", False),
+        )
+        row["aorta_voxels"] = int(np.sum(aorta_mask))
+        row["aorta_volume_fraction"] = (
+            row["aorta_voxels"] / row["volume_voxels"]
+            if row["volume_voxels"] > 0
+            else np.nan
         )
         ostia_eval = detect_and_evaluate_ostia(
             aorta_mask,
@@ -337,18 +342,15 @@ def run_image(
             }
         )
 
-        vesselness_artery = get_or_compute_vesselness(
-            str(img_id),
+        vesselness_artery = compute_vesselness(
             lcc_image,
-            cache_dir=str(cache_dir / variant_name / "vesselness_artery"),
             vesselness_config=config["VESSELNESS_ARTERY"],
-            load_cache=config["LOAD_CACHE"],
-            save_cache=config["SAVE_CACHE"],
             use_gpu=config.get("USE_GPU", False),
-            spacing=vesselness_spacing,
         )
         row["segmentation_attempted"] = True
         label_artery = ostia_eval["label_artery"]
+        label_artery_voxels = int(np.sum(label_artery))
+        row["label_artery_voxels"] = label_artery_voxels
 
         if experiment.get("artery_method", "region_growing") == "fuzzy_connectedness":
             fc_params = {
@@ -391,6 +393,11 @@ def run_image(
                 "dice_artery_before_morphology": dice_before,
                 "dice_artery_after_morphology": dice_after,
                 "dice_artery_morphology_delta": dice_after - dice_before,
+                "artery_volume_ratio": (
+                    float(np.sum(artery_mask)) / label_artery_voxels
+                    if label_artery_voxels > 0
+                    else np.nan
+                ),
             }
         )
     except Exception as exc:
@@ -524,7 +531,6 @@ __all__ = [
     "PARAMETER_COLUMNS",
     "build_base_config",
     "build_preprocessed_inputs",
-    "compute_vesselness_spacing",
     "fuzzy_threshold_outputs",
     "load_downsampled_case",
     "parameter_row",

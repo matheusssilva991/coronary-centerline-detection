@@ -1,8 +1,9 @@
 import numpy as np
 import k3d
+from k3d.factory import plot as create_plot
 from skimage import measure
 from pathlib import Path
-from typing import Any, Optional, Sequence
+from typing import Any, Optional, Sequence, cast
 from numpy.typing import NDArray
 
 
@@ -33,8 +34,11 @@ def visualize_3d_k3d(
     )
 
     # Inicializa cena 3D.
-    plot = k3d.plot(
-        name="Segmentação 3D", height=800, grid_visible=True, axes=axes_labels
+    plot = cast(
+        Any,
+        create_plot(
+            name="Segmentação 3D", height=800, grid_visible=True, axes=axes_labels
+        ),
     )
 
     mesh = k3d.mesh(
@@ -77,8 +81,14 @@ def visualize_aorta_with_ostia(
         axes_labels = ["Y (pixels)", "X (pixels)", "Z (pixels)"]
 
     # Inicializa cena com aorta, label opcional e óstios.
-    plot = k3d.plot(
-        name="Aorta + Óstios + Label", height=800, grid_visible=True, axes=axes_labels
+    plot = cast(
+        Any,
+        create_plot(
+            name="Aorta + Óstios + Label",
+            height=800,
+            grid_visible=True,
+            axes=axes_labels,
+        ),
     )
 
     # Extrai malha da aorta predita.
@@ -238,7 +248,10 @@ def visualize_aorta_ostia_artery(
         mesh_spacing = (1.0, 1.0, 1.0)
         axes_labels = ["Y (pixels)", "X (pixels)", "Z (pixels)"]
 
-    plot = k3d.plot(name=plot_name, height=800, grid_visible=True, axes=axes_labels)
+    plot = cast(
+        Any,
+        create_plot(name=plot_name, height=800, grid_visible=True, axes=axes_labels),
+    )
     _add_mask_mesh(
         plot,
         aorta_mask,
@@ -312,7 +325,10 @@ def visualize_arteries_comparison(
         dy, dx, dz = 1.0, 1.0, 1.0
         axes_labels = ["Y (pixels)", "X (pixels)", "Z (pixels)"]
 
-    plot = k3d.plot(name=plot_name, height=800, grid_visible=True, axes=axes_labels)
+    plot = cast(
+        Any,
+        create_plot(name=plot_name, height=800, grid_visible=True, axes=axes_labels),
+    )
 
     verts_label, faces_label, _, _ = measure.marching_cubes(
         label_mask.astype(float), level=0.5, spacing=(dy, dx, dz)
@@ -348,7 +364,7 @@ def visualize_arteries_comparison(
 
 
 def save_k3d_plot_html(plot: Any, html_path: str) -> None:
-    html_path = Path(html_path)
-    html_path.parent.mkdir(parents=True, exist_ok=True)
-    html_path.write_text(plot.get_snapshot(), encoding="utf-8")
-    print(f"HTML salvo em: {html_path}")
+    output_path = Path(html_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(plot.get_snapshot(), encoding="utf-8")
+    print(f"HTML salvo em: {output_path}")
