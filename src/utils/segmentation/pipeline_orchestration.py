@@ -96,7 +96,7 @@ def _preprocessing_result_fields(preprocessing_details, image_slice_count):
     return fields
 
 
-def _circle_result_fields(detected_circles, image_slice_count):
+def summarize_aorta_circles(detected_circles, image_slice_count):
     """Resume cobertura, interpolação e recuperação do rastreamento da aorta."""
     circle_slices = [
         int(circle["slice_index"])
@@ -121,6 +121,11 @@ def _circle_result_fields(detected_circles, image_slice_count):
             for circle in detected_circles
         ),
     }
+
+
+def _circle_result_fields(detected_circles, image_slice_count):
+    """Compatibilidade interna para o antigo nome do resumo de círculos."""
+    return summarize_aorta_circles(detected_circles, image_slice_count)
 
 
 def _ostia_result_fields(ostia_eval):
@@ -203,7 +208,7 @@ def process_image(img_id, config, base_path):
             config["CIRCLE_DETECTION"],
         )
         result.update(
-            _circle_result_fields(
+            summarize_aorta_circles(
                 detected_circles,
                 result["image_slice_count"],
             )

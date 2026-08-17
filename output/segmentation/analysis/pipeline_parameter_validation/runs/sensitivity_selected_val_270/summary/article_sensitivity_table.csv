@@ -1,0 +1,8 @@
+variant,parameter,value,images,ostia_success_count,ostia_success_percent,mean_dice,std_dice,median_dice,mean_dice_success_ostia,delta_dice_vs_baseline
+baseline,Reference,P99.7; z=40 mm; D=7; vesselness=7.8%; search=85%,270,218,80.740741,0.571870,0.197424,0.640578,0.641853,0.000000
+upper_p995,Upper threshold percentile,99.5,270,217,80.370370,0.551192,0.199848,0.619584,0.621430,-0.020678
+upper_p999,Upper threshold percentile,99.9,270,226,83.703704,0.587852,0.190679,0.653508,0.646864,0.015982
+rg_vessel_05,RG minimum vesselness,5%,270,218,80.740741,0.539361,0.194275,0.606020,0.607917,-0.032509
+rg_vessel_09,RG minimum vesselness,9%,270,218,80.740741,0.571687,0.194405,0.649549,0.637759,-0.000182
+ostia_lower_70,Inferior aorta extent for ostia search,70%,270,207,76.666667,0.557959,0.202423,0.631031,0.636952,-0.013911
+ostia_lower_100,Inferior aorta extent for ostia search,100%,270,219,81.111111,0.574877,0.195835,0.642415,0.643571,0.003007

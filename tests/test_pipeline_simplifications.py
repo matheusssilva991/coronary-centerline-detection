@@ -17,6 +17,7 @@ from utils.segmentation.pipeline_orchestration import (
     _preprocessing_result_fields,
     _resolve_batch_plan,
     run_pipeline,
+    summarize_aorta_circles,
 )
 from utils.segmentation.pipeline_preprocessing import (
     compute_vesselness,
@@ -144,6 +145,17 @@ class PipelineSimplificationTests(TestCase):
         self.assertEqual(circles["aorta_detected_circle_count"], 2)
         self.assertEqual(circles["aorta_circle_coverage"], 0.3)
         self.assertTrue(circles["aorta_recovered_initialization"])
+        self.assertEqual(
+            circles,
+            summarize_aorta_circles(
+                [
+                    {"slice_index": 9},
+                    {"slice_index": 8, "interpolated": True},
+                    {"slice_index": 7, "recovered_initialization": True},
+                ],
+                10,
+            ),
+        )
 
         ostia = _ostia_result_fields(
             {

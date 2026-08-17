@@ -256,29 +256,37 @@ def plot_image_dice_scatter_interactive(
         fig.show()
         return
 
-    subset = subset.sort_values("img_id").reset_index(drop=True)
-    ids = subset["img_id"].astype(str)
+    subset = subset.sort_values(["ia_method", "img_id"]).reset_index(drop=True)
 
     fig = go.Figure()
-    fig.add_trace(
-        go.Scatter(
-            x=ids,
-            y=subset["ia_dice"],
-            mode="markers",
-            marker=dict(color="#D62728", size=8),
-            name="IA",
-            customdata=subset[["img_id", "ia_method"]].values,
-            hovertemplate="img_id: %{customdata[0]}<br>Dice: %{y:.3f}<br>Metodo: %{customdata[1]}<extra></extra>",
+    colors = px.colors.qualitative.Plotly
+    for method_index, (method, method_df) in enumerate(subset.groupby("ia_method")):
+        method_label = prettify_method_label(method)
+        fig.add_trace(
+            go.Scatter(
+                x=method_df["img_id"].astype(str),
+                y=method_df["ia_dice"],
+                mode="markers",
+                marker=dict(color=colors[method_index % len(colors)], size=7),
+                name=method_label,
+                customdata=method_df[["img_id", "ia_method"]].values,
+                hovertemplate=(
+                    "img_id: %{customdata[0]}<br>Dice: %{y:.3f}"
+                    "<br>Metodo: %{customdata[1]}<extra></extra>"
+                ),
+            )
         )
-    )
+
+    # O Dice matemático é igual nas linhas repetidas por método de IA.
+    math_df = subset.drop_duplicates(["target_resolution", "img_id"])
     fig.add_trace(
         go.Scatter(
-            x=ids,
-            y=subset["math_dice"],
+            x=math_df["img_id"].astype(str),
+            y=math_df["math_dice"],
             mode="markers",
-            marker=dict(color="#1F77B4", size=8),
-            name="Matematico",
-            customdata=subset[["img_id", "math_method"]].values,
+            marker=dict(color="#222222", size=8, symbol="x"),
+            name="Pipeline matemático",
+            customdata=math_df[["img_id", "math_method"]].values,
             hovertemplate="img_id: %{customdata[0]}<br>Dice: %{y:.3f}<br>Metodo: %{customdata[1]}<extra></extra>",
         )
     )
@@ -290,7 +298,7 @@ def plot_image_dice_scatter_interactive(
         yaxis_title="Dice",
         yaxis=dict(range=[0, 1.05]),
         template="simple_white",
-        legend_title_text="Origem",
+        legend_title_text="Método",
         margin=dict(l=40, r=20, t=60, b=120),
     )
     fig.update_xaxes(tickangle=45)
@@ -319,20 +327,24 @@ def plot_ia_vs_math_scatter_interactive(
         fig.show()
         return
 
+    subset["ia_method_label"] = subset["ia_method"].apply(prettify_method_label)
     fig = px.scatter(
         subset,
         x="ia_dice",
         y="math_dice",
         hover_data=["img_id", "ia_method", "math_method"],
-        color_discrete_sequence=["#5B8FF9"],
+        color="ia_method_label",
         height=600,
-        width=600,
+        width=760,
     )
     fig.add_shape(
         type="line", x0=0, y0=0, x1=1, y1=1, line=dict(dash="dash", color="gray")
     )
     title = comparison_title or "Comparacao IA vs Matematico"
-    fig.update_layout(title=f"{title} - {resolution}")
+    fig.update_layout(
+        title=f"{title} - {resolution}",
+        legend_title_text="Método de IA",
+    )
     fig.update_xaxes(range=[0, 1.05], title_text="Dice IA")
     fig.update_yaxes(range=[0, 1.05], title_text="Dice Matematico")
     fig.show()

@@ -28,9 +28,11 @@ _SYMBOL_TO_MODULE = {
     "visualize_circles_on_slices": "image_slices",
     # preprocessing_views
     "plot_preprocessing_grid": "preprocessing_views",
+    "plot_pipeline_preprocessing_stages": "preprocessing_views",
     "plot_stage": "preprocessing_views",
     # vesselness
     "compute_vesselness_maps": "vesselness",
+    "display_vesselness_summary": "vesselness",
     "plot_vesselness_mip_grid": "vesselness",
     "plot_vesselness_mip": "vesselness",
     # hough

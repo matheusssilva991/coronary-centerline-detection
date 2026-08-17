@@ -208,14 +208,18 @@ def build_preprocessed_inputs(
         offset=abs(int(min_hu)),
         per_slice=True,
     )
-    return lcc_image, lcc_mask, {
-        "threshold_mode": threshold_mode,
-        **lower_details,
-        "max_hu": max_hu,
-        "threshold_voxels": int(mask.sum()),
-        "lcc_voxels": int(lcc_mask.sum()),
-        **fuzzy_details,
-    }
+    return (
+        lcc_image,
+        lcc_mask,
+        {
+            "threshold_mode": threshold_mode,
+            **lower_details,
+            "max_hu": max_hu,
+            "threshold_voxels": int(mask.sum()),
+            "lcc_voxels": int(lcc_mask.sum()),
+            **fuzzy_details,
+        },
+    )
 
 
 def build_base_config(args: Any) -> dict[str, Any]:
@@ -230,16 +234,14 @@ def build_base_config(args: Any) -> dict[str, Any]:
     return config
 
 
-def run_image(
+def make_image_result_row(
     img_id: int,
     variant_name: str,
     split_name: str,
-    base_path: Path,
-    config: dict[str, Any],
     experiment: dict[str, Any],
 ) -> dict[str, Any]:
-    """Executa uma imagem em uma variante completa do pipeline."""
-    row = {
+    """Cria a linha vazia usada para registrar uma execução por imagem."""
+    return {
         "variant": variant_name,
         "split": split_name,
         "IMG_ID": img_id,
@@ -273,137 +275,201 @@ def run_image(
         "fc_effective_alpha": np.nan,
         "error": None,
     }
+
+
+def prepare_image_context(
+    case: dict[str, Any],
+    config: dict[str, Any],
+    experiment: dict[str, Any],
+) -> dict[str, Any]:
+    """Calcula intermediários que podem ser compartilhados entre variantes.
+
+    O contexto termina nos mapas de vesselness e na máscara da aorta. Mudanças
+    restritas à seleção dos óstios, ao RG/FC ou ao pós-processamento podem usar
+    o mesmo contexto sem repetir as etapas mais caras.
+    """
+    lcc_image, lcc_mask, prep_details = build_preprocessed_inputs(
+        case["down_image"],
+        config,
+        experiment,
+    )
+    spacing = case["scaled_spacing"]
+
+    # O mapa da aorta alimenta tanto o rastreamento quanto a seleção dos óstios.
+    vesselness_ostios = compute_vesselness(
+        lcc_image,
+        vesselness_config=config["VESSELNESS_AORTA"],
+        use_gpu=config.get("USE_GPU", False),
+    )
+    detected_circles = locate_aorta_circles(
+        lcc_image,
+        case["downscale_factors"],
+        spacing,
+        config["CIRCLE_DETECTION"],
+    )
+    aorta_mask = segment_aorta(
+        lcc_image,
+        detected_circles,
+        config["LEVEL_SET"],
+        use_gpu=config.get("USE_GPU", False),
+    )
+
+    # O vesselness arterial independe dos critérios posteriores do RG/FC.
+    vesselness_artery = compute_vesselness(
+        lcc_image,
+        vesselness_config=config["VESSELNESS_ARTERY"],
+        use_gpu=config.get("USE_GPU", False),
+    )
+    volume_voxels = int(case["down_image"].size)
+    aorta_voxels = int(np.sum(aorta_mask))
+    return {
+        "lcc_image": lcc_image,
+        "lcc_mask": lcc_mask,
+        "prep_details": prep_details,
+        "down_label": case["down_label"],
+        "spacing": spacing,
+        "vesselness_ostios": vesselness_ostios,
+        "vesselness_artery": vesselness_artery,
+        "detected_circles": detected_circles,
+        "aorta_mask": aorta_mask,
+        "volume_voxels": volume_voxels,
+        "volume_slices": int(case["down_image"].shape[2]),
+        "aorta_voxels": aorta_voxels,
+        "aorta_volume_fraction": (
+            aorta_voxels / volume_voxels if volume_voxels > 0 else np.nan
+        ),
+    }
+
+
+def evaluate_prepared_image(
+    context: dict[str, Any],
+    row: dict[str, Any],
+    config: dict[str, Any],
+    experiment: dict[str, Any],
+) -> dict[str, Any]:
+    """Executa óstios e artérias usando um contexto previamente preparado."""
+    prep_details = context["prep_details"]
+    row.update(
+        {
+            "threshold_voxels": prep_details.get("threshold_voxels", 0),
+            "lcc_voxels": prep_details.get("lcc_voxels", 0),
+            "volume_voxels": context["volume_voxels"],
+            "volume_slices": context["volume_slices"],
+            "detected_circle_count": len(context["detected_circles"]),
+            "aorta_voxels": context["aorta_voxels"],
+            "aorta_volume_fraction": context["aorta_volume_fraction"],
+        }
+    )
+
+    # Esta é a primeira etapa que muda quando max_z_diff_mm é variado.
+    ostia_eval = detect_and_evaluate_ostia(
+        context["aorta_mask"],
+        context["vesselness_ostios"],
+        context["down_label"],
+        context["spacing"],
+        config,
+        detected_circles=context["detected_circles"],
+    )
+    both_correct = bool(ostia_eval["both_correct"])
+    both_tolerable = bool(ostia_eval["both_tolerable"])
+    row.update(
+        {
+            "ostia_found": True,
+            "both_correct": both_correct,
+            "both_tolerable": both_tolerable,
+            "ostia_success": both_correct or both_tolerable,
+            "ostia_status": (
+                "both_correct"
+                if both_correct
+                else "both_tolerable"
+                if both_tolerable
+                else "found_but_wrong"
+            ),
+            "left_dist_mm": ostia_eval["left_info"]["physical_dist"],
+            "right_dist_mm": ostia_eval["right_info"]["physical_dist"],
+        }
+    )
+
+    row["segmentation_attempted"] = True
+    label_artery = ostia_eval["label_artery"]
+    label_artery_voxels = int(np.sum(label_artery))
+    row["label_artery_voxels"] = label_artery_voxels
+
+    if experiment.get("artery_method", "region_growing") == "fuzzy_connectedness":
+        fc_params = {
+            "alpha": 0.18,
+            "sigma_hu": 80,
+            "neighborhood": 26,
+            **experiment.get("fc", {}),
+        }
+        fc_result = segment_artery_fuzzy_connectedness(
+            context["lcc_image"],
+            context["vesselness_artery"],
+            [ostia_eval["ostia_left"], ostia_eval["ostia_right"]],
+            context["lcc_mask"],
+            config,
+            params=fc_params,
+            max_candidate_voxels=experiment.get("max_candidate_voxels", 500_000),
+            max_processed_voxels=experiment.get("max_processed_voxels", 500_000),
+        )
+        artery_mask = fc_result["artery_mask"]
+        raw_mask = fc_result["raw_mask"]
+        row["fc_processed_voxels"] = fc_result["details"].get("processed_voxels")
+        row["fc_effective_alpha"] = fc_result["details"].get("effective_alpha")
+    else:
+        raw_mask = normal_region_growing_from_ostia(
+            context["vesselness_artery"],
+            ostia_eval["ostia_left"],
+            ostia_eval["ostia_right"],
+            config,
+        )
+        artery_mask = postprocess_artery_mask(raw_mask, config)
+
+    dice_before = float(dice_score(raw_mask, label_artery))
+    dice_after = float(dice_score(artery_mask, label_artery))
+    row.update(
+        {
+            "artery_voxels": int(np.sum(artery_mask)),
+            "artery_voxels_before_morphology": int(np.sum(raw_mask)),
+            "artery_voxels_after_morphology": int(np.sum(artery_mask)),
+            "dice_artery": dice_after,
+            "dice_artery_before_morphology": dice_before,
+            "dice_artery_after_morphology": dice_after,
+            "dice_artery_morphology_delta": dice_after - dice_before,
+            "artery_volume_ratio": (
+                float(np.sum(artery_mask)) / label_artery_voxels
+                if label_artery_voxels > 0
+                else np.nan
+            ),
+        }
+    )
+    return row
+
+
+def set_row_error(row: dict[str, Any], exc: Exception) -> dict[str, Any]:
+    """Registra uma exceção preservando uma linha válida para consolidação."""
+    row["error"] = f"{type(exc).__name__}: {exc}"
+    if row["ostia_status"] == "not_evaluated":
+        row["ostia_status"] = "error"
+    return row
+
+
+def run_image(
+    img_id: int,
+    variant_name: str,
+    split_name: str,
+    base_path: Path,
+    config: dict[str, Any],
+    experiment: dict[str, Any],
+) -> dict[str, Any]:
+    """Executa uma imagem em uma variante completa do pipeline."""
+    row = make_image_result_row(img_id, variant_name, split_name, experiment)
     try:
         case = load_downsampled_case(img_id, base_path, config)
-        row["volume_voxels"] = int(case["down_image"].size)
-        row["volume_slices"] = int(case["down_image"].shape[2])
-        lcc_image, lcc_mask, prep_details = build_preprocessed_inputs(
-            case["down_image"],
-            config,
-            experiment,
-        )
-        row.update(
-            {
-                key: prep_details.get(key)
-                for key in ("threshold_voxels", "lcc_voxels")
-            }
-        )
-        spacing = case["scaled_spacing"]
-
-        vesselness_ostios = compute_vesselness(
-            lcc_image,
-            vesselness_config=config["VESSELNESS_AORTA"],
-            use_gpu=config.get("USE_GPU", False),
-        )
-        detected_circles = locate_aorta_circles(
-            lcc_image,
-            case["downscale_factors"],
-            spacing,
-            config["CIRCLE_DETECTION"],
-        )
-        row["detected_circle_count"] = len(detected_circles)
-        aorta_mask = segment_aorta(
-            lcc_image,
-            detected_circles,
-            config["LEVEL_SET"],
-            use_gpu=config.get("USE_GPU", False),
-        )
-        row["aorta_voxels"] = int(np.sum(aorta_mask))
-        row["aorta_volume_fraction"] = (
-            row["aorta_voxels"] / row["volume_voxels"]
-            if row["volume_voxels"] > 0
-            else np.nan
-        )
-        ostia_eval = detect_and_evaluate_ostia(
-            aorta_mask,
-            vesselness_ostios,
-            case["down_label"],
-            spacing,
-            config,
-            detected_circles=detected_circles,
-        )
-        both_correct = bool(ostia_eval["both_correct"])
-        both_tolerable = bool(ostia_eval["both_tolerable"])
-        row.update(
-            {
-                "ostia_found": True,
-                "both_correct": both_correct,
-                "both_tolerable": both_tolerable,
-                "ostia_success": both_correct or both_tolerable,
-                "ostia_status": (
-                    "both_correct"
-                    if both_correct
-                    else "both_tolerable"
-                    if both_tolerable
-                    else "found_but_wrong"
-                ),
-                "left_dist_mm": ostia_eval["left_info"]["physical_dist"],
-                "right_dist_mm": ostia_eval["right_info"]["physical_dist"],
-            }
-        )
-
-        vesselness_artery = compute_vesselness(
-            lcc_image,
-            vesselness_config=config["VESSELNESS_ARTERY"],
-            use_gpu=config.get("USE_GPU", False),
-        )
-        row["segmentation_attempted"] = True
-        label_artery = ostia_eval["label_artery"]
-        label_artery_voxels = int(np.sum(label_artery))
-        row["label_artery_voxels"] = label_artery_voxels
-
-        if experiment.get("artery_method", "region_growing") == "fuzzy_connectedness":
-            fc_params = {
-                "alpha": 0.18,
-                "sigma_hu": 80,
-                "neighborhood": 26,
-                **experiment.get("fc", {}),
-            }
-            fc_result = segment_artery_fuzzy_connectedness(
-                lcc_image,
-                vesselness_artery,
-                [ostia_eval["ostia_left"], ostia_eval["ostia_right"]],
-                lcc_mask,
-                config,
-                params=fc_params,
-                max_candidate_voxels=experiment.get("max_candidate_voxels", 500_000),
-                max_processed_voxels=experiment.get("max_processed_voxels", 500_000),
-            )
-            artery_mask = fc_result["artery_mask"]
-            raw_mask = fc_result["raw_mask"]
-            row["fc_processed_voxels"] = fc_result["details"].get("processed_voxels")
-            row["fc_effective_alpha"] = fc_result["details"].get("effective_alpha")
-        else:
-            raw_mask = normal_region_growing_from_ostia(
-                vesselness_artery,
-                ostia_eval["ostia_left"],
-                ostia_eval["ostia_right"],
-                config,
-            )
-            artery_mask = postprocess_artery_mask(raw_mask, config)
-
-        dice_before = float(dice_score(raw_mask, label_artery))
-        dice_after = float(dice_score(artery_mask, label_artery))
-        row.update(
-            {
-                "artery_voxels": int(np.sum(artery_mask)),
-                "artery_voxels_before_morphology": int(np.sum(raw_mask)),
-                "artery_voxels_after_morphology": int(np.sum(artery_mask)),
-                "dice_artery": dice_after,
-                "dice_artery_before_morphology": dice_before,
-                "dice_artery_after_morphology": dice_after,
-                "dice_artery_morphology_delta": dice_after - dice_before,
-                "artery_volume_ratio": (
-                    float(np.sum(artery_mask)) / label_artery_voxels
-                    if label_artery_voxels > 0
-                    else np.nan
-                ),
-            }
-        )
+        context = prepare_image_context(case, config, experiment)
+        evaluate_prepared_image(context, row, config, experiment)
     except Exception as exc:
-        row["error"] = f"{type(exc).__name__}: {exc}"
-        if row["ostia_status"] == "not_evaluated":
-            row["ostia_status"] = "error"
+        set_row_error(row, exc)
     return row
 
 
@@ -418,9 +484,7 @@ def summarize_variant(
         return {"variant": variant_name, "images": 0}
 
     dice = pd.to_numeric(df["dice_artery"], errors="coerce")
-    dice_before = pd.to_numeric(
-        df["dice_artery_before_morphology"], errors="coerce"
-    )
+    dice_before = pd.to_numeric(df["dice_artery_before_morphology"], errors="coerce")
     morphology_delta = pd.to_numeric(
         df["dice_artery_morphology_delta"], errors="coerce"
     )
@@ -433,7 +497,9 @@ def summarize_variant(
         "images": int(len(df)),
         "ostia_success_rate": float(success.mean()),
         "ostia_found_rate": float(df["ostia_found"].fillna(False).astype(bool).mean()),
-        "both_correct_rate": float(df["both_correct"].fillna(False).astype(bool).mean()),
+        "both_correct_rate": float(
+            df["both_correct"].fillna(False).astype(bool).mean()
+        ),
         "both_tolerable_rate": float(
             df["both_tolerable"].fillna(False).astype(bool).mean()
         ),
@@ -445,9 +511,7 @@ def summarize_variant(
             float(dice.mean()) if dice.notna().any() else None
         ),
         "mean_dice_morphology_delta": (
-            float(morphology_delta.mean())
-            if morphology_delta.notna().any()
-            else None
+            float(morphology_delta.mean()) if morphology_delta.notna().any() else None
         ),
         "median_dice": float(dice.median()) if dice.notna().any() else None,
         "mean_dice_success_ostia": (
@@ -456,11 +520,15 @@ def summarize_variant(
         "mean_left_dist_mm": pd.to_numeric(
             df["left_dist_mm"],
             errors="coerce",
-        ).replace([np.inf, -np.inf], np.nan).mean(),
+        )
+        .replace([np.inf, -np.inf], np.nan)
+        .mean(),
         "mean_right_dist_mm": pd.to_numeric(
             df["right_dist_mm"],
             errors="coerce",
-        ).replace([np.inf, -np.inf], np.nan).mean(),
+        )
+        .replace([np.inf, -np.inf], np.nan)
+        .mean(),
         "error_count": int(df["error"].notna().sum()),
         "runtime_seconds": float(runtime_seconds),
         "runtime_minutes": float(runtime_seconds / 60),
@@ -531,11 +599,15 @@ __all__ = [
     "PARAMETER_COLUMNS",
     "build_base_config",
     "build_preprocessed_inputs",
+    "evaluate_prepared_image",
     "fuzzy_threshold_outputs",
     "load_downsampled_case",
+    "make_image_result_row",
     "parameter_row",
+    "prepare_image_context",
     "run_image",
     "save_outputs",
+    "set_row_error",
     "split_overrides",
     "summarize_variant",
 ]

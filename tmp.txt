@@ -1,0 +1,5 @@
+bash -c '
+uv run python src/segmentation_pipeline.py --split test --resolution high --config-file config/article_cbeb_sensitivity.json --upper-threshold-percentile 99.7 --num-batches 5 --gpu &&
+uv run python src/segmentation_pipeline.py --split test --resolution high --config-file config/pipeline_config.json --num-batches 5 --gpu &&
+uv run python src/segmentation_pipeline.py --split test --resolution high --config-file config/article_cbeb_sensitivity.json --upper-threshold-percentile 99.9 --num-batches 5 --gpu
+'

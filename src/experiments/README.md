@@ -15,11 +15,16 @@ ficam em `output/segmentation/analysis/`.
 - `pipeline_failure_analysis.py`: seleciona, a partir dos quatro runs de
   validação, uma coorte focada de falhas e controles para testar correções.
 - `pipeline_parameter_validation.py`: executa a análise OFAT de sensibilidade
-  solicitada para o artigo. Compara nove configurações no split de validação e
+  solicitada para o artigo. Compara configurações controladas no split de validação e
   mede sucesso dos óstios e Dice. A referência congelada em
-  `config/article_sensitivity_reference.json` reproduz o comportamento do run
-  `train/normal_rg/2026-06-29_09-42-27`. Seus resultados alimentam o notebook
+  `config/article_cbeb_sensitivity.json` usa P99.9 como referência do artigo do
+  CBEB. Seus resultados alimentam o notebook
   `src/eda/pipeline_parameter_validation_eda.ipynb`.
+- `hybrid_resolution_pipeline.py`: localiza a aorta e os óstios em mid
+  resolution, reescala as coordenadas `(y, x, z)` e executa somente o
+  pré-processamento e a segmentação arterial em high resolution. Salva o
+  progresso após cada exame em
+  `output/segmentation/analysis/hybrid_resolution_pipeline/`.
 
 Helpers reutilizáveis ficam em `src/utils/experiments/`.
 
@@ -66,23 +71,81 @@ uv run python src/experiments/pipeline_parameter_validation.py \
   --gpu
 ```
 
-Para confirmar no conjunto completo de validação somente os grupos que mais
-variaram na triagem de 30 imagens:
+Para fazer a triagem pareada das cinco variantes híbridas em cinco imagens:
+
+```bash
+uv run python src/experiments/hybrid_resolution_pipeline.py \
+  --split train \
+  --sample-size 5 \
+  --config-path config/article_cbeb_sensitivity.json \
+  --upper-threshold-percentile 99.9 \
+  --variants recommended \
+  --run-name hybrid_tuning_train_5 \
+  --gpu
+```
+
+As variantes recomendadas isolam uma mudança por vez:
+
+- `baseline_high_scaled`: configuração high atual, usada como referência;
+- `morphology_mid_radii`: mantém RG/Frangi high e usa fechamento 3, dilatação 2;
+- `rg_mid_thresholds`: usa divisor 7 e fração mínima de vesselness 0,078;
+- `rg_mid_thresholds_morphology_mid`: combina os dois ajustes anteriores;
+- `artery_sigmas_physical_x2`: testa sigmas `[3, 4, 5, 6]` em high.
+
+As quatro variantes com os sigmas originais compartilham o mesmo mapa de
+vesselness. O mapa com sigmas duplicados só é calculado depois e o mapa anterior
+é liberado, reduzindo tempo e pico de memória. Depois da triagem, confirme as
+variantes promissoras nas 30 imagens, por exemplo:
+
+```bash
+uv run python src/experiments/hybrid_resolution_pipeline.py \
+  --split train \
+  --sample-size 30 \
+  --config-path config/article_cbeb_sensitivity.json \
+  --upper-threshold-percentile 99.9 \
+  --variants baseline_high_scaled,morphology_mid_radii,rg_mid_thresholds_morphology_mid \
+  --run-name hybrid_confirmation_train_30 \
+  --gpu
+```
+
+Use `--sample-size 0` para todo o split ou `--ids 1,2,3` para exames
+específicos. Se a execução for interrompida, retome no mesmo diretório:
+
+```bash
+uv run python src/experiments/hybrid_resolution_pipeline.py \
+  --split train \
+  --sample-size 5 \
+  --config-path config/article_cbeb_sensitivity.json \
+  --upper-threshold-percentile 99.9 \
+  --variants recommended \
+  --resume-dir output/segmentation/analysis/hybrid_resolution_pipeline/SEU_RUN \
+  --gpu
+```
+
+O CSV registra variante, parâmetros efetivos, óstios antes/depois da reescala,
+Dice high antes/depois da morfologia, razão entre volumes predito/GT e tempos.
+O resumo inclui diferença pareada e vitórias contra `baseline_high_scaled`. O
+experimento não interpola máscaras mid para high: apenas as coordenadas dos
+óstios são transferidas.
+
+Para confirmar no conjunto completo de validação os parâmetros que precisam ser
+recalculados sobre o novo baseline P99.9:
 
 ```bash
 uv run python src/experiments/pipeline_parameter_validation.py \
   --split val \
   --sample-size 270 \
   --resolution mid \
-  --variants baseline,upper_p995,upper_p999,rg_vessel_05,rg_vessel_09 \
-  --run-name sensitivity_selected_val_270 \
+  --variants baseline,ostia_z30,ostia_z50,rg_vessel_05,rg_vessel_09 \
+  --run-name sensitivity_cbeb_p999_val_270 \
   --gpu
 ```
 
-No computador usado na triagem, cada variante processou 30 imagens em cerca de
-21 minutos. Sem reaproveitamento entre variantes, a projeção para 270 imagens
-é de aproximadamente 3 h 10 min por variante, ou 15 h 50 min para as cinco
-variantes acima. O tempo real depende principalmente da GPU e do armazenamento.
+O experimento processa uma imagem por vez. Variantes que alteram somente a
+seleção dos óstios ou o Region Growing compartilham downsampling, threshold,
+LCC, vesselness, círculos e máscara da aorta em memória. Nenhum cache volumétrico
+é salvo em disco. Variações do percentil superior compartilham apenas o
+carregamento/downsampling, pois mudam todas as etapas posteriores.
 
 A validação pode ser dividida sem separar os resultados. Execute a primeira
 parte com um `--run-name` fixo:
@@ -90,8 +153,8 @@ parte com um `--run-name` fixo:
 ```bash
 uv run python src/experiments/pipeline_parameter_validation.py \
   --split val --sample-size 270 --resolution mid --gpu \
-  --variants baseline,upper_p995,upper_p999 \
-  --run-name sensitivity_selected_val_270
+  --variants baseline,upper_p995,upper_p997 \
+  --run-name sensitivity_cbeb_p999_val_270
 ```
 
 Depois anexe as variantes restantes ao mesmo run:
@@ -100,7 +163,7 @@ Depois anexe as variantes restantes ao mesmo run:
 uv run python src/experiments/pipeline_parameter_validation.py \
   --split val --sample-size 270 --resolution mid --gpu \
   --variants rg_vessel_05,rg_vessel_09 \
-  --run-name sensitivity_selected_val_270 \
+  --run-name sensitivity_cbeb_p999_val_270 \
   --append
 ```
 
@@ -117,7 +180,7 @@ baseline utiliza 85%:
 uv run python src/experiments/pipeline_parameter_validation.py \
   --split val --sample-size 270 --resolution mid --gpu \
   --variants ostia_lower_70,ostia_lower_100 \
-  --run-name sensitivity_selected_val_270 \
+  --run-name sensitivity_cbeb_p999_val_270 \
   --append
 ```
 

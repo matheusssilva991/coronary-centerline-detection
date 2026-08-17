@@ -113,7 +113,11 @@ def load_ostia_comparison_scenario(ia_results_df, math_paths, scenario):
 
 
 def build_ostia_image_comparison_df(ia_results_df, math_results_df):
-    """Pair the best IA Dice per image with the mathematical Dice."""
+    """Pair every IA method per image with the mathematical Dice.
+
+    Keeping one row per IA method avoids selecting the best model separately
+    for each examination, which would make the visual comparison optimistic.
+    """
     columns = [
         "target_resolution",
         "img_id",
@@ -133,18 +137,28 @@ def build_ostia_image_comparison_df(ia_results_df, math_results_df):
     if not required_cols.issubset(math_results_df.columns):
         return pd.DataFrame(columns=columns)
 
-    ia_subset = ia_results_df.dropna(subset=["target_resolution", "img_id", "dice"])
+    ia_subset = ia_results_df.dropna(
+        subset=["target_resolution", "img_id", "dice", "method"]
+    ).copy()
+    ia_subset["dice"] = pd.to_numeric(ia_subset["dice"], errors="coerce")
+    ia_subset = ia_subset.dropna(subset=["dice"])
     ia_subset = ia_subset.sort_values(
-        ["target_resolution", "img_id", "dice"],
-        ascending=[True, True, False],
+        ["target_resolution", "img_id", "method", "dice"],
+        ascending=[True, True, True, False],
     )
-    best_ia_df = (
-        ia_subset.groupby(["target_resolution", "img_id"], as_index=False)
+    ia_by_method_df = (
+        ia_subset.groupby(
+            ["target_resolution", "img_id", "method"], as_index=False
+        )
         .first()
         .rename(columns={"dice": "ia_dice", "method": "ia_method"})
     )
 
-    math_subset = math_results_df.dropna(subset=["target_resolution", "img_id", "dice"])
+    math_subset = math_results_df.dropna(
+        subset=["target_resolution", "img_id", "dice", "method"]
+    ).copy()
+    math_subset["dice"] = pd.to_numeric(math_subset["dice"], errors="coerce")
+    math_subset = math_subset.dropna(subset=["dice"])
     math_subset = math_subset.sort_values(
         ["target_resolution", "img_id", "dice"],
         ascending=[True, True, False],
@@ -156,11 +170,11 @@ def build_ostia_image_comparison_df(ia_results_df, math_results_df):
     )
 
     return (
-        best_ia_df[["target_resolution", "img_id", "ia_dice", "ia_method"]]
+        ia_by_method_df[["target_resolution", "img_id", "ia_dice", "ia_method"]]
         .merge(
             math_df[["target_resolution", "img_id", "math_dice", "math_method"]],
             on=["target_resolution", "img_id"],
             how="inner",
         )
-        .sort_values(["target_resolution", "img_id"])
+        .sort_values(["target_resolution", "ia_method", "img_id"])
     )

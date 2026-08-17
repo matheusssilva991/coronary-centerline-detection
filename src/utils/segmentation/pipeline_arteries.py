@@ -250,6 +250,32 @@ def segment_arteries_from_ostia(
         use_gpu=config.get("USE_GPU", False),
     )
 
+    return segment_arteries_from_vesselness(
+        lcc_image,
+        label_artery,
+        vesselness_artery,
+        ostia_left,
+        ostia_right,
+        config,
+    )
+
+
+def segment_arteries_from_vesselness(
+    lcc_image: Any,
+    label_artery: Any,
+    vesselness_artery: Any,
+    ostia_left: Optional[Sequence[int]],
+    ostia_right: Optional[Sequence[int]],
+    config: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Segmenta artérias reutilizando um mapa de vesselness já calculado.
+
+    Esta entrada é útil em experimentos pareados que alteram apenas o Region
+    Growing ou a morfologia. O fluxo principal continua usando
+    :func:`segment_arteries_from_ostia`, que calcula o mapa e delega para esta
+    função.
+    """
+
     # Despacha RG ou FC mantendo o mesmo contrato de máscaras e métricas.
     method = _normalize_artery_segmentation_method(
         config.get("ARTERY_SEGMENTATION", {}).get("method", "region_growing")

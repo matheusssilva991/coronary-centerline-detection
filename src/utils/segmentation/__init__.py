@@ -52,6 +52,8 @@ _SYMBOL_TO_MODULE = {
     "postprocess_artery_mask_conditioned": "pipeline_arteries",
     "resolve_lower_threshold": "lower_threshold",
     "segment_arteries_from_ostia": "pipeline_arteries",
+    "segment_arteries_from_vesselness": "pipeline_arteries",
+    "summarize_aorta_circles": "pipeline_orchestration",
 }
 
 __all__ = list(_SYMBOL_TO_MODULE)

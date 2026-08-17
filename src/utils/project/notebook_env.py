@@ -6,6 +6,12 @@ import os
 import sys
 from pathlib import Path
 
+from .config import (
+    apply_aorta_ostia_method,
+    load_config_json,
+    scale_config_to_resolution,
+)
+
 
 def configure_notebook_environment(chdir_to_src: bool = True) -> Path:
     """Add src to sys.path and optionally switch cwd to the src directory.
@@ -62,6 +68,36 @@ def resolve_imagecas_base_path() -> Path:
         ],
         "ImageCAS",
     )
+
+
+def load_notebook_pipeline_config(
+    config_file: str | Path,
+    resolution: str = "mid",
+) -> dict:
+    """Carrega e escala a configuração usada em notebooks interativos.
+
+    Preserva a ordem aplicada historicamente no ``main.ipynb``: carrega o
+    JSON, força fatores unitários em alta resolução, aplica um perfil de
+    aorta/óstios não padrão e, por fim, escala os parâmetros espaciais.
+    """
+    if resolution not in {"mid", "high"}:
+        raise ValueError("resolution deve ser 'mid' ou 'high'.")
+
+    config_path = Path(config_file)
+    if not config_path.is_file():
+        raise FileNotFoundError(f"Configuração não encontrada: {config_path}")
+
+    config = load_config_json(str(config_path), {})
+    if resolution == "high":
+        config["DOWNSCALE_FACTORS"] = [1, 1, 1]
+
+    selected_method = config.get("AORTA_OSTIA_METHOD", {}).get(
+        "method", "standard"
+    )
+    if selected_method != "standard":
+        config = apply_aorta_ostia_method(config, method=selected_method)
+
+    return scale_config_to_resolution(config)
 
 
 def _numeric_result_dir(path: Path) -> Path:

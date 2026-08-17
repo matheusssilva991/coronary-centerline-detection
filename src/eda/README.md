@@ -37,9 +37,9 @@ export IMAGECAS_BASE_PATH=/caminho/para/ImageCAS/1-1000
 | [split_resolution_analysis.ipynb](split_resolution_analysis.ipynb) | Comparar train/val/test entre mid e high | Resultados canônicos | Tabelas e gráficos exibidos | Baixo |
 | [ia_vs_pipeline_analysis.ipynb](ia_vs_pipeline_analysis.ipynb) | Comparar IA e pipeline somente nos IDs comuns | `output/ia_results` e resultados canônicos | Tabelas e gráficos exibidos | Baixo |
 | [bad_cases_results_analysis.ipynb](bad_cases_results_analysis.ipynb) | Quantificar casos ruins em mid e high | Summaries canônicos | `analysis/bad_cases/` | Baixo |
-| [threshold_pipeline_comparison_analysis.ipynb](threshold_pipeline_comparison_analysis.ipynb) | Comparar threshold normal/fuzzy e RG/FC | Runs de comparação | Tabelas, gráficos e 3D no notebook | Baixo; alto na seção 3D |
+| [threshold_pipeline_comparison_analysis.ipynb](threshold_pipeline_comparison_analysis.ipynb) | Resumir threshold normal/fuzzy e RG/FC; comparar a melhor variante com o baseline | Runs de comparação | Tabelas e gráficos pareados no notebook | Baixo |
 | [aorta_circle_slice_analysis.ipynb](aorta_circle_slice_analysis.ipynb) | Relacionar fatias e círculos detectados | Summary com métricas da aorta | `analysis/aorta_circle_slices/` | Baixo |
-| [pipeline_parameter_validation_eda.ipynb](pipeline_parameter_validation_eda.ipynb) | Análise OFAT de sensibilidade: sucesso dos óstios, Dice e erros qualitativos no split `val` | Run de `pipeline_parameter_validation.py` | Resultados no notebook; somente o run compacto é persistido | Baixo na análise; alto nos casos 3D |
+| [pipeline_parameter_validation_eda.ipynb](pipeline_parameter_validation_eda.ipynb) | Análise OFAT quantitativa: sucesso dos óstios, Dice e thresholds no split `val` | Run de `pipeline_parameter_validation.py` | Tabelas e gráficos no notebook; somente o run compacto é persistido | Baixo; moderado ao recalcular thresholds em HU |
 
 ### Análises qualitativas
 

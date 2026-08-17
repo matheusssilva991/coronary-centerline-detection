@@ -6,6 +6,25 @@ import matplotlib.pyplot as plt
 import numpy as np
 from numpy.typing import NDArray
 
+from .image_slices import plot_mip_projection
+
+
+def display_vesselness_summary(
+    vesselness: NDArray,
+    *,
+    label: str,
+    title: str,
+    cmap: str = "gray",
+) -> None:
+    """Imprime estatísticas e plota a MIP de um mapa de vesselness."""
+    print(
+        f"{label}: "
+        f"min={vesselness.min():.4f}, "
+        f"max={vesselness.max():.4f}, "
+        f"média={vesselness.mean():.4f}"
+    )
+    plot_mip_projection(vesselness, title=title, cmap=cmap)
+
 
 def compute_vesselness_maps(
     preprocessed: dict[int, dict[str, Any]],

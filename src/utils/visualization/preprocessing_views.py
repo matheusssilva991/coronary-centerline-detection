@@ -51,6 +51,37 @@ def plot_stage(
     plt.close()
 
 
+def plot_pipeline_preprocessing_stages(
+    image_data: dict[str, Any],
+    slice_idx: int,
+    *,
+    dpi: int = 110,
+) -> None:
+    """Plota as quatro etapas de pré-processamento exibidas no pipeline interativo."""
+    image = image_data["image"]
+    down_image = image_data["down_image"]
+    threshold_mask = image_data["threshold_mask"]
+    lcc_image = image_data["lcc_image"]
+    raw_slice_idx = min(slice_idx, image.shape[2] - 1)
+
+    fig, axes = plt.subplots(1, 4, figsize=(18, 5), dpi=dpi)
+    axes[0].imshow(image[:, :, raw_slice_idx], cmap="gray")
+    axes[0].set_title("Imagem original")
+    axes[1].imshow(down_image[:, :, slice_idx], cmap="gray")
+    axes[1].set_title("Downsampling")
+    axes[2].imshow(
+        threshold_mask[:, :, slice_idx], cmap="gray", vmin=0, vmax=1
+    )
+    axes[2].set_title("Máscara de threshold")
+    axes[3].imshow(lcc_image[:, :, slice_idx], cmap="gray")
+    axes[3].set_title("Imagem após LCC")
+    for axis in axes:
+        axis.axis("off")
+    plt.tight_layout()
+    plt.show()
+    plt.close(fig)
+
+
 def plot_preprocessing_grid(
     preprocessed: dict[int, dict[str, Any]],
     ids_to_plot: Optional[Iterable[int]] = None,

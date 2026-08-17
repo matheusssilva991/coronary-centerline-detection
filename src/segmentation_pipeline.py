@@ -191,6 +191,11 @@ def build_effective_config(args):
         effective_config = load_config_json(args.config_file, effective_config)
         print(f"⚙️  Configuração carregada de: {args.config_file}")
 
+    # A resolução escolhida na CLI prevalece sobre fatores salvos em snapshots
+    # de configuração produzidos originalmente para mid resolution.
+    if args.resolution == "high":
+        effective_config["DOWNSCALE_FACTORS"] = [1, 1, 1]
+
     _apply_execution_overrides(effective_config, args)
     effective_config = _apply_aorta_ostia_override(effective_config, args)
     _apply_threshold_overrides(effective_config, args)

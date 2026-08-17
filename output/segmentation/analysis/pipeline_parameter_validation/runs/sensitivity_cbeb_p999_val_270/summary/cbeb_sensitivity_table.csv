@@ -1,0 +1,8 @@
+variant,parameter,value,images,ostia_success_n,ostia_success_percent,mean_dice,std_dice,median_dice,mean_dice_valid_ostia,delta_dice_vs_baseline
+baseline,Upper percentile,99.9 (baseline),270,226,83.703704,0.587852,0.190679,0.653508,0.646864,0.000000
+upper_p997,Upper percentile,99.7,270,218,80.740741,0.571870,0.197424,0.640578,0.641853,-0.015982
+upper_p995,Upper percentile,99.5,270,217,80.370370,0.551192,0.199848,0.619584,0.621430,-0.036660
+ostia_z30,Maximum z distance,30 mm,270,225,83.333333,0.585323,0.193959,0.653106,0.646763,-0.002529
+ostia_z50,Maximum z distance,50 mm,270,226,83.703704,0.587852,0.190679,0.653508,0.646864,0.000000
+rg_vessel_05,RG minimum vesselness,5.0%,270,226,83.703704,0.560379,0.182837,0.623701,0.617775,-0.027473
+rg_vessel_09,RG minimum vesselness,9.0%,270,226,83.703704,0.581644,0.194615,0.656167,0.639388,-0.006208

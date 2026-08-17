@@ -19,6 +19,7 @@ from .notebook_env import (
     get_bad_cases_export_dir,
     get_cases_analysis_output_dir,
     get_default_split_paths,
+    load_notebook_pipeline_config,
     resolve_existing_path,
     resolve_imagecas_base_path,
 )
@@ -31,6 +32,7 @@ __all__ = [
     "get_data_splits",
     "get_default_split_paths",
     "load_config_json",
+    "load_notebook_pipeline_config",
     "normalize_runtime_config",
     "resolve_existing_path",
     "resolve_imagecas_base_path",

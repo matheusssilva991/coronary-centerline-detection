@@ -17,6 +17,11 @@ O catálogo dos notebooks que produzem estas análises está em
 - `pipeline_parameter_validation/`: análise OFAT de sensibilidade dos parâmetros
   do artigo. Em `runs/`, somente execuções cuja referência foi conferida contra
   um run histórico equivalente devem ser mantidas.
+- `hybrid_resolution_pipeline/`: resultados compactos do experimento que
+  localiza os óstios em mid resolution e segmenta as artérias em high
+  resolution. O sweep recomendado compara morfologia, critérios do RG e sigmas
+  do Frangi reutilizando as etapas comuns. Cada run mantém apenas configurações,
+  CSV por imagem e resumo pareado por variante.
 
 ## Regra pratica
 

@@ -6,10 +6,52 @@ from unittest.mock import patch
 
 import numpy as np
 
-from utils.experiments.qualitative_pipeline import run_qualitative_pipeline_case
+from utils.experiments.qualitative_pipeline import (
+    display_qualitative_pipeline_case,
+    run_qualitative_pipeline_case,
+)
 
 
 class QualitativePipelineTest(TestCase):
+    @patch("utils.experiments.qualitative_pipeline.visualize_aorta_ostia_artery")
+    @patch("utils.experiments.qualitative_pipeline.run_qualitative_pipeline_case")
+    def test_display_reuses_cached_result(self, run_case, visualize):
+        volume = np.zeros((4, 4, 3), dtype=np.uint8)
+        cached_result = {
+            "aorta_mask": volume,
+            "ostia_left": (1, 1, 1),
+            "ostia_right": (2, 2, 1),
+            "artery_mask": volume,
+            "label_artery": volume,
+            "scaled_spacing": (0.6, 0.7, 0.8),
+        }
+        cache = {(90, "baseline"): cached_result}
+
+        result = display_qualitative_pipeline_case(
+            90,
+            {},
+            Path("dataset"),
+            variant_label="Baseline",
+            case_label="Dice próximo da média",
+            cache=cache,
+            cache_key=(90, "baseline"),
+        )
+
+        self.assertIs(result, cached_result)
+        run_case.assert_not_called()
+        visualize.assert_called_once_with(
+            volume,
+            (1, 1, 1),
+            (2, 2, 1),
+            artery_mask=volume,
+            label_artery=volume,
+            spacing=(0.6, 0.7, 0.8),
+            use_physical_coords=True,
+            save_html_path=None,
+            display_plot=True,
+            plot_name="Baseline | IMG 90 | Dice próximo da média",
+        )
+
     @patch("utils.experiments.qualitative_pipeline.segment_arteries_from_ostia")
     @patch("utils.experiments.qualitative_pipeline.detect_and_evaluate_ostia")
     @patch("utils.experiments.qualitative_pipeline.segment_aorta")

@@ -1,0 +1,2 @@
+split,images,errors,mid_ostia_success_count,mid_ostia_success_percent,high_rescaled_ostia_success_count,high_rescaled_ostia_success_percent,mean_dice_high,median_dice_high,mean_dice_before_morphology_high,mean_morphology_delta_high,total_time_seconds,mean_time_seconds_per_image
+train,5,0,5,100.0,5,100.0,0.5783428718242949,0.5865952216219399,0.31358174490246393,0.26476112692183096,535.9174903210005,107.18349806420011

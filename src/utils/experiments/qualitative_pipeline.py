@@ -15,6 +15,7 @@ from utils.segmentation.pipeline_preprocessing import (
     compute_vesselness,
     load_and_preprocess_image,
 )
+from utils.visualization.volume import visualize_aorta_ostia_artery
 
 
 def run_qualitative_pipeline_case(
@@ -97,4 +98,45 @@ def run_qualitative_pipeline_case(
     }
 
 
-__all__ = ["run_qualitative_pipeline_case"]
+def display_qualitative_pipeline_case(
+    img_id: int | str,
+    config: dict[str, Any],
+    imagecas_path: str | Path,
+    *,
+    variant_label: str,
+    case_label: str,
+    cache: dict[Any, dict[str, Any]] | None = None,
+    cache_key: Any | None = None,
+) -> dict[str, Any]:
+    """Executa e apresenta um caso como aorta, óstios, predição e referência 3D.
+
+    O cache opcional evita repetir as etapas pesadas quando o notebook exibe o
+    mesmo exame e a mesma configuração mais de uma vez.
+    """
+    resolved_cache_key = cache_key if cache_key is not None else int(img_id)
+    if cache is not None and resolved_cache_key in cache:
+        result = cache[resolved_cache_key]
+    else:
+        result = run_qualitative_pipeline_case(img_id, config, imagecas_path)
+        if cache is not None:
+            cache[resolved_cache_key] = result
+
+    visualize_aorta_ostia_artery(
+        result["aorta_mask"],
+        result["ostia_left"],
+        result["ostia_right"],
+        artery_mask=result["artery_mask"],
+        label_artery=result["label_artery"],
+        spacing=result["scaled_spacing"],
+        use_physical_coords=True,
+        save_html_path=None,
+        display_plot=True,
+        plot_name=f"{variant_label} | IMG {int(img_id)} | {case_label}",
+    )
+    return result
+
+
+__all__ = [
+    "display_qualitative_pipeline_case",
+    "run_qualitative_pipeline_case",
+]
