@@ -2,7 +2,11 @@ import unittest
 
 import pandas as pd
 
-from utils.project.results import add_internal_result_aliases
+from utils.project.results import (
+    add_internal_result_aliases,
+    make_readable_results_dataframe,
+    make_result_dataframe,
+)
 
 
 class ResultAliasTests(unittest.TestCase):
@@ -26,6 +30,24 @@ class ResultAliasTests(unittest.TestCase):
             ["both_correct", "not_found"],
         )
         self.assertIn("artery_dice", result.columns)
+
+    def test_preserves_image_and_aorta_volume_fields_in_readable_schema(self):
+        internal = make_result_dataframe(
+            [
+                {
+                    "IMG_ID": 1,
+                    "image_voxels": 1_000,
+                    "aorta_mask_voxels": 125,
+                    "aorta_volume_fraction": 0.125,
+                }
+            ]
+        )
+
+        readable = make_readable_results_dataframe(internal)
+
+        self.assertEqual(readable.loc[0, "image_voxel_count"], 1_000)
+        self.assertEqual(readable.loc[0, "aorta_mask_voxel_count"], 125)
+        self.assertEqual(readable.loc[0, "aorta_volume_fraction"], 0.125)
 
 
 if __name__ == "__main__":

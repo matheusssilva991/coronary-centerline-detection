@@ -301,3 +301,235 @@ def summarize_bad_dice_with_threshold(df_bad, dice_threshold=0.3):
         "n_without_low_dice": int(dice_without_low.shape[0]),
         "n_low_dice_correct": int(low_dice_correct_mask.sum()),
     }
+
+
+def _classify_intersection_group(row):
+    """Classify a bad case by ostia availability and artery intersection."""
+    ostia_status = str(row.get("ostia_status", "")).strip().lower()
+    if ostia_status == "not_found" or row.get("ostia_found") is False:
+        return "ostia_not_found"
+    if bool(row.get("left_intersects", False)) or bool(
+        row.get("right_intersects", False)
+    ):
+        return "with_intersection"
+    return "without_intersection"
+
+
+def _sample_image_ids(ids, sample_size, rng):
+    """Sample unique image IDs deterministically with the supplied generator."""
+    unique_ids = sorted(set(int(image_id) for image_id in ids))
+    if len(unique_ids) <= sample_size:
+        return unique_ids
+    return sorted(
+        rng.choice(unique_ids, size=sample_size, replace=False).astype(int).tolist()
+    )
+
+
+def prepare_bad_case_qualitative_comparison(
+    split_paths_by_resolution,
+    bad_cases_export_dir,
+    *,
+    split_name="test",
+    resolutions=("high", "mid"),
+    samples_per_group=2,
+    random_seed=42,
+):
+    """Select reproducible bad cases for qualitative resolution comparison.
+
+    The selection prioritizes images with the same failure category in both
+    resolutions, then fills missing slots with failures available in only one
+    resolution or with a different category in the other resolution.
+    """
+    from .io import load_split_summary
+
+    available_resolutions = tuple(
+        resolution
+        for resolution in resolutions
+        if split_name
+        in split_paths_by_resolution.get(f"{resolution}_res", {})
+    )
+    if not available_resolutions:
+        raise FileNotFoundError(
+            f"No consolidated results found for split '{split_name}'."
+        )
+    if samples_per_group <= 0:
+        raise ValueError("samples_per_group must be greater than zero.")
+
+    summaries_by_resolution = {}
+    for resolution in available_resolutions:
+        summary = load_split_summary(
+            split_paths_by_resolution,
+            f"{resolution}_res",
+            split_name,
+        ).copy()
+        summary["image_id"] = summary["IMG_ID"].astype(int)
+        summary["resolution"] = resolution
+        summaries_by_resolution[resolution] = summary
+
+    bad_cases_by_resolution = {}
+    detail_columns = [
+        "image_id",
+        "status",
+        "ostia_status",
+        "ostia_found",
+        "left_intersects",
+        "right_intersects",
+        "both_correct",
+        "both_tolerable",
+        "dice_artery",
+    ]
+    export_dir = Path(bad_cases_export_dir)
+    for resolution, summary in summaries_by_resolution.items():
+        export_path = export_dir / f"bad_cases_{split_name}_{resolution}_res.csv"
+        bad_cases = (
+            pd.read_csv(export_path).copy()
+            if export_path.is_file()
+            else get_bad_cases(summary).copy()
+        )
+        if "image_id" not in bad_cases.columns and "IMG_ID" in bad_cases.columns:
+            bad_cases = bad_cases.rename(columns={"IMG_ID": "image_id"})
+        bad_cases["image_id"] = bad_cases["image_id"].astype(int)
+        bad_cases["resolution"] = resolution
+
+        available_details = [
+            column for column in detail_columns if column in summary.columns
+        ]
+        bad_cases = bad_cases.drop(
+            columns=[
+                column
+                for column in available_details
+                if column != "image_id"
+            ],
+            errors="ignore",
+        ).merge(summary[available_details], on="image_id", how="left")
+        bad_cases["intersection_group"] = bad_cases.apply(
+            _classify_intersection_group,
+            axis=1,
+        )
+        bad_cases_by_resolution[resolution] = bad_cases
+
+    all_bad_cases = pd.concat(bad_cases_by_resolution.values(), ignore_index=True)
+    bad_case_matrix = all_bad_cases.pivot_table(
+        index="image_id",
+        columns="resolution",
+        values="bad_case_status",
+        aggfunc="first",
+    )
+
+    rng = np.random.default_rng(random_seed)
+    selected_records = []
+    intersection_groups = (
+        "with_intersection",
+        "without_intersection",
+        "ostia_not_found",
+    )
+    for error_type in sorted(all_bad_cases["bad_case_status"].dropna().unique()):
+        error_rows = all_bad_cases[all_bad_cases["bad_case_status"].eq(error_type)]
+        for intersection_group in intersection_groups:
+            target_rows = error_rows[
+                error_rows["intersection_group"].eq(intersection_group)
+            ]
+            target_ids = sorted(target_rows["image_id"].unique())
+            if not target_ids:
+                continue
+
+            compares_mid_high = {"high", "mid"}.issubset(available_resolutions)
+            same_error_ids = (
+                [
+                    image_id
+                    for image_id in target_ids
+                    if image_id in bad_case_matrix.index
+                    and bad_case_matrix.loc[image_id].get("high") == error_type
+                    and bad_case_matrix.loc[image_id].get("mid") == error_type
+                ]
+                if compares_mid_high
+                else []
+            )
+            remaining_ids = [
+                image_id
+                for image_id in target_ids
+                if image_id not in same_error_ids
+            ]
+            chosen_ids = _sample_image_ids(
+                same_error_ids,
+                samples_per_group,
+                rng,
+            )
+            if len(chosen_ids) < samples_per_group:
+                chosen_ids.extend(
+                    _sample_image_ids(
+                        remaining_ids,
+                        samples_per_group - len(chosen_ids),
+                        rng,
+                    )
+                )
+
+            selected_records.extend(
+                {
+                    "image_id": int(image_id),
+                    "target_bad_case_status": error_type,
+                    "target_intersection_group": intersection_group,
+                    "comparison_priority": (
+                        "same_error_mid_high"
+                        if image_id in same_error_ids
+                        else "one_resolution_or_different_error"
+                    ),
+                }
+                for image_id in chosen_ids
+            )
+
+    plan_columns = [
+        "image_id",
+        "target_bad_case_status",
+        "target_intersection_group",
+        "comparison_priority",
+    ]
+    selected_plan = pd.DataFrame(selected_records, columns=plan_columns)
+    selected_plan = selected_plan.drop_duplicates(plan_columns[:3])
+    selected_image_ids = list(dict.fromkeys(selected_plan["image_id"].tolist()))
+    selection_reasons = (
+        selected_plan.assign(
+            selection_reason=lambda frame: frame["target_bad_case_status"]
+            + "/"
+            + frame["target_intersection_group"]
+        )
+        .groupby("image_id")["selection_reason"]
+        .apply(lambda values: "; ".join(values))
+        .to_dict()
+    )
+
+    selected_rows = []
+    for image_id in selected_image_ids:
+        for resolution in available_resolutions:
+            bad_match = all_bad_cases[
+                all_bad_cases["image_id"].eq(image_id)
+                & all_bad_cases["resolution"].eq(resolution)
+            ]
+            if not bad_match.empty:
+                row = bad_match.iloc[0].to_dict()
+            else:
+                summary_match = summaries_by_resolution[resolution][
+                    summaries_by_resolution[resolution]["image_id"].eq(image_id)
+                ]
+                if summary_match.empty:
+                    continue
+                row = summary_match.iloc[0].to_dict()
+                row["bad_case_status"] = "not_bad"
+                row["subset"] = split_name
+                row["intersection_group"] = _classify_intersection_group(row)
+            row["selection_reason"] = selection_reasons.get(image_id, "")
+            selected_rows.append(row)
+
+    selected_cases = pd.DataFrame(selected_rows)
+    if not selected_cases.empty:
+        selected_cases = selected_cases.drop_duplicates(["image_id", "resolution"])
+
+    return {
+        "resolutions": available_resolutions,
+        "summaries_by_resolution": summaries_by_resolution,
+        "bad_cases_by_resolution": bad_cases_by_resolution,
+        "all_bad_cases": all_bad_cases,
+        "selected_image_plan": selected_plan,
+        "selected_image_ids": selected_image_ids,
+        "selected_cases": selected_cases,
+    }

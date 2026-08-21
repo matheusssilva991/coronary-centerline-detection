@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -6,13 +7,13 @@ import pandas as pd
 from ..project.results import add_internal_result_aliases
 
 
-def map_ia_resolution_to_target(ia_resolution):
+def map_ia_resolution_to_target(ia_resolution: str) -> str:
     """Map IA resolution bucket to the target mathematical resolution."""
     # Mapeia bucket da IA para a resolucao usada no comparativo final.
     return "high_res" if ia_resolution == "high" else "mid_res"
 
 
-def prettify_method_label(method_name):
+def prettify_method_label(method_name: str) -> str:
     """Create a more readable method label for plot axes."""
     # Converte nome tecnico para rótulo de eixo.
     if method_name == "pipeline_matematico":
@@ -49,8 +50,9 @@ def prettify_method_label(method_name):
 
 
 def load_ia_results_for_comparison(
-    ia_results_base, allowed_ia_resolutions=("mid", "high")
-):
+    ia_results_base: str | Path,
+    allowed_ia_resolutions: tuple[str, ...] = ("mid", "high"),
+) -> tuple[pd.DataFrame, list[str]]:
     """Load IA CSV outputs from all folds and methods."""
     # Lê resultados IA e padroniza colunas para comparacao.
     ia_results_base = Path(ia_results_base)
@@ -127,7 +129,9 @@ def load_ia_results_for_comparison(
     return pd.DataFrame(columns=columns), missing_ia_files
 
 
-def load_math_results_for_comparison(math_paths):
+def load_math_results_for_comparison(
+    math_paths: dict[str, Any],
+) -> tuple[pd.DataFrame, list[str]]:
     """Load mathematical pipeline summary CSVs for selected resolutions/splits."""
     # Lê resumos matemáticos no mesmo schema da IA.
     math_frames = []
@@ -253,7 +257,7 @@ def filter_to_common_ia_math_ids(comparison_raw: pd.DataFrame) -> pd.DataFrame:
     )
 
 
-def build_comparison_agg_df(comparison_raw):
+def build_comparison_agg_df(comparison_raw: pd.DataFrame) -> pd.DataFrame:
     """Aggregate Dice metrics by resolution, source and method."""
     if comparison_raw.empty:
         # Mantém contrato de retorno mesmo sem entrada.

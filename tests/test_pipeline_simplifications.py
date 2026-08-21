@@ -18,6 +18,7 @@ from utils.segmentation.pipeline_orchestration import (
     _resolve_batch_plan,
     run_pipeline,
     summarize_aorta_circles,
+    summarize_aorta_volume,
 )
 from utils.segmentation.pipeline_preprocessing import (
     compute_vesselness,
@@ -129,9 +130,18 @@ class PipelineSimplificationTests(TestCase):
         preprocessing = _preprocessing_result_fields(
             {"threshold_mode": "fuzzy", "min_threshold": -280.0},
             120,
+            256 * 256 * 120,
         )
         self.assertEqual(preprocessing["threshold_mode"], "fuzzy")
         self.assertEqual(preprocessing["image_slice_count"], 120)
+        self.assertEqual(preprocessing["image_voxels"], 256 * 256 * 120)
+
+        aorta_volume = summarize_aorta_volume(
+            np.array([[[1, 0], [1, 0]], [[1, 0], [0, 0]]], dtype=np.uint8),
+            8,
+        )
+        self.assertEqual(aorta_volume["aorta_mask_voxels"], 3)
+        self.assertEqual(aorta_volume["aorta_volume_fraction"], 3 / 8)
 
         circles = _circle_result_fields(
             [

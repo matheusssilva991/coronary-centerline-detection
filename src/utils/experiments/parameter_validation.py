@@ -3,11 +3,36 @@
 from __future__ import annotations
 
 import copy
+import json
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 import pandas as pd
+
+
+def load_parameter_validation_run(
+    run_dir: str | Path,
+    *,
+    expected_split: str | None = "val",
+) -> tuple[Path, pd.DataFrame, pd.DataFrame, dict[str, Any]]:
+    """Carrega resultados, parâmetros e configuração de um run compacto."""
+    run_dir = Path(run_dir)
+    if not run_dir.is_dir():
+        raise FileNotFoundError(f"Run não encontrado: {run_dir}")
+
+    results = pd.read_csv(run_dir / "results/image_results.csv")
+    parameters = pd.read_csv(run_dir / "parameters/variant_parameters.csv")
+    config = json.loads((run_dir / "run_config.json").read_text(encoding="utf-8"))
+
+    if expected_split is not None:
+        result_splits = set(results["split"].dropna())
+        if config.get("split") != expected_split or result_splits != {expected_split}:
+            raise ValueError(
+                f"O run {run_dir.name} não contém apenas o split {expected_split}."
+            )
+
+    return run_dir, results, parameters, config
 
 
 _DOWNSTREAM_CONFIG_SECTIONS = {
@@ -63,7 +88,7 @@ def prepared_context_cache_key(
     }
     preprocessing_experiment = {
         key: experiment.get(key)
-        for key in ("threshold_mode", "fuzzy")
+        for key in ("threshold_mode", "fuzzy", "ostia_only")
         if key in experiment
     }
     return _freeze_cache_value(
@@ -243,6 +268,297 @@ def select_top_threshold_cases(
     )
 
 
+def load_downscaled_intensity_values(
+    image_id: int,
+    base_path: str | Path,
+    config: dict[str, Any],
+) -> np.ndarray:
+    """Carrega um volume e retorna seus valores finitos após o downsampling."""
+    import cv2
+
+    from ..processing.preprocessing import downscale_image
+    from ..utils.nifti_io import load_raw_img_and_label
+
+    interpolation_map = {
+        "nearest": cv2.INTER_NEAREST,
+        "linear": cv2.INTER_LINEAR,
+        "cubic": cv2.INTER_CUBIC,
+        "area": cv2.INTER_AREA,
+        "lanczos4": cv2.INTER_LANCZOS4,
+    }
+    interpolation = interpolation_map.get(
+        config.get("OPENCV_INTERPOLATION", "linear"), cv2.INTER_LINEAR
+    )
+    image_object, _ = load_raw_img_and_label(
+        str(Path(base_path) / f"{image_id}.img.nii.gz")
+    )
+    image = np.asarray(image_object.get_fdata(), dtype=np.float32)
+    down_image = downscale_image(
+        image,
+        config["DOWNSCALE_FACTORS"],
+        order=3,
+        use_opencv=config.get("DOWNSCALE_METHOD") == "opencv",
+        opencv_interpolation=interpolation,
+    )
+    finite_values = np.asarray(down_image)[np.isfinite(down_image)]
+    if finite_values.size == 0:
+        raise ValueError(f"IMG_ID={image_id} não possui intensidades HU finitas.")
+    return finite_values
+
+
+def summarize_intensity_histograms(
+    values: np.ndarray,
+    image_id: int,
+    *,
+    dense_min_hu: float = 300.0,
+    bins: int = 256,
+) -> tuple[dict[str, float | int], pd.DataFrame]:
+    """Resume e discretiza histogramas completo e acima de um limite HU."""
+    if bins <= 0:
+        raise ValueError("bins deve ser maior que zero.")
+
+    finite_values = np.asarray(values, dtype=np.float32)
+    finite_values = finite_values[np.isfinite(finite_values)]
+    if finite_values.size == 0:
+        raise ValueError("O histograma requer ao menos uma intensidade finita.")
+
+    subsets = {
+        "full": finite_values,
+        "above_300_hu": finite_values[finite_values > dense_min_hu],
+    }
+    summary: dict[str, float | int] = {
+        "IMG_ID": int(image_id),
+        "dense_min_hu": float(dense_min_hu),
+    }
+    histogram_frames = []
+
+    for subset_name, subset_values in subsets.items():
+        prefix = "full" if subset_name == "full" else "above_300"
+        summary[f"{prefix}_voxel_count"] = int(subset_values.size)
+        if subset_values.size == 0:
+            for metric in (
+                "mean_hu",
+                "median_hu",
+                "max_hu",
+                "histogram_peak_hu",
+                "histogram_peak_count",
+            ):
+                summary[f"{prefix}_{metric}"] = np.nan
+            continue
+
+        counts, edges = np.histogram(subset_values, bins=bins)
+        centers = (edges[:-1] + edges[1:]) / 2
+        peak_index = int(np.argmax(counts))
+        summary.update(
+            {
+                f"{prefix}_mean_hu": float(np.mean(subset_values)),
+                f"{prefix}_median_hu": float(np.median(subset_values)),
+                f"{prefix}_max_hu": float(np.max(subset_values)),
+                f"{prefix}_histogram_peak_hu": float(centers[peak_index]),
+                f"{prefix}_histogram_peak_count": int(counts[peak_index]),
+            }
+        )
+        histogram_frames.append(
+            pd.DataFrame(
+                {
+                    "IMG_ID": int(image_id),
+                    "histogram": subset_name,
+                    "bin_left_hu": edges[:-1],
+                    "bin_right_hu": edges[1:],
+                    "bin_center_hu": centers,
+                    "count": counts,
+                }
+            )
+        )
+
+    summary["above_300_voxel_percent"] = (
+        100 * int(summary["above_300_voxel_count"]) / int(summary["full_voxel_count"])
+    )
+    histogram_df = (
+        pd.concat(histogram_frames, ignore_index=True)
+        if histogram_frames
+        else pd.DataFrame()
+    )
+    return summary, histogram_df
+
+
+def build_normalized_intensity_histograms(
+    histogram_bins: pd.DataFrame,
+    *,
+    image_ids: list[int] | None = None,
+    histogram_name: str = "full",
+    bins: int = 256,
+) -> pd.DataFrame:
+    """Rebin per-image histograms as probabilities on a shared HU grid.
+
+    Each source histogram is converted to a cumulative probability curve and
+    interpolated at shared bin edges. This prevents images with more voxels or
+    different original HU ranges from being compared on incompatible bins.
+    """
+    if bins <= 0:
+        raise ValueError("bins deve ser maior que zero.")
+
+    required_columns = {
+        "IMG_ID",
+        "histogram",
+        "bin_left_hu",
+        "bin_right_hu",
+        "count",
+    }
+    missing = required_columns.difference(histogram_bins.columns)
+    if missing:
+        raise ValueError(f"Colunas de histograma ausentes: {sorted(missing)}")
+
+    selected = histogram_bins.loc[
+        histogram_bins["histogram"].eq(histogram_name)
+    ].copy()
+    if image_ids is not None:
+        selected_ids = {int(image_id) for image_id in image_ids}
+        selected = selected.loc[selected["IMG_ID"].astype(int).isin(selected_ids)]
+    if selected.empty:
+        return pd.DataFrame(
+            columns=[
+                "histogram",
+                "bin_left_hu",
+                "bin_right_hu",
+                "bin_center_hu",
+                "probability",
+            ]
+        )
+
+    common_edges = np.linspace(
+        float(selected["bin_left_hu"].min()),
+        float(selected["bin_right_hu"].max()),
+        bins + 1,
+    )
+    profile_frames = []
+    for image_id, image_histogram in selected.groupby("IMG_ID"):
+        image_histogram = image_histogram.sort_values("bin_left_hu")
+        counts = pd.to_numeric(image_histogram["count"], errors="coerce").fillna(0)
+        total = float(counts.sum())
+        if total <= 0:
+            continue
+
+        source_edges = np.concatenate(
+            [
+                image_histogram["bin_left_hu"].to_numpy(dtype=float),
+                [float(image_histogram["bin_right_hu"].iloc[-1])],
+            ]
+        )
+        source_cdf = np.concatenate([[0.0], counts.cumsum().to_numpy() / total])
+        common_cdf = np.interp(
+            common_edges,
+            source_edges,
+            source_cdf,
+            left=0.0,
+            right=1.0,
+        )
+        profile_frames.append(
+            pd.DataFrame(
+                {
+                    "IMG_ID": int(image_id),
+                    "histogram": histogram_name,
+                    "bin_left_hu": common_edges[:-1],
+                    "bin_right_hu": common_edges[1:],
+                    "bin_center_hu": (common_edges[:-1] + common_edges[1:]) / 2,
+                    "probability": np.diff(common_cdf),
+                }
+            )
+        )
+
+    if not profile_frames:
+        return pd.DataFrame()
+    return pd.concat(profile_frames, ignore_index=True)
+
+
+def build_mean_intensity_histogram(
+    histogram_bins: pd.DataFrame,
+    *,
+    image_ids: list[int] | None = None,
+    histogram_name: str = "full",
+    bins: int = 256,
+) -> pd.DataFrame:
+    """Average normalized image histograms on a shared HU grid."""
+    profiles = build_normalized_intensity_histograms(
+        histogram_bins,
+        image_ids=image_ids,
+        histogram_name=histogram_name,
+        bins=bins,
+    )
+    if profiles.empty:
+        return pd.DataFrame()
+
+    return (
+        profiles.groupby(
+            [
+                "histogram",
+                "bin_left_hu",
+                "bin_right_hu",
+                "bin_center_hu",
+            ],
+            as_index=False,
+        )
+        .agg(
+            mean_probability=("probability", "mean"),
+            std_probability=("probability", "std"),
+            images=("IMG_ID", "nunique"),
+        )
+        .fillna({"std_probability": 0.0})
+    )
+
+
+def compute_intensity_histogram_analysis(
+    image_ids: list[int],
+    base_path: str | Path,
+    config: dict[str, Any],
+    *,
+    dense_min_hu: float = 300.0,
+    bins: int = 256,
+    percentiles: tuple[float, ...] = (),
+    progress_every: int | None = None,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Calcula métricas e histogramas dos volumes reduzidos do pipeline.
+
+    Percentis opcionais são armazenados como colunas ``p<valor>_hu`` no resumo,
+    permitindo obter histogramas e thresholds efetivos com um único carregamento.
+    """
+    if progress_every is not None and progress_every <= 0:
+        raise ValueError("progress_every deve ser maior que zero.")
+
+    unique_image_ids = list(dict.fromkeys(int(value) for value in image_ids))
+    summary_rows = []
+    histogram_frames = []
+    for position, image_id in enumerate(unique_image_ids, start=1):
+        values = load_downscaled_intensity_values(image_id, base_path, config)
+        summary, histogram = summarize_intensity_histograms(
+            values,
+            image_id,
+            dense_min_hu=dense_min_hu,
+            bins=bins,
+        )
+        for percentile, threshold_hu in zip(
+            percentiles,
+            np.percentile(values, percentiles) if percentiles else (),
+        ):
+            percentile_key = str(percentile).replace(".", "")
+            summary[f"p{percentile_key}_hu"] = float(threshold_hu)
+        summary_rows.append(summary)
+        histogram_frames.append(histogram)
+        if progress_every and (
+            position % progress_every == 0 or position == len(unique_image_ids)
+        ):
+            print(
+                f"Histogramas processados: {position}/{len(unique_image_ids)}"
+            )
+
+    histogram_df = (
+        pd.concat(histogram_frames, ignore_index=True)
+        if histogram_frames
+        else pd.DataFrame()
+    )
+    return pd.DataFrame(summary_rows), histogram_df
+
+
 def compute_effective_upper_thresholds(
     image_ids: list[int],
     base_path: str | Path,
@@ -256,43 +572,10 @@ def compute_effective_upper_thresholds(
     limites mínimo e máximo retornados também pertencem ao volume reduzido que
     efetivamente entra no thresholding, e não ao NIfTI na resolução original.
     """
-    import cv2
-
-    from ..processing.preprocessing import downscale_image
-    from ..utils.nifti_io import load_raw_img_and_label
-
-    interpolation_map = {
-        "nearest": cv2.INTER_NEAREST,
-        "linear": cv2.INTER_LINEAR,
-        "cubic": cv2.INTER_CUBIC,
-        "area": cv2.INTER_AREA,
-        "lanczos4": cv2.INTER_LANCZOS4,
-    }
-    use_opencv = config.get("DOWNSCALE_METHOD") == "opencv"
-    interpolation = interpolation_map.get(
-        config.get("OPENCV_INTERPOLATION", "linear"), cv2.INTER_LINEAR
-    )
-    base_path = Path(base_path)
     rows: list[dict[str, float | int]] = []
 
-    for position, image_id in enumerate(sorted(set(image_ids)), start=1):
-        print(f"Threshold HU [{position}/{len(set(image_ids))}] IMG_ID={image_id}")
-        image_object, _ = load_raw_img_and_label(
-            str(base_path / f"{image_id}.img.nii.gz")
-        )
-        image = np.asarray(image_object.get_fdata(), dtype=np.float32)
-        down_image = downscale_image(
-            image,
-            config["DOWNSCALE_FACTORS"],
-            order=3,
-            use_opencv=use_opencv,
-            opencv_interpolation=interpolation,
-        )
-        # Ignora valores inválidos antes de medir a faixa HU e os percentis.
-        finite_values = np.asarray(down_image)[np.isfinite(down_image)]
-        if finite_values.size == 0:
-            raise ValueError(f"IMG_ID={image_id} não possui intensidades HU finitas.")
-
+    for image_id in sorted(set(image_ids)):
+        finite_values = load_downscaled_intensity_values(image_id, base_path, config)
         image_min_hu = float(finite_values.min())
         image_max_hu = float(finite_values.max())
         values = np.percentile(finite_values, percentiles)
@@ -422,6 +705,167 @@ def parameter_validation_variants() -> list[dict[str, Any]]:
             )
             for initial in (0.05, 0.09)
         ],
+    ]
+
+
+def resolution_scaling_variants() -> list[dict[str, Any]]:
+    """Retorna variantes que isolam os grupos de escala usados em high-res.
+
+    Todos os casos preservam a configuração P99.9 do artigo. As variantes
+    iniciais desativam grupos de ``scale_config_to_resolution``; as variantes
+    de refinamento aplicam valores intermediários depois da escala para estudar
+    os parâmetros que efetivamente alteraram a localização dos óstios.
+    """
+    reference = {
+        "threshold_mode": "normal",
+        "artery_method": "region_growing",
+        "MAX_THRESHOLD_PERCENTILE": 99.9,
+    }
+
+    def variant(
+        name: str,
+        group: str,
+        description: str,
+        disabled_groups: tuple[str, ...] = (),
+        post_scale_overrides: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        return {
+            "name": name,
+            "parameter_group": group,
+            "description": description,
+            "overrides": reference.copy(),
+            "disabled_scaling_groups": list(disabled_groups),
+            "post_scale_overrides": copy.deepcopy(post_scale_overrides or {}),
+        }
+
+    return [
+        variant(
+            "all_scaled",
+            "reference",
+            "Aplica todos os grupos de escala atuais para high resolution.",
+        ),
+        variant(
+            "circle_geometry_unscaled",
+            "circle_geometry",
+            "Mantém raios, passo e offset da Hough nos valores mid-res.",
+            ("circle_geometry",),
+        ),
+        variant(
+            "circle_tracking_unscaled",
+            "circle_tracking",
+            "Mantém sigma do Canny, distância entre vizinhos e padding da ROI.",
+            ("circle_tracking",),
+        ),
+        variant(
+            "level_set_iterations_unscaled",
+            "level_set_iterations",
+            "Mantém 31 iterações do level set em vez do ajuste high-res.",
+            ("level_set_iterations",),
+        ),
+        variant(
+            "level_set_morphology_unscaled",
+            "level_set_morphology",
+            "Mantém o raio de remoção de vazamentos no valor mid-res.",
+            ("level_set_morphology",),
+        ),
+        variant(
+            "ostia_surface_unscaled",
+            "ostia_surface",
+            "Mantém o raio de erosão da superfície da aorta no valor mid-res.",
+            ("ostia_surface",),
+        ),
+        variant(
+            "ostia_candidates_unscaled",
+            "ostia_candidates",
+            "Mantém top_n no valor mid-res, sem multiplicação pela área XY.",
+            ("ostia_candidates",),
+        ),
+        variant(
+            "morphology_radii_unscaled",
+            "combined_morphology",
+            "Mantém os raios 3D do level set e da superfície nos valores mid-res.",
+            ("level_set_morphology", "ostia_surface"),
+        ),
+        variant(
+            "canny_sigma_mid",
+            "circle_tracking_refinement",
+            "Mantém somente o sigma do Canny no valor mid-res 3.",
+            post_scale_overrides={"CIRCLE_DETECTION.canny_sigma": 3.0},
+        ),
+        variant(
+            "canny_sigma_4",
+            "circle_tracking_refinement",
+            "Usa sigma 4 no Canny, entre os valores mid-res 3 e high-res 6.",
+            post_scale_overrides={"CIRCLE_DETECTION.canny_sigma": 4.0},
+        ),
+        variant(
+            "canny_sigma_5",
+            "circle_tracking_refinement",
+            "Usa sigma 5 no Canny, entre os valores mid-res 3 e high-res 6.",
+            post_scale_overrides={"CIRCLE_DETECTION.canny_sigma": 5.0},
+        ),
+        variant(
+            "neighbor_distance_mid",
+            "circle_tracking_refinement",
+            "Mantém somente a distância de vizinhança no valor mid-res 5.",
+            post_scale_overrides={
+                "CIRCLE_DETECTION.neighbor_distance_threshold": 5.0
+            },
+        ),
+        variant(
+            "local_roi_padding_mid",
+            "circle_tracking_refinement",
+            "Mantém somente o padding da ROI no valor mid-res 30.",
+            post_scale_overrides={"CIRCLE_DETECTION.local_roi_padding": 30},
+        ),
+        variant(
+            "level_set_iterations_50",
+            "level_set_iterations_refinement",
+            "Usa 50 iterações como ponto intermediário entre 31 e 70.",
+            post_scale_overrides={"LEVEL_SET.num_iter": 50},
+        ),
+        variant(
+            "level_set_iterations_60",
+            "level_set_iterations_refinement",
+            "Usa 60 iterações como ponto intermediário próximo de high-res 70.",
+            post_scale_overrides={"LEVEL_SET.num_iter": 60},
+        ),
+        variant(
+            "canny_sigma_3_level_set_50",
+            "combined_scaling_refinement",
+            "Combina sigma 3 do Canny com 50 iterações do level set.",
+            post_scale_overrides={
+                "CIRCLE_DETECTION.canny_sigma": 3.0,
+                "LEVEL_SET.num_iter": 50,
+            },
+        ),
+        variant(
+            "canny_sigma_4_level_set_50",
+            "combined_scaling_refinement",
+            "Combina sigma 4 do Canny com 50 iterações do level set.",
+            post_scale_overrides={
+                "CIRCLE_DETECTION.canny_sigma": 4.0,
+                "LEVEL_SET.num_iter": 50,
+            },
+        ),
+        variant(
+            "canny_sigma_5_level_set_50",
+            "combined_scaling_refinement",
+            "Combina sigma 5 do Canny com 50 iterações do level set.",
+            post_scale_overrides={
+                "CIRCLE_DETECTION.canny_sigma": 5.0,
+                "LEVEL_SET.num_iter": 50,
+            },
+        ),
+        variant(
+            "roi_padding_40_level_set_50",
+            "combined_scaling_refinement",
+            "Combina padding local 40 com 50 iterações do level set.",
+            post_scale_overrides={
+                "CIRCLE_DETECTION.local_roi_padding": 40,
+                "LEVEL_SET.num_iter": 50,
+            },
+        ),
     ]
 
 
@@ -602,6 +1046,7 @@ __all__ = [
     "build_parameter_sensitivity_summary",
     "image_load_cache_key",
     "parameter_validation_variants",
+    "resolution_scaling_variants",
     "prepared_context_cache_key",
     "select_parameter_validation_cases",
     "validate_parameter_validation_append",

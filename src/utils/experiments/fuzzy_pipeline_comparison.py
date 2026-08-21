@@ -80,6 +80,8 @@ PARAMETER_COLUMNS = [
     "variant",
     "parameter_group",
     "description",
+    "disabled_scaling_groups",
+    "post_scale_overrides",
     "overrides_json",
     "threshold_mode",
     "fuzzy.soft_margin_hu",
@@ -110,6 +112,7 @@ PARAMETER_COLUMNS = [
 EXPERIMENT_KEYS = {
     "threshold_mode",
     "artery_method",
+    "ostia_only",
     "max_candidate_voxels",
     "max_processed_voxels",
 }
@@ -314,12 +317,14 @@ def prepare_image_context(
         use_gpu=config.get("USE_GPU", False),
     )
 
-    # O vesselness arterial independe dos critérios posteriores do RG/FC.
-    vesselness_artery = compute_vesselness(
-        lcc_image,
-        vesselness_config=config["VESSELNESS_ARTERY"],
-        use_gpu=config.get("USE_GPU", False),
-    )
+    # Em sweeps exclusivos de óstios, evita o mapa arterial e toda a etapa RG/FC.
+    vesselness_artery = None
+    if not experiment.get("ostia_only", False):
+        vesselness_artery = compute_vesselness(
+            lcc_image,
+            vesselness_config=config["VESSELNESS_ARTERY"],
+            use_gpu=config.get("USE_GPU", False),
+        )
     volume_voxels = int(case["down_image"].size)
     aorta_voxels = int(np.sum(aorta_mask))
     return {
@@ -390,10 +395,13 @@ def evaluate_prepared_image(
         }
     )
 
-    row["segmentation_attempted"] = True
     label_artery = ostia_eval["label_artery"]
     label_artery_voxels = int(np.sum(label_artery))
     row["label_artery_voxels"] = label_artery_voxels
+    if experiment.get("ostia_only", False):
+        return row
+
+    row["segmentation_attempted"] = True
 
     if experiment.get("artery_method", "region_growing") == "fuzzy_connectedness":
         fc_params = {

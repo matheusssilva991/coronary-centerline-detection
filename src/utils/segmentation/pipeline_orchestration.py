@@ -63,6 +63,7 @@ IMAGE_RESULT_DEFAULTS = {
     "threshold_voxels": None,
     "lcc_voxels": None,
     "image_slice_count": None,
+    "image_voxels": None,
     "aorta_circle_count": None,
     "aorta_detected_circle_count": None,
     "aorta_interpolated_circle_count": None,
@@ -71,6 +72,7 @@ IMAGE_RESULT_DEFAULTS = {
     "aorta_circle_coverage": None,
     "aorta_recovered_initialization": False,
     "aorta_mask_voxels": None,
+    "aorta_volume_fraction": None,
 }
 
 
@@ -79,7 +81,11 @@ def _new_image_result(img_id):
     return {"IMG_ID": img_id, **IMAGE_RESULT_DEFAULTS}
 
 
-def _preprocessing_result_fields(preprocessing_details, image_slice_count):
+def _preprocessing_result_fields(
+    preprocessing_details,
+    image_slice_count,
+    image_voxel_count=None,
+):
     """Converte detalhes do pré-processamento nos campos persistidos."""
     detail_keys = (
         "threshold_mode",
@@ -93,6 +99,9 @@ def _preprocessing_result_fields(preprocessing_details, image_slice_count):
     )
     fields = {key: preprocessing_details.get(key) for key in detail_keys}
     fields["image_slice_count"] = int(image_slice_count)
+    fields["image_voxels"] = (
+        int(image_voxel_count) if image_voxel_count is not None else None
+    )
     return fields
 
 
@@ -119,6 +128,17 @@ def summarize_aorta_circles(detected_circles, image_slice_count):
         "aorta_recovered_initialization": any(
             bool(circle.get("recovered_initialization", False))
             for circle in detected_circles
+        ),
+    }
+
+
+def summarize_aorta_volume(aorta_mask, image_voxel_count):
+    """Calcula a ocupação da aorta no volume processado completo."""
+    aorta_mask_voxels = int(aorta_mask.sum())
+    return {
+        "aorta_mask_voxels": aorta_mask_voxels,
+        "aorta_volume_fraction": (
+            aorta_mask_voxels / image_voxel_count if image_voxel_count else None
         ),
     }
 
@@ -190,6 +210,7 @@ def process_image(img_id, config, base_path):
             _preprocessing_result_fields(
                 preprocessing_details,
                 lcc_image.shape[2],
+                lcc_image.size,
             )
         )
 
@@ -221,7 +242,13 @@ def process_image(img_id, config, base_path):
             config["LEVEL_SET"],
             use_gpu=config.get("USE_GPU", False),
         )
-        result["aorta_mask_voxels"] = int(aorta_mask.sum())
+        # Relaciona a máscara da aorta ao volume processado completo.
+        result.update(
+            summarize_aorta_volume(
+                aorta_mask,
+                result["image_voxels"],
+            )
+        )
 
         try:
             # Seleciona os óstios e valida contra o label arterial.

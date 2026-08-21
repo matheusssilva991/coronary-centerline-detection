@@ -42,7 +42,9 @@ coronary-centerline-detection/
 │   │   ├── ia_vs_pipeline_analysis.ipynb    # IA versus pipeline matemático
 │   │   ├── bad_cases_results_analysis.ipynb # Casos ruins quantitativos
 │   │   ├── bad_cases_qualitative_analysis.ipynb # Casos ruins em 3D
-│   │   ├── threshold_pipeline_comparison_analysis.ipynb # Variantes do pipeline
+│   │   ├── segmentation_method_comparison.ipynb # Threshold normal/fuzzy e RG/FC
+│   │   ├── pipeline_sensitivity_analysis.ipynb # Sensibilidade OFAT
+│   │   ├── upper_threshold_analysis.ipynb # Percentis e thresholds HU
 │   │   ├── aorta_circle_slice_analysis.ipynb # Fatias e círculos da aorta
 │   │   ├── fuzzy_membership_functions.ipynb # Funções de pertinência fuzzy
 │   │   └── morphological_operations_example.ipynb # Operações morfológicas

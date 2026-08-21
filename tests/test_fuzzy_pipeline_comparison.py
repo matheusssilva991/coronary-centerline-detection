@@ -111,3 +111,67 @@ class RunImageTest(TestCase):
             detect_ostia.call_args.kwargs["detected_circles"],
             circles,
         )
+
+    @patch("utils.experiments.fuzzy_pipeline_comparison.postprocess_artery_mask")
+    @patch("utils.experiments.fuzzy_pipeline_comparison.normal_region_growing_from_ostia")
+    @patch("utils.experiments.fuzzy_pipeline_comparison.detect_and_evaluate_ostia")
+    @patch("utils.experiments.fuzzy_pipeline_comparison.segment_aorta")
+    @patch("utils.experiments.fuzzy_pipeline_comparison.locate_aorta_circles")
+    @patch("utils.experiments.fuzzy_pipeline_comparison.compute_vesselness")
+    @patch("utils.experiments.fuzzy_pipeline_comparison.build_preprocessed_inputs")
+    @patch("utils.experiments.fuzzy_pipeline_comparison.load_downsampled_case")
+    def test_ostia_only_skips_arterial_vesselness_and_segmentation(
+        self,
+        load_case,
+        build_inputs,
+        compute_vesselness,
+        detect_circles,
+        segment_aorta,
+        detect_ostia,
+        region_growing,
+        postprocess,
+    ):
+        volume = np.ones((2, 2, 2), dtype=np.float32)
+        label = np.ones_like(volume, dtype=np.uint8)
+        load_case.return_value = {
+            "down_image": volume,
+            "down_label": label,
+            "scaled_spacing": (1.0, 1.0, 1.0),
+            "downscale_factors": (1, 1, 1),
+        }
+        build_inputs.return_value = (volume, volume.astype(bool), {})
+        compute_vesselness.return_value = volume
+        detect_circles.return_value = []
+        segment_aorta.return_value = label
+        detect_ostia.return_value = {
+            "both_correct": True,
+            "both_tolerable": True,
+            "left_info": {"physical_dist": 0.0},
+            "right_info": {"physical_dist": 0.0},
+            "label_artery": label,
+            "ostia_left": (1, 1, 1),
+            "ostia_right": (1, 1, 1),
+        }
+        config = {
+            "USE_GPU": False,
+            "VESSELNESS_AORTA": {},
+            "VESSELNESS_ARTERY": {},
+            "CIRCLE_DETECTION": {},
+            "LEVEL_SET": {},
+        }
+
+        result = run_image(
+            10,
+            "ostia_only",
+            "val",
+            Path("/unused"),
+            config,
+            {"threshold_mode": "normal", "ostia_only": True},
+        )
+
+        self.assertIsNone(result["error"])
+        self.assertTrue(result["ostia_success"])
+        self.assertFalse(result["segmentation_attempted"])
+        self.assertEqual(compute_vesselness.call_count, 1)
+        region_growing.assert_not_called()
+        postprocess.assert_not_called()

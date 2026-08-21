@@ -10,10 +10,9 @@ import numpy as np
 from numpy.typing import NDArray
 
 
-def save_volume_slice_figure(
+def _create_volume_slice_figure(
     image_volume: NDArray,
     slice_index: int,
-    output_path: str | Path,
     *,
     axis: int = 2,
     cmap: str = "gray",
@@ -24,13 +23,8 @@ def save_volume_slice_figure(
     figure_width: float = 7.0,
     padding_fraction: float = 0.0,
     output_size_px: tuple[int, int] | None = None,
-) -> Path:
-    """Salva uma fatia 2D completa, sem recorte automático do Matplotlib.
-
-    O tamanho da figura acompanha a proporção real da fatia e os limites dos
-    eixos incluem explicitamente todos os pixels. Isso evita que o backend do
-    notebook ou ``bbox_inches='tight'`` remova parte da imagem.
-    """
+) -> tuple[Any, Any]:
+    """Create a complete 2D slice figure shared by display and export."""
     if image_volume.ndim != 3:
         raise ValueError("image_volume deve ser 3D.")
     if axis not in (0, 1, 2):
@@ -61,9 +55,6 @@ def save_volume_slice_figure(
         figure_width = output_width / dpi
         figure_height = output_height / dpi
 
-    output = Path(output_path)
-    output.parent.mkdir(parents=True, exist_ok=True)
-
     fig, ax = plt.subplots(figsize=(figure_width, figure_height), dpi=dpi)
     ax.imshow(
         image_slice,
@@ -84,6 +75,80 @@ def save_volume_slice_figure(
     ax.margins(0)
     ax.axis("off")
     ax.set_position((0, 0, 1, 1))
+    return fig, ax
+
+
+def plot_volume_slice(
+    image_volume: NDArray,
+    slice_index: int,
+    *,
+    axis: int = 2,
+    cmap: str = "gray",
+    vmin: Optional[float] = None,
+    vmax: Optional[float] = None,
+    origin: Literal["upper", "lower"] = "upper",
+    dpi: int = 100,
+    figure_width: float = 4.0,
+    padding_fraction: float = 0.0,
+    output_size_px: tuple[int, int] | None = None,
+    show: bool = True,
+) -> tuple[Any, Any]:
+    """Display one complete volume slice without clipping border pixels."""
+    fig, ax = _create_volume_slice_figure(
+        image_volume,
+        slice_index,
+        axis=axis,
+        cmap=cmap,
+        vmin=vmin,
+        vmax=vmax,
+        origin=origin,
+        dpi=dpi,
+        figure_width=figure_width,
+        padding_fraction=padding_fraction,
+        output_size_px=output_size_px,
+    )
+    if show:
+        plt.show()
+    return fig, ax
+
+
+def save_volume_slice_figure(
+    image_volume: NDArray,
+    slice_index: int,
+    output_path: str | Path,
+    *,
+    axis: int = 2,
+    cmap: str = "gray",
+    vmin: Optional[float] = None,
+    vmax: Optional[float] = None,
+    origin: Literal["upper", "lower"] = "upper",
+    dpi: int = 300,
+    figure_width: float = 7.0,
+    padding_fraction: float = 0.0,
+    output_size_px: tuple[int, int] | None = None,
+) -> Path:
+    """Salva uma fatia 2D completa, sem recorte automático do Matplotlib.
+
+    O tamanho da figura acompanha a proporção real da fatia e os limites dos
+    eixos incluem explicitamente todos os pixels. Isso evita que o backend do
+    notebook ou ``bbox_inches='tight'`` remova parte da imagem.
+    """
+    output = Path(output_path)
+    output.parent.mkdir(parents=True, exist_ok=True)
+
+    fig, _ = _create_volume_slice_figure(
+        image_volume,
+        slice_index,
+        axis=axis,
+        cmap=cmap,
+        vmin=vmin,
+        vmax=vmax,
+        origin=origin,
+        dpi=dpi,
+        figure_width=figure_width,
+        padding_fraction=padding_fraction,
+        output_size_px=output_size_px,
+    )
     fig.savefig(output, dpi=dpi, pad_inches=0, facecolor="black")
     plt.close(fig)
     return output

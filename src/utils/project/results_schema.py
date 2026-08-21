@@ -30,6 +30,7 @@ RESULT_COLUMNS: list[str] = [
     "threshold_voxels",
     "lcc_voxels",
     "image_slice_count",
+    "image_voxels",
     "aorta_circle_count",
     "aorta_detected_circle_count",
     "aorta_interpolated_circle_count",
@@ -38,6 +39,7 @@ RESULT_COLUMNS: list[str] = [
     "aorta_circle_coverage",
     "aorta_recovered_initialization",
     "aorta_mask_voxels",
+    "aorta_volume_fraction",
     "ostia_found",
     "ostia_status",
     "segmentation_attempted",
@@ -78,6 +80,7 @@ READABLE_COLUMN_NAMES: dict[str, str] = {
     "threshold_voxels": "threshold_voxel_count",
     "lcc_voxels": "lcc_voxel_count",
     "image_slice_count": "image_slice_count",
+    "image_voxels": "image_voxel_count",
     "aorta_circle_count": "aorta_circle_count",
     "aorta_detected_circle_count": "aorta_detected_circle_count",
     "aorta_interpolated_circle_count": "aorta_interpolated_circle_count",
@@ -86,6 +89,7 @@ READABLE_COLUMN_NAMES: dict[str, str] = {
     "aorta_circle_coverage": "aorta_circle_coverage",
     "aorta_recovered_initialization": "aorta_recovered_initialization",
     "aorta_mask_voxels": "aorta_mask_voxel_count",
+    "aorta_volume_fraction": "aorta_volume_fraction",
     "ostia_found": "ostia_detected",
     "ostia_status": "ostia_detection_status",
     "segmentation_attempted": "artery_segmentation_run",
@@ -308,6 +312,7 @@ def build_result_row(result: dict[str, Any]) -> dict[str, Any]:
         "threshold_voxels": _get_result_value(result, "threshold_voxels"),
         "lcc_voxels": _get_result_value(result, "lcc_voxels"),
         "image_slice_count": _get_result_value(result, "image_slice_count"),
+        "image_voxels": _get_result_value(result, "image_voxels"),
         "aorta_circle_count": _get_result_value(result, "aorta_circle_count"),
         "aorta_detected_circle_count": _get_result_value(
             result, "aorta_detected_circle_count"
@@ -324,6 +329,9 @@ def build_result_row(result: dict[str, Any]) -> dict[str, Any]:
             _get_result_value(result, "aorta_recovered_initialization", False)
         ),
         "aorta_mask_voxels": _get_result_value(result, "aorta_mask_voxels"),
+        "aorta_volume_fraction": _get_result_value(
+            result, "aorta_volume_fraction"
+        ),
         # Resultado da localização e validação dos óstios.
         "ostia_found": _as_bool_value(_get_result_value(result, "ostia_found", False)),
         "ostia_status": _get_result_value(result, "ostia_status"),

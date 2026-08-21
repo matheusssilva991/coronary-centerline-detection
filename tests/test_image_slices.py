@@ -7,12 +7,31 @@ from unittest.mock import patch
 import matplotlib.image as mpimg
 import numpy as np
 
-from utils.visualization.image_slices import save_volume_slice_figure
+from utils.visualization.image_slices import (
+    plot_volume_slice,
+    save_volume_slice_figure,
+)
 from utils.visualization.preprocessing_views import plot_preprocessing_grid
 from utils.visualization.vesselness import plot_vesselness_mip_grid
 
 
 class SaveVolumeSliceFigureTest(TestCase):
+    def test_plot_volume_slice_returns_the_complete_selected_slice(self):
+        volume = np.arange(6 * 4 * 3, dtype=np.float32).reshape(6, 4, 3)
+
+        fig, ax = plot_volume_slice(
+            volume,
+            1,
+            padding_fraction=0.1,
+            show=False,
+        )
+        rendered = np.asarray(ax.images[0].get_array())
+
+        np.testing.assert_array_equal(rendered, volume[:, :, 1])
+        self.assertLess(ax.get_xlim()[0], -0.5)
+        self.assertGreater(ax.get_xlim()[1], volume.shape[1] - 0.5)
+        fig.clear()
+
     def test_preserves_slice_aspect_ratio_without_cropping(self):
         volume = np.arange(20 * 10 * 3, dtype=np.float32).reshape(20, 10, 3)
 

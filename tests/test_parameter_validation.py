@@ -1,23 +1,120 @@
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
+import numpy as np
 import pandas as pd
 
 from utils.experiments.parameter_validation import (
+    build_mean_intensity_histogram,
+    build_normalized_intensity_histograms,
     build_parameter_pairwise_summary,
     build_parameter_sensitivity_summary,
     build_threshold_performance_data,
+    compute_intensity_histogram_analysis,
     image_load_cache_key,
     parameter_validation_variants,
     prepared_context_cache_key,
+    resolution_scaling_variants,
     select_parameter_validation_cases,
     select_top_threshold_cases,
+    summarize_intensity_histograms,
     summarize_top_threshold_cases,
     validate_parameter_validation_append,
+)
+from utils.project.config import (
+    RESOLUTION_SCALING_GROUPS,
+    load_config_json,
+    scale_config_to_resolution,
 )
 
 
 class ParameterValidationTests(unittest.TestCase):
+    def test_builds_mean_histogram_on_common_probability_grid(self) -> None:
+        histogram_bins = pd.DataFrame(
+            {
+                "IMG_ID": [1, 1, 2, 2],
+                "histogram": ["full"] * 4,
+                "bin_left_hu": [0.0, 1.0, 0.0, 2.0],
+                "bin_right_hu": [1.0, 2.0, 2.0, 4.0],
+                "count": [1, 1, 2, 2],
+            }
+        )
+
+        mean_histogram = build_mean_intensity_histogram(
+            histogram_bins,
+            histogram_name="full",
+            bins=4,
+        )
+
+        self.assertEqual(len(mean_histogram), 4)
+        self.assertEqual(int(mean_histogram["images"].iloc[0]), 2)
+        self.assertAlmostEqual(mean_histogram["mean_probability"].sum(), 1.0)
+        self.assertTrue((mean_histogram["std_probability"] >= 0).all())
+
+        profiles = build_normalized_intensity_histograms(
+            histogram_bins,
+            histogram_name="full",
+            bins=4,
+        )
+        probability_by_image = profiles.groupby("IMG_ID")["probability"].sum()
+        self.assertEqual(profiles.groupby("IMG_ID")["bin_center_hu"].nunique().nunique(), 1)
+        self.assertTrue(np.allclose(probability_by_image, 1.0))
+
+    def test_summarizes_full_and_dense_intensity_histograms(self) -> None:
+        values = np.array(
+            [-1000.0, -500.0, 0.0, 300.0, 301.0, 500.0, 1000.0, np.nan]
+        )
+
+        summary, histogram = summarize_intensity_histograms(
+            values,
+            image_id=42,
+            dense_min_hu=300.0,
+            bins=4,
+        )
+
+        self.assertEqual(summary["IMG_ID"], 42)
+        self.assertEqual(summary["full_voxel_count"], 7)
+        self.assertAlmostEqual(summary["full_median_hu"], 300.0)
+        self.assertAlmostEqual(summary["full_max_hu"], 1000.0)
+        self.assertEqual(summary["above_300_voxel_count"], 3)
+        self.assertAlmostEqual(
+            summary["above_300_mean_hu"], 1801.0 / 3.0, places=4
+        )
+        self.assertAlmostEqual(summary["above_300_median_hu"], 500.0)
+        self.assertAlmostEqual(summary["above_300_max_hu"], 1000.0)
+        self.assertAlmostEqual(summary["above_300_voxel_percent"], 300.0 / 7.0)
+        self.assertEqual(histogram.groupby("histogram")["count"].sum()["full"], 7)
+        self.assertEqual(
+            histogram.groupby("histogram")["count"].sum()["above_300_hu"], 3
+        )
+
+    def test_rejects_invalid_histogram_progress_interval(self) -> None:
+        with self.assertRaisesRegex(ValueError, "progress_every"):
+            compute_intensity_histogram_analysis(
+                [1],
+                "/unused",
+                {},
+                progress_every=0,
+            )
+
+    def test_computes_percentiles_with_the_histogram_pass(self) -> None:
+        values = np.array([0.0, 10.0, 20.0, 30.0], dtype=np.float32)
+        with patch(
+            "utils.experiments.parameter_validation.load_downscaled_intensity_values",
+            return_value=values,
+        ):
+            summary, _ = compute_intensity_histogram_analysis(
+                [7],
+                "/unused",
+                {},
+                bins=2,
+                percentiles=(50.0, 75.0),
+            )
+
+        self.assertAlmostEqual(float(summary.loc[0, "p500_hu"]), 15.0)
+        self.assertAlmostEqual(float(summary.loc[0, "p750_hu"]), 22.5)
+
     def test_builds_top_threshold_analysis(self) -> None:
         results = pd.DataFrame(
             {
@@ -199,6 +296,78 @@ class ParameterValidationTests(unittest.TestCase):
         self.assertEqual(
             lower_region_variant["overrides"]["OSTIA_DETECTION.max_z_diff_mm"],
             40.0,
+        )
+
+    def test_resolution_scaling_groups_can_be_isolated(self) -> None:
+        config = load_config_json("config/article_cbeb_sensitivity.json", {})
+        config["DOWNSCALE_FACTORS"] = [1, 1, 1]
+
+        fully_scaled = scale_config_to_resolution(config)
+        without_surface = scale_config_to_resolution(
+            config,
+            enabled_groups=RESOLUTION_SCALING_GROUPS.difference(
+                {"ostia_surface"}
+            ),
+        )
+        without_candidates = scale_config_to_resolution(
+            config,
+            enabled_groups=RESOLUTION_SCALING_GROUPS.difference(
+                {"ostia_candidates"}
+            ),
+        )
+
+        self.assertEqual(fully_scaled["OSTIA_DETECTION"]["erosion_radius"], 8)
+        self.assertEqual(without_surface["OSTIA_DETECTION"]["erosion_radius"], 4)
+        self.assertEqual(fully_scaled["OSTIA_DETECTION"]["top_n"], 8000)
+        self.assertEqual(without_candidates["OSTIA_DETECTION"]["top_n"], 2000)
+        self.assertEqual(fully_scaled["CIRCLE_DETECTION"]["radii_start_px"], 36)
+
+    def test_resolution_scaling_rejects_unknown_group(self) -> None:
+        config = load_config_json("config/article_cbeb_sensitivity.json", {})
+        config["DOWNSCALE_FACTORS"] = [1, 1, 1]
+
+        with self.assertRaisesRegex(ValueError, "grupo_inexistente"):
+            scale_config_to_resolution(
+                config,
+                enabled_groups={"grupo_inexistente"},
+            )
+
+    def test_resolution_scaling_variants_are_explicit(self) -> None:
+        variants = resolution_scaling_variants()
+        names = [item["name"] for item in variants]
+
+        self.assertEqual(names[0], "all_scaled")
+        self.assertEqual(len(names), len(set(names)))
+        self.assertIn("circle_geometry_unscaled", names)
+        self.assertIn("morphology_radii_unscaled", names)
+        self.assertTrue(
+            all("disabled_scaling_groups" in item for item in variants)
+        )
+        canny_variant = next(
+            item for item in variants if item["name"] == "canny_sigma_mid"
+        )
+        self.assertEqual(
+            canny_variant["post_scale_overrides"],
+            {"CIRCLE_DETECTION.canny_sigma": 3.0},
+        )
+        level_set_variant = next(
+            item for item in variants if item["name"] == "level_set_iterations_50"
+        )
+        self.assertEqual(
+            level_set_variant["post_scale_overrides"],
+            {"LEVEL_SET.num_iter": 50},
+        )
+        combined_variant = next(
+            item
+            for item in variants
+            if item["name"] == "canny_sigma_4_level_set_50"
+        )
+        self.assertEqual(
+            combined_variant["post_scale_overrides"],
+            {
+                "CIRCLE_DETECTION.canny_sigma": 4.0,
+                "LEVEL_SET.num_iter": 50,
+            },
         )
 
     def test_selects_distinct_qualitative_cases_when_available(self) -> None:

@@ -37,9 +37,10 @@ export IMAGECAS_BASE_PATH=/caminho/para/ImageCAS/1-1000
 | [split_resolution_analysis.ipynb](split_resolution_analysis.ipynb) | Comparar train/val/test entre mid e high | Resultados canônicos | Tabelas e gráficos exibidos | Baixo |
 | [ia_vs_pipeline_analysis.ipynb](ia_vs_pipeline_analysis.ipynb) | Comparar IA e pipeline somente nos IDs comuns | `output/ia_results` e resultados canônicos | Tabelas e gráficos exibidos | Baixo |
 | [bad_cases_results_analysis.ipynb](bad_cases_results_analysis.ipynb) | Quantificar casos ruins em mid e high | Summaries canônicos | `analysis/bad_cases/` | Baixo |
-| [threshold_pipeline_comparison_analysis.ipynb](threshold_pipeline_comparison_analysis.ipynb) | Resumir threshold normal/fuzzy e RG/FC; comparar a melhor variante com o baseline | Runs de comparação | Tabelas e gráficos pareados no notebook | Baixo |
+| [segmentation_method_comparison.ipynb](segmentation_method_comparison.ipynb) | Resumir threshold normal/fuzzy e RG/FC; comparar a melhor variante com o baseline | Runs de comparação | Tabelas e gráficos pareados no notebook | Baixo |
 | [aorta_circle_slice_analysis.ipynb](aorta_circle_slice_analysis.ipynb) | Relacionar fatias e círculos detectados | Summary com métricas da aorta | `analysis/aorta_circle_slices/` | Baixo |
-| [pipeline_parameter_validation_eda.ipynb](pipeline_parameter_validation_eda.ipynb) | Análise OFAT quantitativa: sucesso dos óstios, Dice e thresholds no split `val` | Run de `pipeline_parameter_validation.py` | Tabelas e gráficos no notebook; somente o run compacto é persistido | Baixo; moderado ao recalcular thresholds em HU |
+| [pipeline_sensitivity_analysis.ipynb](pipeline_sensitivity_analysis.ipynb) | Análise OFAT: Dice, sucesso dos óstios, efeitos relativos e amplitude por parâmetro no split `val` | Runs de `pipeline_parameter_validation.py` | Tabelas e gráficos exibidos no notebook | Baixo |
+| [upper_threshold_analysis.ipynb](upper_threshold_analysis.ipynb) | Comparar P99.9, P99.7 e P99.5; investigar thresholds HU e histogramas de quatro casos representativos | Mesmos runs de validação e, opcionalmente, volumes ImageCAS | Tabelas e gráficos exibidos no notebook | Baixo; moderado ao carregar intensidades |
 
 ### Análises qualitativas
 

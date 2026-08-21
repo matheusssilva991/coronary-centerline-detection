@@ -48,10 +48,16 @@ output/segmentation/runs/mid_res/circle_detection_gpu_diff/<timestamp>/
 output/segmentation/runs/mid_res/article_p99_9/<split>/<timestamp>/
 output/segmentation/runs/mid_res/current_baseline/<split>/<timestamp>/
 output/segmentation/runs/mid_res/fuzzy_comparison/<split>/<variant>/<timestamp>/
+output/segmentation/runs/high_res/legacy_low_ostia_accuracy/<percentil>/<split>/<timestamp>/
 ```
 
 Use esses agrupamentos quando quiser comparar muitas execucoes do mesmo tipo sem
 misturar tudo na raiz de `mid_res/`.
+
+Os runs históricos de high resolution que variam P99.7, P99.8 e P99.9, mas
+apresentaram baixa acurácia dos óstios, estão indexados em
+`runs/high_res/legacy_low_ostia_accuracy/run_index.csv`. Eles devem ser usados
+somente como referência anterior às correções de escala e localização.
 
 ### Estrutura de uma run
 
@@ -109,6 +115,15 @@ Os CSVs novos também registram o efeito do pós-processamento arterial:
 
 `artery_dice` e `artery_voxel_count` continuam representando o resultado após
 a morfologia para manter compatibilidade com análises anteriores.
+
+Cada imagem também registra a ocupação da máscara da aorta:
+
+- `image_voxel_count`: total de voxels do volume completo após o downsampling;
+- `aorta_mask_voxel_count`: quantidade de voxels da máscara da aorta;
+- `aorta_volume_fraction`: razão entre os voxels da aorta e o volume processado.
+
+Essa fração usa a resolução efetiva do run. Ela não compara diretamente a
+máscara reduzida com o tamanho do NIfTI original.
 
 ```text
 numeric/
@@ -403,7 +418,7 @@ execucao, junto com os parametros efetivos.
 - Resultado oficial:
   `canonical/<resolucao>_res/<split>/<timestamp>/numeric/`
 - Comparacao atual de threshold/RG/FC:
-  `src/eda/threshold_pipeline_comparison_analysis.ipynb`
+  `src/eda/segmentation_method_comparison.ipynb`
 - Historico dos experimentos removidos:
   `analysis/EXPERIMENTS_ARCHIVE.md`
 - Métricas históricas da confirmação de aorta/óstios:

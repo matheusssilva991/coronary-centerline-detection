@@ -75,6 +75,13 @@ def plot_comparison_bar_by_resolution(
     agg: pd.DataFrame, resolution: str, comparison_title: Optional[str] = None
 ) -> None:
     """Plota comparação de Dice por método para uma resolução alvo."""
+    if agg.empty or "target_resolution" not in agg.columns:
+        plt.figure(figsize=(10, 5))
+        plt.text(0.5, 0.5, f"Sem dados para {resolution}", ha="center", va="center")
+        plt.axis("off")
+        plt.show()
+        return
+
     # Filtra somente a resolução solicitada.
     subset = agg[agg["target_resolution"] == resolution].copy()
     if subset.empty:

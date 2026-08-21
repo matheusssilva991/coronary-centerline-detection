@@ -14,9 +14,10 @@ O catálogo dos notebooks que produzem estas análises está em
 - `bad_cases/`: catálogo compacto de casos ruins usado pelas EDAs qualitativas.
 - `pipeline_failure_analysis/`: catálogo e coorte focada de validação usada
   pelo runner de correções.
-- `pipeline_parameter_validation/`: análise OFAT de sensibilidade dos parâmetros
-  do artigo. Em `runs/`, somente execuções cuja referência foi conferida contra
-  um run histórico equivalente devem ser mantidas.
+- `pipeline_parameter_validation/`: resultados compactos usados tanto pela
+  análise OFAT de sensibilidade quanto pela investigação dos thresholds
+  adaptativos. Em `runs/`, somente execuções cuja referência foi conferida
+  contra um run histórico equivalente devem ser mantidas.
 - `hybrid_resolution_pipeline/`: resultados compactos do experimento que
   localiza os óstios em mid resolution e segmenta as artérias em high
   resolution. O sweep recomendado compara morfologia, critérios do RG e sigmas

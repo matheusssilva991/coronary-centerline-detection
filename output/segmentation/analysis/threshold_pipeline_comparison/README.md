@@ -1,6 +1,6 @@
 # Comparacao threshold/RG/FC
 
-Saidas geradas por `src/eda/threshold_pipeline_comparison_analysis.ipynb`.
+Saidas geradas por `src/eda/segmentation_method_comparison.ipynb`.
 
 ## Pastas
 

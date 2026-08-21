@@ -15,11 +15,13 @@ ficam em `output/segmentation/analysis/`.
 - `pipeline_failure_analysis.py`: seleciona, a partir dos quatro runs de
   validação, uma coorte focada de falhas e controles para testar correções.
 - `pipeline_parameter_validation.py`: executa a análise OFAT de sensibilidade
-  solicitada para o artigo. Compara configurações controladas no split de validação e
-  mede sucesso dos óstios e Dice. A referência congelada em
+  do artigo ou o diagnóstico dos grupos escalados para high resolution. Compara
+  configurações controladas no split de validação e mede sucesso dos óstios e
+  Dice. A referência congelada em
   `config/article_cbeb_sensitivity.json` usa P99.9 como referência do artigo do
-  CBEB. Seus resultados alimentam o notebook
-  `src/eda/pipeline_parameter_validation_eda.ipynb`.
+  CBEB. Seus resultados alimentam a análise OFAT em
+  `src/eda/pipeline_sensitivity_analysis.ipynb` e a investigação específica
+  dos percentis em `src/eda/upper_threshold_analysis.ipynb`.
 - `hybrid_resolution_pipeline.py`: localiza a aorta e os óstios em mid
   resolution, reescala as coordenadas `(y, x, z)` e executa somente o
   pré-processamento e a segmentação arterial em high resolution. Salva o
@@ -70,6 +72,95 @@ uv run python src/experiments/pipeline_parameter_validation.py \
   --resolution mid \
   --gpu
 ```
+
+Para diagnosticar somente a localização dos óstios em high resolution, sem
+calcular vesselness arterial, RG/FC ou pós-processamento, execute primeiro uma
+triagem curta:
+
+```bash
+uv run python src/experiments/pipeline_parameter_validation.py \
+  --study resolution_scaling \
+  --ostia-only \
+  --split val \
+  --sample-size 12 \
+  --resolution high \
+  --config-path config/article_cbeb_sensitivity.json \
+  --run-name high_res_scaling_ostia_val12 \
+  --gpu
+```
+
+O estudo mantém os raios da Hough escalados na referência e desativa um grupo
+por variante: geometria dos círculos, rastreamento auxiliar, iterações e
+morfologia do level set, erosão da superfície e quantidade de candidatos. A
+variante combinada `morphology_radii_unscaled` mantém nos valores mid-res os
+dois raios morfológicos 3D mais sensíveis à anisotropia entre XY e Z. Depois da
+triagem, repita somente `all_scaled` e as duas melhores variantes em 60 imagens
+usando `--variants` e outro `--run-name`.
+
+Depois da triagem inicial, a rodada abaixo concentra a análise em falhas de
+óstios da validação high-res e em controles próximos do limite de 7 mm. Ela
+isola os três parâmetros do rastreamento que antes eram alterados em conjunto e
+testa um número intermediário de iterações do level set. Os IDs explícitos são
+validados contra o split informado para evitar vazamento do conjunto de teste.
+
+```bash
+uv run python src/experiments/pipeline_parameter_validation.py \
+  --study resolution_scaling \
+  --ostia-only \
+  --split val \
+  --ids 180,269,293,961,188,960,753,209,340,556,470,450,150,755,557,539,9,464,296,122,190,460,978,325 \
+  --resolution high \
+  --config-path config/article_cbeb_sensitivity.json \
+  --variants all_scaled,canny_sigma_mid,neighbor_distance_mid,local_roi_padding_mid,level_set_iterations_50 \
+  --run-name high_res_scaling_ostia_failures_val24 \
+  --gpu
+```
+
+Os primeiros 20 exames representam falhas unilaterais ou bilaterais em high
+resolution que tiveram sucesso na referência mid-res. Os quatro últimos são
+controles high-res próximos do limite de tolerância. Variantes sem mudança na
+triagem de 12 imagens ficam fora desta rodada, mas continuam disponíveis para
+reprodutibilidade.
+
+Após concluir essa rodada, acrescente os refinamentos de Canny e level set ao
+mesmo diretório. `--append` ignora as variantes já completas e preserva os
+resultados anteriores:
+
+```bash
+uv run python src/experiments/pipeline_parameter_validation.py \
+  --study resolution_scaling \
+  --ostia-only \
+  --split val \
+  --ids 180,269,293,961,188,960,753,209,340,556,470,450,150,755,557,539,9,464,296,122,190,460,978,325 \
+  --resolution high \
+  --config-path config/article_cbeb_sensitivity.json \
+  --variants canny_sigma_4,canny_sigma_5,level_set_iterations_60,canny_sigma_3_level_set_50,canny_sigma_4_level_set_50,canny_sigma_5_level_set_50,roi_padding_40_level_set_50 \
+  --run-name high_res_scaling_ostia_failures_val24 \
+  --append \
+  --gpu
+```
+
+Depois de selecionar a configuração vencedora na coorte difícil, execute apenas
+ela nas 270 imagens de validação:
+
+```bash
+uv run python src/experiments/pipeline_parameter_validation.py \
+  --study resolution_scaling \
+  --split val \
+  --sample-size 270 \
+  --resolution high \
+  --config-path config/article_cbeb_sensitivity.json \
+  --variants canny_sigma_3_level_set_50 \
+  --run-name high_res_canny3_ls50_full_val270 \
+  --gpu
+```
+
+O baseline não precisa ser recalculado: nas 24 imagens pareadas, `all_scaled`
+reproduziu exatamente Dice, distâncias dos óstios e volume da aorta do run
+P99.9 já concluído em
+`output/segmentation/runs/high_res/legacy_low_ostia_accuracy/p99_9/val/2026-08-11_13-31-45`.
+Quando a execução for interrompida, repita o mesmo comando com `--append`; os
+pares já salvos em `results/image_results.csv` serão ignorados.
 
 Para fazer a triagem pareada das cinco variantes híbridas em cinco imagens:
 

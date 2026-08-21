@@ -1,7 +1,7 @@
-"""Executa a análise OFAT de sensibilidade descrita no artigo.
+"""Executa análises OFAT de sensibilidade e escala por resolução.
 
-O teste preserva threshold normal e region growing. A referência usa os valores
-centrais declarados no estudo e cada variante altera um único parâmetro.
+O estudo padrão preserva a análise do artigo. ``resolution_scaling`` isola os
+grupos aplicados por ``scale_config_to_resolution`` para diagnosticar high-res.
 """
 
 from __future__ import annotations
@@ -26,6 +26,7 @@ from utils.experiments import (  # noqa: E402
     image_load_cache_key,
     parameter_validation_variants,
     prepared_context_cache_key,
+    resolution_scaling_variants,
     validate_parameter_validation_append,
 )
 from utils.experiments.fuzzy_pipeline_comparison import (  # noqa: E402
@@ -48,6 +49,7 @@ from utils.experiments.sweep_common import (  # noqa: E402
     write_json,
 )
 from utils.project.config import (  # noqa: E402
+    RESOLUTION_SCALING_GROUPS,
     apply_aorta_ostia_method,
     scale_config_to_resolution,
 )
@@ -64,8 +66,19 @@ def build_parser() -> argparse.ArgumentParser:
     """Cria a CLI do experimento."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--split", choices=["train", "val"], default="val")
+    parser.add_argument(
+        "--study",
+        choices=["article_sensitivity", "resolution_scaling"],
+        default="article_sensitivity",
+        help="Família de variantes executada pelo experimento.",
+    )
     parser.add_argument("--sample-size", type=int, default=30)
     parser.add_argument("--start-index", type=int, default=0)
+    parser.add_argument(
+        "--ids",
+        default=None,
+        help="IMG_IDs separados por vírgula; quando informado, ignora a amostragem.",
+    )
     parser.add_argument("--resolution", choices=["mid", "high"], default="mid")
     parser.add_argument("--config-path", type=Path, default=DEFAULT_CONFIG_PATH)
     parser.add_argument("--output-root", type=Path, default=DEFAULT_OUTPUT_ROOT)
@@ -88,6 +101,11 @@ def build_parser() -> argparse.ArgumentParser:
             "já concluídos e validando a compatibilidade da execução."
         ),
     )
+    parser.add_argument(
+        "--ostia-only",
+        action="store_true",
+        help="Interrompe após avaliar os óstios, sem vesselness arterial ou RG/FC.",
+    )
     gpu_group = parser.add_mutually_exclusive_group()
     gpu_group.add_argument("--gpu", dest="use_gpu", action="store_true", default=None)
     gpu_group.add_argument("--no-gpu", dest="use_gpu", action="store_false")
@@ -95,9 +113,13 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def select_variants(names: str | None) -> list[dict]:
+def select_variants(names: str | None, study: str) -> list[dict]:
     """Seleciona variantes mantendo a ordem declarada."""
-    variants = parameter_validation_variants()
+    variants = (
+        resolution_scaling_variants()
+        if study == "resolution_scaling"
+        else parameter_validation_variants()
+    )
     if not names:
         return variants
     requested = [item.strip() for item in names.split(",") if item.strip()]
@@ -131,6 +153,8 @@ def _zero_failed_dice(row: dict) -> None:
 def _prepare_variant_specs(
     variants: list[dict],
     base_config: dict,
+    *,
+    ostia_only: bool = False,
 ) -> tuple[list[dict], list[dict]]:
     """Materializa configs, parâmetros e chaves de reaproveitamento."""
     specs: list[dict] = []
@@ -139,14 +163,23 @@ def _prepare_variant_specs(
         variant_name = current_variant["name"]
         overrides = current_variant["overrides"]
         config_overrides, experiment = split_overrides(overrides)
+        if ostia_only:
+            experiment["ostia_only"] = True
+        disabled_groups = set(current_variant.get("disabled_scaling_groups", []))
+        enabled_groups = RESOLUTION_SCALING_GROUPS.difference(disabled_groups)
         config = scale_config_to_resolution(
-            apply_overrides(base_config, config_overrides)
+            apply_overrides(base_config, config_overrides),
+            enabled_groups=enabled_groups,
         )
+        post_scale_overrides = current_variant.get("post_scale_overrides", {})
+        config = apply_overrides(config, post_scale_overrides)
         parameters = parameter_row(variant_name, overrides, config, experiment)
         parameters.update(
             {
                 "parameter_group": current_variant["parameter_group"],
                 "description": current_variant["description"],
+                "disabled_scaling_groups": sorted(disabled_groups),
+                "post_scale_overrides": post_scale_overrides,
             }
         )
         parameter_rows.append(parameters)
@@ -155,6 +188,8 @@ def _prepare_variant_specs(
                 **current_variant,
                 "config": config,
                 "experiment": experiment,
+                "disabled_scaling_groups": sorted(disabled_groups),
+                "post_scale_overrides": post_scale_overrides,
                 "load_key": image_load_cache_key(config),
                 "context_key": prepared_context_cache_key(config, experiment),
             }
@@ -219,10 +254,20 @@ def main() -> None:
         args.split,
         args.sample_size,
         args.start_index,
-        None,
+        args.ids,
         base_path,
     )
-    requested_variants = select_variants(args.variants)
+    if len(image_ids) != len(set(image_ids)):
+        raise ValueError("--ids não pode conter IMG_IDs repetidos.")
+    if args.ids:
+        split_ids = set(select_ids(args.split, 10_000, 0, None, base_path))
+        invalid_ids = sorted(set(image_ids).difference(split_ids))
+        if invalid_ids:
+            raise ValueError(
+                f"IDs fora do split {args.split!r}: {invalid_ids}. "
+                "A seleção de parâmetros deve permanecer no split solicitado."
+            )
+    requested_variants = select_variants(args.variants, args.study)
 
     summaries: list[dict] = []
     image_rows: list[dict] = []
@@ -232,6 +277,10 @@ def main() -> None:
     resumed_runtime_by_variant: dict[str, float] = {}
     if args.append:
         existing_config = load_json_file(run_config_path)
+        if existing_config.get("study", "article_sensitivity") != args.study:
+            raise ValueError("--append requer o mesmo --study do run existente.")
+        if bool(existing_config.get("ostia_only", False)) != args.ostia_only:
+            raise ValueError("--append requer o mesmo modo --ostia-only.")
         validate_parameter_validation_append(
             existing_config,
             split=args.split,
@@ -284,9 +333,12 @@ def main() -> None:
     write_json(
         run_config_path,
         {
+            "study": args.study,
+            "ostia_only": args.ostia_only,
             "split": args.split,
             "sample_size": args.sample_size,
             "start_index": args.start_index,
+            "ids_argument": args.ids,
             "ids": image_ids,
             "resolution": args.resolution,
             "aorta_ostia_method": args.aorta_ostia_method,
@@ -312,7 +364,11 @@ def main() -> None:
         print("Nenhuma variante pendente para processar.")
         return
 
-    specs, new_parameter_rows = _prepare_variant_specs(variants, base_config)
+    specs, new_parameter_rows = _prepare_variant_specs(
+        variants,
+        base_config,
+        ostia_only=args.ostia_only,
+    )
     existing_parameter_names = {
         str(row.get("variant")) for row in parameter_rows if row.get("variant")
     }
