@@ -38,6 +38,8 @@ class ResultAliasTests(unittest.TestCase):
                     "IMG_ID": 1,
                     "image_voxels": 1_000,
                     "aorta_mask_voxels": 125,
+                    "aorta_segmented_slice_count": 5,
+                    "aorta_voxels_per_segmented_slice": 25.0,
                     "aorta_volume_fraction": 0.125,
                 }
             ]
@@ -47,6 +49,8 @@ class ResultAliasTests(unittest.TestCase):
 
         self.assertEqual(readable.loc[0, "image_voxel_count"], 1_000)
         self.assertEqual(readable.loc[0, "aorta_mask_voxel_count"], 125)
+        self.assertEqual(readable.loc[0, "aorta_segmented_slice_count"], 5)
+        self.assertEqual(readable.loc[0, "aorta_voxels_per_segmented_slice"], 25.0)
         self.assertEqual(readable.loc[0, "aorta_volume_fraction"], 0.125)
 
 

@@ -141,7 +141,18 @@ class PipelineSimplificationTests(TestCase):
             8,
         )
         self.assertEqual(aorta_volume["aorta_mask_voxels"], 3)
+        self.assertEqual(aorta_volume["aorta_segmented_slice_count"], 1)
+        self.assertEqual(aorta_volume["aorta_voxels_per_segmented_slice"], 3.0)
         self.assertEqual(aorta_volume["aorta_volume_fraction"], 3 / 8)
+
+        empty_aorta_volume = summarize_aorta_volume(
+            np.zeros((2, 2, 2), dtype=np.uint8),
+            8,
+        )
+        self.assertEqual(empty_aorta_volume["aorta_segmented_slice_count"], 0)
+        self.assertIsNone(
+            empty_aorta_volume["aorta_voxels_per_segmented_slice"]
+        )
 
         circles = _circle_result_fields(
             [

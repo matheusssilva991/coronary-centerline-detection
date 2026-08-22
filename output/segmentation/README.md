@@ -120,6 +120,8 @@ Cada imagem também registra a ocupação da máscara da aorta:
 
 - `image_voxel_count`: total de voxels do volume completo após o downsampling;
 - `aorta_mask_voxel_count`: quantidade de voxels da máscara da aorta;
+- `aorta_segmented_slice_count`: quantidade de fatias ocupadas pela máscara da aorta;
+- `aorta_voxels_per_segmented_slice`: média de voxels da aorta por fatia ocupada;
 - `aorta_volume_fraction`: razão entre os voxels da aorta e o volume processado.
 
 Essa fração usa a resolução efetiva do run. Ela não compara diretamente a
@@ -161,6 +163,17 @@ tempo total conhecido por lote e tempo apenas da execucao atual.
 
 Reservado para HTMLs, PNGs ou outros exemplos visuais ligados diretamente a uma
 run. O pipeline nao cria essa pasta quando nao ha nada visual para salvar.
+
+Use `--save-segmentation-visuals` para gerar um HTML 3D interativo por imagem.
+Cada arquivo reúne a máscara da aorta, os óstios detectados, a artéria predita e
+a artéria de referência, sendo salvo como:
+
+```text
+visual/{split}/img_{IMG_ID}_aorta_ostia_artery.html
+```
+
+A opção permanece desativada por padrão porque a extração das malhas aumenta o
+tempo de execução e o espaço ocupado pela run.
 
 Sugestao:
 

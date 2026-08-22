@@ -50,6 +50,9 @@ Exemplos de uso:
   # Sobrescrever apenas o percentil superior do threshold
   python segmentation_pipeline.py --split test --upper-threshold-percentile 99.9
 
+  # Salvar um HTML 3D por imagem com aorta, óstios e artérias
+  python segmentation_pipeline.py --split train --save-segmentation-visuals
+
   # PROCESSAMENTO EM LOTES (salvamento incremental):
     # Processar em 10 lotes (divide as imagens entre 10 blocos)
     python segmentation_pipeline.py --num-batches 10
@@ -84,7 +87,7 @@ Arquivos de saída:
   - config/effective_pipeline_config.json: Config efetiva usada no run
   - config/split_ids.json: IDs processados por split
   - logs/pipeline.log: Log da execução
-  - visual/: Exemplos visuais gerados por notebooks/scripts auxiliares
+  - visual/{split}/*.html: Visualizações 3D quando --save-segmentation-visuals for usado
 """
 
 
@@ -294,6 +297,14 @@ def build_parser(default_base_path, default_output_dir):
         "--verbose",
         action="store_true",
         help="Habilitar logging detalhado (DEBUG)",
+    )
+    parser.add_argument(
+        "--save-segmentation-visuals",
+        action="store_true",
+        help=(
+            "Salva um HTML 3D interativo por imagem com aorta, óstios, "
+            "artéria predita e ground truth."
+        ),
     )
     parser.add_argument(
         "--num-batches",

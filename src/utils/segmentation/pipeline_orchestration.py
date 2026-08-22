@@ -26,6 +26,7 @@ from .pipeline_detection import (
     segment_aorta,
 )
 from .pipeline_preprocessing import compute_vesselness, load_and_preprocess_image
+from .pipeline_visuals import save_segmentation_visual
 
 logger = logging.getLogger(__name__)
 
@@ -72,6 +73,8 @@ IMAGE_RESULT_DEFAULTS = {
     "aorta_circle_coverage": None,
     "aorta_recovered_initialization": False,
     "aorta_mask_voxels": None,
+    "aorta_segmented_slice_count": None,
+    "aorta_voxels_per_segmented_slice": None,
     "aorta_volume_fraction": None,
 }
 
@@ -133,10 +136,17 @@ def summarize_aorta_circles(detected_circles, image_slice_count):
 
 
 def summarize_aorta_volume(aorta_mask, image_voxel_count):
-    """Calcula a ocupação da aorta no volume processado completo."""
+    """Calcula a ocupação total e por fatia da máscara final da aorta."""
     aorta_mask_voxels = int(aorta_mask.sum())
+    segmented_slice_count = int(aorta_mask.any(axis=(0, 1)).sum())
     return {
         "aorta_mask_voxels": aorta_mask_voxels,
+        "aorta_segmented_slice_count": segmented_slice_count,
+        "aorta_voxels_per_segmented_slice": (
+            aorta_mask_voxels / segmented_slice_count
+            if segmented_slice_count
+            else None
+        ),
         "aorta_volume_fraction": (
             aorta_mask_voxels / image_voxel_count if image_voxel_count else None
         ),
@@ -184,7 +194,7 @@ def _ostia_result_fields(ostia_eval):
     }
 
 
-def process_image(img_id, config, base_path):
+def process_image(img_id, config, base_path, visual_output_dir=None):
     """Processa uma imagem completa e retorna o dicionário de resultados.
 
     Fluxo por imagem:
@@ -260,13 +270,22 @@ def process_image(img_id, config, base_path):
                 config,
                 detected_circles=detected_circles,
             )
-
-            del aorta_mask
         except ValueError as ostia_exc:
             result["ostia_status"] = "not_found"
             result["ostia_error"] = str(ostia_exc)
             result["skip_reason"] = "ostia_not_found"
             result["dice_artery"] = 0.0
+            if visual_output_dir is not None:
+                save_segmentation_visual(
+                    visual_output_dir,
+                    img_id,
+                    aorta_mask=aorta_mask,
+                    ostia_left=None,
+                    ostia_right=None,
+                    artery_mask=None,
+                    label_artery=(label == 1).astype("uint8"),
+                    spacing=scaled_spacing,
+                )
             return result
 
         result.update(_ostia_result_fields(ostia_eval))
@@ -280,6 +299,19 @@ def process_image(img_id, config, base_path):
             ostia_eval["ostia_right"],
             config,
         )
+        if visual_output_dir is not None:
+            save_segmentation_visual(
+                visual_output_dir,
+                img_id,
+                aorta_mask=aorta_mask,
+                ostia_left=ostia_eval["ostia_left"],
+                ostia_right=ostia_eval["ostia_right"],
+                artery_mask=artery_metrics.get("artery_mask"),
+                label_artery=ostia_eval["label_artery"],
+                spacing=scaled_spacing,
+            )
+
+        del aorta_mask
         artery_metrics.pop("artery_mask", None)
         artery_metrics.pop("raw_artery_mask", None)
         result.update(artery_metrics)
@@ -352,6 +384,7 @@ def _process_and_save_batch(
     config,
     base_path,
     output_dir,
+    visual_output_dir=None,
 ):
     """Processa um lote e persiste resultados e duração imediatamente."""
     batch_started_at = datetime.now().isoformat(timespec="seconds")
@@ -365,7 +398,7 @@ def _process_and_save_batch(
 
     # Processa todas as imagens antes de persistir o lote de forma atômica.
     batch_results = [
-        process_image(img_id, config, base_path)
+        process_image(img_id, config, base_path, visual_output_dir=visual_output_dir)
         for img_id in tqdm(
             batch_ids,
             desc=f"Lote {batch_number}/{num_batches}",
@@ -415,6 +448,7 @@ def run_pipeline(
     base_path,
     output_dir=None,
     resume_from_batch=0,
+    visual_output_dir=None,
 ):
     """Processa imagens em lotes com uma config runtime já escalada para a resolução."""
     start_time = time.time()
@@ -458,6 +492,7 @@ def run_pipeline(
             config,
             base_path,
             output_dir,
+            visual_output_dir,
         )
 
         all_results.extend(batch_results)

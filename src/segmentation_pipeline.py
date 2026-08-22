@@ -134,6 +134,9 @@ def _apply_execution_overrides(config, args):
     for config_key, value in direct_overrides.items():
         if value is not None:
             config[config_key] = value
+    config["SAVE_SEGMENTATION_VISUALS"] = bool(
+        getattr(args, "save_segmentation_visuals", False)
+    )
 
     nested_overrides = (
         ("ARTERY_SEGMENTATION", "method", args.artery_segmentation_method),
@@ -242,6 +245,10 @@ def print_run_settings(args, config, base_path):
         f"(p={lower_threshold_config.get('percentile', 'N/A')})"
     )
     print(f"📦 Processamento em {args.num_batches} lotes")
+    print(
+        "🖼️  Visualizações 3D: "
+        f"{'salvas' if config.get('SAVE_SEGMENTATION_VISUALS') else 'desativadas'}"
+    )
 
     if args.resume_batch > 0:
         print(f"🔄 Retomando a partir do lote {args.resume_batch}")
@@ -474,6 +481,7 @@ def run_processing_split(
     args,
     base_path,
     output_root_dir,
+    visual_dir=None,
 ):
     """Processa um split e salva CSV final + metadata."""
     summary = run_pipeline(
@@ -484,6 +492,11 @@ def run_processing_split(
         output_dir,
         resume_from_batch=args.resume_batches_by_split.get(
             split_name, args.resume_batch
+        ),
+        visual_output_dir=(
+            Path(visual_dir) / split_name
+            if config.get("SAVE_SEGMENTATION_VISUALS") and visual_dir is not None
+            else None
         ),
     )
     current_run_execution_time = summary.get("execution_time")
@@ -543,6 +556,7 @@ def run_requested_splits(
     config,
     base_path,
     output_root_dir,
+    visual_dir=None,
 ):
     """Executa ou consolida todos os splits solicitados."""
     for split_name, ids in splits_to_run:
@@ -568,6 +582,7 @@ def run_requested_splits(
                 args,
                 base_path,
                 output_root_dir,
+                visual_dir,
             )
 
 
@@ -600,6 +615,7 @@ def main():
         effective_config,
         base_path,
         output_root_dir,
+        output_dirs["visual_dir"],
     )
 
     print(f"\n{'=' * 60}")

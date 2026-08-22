@@ -3,3 +3,14 @@ uv run python src/segmentation_pipeline.py --split test --resolution high --conf
 uv run python src/segmentation_pipeline.py --split test --resolution high --config-file config/pipeline_config.json --num-batches 5 --gpu &&
 uv run python src/segmentation_pipeline.py --split test --resolution high --config-file config/article_cbeb_sensitivity.json --upper-threshold-percentile 99.9 --num-batches 5 --gpu
 '
+
+uv run python src/experiments/pipeline_parameter_validation.py \
+  --split val \
+  --study resolution_scaling \
+  --sample-size 270 \
+  --resolution high \
+  --config-path config/article_cbeb_sensitivity.json \
+  --run-name high_res_canny3_ls50_full_val270 \
+  --variants canny_sigma_3_level_set_50 \
+  --gpu \
+  --append

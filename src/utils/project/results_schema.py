@@ -39,6 +39,8 @@ RESULT_COLUMNS: list[str] = [
     "aorta_circle_coverage",
     "aorta_recovered_initialization",
     "aorta_mask_voxels",
+    "aorta_segmented_slice_count",
+    "aorta_voxels_per_segmented_slice",
     "aorta_volume_fraction",
     "ostia_found",
     "ostia_status",
@@ -89,6 +91,8 @@ READABLE_COLUMN_NAMES: dict[str, str] = {
     "aorta_circle_coverage": "aorta_circle_coverage",
     "aorta_recovered_initialization": "aorta_recovered_initialization",
     "aorta_mask_voxels": "aorta_mask_voxel_count",
+    "aorta_segmented_slice_count": "aorta_segmented_slice_count",
+    "aorta_voxels_per_segmented_slice": "aorta_voxels_per_segmented_slice",
     "aorta_volume_fraction": "aorta_volume_fraction",
     "ostia_found": "ostia_detected",
     "ostia_status": "ostia_detection_status",
@@ -329,6 +333,12 @@ def build_result_row(result: dict[str, Any]) -> dict[str, Any]:
             _get_result_value(result, "aorta_recovered_initialization", False)
         ),
         "aorta_mask_voxels": _get_result_value(result, "aorta_mask_voxels"),
+        "aorta_segmented_slice_count": _get_result_value(
+            result, "aorta_segmented_slice_count"
+        ),
+        "aorta_voxels_per_segmented_slice": _get_result_value(
+            result, "aorta_voxels_per_segmented_slice"
+        ),
         "aorta_volume_fraction": _get_result_value(
             result, "aorta_volume_fraction"
         ),
