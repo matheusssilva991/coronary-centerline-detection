@@ -29,5 +29,9 @@ output/segmentation/
 - Grupos nomeados, como `fuzzy_comparison/`, reúnem runs do mesmo experimento.
 - Resultados brutos pertencem a `runs/`; artefatos derivados pertencem a
   `analysis/`.
+- Os HTMLs 3D podem ser mantidos fora do repositório com
+  `--visual-output-dir /caminho/externo`; CSVs, configurações e logs continuam
+  dentro do run, enquanto a hierarquia da pasta `visual/` é espelhada na raiz
+  externa.
 
 Consulte primeiro o README da pasta de interesse antes de reutilizar um run.

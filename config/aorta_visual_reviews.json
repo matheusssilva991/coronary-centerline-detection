@@ -50,6 +50,80 @@
           "821": "aorta precisa ser segmentada um pouco mais"
         }
       }
+    },
+    "coverage_080": {
+      "train": {
+        "run_dir": "output/segmentation/runs/mid_res/aorta_segmentation_experiments/train/circle_filter_coverage_080/2026-08-24_14-10-36",
+        "aorta_good_ids": [13, 28, 90, 129, 194, 305, 315, 344, 380, 447, 518, 538, 550, 631, 676, 696, 793, 836, 854, 887, 937, 965],
+        "aorta_bad_ids": [44, 175, 330, 428, 603, 608, 752, 760],
+        "notes": {
+          "428": "subsegmentou um pouco e causou a perda de um dos ostios",
+          "760": "reduziu pouco o vazamento, mas a aorta continuou ruim"
+        }
+      },
+      "val": {
+        "run_dir": "output/segmentation/runs/mid_res/aorta_segmentation_experiments/val/circle_filter_coverage_080/2026-08-24_14-10-36",
+        "aorta_good_ids": [2, 6, 35, 89, 110, 116, 156, 187, 227, 294, 307, 308, 341, 384, 437, 449, 450, 468, 490, 507, 510, 513, 545, 552, 570, 614, 656, 672, 730, 737, 772, 776, 802, 805, 810, 813, 821, 832, 835, 870, 873, 881, 886, 907, 913, 961, 978],
+        "aorta_bad_ids": [11, 134, 184, 296, 444, 464, 597, 602, 705, 720, 790, 792, 838],
+        "notes": {
+          "384": "mascara um pouco mais modelada; a mudanca causou a perda de um dos ostios",
+          "437": "pequena adicao na mascara, sem influencia observavel",
+          "444": "vazamento permaneceu",
+          "602": "aorta permaneceu ruim",
+          "720": "vazamento permaneceu",
+          "790": "vazamento diminuiu, mas a aorta permaneceu ruim",
+          "838": "vazamento permaneceu"
+        }
+      }
+    },
+    "coverage_065_fallback": {
+      "train": {
+        "run_dir": "output/segmentation/runs/mid_res/aorta_segmentation_experiments/train/circle_filter_coverage_065_fallback/2026-08-24_14-54-43",
+        "aorta_good_ids": [13, 28, 90, 129, 194, 305, 315, 344, 380, 447, 518, 538, 550, 631, 676, 696, 793, 836, 854, 887, 937, 965],
+        "aorta_bad_ids": [44, 175, 330, 428, 603, 608, 752, 760],
+        "notes": {
+          "428": "subsegmentou um pouco e causou a perda de um dos ostios",
+          "760": "reduziu pouco o vazamento, mas a aorta continuou ruim"
+        }
+      },
+      "val": {
+        "run_dir": "output/segmentation/runs/mid_res/aorta_segmentation_experiments/val/circle_filter_coverage_065_fallback/2026-08-24_14-54-43",
+        "aorta_good_ids": [2, 6, 35, 89, 110, 116, 156, 187, 227, 294, 307, 308, 341, 384, 437, 449, 450, 468, 490, 507, 510, 513, 545, 552, 570, 614, 656, 672, 730, 737, 772, 776, 802, 805, 810, 813, 821, 832, 835, 870, 873, 881, 886, 907, 913, 961, 978],
+        "aorta_bad_ids": [11, 134, 184, 296, 444, 464, 597, 602, 705, 720, 790, 792, 838],
+        "notes": {
+          "11": "vazamento permaneceu apesar da grande reducao de volume",
+          "384": "mascara um pouco mais modelada; a mudanca causou a perda de um dos ostios",
+          "437": "pequena adicao na mascara, sem influencia observavel",
+          "444": "vazamento permaneceu",
+          "602": "aorta permaneceu ruim",
+          "720": "vazamento permaneceu",
+          "790": "vazamento diminuiu, mas a aorta permaneceu ruim",
+          "838": "vazamento permaneceu"
+        }
+      }
+    },
+    "adaptive_current": {
+      "train": {
+        "run_dir": "output/segmentation/runs/mid_res/aorta_segmentation_experiments/train/adaptive_current_p99_9_m300/2026-08-24_16-41-06",
+        "aorta_good_ids": [13, 28, 90, 129, 194, 305, 315, 344, 380, 447, 518, 538, 550, 631, 676, 696, 793, 836, 854, 887, 937, 965],
+        "aorta_bad_ids": [44, 175, 330, 428, 603, 608, 752, 760],
+        "notes": {
+          "428": "segmentacao quase boa, mas a reducao removeu parte da quina usada para localizar um dos ostios",
+          "760": "mascara visualmente igual ao normal; o vazamento permaneceu"
+        }
+      },
+      "val": {
+        "run_dir": "output/segmentation/runs/mid_res/aorta_segmentation_experiments/val/adaptive_current_p99_9_m300/2026-08-24_16-41-23",
+        "aorta_good_ids": [2, 6, 35, 89, 110, 116, 156, 187, 227, 294, 307, 308, 341, 437, 449, 450, 468, 490, 507, 510, 513, 545, 552, 570, 614, 656, 672, 730, 737, 772, 776, 802, 805, 810, 813, 821, 832, 835, 870, 873, 881, 886, 907, 913, 961, 978],
+        "aorta_bad_ids": [11, 134, 184, 296, 384, 444, 464, 597, 602, 705, 720, 790, 792, 838],
+        "notes": {
+          "384": "a evolucao permissiva adicionou tortuosidade e tornou a mascara da aorta incorreta",
+          "437": "mascara correta; a pequena expansao nao prejudicou a aorta",
+          "444": "o vazamento diminuiu, mas permaneceu",
+          "602": "o vazamento permaneceu",
+          "838": "o vazamento permaneceu"
+        }
+      }
     }
   }
 }

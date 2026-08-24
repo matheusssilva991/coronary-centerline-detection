@@ -7,9 +7,11 @@ from pathlib import Path
 from typing import Any
 
 
-REVIEW_ID_FIELDS = (
+AORTA_REVIEW_ID_FIELDS = (
     "aorta_good_ids",
     "aorta_bad_ids",
+)
+OSTIA_REVIEW_ID_FIELDS = (
     "ostia_good_ids",
     "ostia_bad_ids",
 )
@@ -43,8 +45,9 @@ def get_aorta_visual_review(
         raise KeyError(f"Review not found for variant={variant!r}, split={split!r}.") from exc
 
     review = dict(raw_review)
-    for field in REVIEW_ID_FIELDS:
-        review[field] = {int(img_id) for img_id in raw_review[field]}
+    for field in (*AORTA_REVIEW_ID_FIELDS, *OSTIA_REVIEW_ID_FIELDS):
+        if field in raw_review:
+            review[field] = {int(img_id) for img_id in raw_review[field]}
     review["notes"] = {
         int(img_id): note for img_id, note in raw_review.get("notes", {}).items()
     }
@@ -64,14 +67,27 @@ def _validate_review(review: Any, variant: str, split: str) -> None:
     """Reject incomplete or contradictory manual classifications."""
     if not isinstance(review, dict) or not review.get("run_dir"):
         raise ValueError(f"Missing run_dir for variant={variant!r}, split={split!r}.")
-    missing = [field for field in REVIEW_ID_FIELDS if field not in review]
+    missing = [field for field in AORTA_REVIEW_ID_FIELDS if field not in review]
     if missing:
         raise ValueError(
             f"Missing review fields for variant={variant!r}, split={split!r}: {missing}"
         )
 
-    groups = {field: {int(img_id) for img_id in review[field]} for field in REVIEW_ID_FIELDS}
-    for subject in ("aorta", "ostia"):
+    groups = {
+        field: {int(img_id) for img_id in review[field]}
+        for field in (*AORTA_REVIEW_ID_FIELDS, *OSTIA_REVIEW_ID_FIELDS)
+        if field in review
+    }
+    ostia_fields_present = [field in review for field in OSTIA_REVIEW_ID_FIELDS]
+    if any(ostia_fields_present) and not all(ostia_fields_present):
+        raise ValueError(
+            f"Incomplete ostia labels for variant={variant!r}, split={split!r}."
+        )
+
+    subjects = ["aorta"]
+    if all(ostia_fields_present):
+        subjects.append("ostia")
+    for subject in subjects:
         good = groups[f"{subject}_good_ids"]
         bad = groups[f"{subject}_bad_ids"]
         overlap = good & bad

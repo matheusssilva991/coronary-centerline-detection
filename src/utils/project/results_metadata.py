@@ -54,6 +54,8 @@ def _runtime_config_metadata(config: dict[str, Any]) -> dict[str, Any]:
     )
     return {
         "use_gpu": config.get("USE_GPU"),
+        "save_segmentation_visuals": config.get("SAVE_SEGMENTATION_VISUALS", False),
+        "visual_output_dir": config.get("VISUAL_OUTPUT_DIR"),
         "downscale_method": config.get("DOWNSCALE_METHOD"),
         "opencv_interpolation": config.get("OPENCV_INTERPOLATION")
         if config.get("DOWNSCALE_METHOD") == "opencv"

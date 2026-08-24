@@ -84,6 +84,24 @@ class AortaVisualReviewTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "do not cover the same cohort"):
             load_aorta_visual_reviews(catalog_path)
 
+    def test_load_review_accepts_aorta_only_labels(self) -> None:
+        catalog_path = _write_catalog(
+            self.root / "reviews.json",
+            {
+                "run_dir": "output/example",
+                "aorta_good_ids": [1, 2],
+                "aorta_bad_ids": [3],
+                "notes": {"3": "leak"},
+            },
+        )
+
+        catalog = load_aorta_visual_reviews(catalog_path)
+        review = get_aorta_visual_review(catalog, "normal", "train")
+
+        self.assertEqual(review["aorta_good_ids"], {1, 2})
+        self.assertEqual(review["aorta_bad_ids"], {3})
+        self.assertNotIn("ostia_good_ids", review)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -12,3 +12,6 @@ wheels/
 /output/cases_analysis_cache
 *.log
 .ruff_cache/
+
+# Visualizações 3D são artefatos grandes; prefira --visual-output-dir.
+/output/segmentation/runs/**/visual

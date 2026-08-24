@@ -137,6 +137,10 @@ def _apply_execution_overrides(config, args):
     config["SAVE_SEGMENTATION_VISUALS"] = bool(
         getattr(args, "save_segmentation_visuals", False)
     )
+    visual_output_dir = getattr(args, "visual_output_dir", None)
+    config["VISUAL_OUTPUT_DIR"] = (
+        Path(visual_output_dir).as_posix() if visual_output_dir is not None else None
+    )
 
     nested_overrides = (
         ("ARTERY_SEGMENTATION", "method", args.artery_segmentation_method),
@@ -353,7 +357,13 @@ def resolve_output_dir(args, output_root_dir):
     if (args.resume_requested or args.merge_only) and args.resume_dir:
         if args.resume_dir.exists():
             print(f"\n📁 Usando diretório anterior: {args.resume_dir}\n")
-            return resolve_existing_output_dirs(args.resume_dir)
+            output_dirs = resolve_existing_output_dirs(args.resume_dir)
+            output_dirs["visual_dir"] = resolve_visual_output_dir(
+                args,
+                output_dirs["run_dir"],
+                output_root_dir,
+            )
+            return output_dirs
         print(f"❌ Erro: Diretório não encontrado: {args.resume_dir}")
         print("   Use --resume-dir com o caminho do diretório anterior")
         raise SystemExit(1)
@@ -374,10 +384,33 @@ def resolve_output_dir(args, output_root_dir):
         experiment_name=experiment_name,
     )
     output_dirs = build_structured_output_dirs(run_dir)
+    output_dirs["visual_dir"] = resolve_visual_output_dir(
+        args,
+        output_dirs["run_dir"],
+        output_root_dir,
+    )
     print(f"📁 Diretório da execução: {output_dirs['run_dir']}")
     print(f"📊 Resultados numéricos: {output_dirs['numeric_dir']}")
     print(f"🖼️  Exemplos visuais: {output_dirs['visual_dir']} (criada sob demanda)\n")
     return output_dirs
+
+
+def resolve_visual_output_dir(args, run_dir, output_root_dir):
+    """Resolve a pasta visual interna ou espelha o run em uma raiz externa."""
+    visual_root = getattr(args, "visual_output_dir", None)
+    if visual_root is None:
+        return Path(run_dir) / "visual"
+
+    run_path = Path(run_dir)
+    try:
+        # Preserva segmentation/runs/<resolução>/<grupo>/<timestamp> no disco externo.
+        relative_run = run_path.resolve().relative_to(Path(output_root_dir).resolve())
+    except ValueError:
+        # Runs retomados fora de --output-dir ainda recebem um caminho estável.
+        relative_run = (
+            Path("segmentation") / "runs" / f"{args.resolution}_res" / run_path.name
+        )
+    return Path(visual_root) / relative_run / "visual"
 
 
 def build_structured_output_dirs(run_dir):

@@ -56,6 +56,9 @@ Exemplos de uso:
   # Salvar um HTML 3D por imagem com aorta, óstios e artérias
   python segmentation_pipeline.py --split train --save-segmentation-visuals
 
+  # Salvar os HTMLs em um disco externo, mantendo CSVs e logs no repositório
+  python segmentation_pipeline.py --split train --save-segmentation-visuals --visual-output-dir /media/matheus/HD/ImageCAS_pipeline_results
+
   # PROCESSAMENTO EM LOTES (salvamento incremental):
     # Processar em 10 lotes (divide as imagens entre 10 blocos)
     python segmentation_pipeline.py --num-batches 10
@@ -90,7 +93,7 @@ Arquivos de saída:
   - config/effective_pipeline_config.json: Config efetiva usada no run
   - config/split_ids.json: IDs processados por split
   - logs/pipeline.log: Log da execução
-  - visual/{split}/*.html: Visualizações 3D quando --save-segmentation-visuals for usado
+  - visual/{split}/*.html: Visualizações 3D; pode ser redirecionado com --visual-output-dir
 """
 
 
@@ -450,6 +453,15 @@ def build_parser(default_base_path, default_output_dir):
         ),
     )
     parser.add_argument(
+        "--visual-output-dir",
+        type=str,
+        default=None,
+        help=(
+            "Raiz alternativa para os HTMLs 3D. A estrutura relativa do run "
+            "é preservada nessa raiz; CSVs, configs e logs continuam em --output-dir."
+        ),
+    )
+    parser.add_argument(
         "--num-batches",
         type=int,
         default=5,
@@ -499,6 +511,9 @@ def parse_pipeline_args(default_base_path, default_output_dir):
 
     args.base_path = Path(args.base_path).expanduser()
     args.output_dir = Path(args.output_dir).expanduser()
+    args.visual_output_dir = (
+        Path(args.visual_output_dir).expanduser() if args.visual_output_dir else None
+    )
     args.resume_dir = Path(args.resume_dir).expanduser() if args.resume_dir else None
     args.split_config = (
         Path(args.split_config).expanduser() if args.split_config else None

@@ -1,10 +1,12 @@
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import numpy as np
 
+from segmentation_pipeline import resolve_visual_output_dir
 from utils.segmentation.pipeline_cli import build_parser
 from utils.segmentation.pipeline_visuals import save_segmentation_visual
 
@@ -96,6 +98,42 @@ class PipelineVisualTests(unittest.TestCase):
 
         self.assertFalse(default_args.save_segmentation_visuals)
         self.assertTrue(enabled_args.save_segmentation_visuals)
+
+    def test_cli_accepts_external_visual_output_directory(self):
+        parser = build_parser(Path("/dataset"), Path("/output"))
+
+        args = parser.parse_args(
+            [
+                "--save-segmentation-visuals",
+                "--visual-output-dir",
+                "/media/results",
+            ]
+        )
+
+        self.assertEqual(args.visual_output_dir, "/media/results")
+
+    def test_external_visual_directory_preserves_run_structure(self):
+        args = SimpleNamespace(
+            visual_output_dir=Path("/media/results"),
+            resolution="mid",
+        )
+        output_root = Path("/repo/output")
+        run_dir = output_root / "segmentation/runs/mid_res/group/timestamp"
+
+        visual_dir = resolve_visual_output_dir(args, run_dir, output_root)
+
+        self.assertEqual(
+            visual_dir,
+            Path("/media/results/segmentation/runs/mid_res/group/timestamp/visual"),
+        )
+
+    def test_default_visual_directory_remains_inside_run(self):
+        args = SimpleNamespace(visual_output_dir=None, resolution="mid")
+        run_dir = Path("/repo/output/segmentation/runs/mid_res/timestamp")
+
+        visual_dir = resolve_visual_output_dir(args, run_dir, Path("/repo/output"))
+
+        self.assertEqual(visual_dir, run_dir / "visual")
 
     @patch("utils.segmentation.pipeline_visuals.visualize_aorta_ostia_artery")
     def test_saves_combined_visual_in_requested_directory(self, visualize):

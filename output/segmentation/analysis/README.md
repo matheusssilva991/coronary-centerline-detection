@@ -11,8 +11,8 @@ O catálogo dos notebooks que produzem estas análises está em
 
 - `EXPERIMENTS_ARCHIVE.md`: decisões e métricas resumidas dos sweeps encerrados.
 - `aorta_circle_slices/`: métricas entre número de fatias e círculos da aorta.
-- `aorta_bad_cases/`: atalhos leves para comparar rapidamente visualizações 3D
-  de aortas e óstios problemáticos entre variantes. Há catálogos separados
+- `aorta_bad_cases/`: atalhos leves para comparar rapidamente máscaras 3D da
+  aorta classificadas visualmente como ruins entre variantes. Há catálogos separados
   para [treino](aorta_bad_cases/train_p99_9_m300/README.md) e
   [validação](aorta_bad_cases/val_p99_9_m300/README.md).
 - `bad_cases/`: catálogo compacto de casos ruins usado pelas EDAs qualitativas.
