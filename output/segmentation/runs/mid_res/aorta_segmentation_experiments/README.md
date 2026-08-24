@@ -98,9 +98,14 @@ FILTER_PROFILE=aggressive RUN_VAL=0 SAVE_VISUALS=1 \
   bash src/experiments/runners/run_aorta_circle_coverage_tests.sh
 ```
 
-O novo run ficará em `train/circle_filter_aggressive_p999/<timestamp>/`. O
-sufixo `p999` evita confusão com `circle_filter_aggressive/2026-08-23_10-07-44`,
+O novo run deve ser organizado em
+`train/circle_filter_aggressive_p99_9/<timestamp>/`. O sufixo `p99_9` evita
+confusão com `circle_filter_aggressive/2026-08-23_10-07-44`,
 que foi executado com P10.75/P99.8.
+
+Nos runs ativos, `train/` e `val/` identificam a coorte do experimento. Dentro
+de cada run, `visual/{split}/` é mantido porque faz parte da estrutura padrão
+do pipeline e permite que uma execução futura contenha mais de um split.
 
 ## Referências visuais arquivadas
 

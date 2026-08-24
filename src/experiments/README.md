@@ -305,7 +305,7 @@ FILTER_PROFILE=aggressive RUN_VAL=0 SAVE_VISUALS=1 \
 
 Esse perfil usa cobertura mínima de 40%, não interpola outliers isolados e não
 aplica fallback. O resultado é salvo em
-`runs/mid_res/aorta_segmentation_experiments/train/circle_filter_aggressive_p999/`.
+`runs/mid_res/aorta_segmentation_experiments/train/circle_filter_aggressive_p99_9/`.
 
 Os parâmetros `COVERAGE`, `RUN_WITHOUT_FALLBACK` e `RUN_WITH_FALLBACK` permitem
 reutilizar o runner. Por exemplo, a comparação histórica de 60% com e sem

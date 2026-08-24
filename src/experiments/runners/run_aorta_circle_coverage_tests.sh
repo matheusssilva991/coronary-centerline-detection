@@ -58,7 +58,7 @@ run_aggressive() {
   run_variant \
     "$split" \
     "$split_config" \
-    "circle_filter_aggressive_p999" \
+    "circle_filter_aggressive_p99_9" \
     --no-aorta-circle-filter-reject-oversegmented
 }
 
