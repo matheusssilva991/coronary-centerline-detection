@@ -8,6 +8,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
@@ -22,8 +23,9 @@ from ..project.results import (
 from .pipeline_arteries import segment_arteries_from_ostia
 from .pipeline_detection import (
     detect_and_evaluate_ostia,
+    filter_located_aorta_circles,
     locate_aorta_circles,
-    segment_aorta,
+    segment_aorta_with_diagnostics,
 )
 from .pipeline_preprocessing import compute_vesselness, load_and_preprocess_image
 from .pipeline_visuals import save_segmentation_visual
@@ -47,6 +49,10 @@ IMAGE_RESULT_DEFAULTS = {
     "proceeded_with_bad_ostia": False,
     "skip_reason": None,
     "ostia_error": None,
+    "ostia_surface_mode": None,
+    "ostia_surface_thickness_mm": None,
+    "ostia_candidate_score_mode": None,
+    "ostia_pair_selection_mode": None,
     "left_intersects": False,
     "right_intersects": False,
     "left_dist_voxels": None,
@@ -71,11 +77,124 @@ IMAGE_RESULT_DEFAULTS = {
     "aorta_circle_first_slice": None,
     "aorta_circle_last_slice": None,
     "aorta_circle_coverage": None,
+    "aorta_circle_radius_min_px": None,
+    "aorta_circle_radius_max_px": None,
+    "aorta_circle_radius_mean_px": None,
+    "aorta_circle_radius_median_px": None,
+    "aorta_circle_radius_std_px": None,
+    "aorta_circle_radius_p10_px": None,
+    "aorta_circle_radius_p90_px": None,
+    "aorta_circle_radius_min_mm": None,
+    "aorta_circle_radius_max_mm": None,
+    "aorta_circle_radius_mean_mm": None,
+    "aorta_circle_radius_median_mm": None,
+    "aorta_circle_radius_std_mm": None,
+    "aorta_circle_radius_p10_mm": None,
+    "aorta_circle_radius_p90_mm": None,
+    "aorta_detected_circle_radius_median_mm": None,
+    "aorta_interpolated_circle_radius_median_mm": None,
+    "aorta_circle_radius_first_mm": None,
+    "aorta_circle_radius_last_mm": None,
+    "aorta_circle_radius_max_step_change_mm": None,
+    "aorta_circle_radius_p90_step_change_mm": None,
+    "aorta_circle_mean_hough_accumulator": None,
+    "aorta_circle_lower_radius_bound_fraction": None,
+    "aorta_circle_upper_radius_bound_fraction": None,
     "aorta_recovered_initialization": False,
+    "aorta_circle_filter_method": "none",
+    "aorta_circle_filter_applied": False,
+    "aorta_circle_original_count": None,
+    "aorta_circle_used_count": None,
+    "aorta_circle_filter_interpolated_count": 0,
+    "aorta_circle_filter_trimmed_tail_count": 0,
+    "aorta_circle_filter_trim_start_slice": None,
+    "aorta_circle_filter_original_coverage": None,
+    "aorta_circle_filter_used_coverage": None,
+    "aorta_circle_filter_reason": None,
+    "aorta_circle_filter_fallback_enabled": False,
+    "aorta_circle_filter_accepted": False,
+    "aorta_circle_filter_rejected": False,
+    "aorta_circle_filter_rejection_reason": None,
+    "aorta_circle_filter_candidate_controller_state": None,
+    "aorta_circle_filter_fallback_controller_state": None,
+    "aorta_circle_filter_candidate_mask_voxel_count": None,
     "aorta_mask_voxels": None,
     "aorta_segmented_slice_count": None,
     "aorta_voxels_per_segmented_slice": None,
     "aorta_volume_fraction": None,
+    "aorta_level_set_mode": None,
+    "aorta_level_set_iterations_used": None,
+    "aorta_level_set_stop_reason": None,
+    "aorta_level_set_checkpoint_count": None,
+    "aorta_level_set_rolled_back": False,
+    "aorta_level_set_mask_change_fraction": None,
+    "aorta_level_set_voxels_per_segmented_slice": None,
+    "aorta_level_set_circle_fill_q25": None,
+    "aorta_level_set_circle_area_ratio_p90": None,
+    "aorta_level_set_leak_suspected": False,
+    "aorta_level_set_localization_suspected": False,
+    "aorta_level_set_leak_signal_count": 0,
+    "aorta_level_set_trigger_iteration": None,
+    "aorta_level_set_trigger_volume_fraction": None,
+    "aorta_level_set_trigger_relative_growth": None,
+    "aorta_level_set_trigger_mask_change_fraction": None,
+    "aorta_level_set_trigger_circle_fill_q25": None,
+    "aorta_level_set_trigger_circle_area_ratio_p90": None,
+    "aorta_level_set_correction_applied": False,
+    "aorta_level_set_correction_method": None,
+    "aorta_level_set_refinement_applied": False,
+    "aorta_level_set_refinement_accepted": False,
+    "aorta_level_set_refinement_iterations": None,
+    "aorta_level_set_refinement_balloon": None,
+    "aorta_level_set_refinement_smoothing": None,
+    "aorta_level_set_refinement_transition_mode": None,
+    "aorta_level_set_refinement_anomaly_margin_slices": None,
+    "aorta_level_set_refinement_volume_loss_fraction": None,
+    "aorta_level_set_slice_area_jump_p95_before": None,
+    "aorta_level_set_slice_area_jump_p95_after": None,
+    "aorta_level_set_refinement_rejection_reason": None,
+    "aorta_level_set_controller_state": None,
+    "aorta_level_set_profile_used": None,
+    "aorta_level_set_rollback_iteration": None,
+    "aorta_level_set_circle_confidence_signal_count": 0,
+    "aorta_level_set_alternative_attempted": False,
+    "aorta_level_set_alternative_accepted": False,
+    "aorta_level_set_conservative_attempted": False,
+    "aorta_level_set_conservative_accepted": False,
+    "aorta_level_set_permissive_attempted": False,
+    "aorta_level_set_permissive_accepted": False,
+    "aorta_level_set_nominal_volume_fraction": None,
+    "aorta_level_set_nominal_circle_fill_q25": None,
+    "aorta_level_set_nominal_circle_area_ratio_p90": None,
+    "aorta_level_set_final_volume_fraction": None,
+    "aorta_level_set_decision_reason": None,
+    "aorta_neck_pruning_method": None,
+    "aorta_neck_pruning_attempted": False,
+    "aorta_neck_pruning_accepted": False,
+    "aorta_neck_pruning_anomalous_slice_count": 0,
+    "aorta_neck_pruning_removed_voxels": 0,
+    "aorta_neck_pruning_volume_loss_fraction": 0.0,
+    "aorta_neck_pruning_area_ratio_before": None,
+    "aorta_neck_pruning_area_ratio_after": None,
+    "aorta_neck_pruning_fill_q25_before": None,
+    "aorta_neck_pruning_fill_q25_after": None,
+    "aorta_neck_pruning_slice_area_jump_p95_before": None,
+    "aorta_neck_pruning_slice_area_jump_p95_after": None,
+    "aorta_neck_pruning_rejection_reason": None,
+    "aorta_area_jump_pruning_method": None,
+    "aorta_area_jump_pruning_attempted": False,
+    "aorta_area_jump_pruning_accepted": False,
+    "aorta_area_jump_pruning_trigger_slice": None,
+    "aorta_area_jump_pruning_neck_slice": None,
+    "aorta_area_jump_pruning_removed_voxels": 0,
+    "aorta_area_jump_pruning_volume_loss_fraction": 0.0,
+    "aorta_area_jump_pruning_area_ratio_before": None,
+    "aorta_area_jump_pruning_area_ratio_after": None,
+    "aorta_area_jump_pruning_fill_q25_before": None,
+    "aorta_area_jump_pruning_fill_q25_after": None,
+    "aorta_area_jump_pruning_voxels_per_slice_before": None,
+    "aorta_area_jump_pruning_voxels_per_slice_after": None,
+    "aorta_area_jump_pruning_rejection_reason": None,
 }
 
 
@@ -108,8 +227,43 @@ def _preprocessing_result_fields(
     return fields
 
 
-def summarize_aorta_circles(detected_circles, image_slice_count):
-    """Resume cobertura, interpolação e recuperação do rastreamento da aorta."""
+def _describe_circle_radii(values, unit):
+    """Calcula estatísticas robustas para uma sequência de raios."""
+    prefix = "aorta_circle_radius_"
+    suffix = f"_{unit}"
+    keys = ("min", "max", "mean", "median", "std", "p10", "p90")
+    if not values:
+        return {f"{prefix}{key}{suffix}": None for key in keys}
+
+    radii = np.asarray(values, dtype=float)
+    return {
+        f"{prefix}min{suffix}": float(np.min(radii)),
+        f"{prefix}max{suffix}": float(np.max(radii)),
+        f"{prefix}mean{suffix}": float(np.mean(radii)),
+        f"{prefix}median{suffix}": float(np.median(radii)),
+        f"{prefix}std{suffix}": float(np.std(radii)),
+        f"{prefix}p10{suffix}": float(np.percentile(radii, 10)),
+        f"{prefix}p90{suffix}": float(np.percentile(radii, 90)),
+    }
+
+
+def _median_or_none(values):
+    """Retorna a mediana como float ou ``None`` para coleção vazia."""
+    return float(np.median(values)) if values else None
+
+
+def _mean_or_none(values):
+    """Retorna a média como float ou ``None`` para coleção vazia."""
+    return float(np.mean(values)) if values else None
+
+
+def summarize_aorta_circles(
+    detected_circles,
+    image_slice_count,
+    scaled_spacing=None,
+    circle_config=None,
+):
+    """Resume cobertura, raios e continuidade do rastreamento da aorta."""
     circle_slices = [
         int(circle["slice_index"])
         for circle in detected_circles
@@ -119,7 +273,87 @@ def summarize_aorta_circles(detected_circles, image_slice_count):
         bool(circle.get("interpolated", False)) for circle in detected_circles
     )
     circle_count = len(detected_circles)
-    return {
+    valid_circles = [
+        circle
+        for circle in detected_circles
+        if circle.get("radius") is not None
+        and math.isfinite(float(circle["radius"]))
+    ]
+    radii_px = [float(circle["radius"]) for circle in valid_circles]
+
+    # Converte os raios para a unidade física usada nas comparações entre resoluções.
+    pixel_spacing = None
+    if scaled_spacing is not None and len(scaled_spacing) >= 2:
+        candidate_spacing = (float(scaled_spacing[0]) + float(scaled_spacing[1])) / 2
+        if math.isfinite(candidate_spacing) and candidate_spacing > 0:
+            pixel_spacing = candidate_spacing
+    radii_mm = (
+        [radius * pixel_spacing for radius in radii_px]
+        if pixel_spacing is not None
+        else []
+    )
+
+    detected_valid = [
+        circle
+        for circle in valid_circles
+        if not bool(circle.get("interpolated", False))
+    ]
+    interpolated_valid = [
+        circle for circle in valid_circles if bool(circle.get("interpolated", False))
+    ]
+    detected_radii_px = [float(circle["radius"]) for circle in detected_valid]
+    detected_radii_mm = (
+        [radius * pixel_spacing for radius in detected_radii_px]
+        if pixel_spacing is not None
+        else []
+    )
+    interpolated_radii_mm = (
+        [float(circle["radius"]) * pixel_spacing for circle in interpolated_valid]
+        if pixel_spacing is not None
+        else []
+    )
+
+    # Mede mudanças de raio por fatia, inclusive quando há lacunas no rastreamento.
+    ordered_radii = sorted(
+        (
+            int(circle["slice_index"]),
+            float(circle["radius"]) * pixel_spacing,
+        )
+        for circle in valid_circles
+        if pixel_spacing is not None and circle.get("slice_index") is not None
+    )
+    step_changes_mm = []
+    for (previous_z, previous_radius), (current_z, current_radius) in zip(
+        ordered_radii,
+        ordered_radii[1:],
+    ):
+        slice_distance = max(abs(current_z - previous_z), 1)
+        step_changes_mm.append(abs(current_radius - previous_radius) / slice_distance)
+
+    # Saturação nos extremos indica que o intervalo da Hough pode estar truncado.
+    lower_bound_fraction = None
+    upper_bound_fraction = None
+    if circle_config and detected_radii_px:
+        radius_step = float(circle_config.get("radius_step_px", 1))
+        lower_bound = float(circle_config["radii_start_px"])
+        hough_radii = np.arange(
+            lower_bound,
+            float(circle_config["radii_end_px"]),
+            radius_step,
+        )
+        if hough_radii.size:
+            upper_bound = float(hough_radii[-1])
+            detected_array = np.asarray(detected_radii_px)
+            lower_bound_fraction = float(np.mean(np.isclose(detected_array, lower_bound)))
+            upper_bound_fraction = float(np.mean(np.isclose(detected_array, upper_bound)))
+
+    accumulators = [
+        float(circle["accum"])
+        for circle in detected_valid
+        if circle.get("accum") is not None
+        and math.isfinite(float(circle["accum"]))
+    ]
+    summary = {
         "aorta_circle_count": circle_count,
         "aorta_detected_circle_count": circle_count - interpolated_count,
         "aorta_interpolated_circle_count": interpolated_count,
@@ -132,7 +366,31 @@ def summarize_aorta_circles(detected_circles, image_slice_count):
             bool(circle.get("recovered_initialization", False))
             for circle in detected_circles
         ),
+        "aorta_detected_circle_radius_median_mm": _median_or_none(
+            detected_radii_mm
+        ),
+        "aorta_interpolated_circle_radius_median_mm": _median_or_none(
+            interpolated_radii_mm
+        ),
+        "aorta_circle_radius_first_mm": (
+            ordered_radii[0][1] if ordered_radii else None
+        ),
+        "aorta_circle_radius_last_mm": (
+            ordered_radii[-1][1] if ordered_radii else None
+        ),
+        "aorta_circle_radius_max_step_change_mm": (
+            max(step_changes_mm) if step_changes_mm else None
+        ),
+        "aorta_circle_radius_p90_step_change_mm": (
+            float(np.percentile(step_changes_mm, 90)) if step_changes_mm else None
+        ),
+        "aorta_circle_mean_hough_accumulator": _mean_or_none(accumulators),
+        "aorta_circle_lower_radius_bound_fraction": lower_bound_fraction,
+        "aorta_circle_upper_radius_bound_fraction": upper_bound_fraction,
     }
+    summary.update(_describe_circle_radii(radii_px, "px"))
+    summary.update(_describe_circle_radii(radii_mm, "mm"))
+    return summary
 
 
 def summarize_aorta_volume(aorta_mask, image_voxel_count):
@@ -153,9 +411,103 @@ def summarize_aorta_volume(aorta_mask, image_voxel_count):
     }
 
 
-def _circle_result_fields(detected_circles, image_slice_count):
+def _segment_aorta_with_circle_filter_fallback(
+    lcc_image,
+    original_circles,
+    filtered_circles,
+    filter_diagnostics,
+    image_slice_count,
+    scaled_spacing,
+    config,
+):
+    """Segmenta a aorta e rejeita opcionalmente uma trajetória filtrada ruim."""
+    circle_config = config["CIRCLE_DETECTION"]
+    level_set_config = config["LEVEL_SET"]
+    trajectory_filter = circle_config.get("trajectory_filter", {})
+    fallback_enabled = bool(
+        trajectory_filter.get("reject_oversegmented_result", False)
+    )
+
+    # Primeiro avalia normalmente a trajetória resultante do filtro robusto.
+    filtered_summary = summarize_aorta_circles(
+        filtered_circles,
+        image_slice_count,
+        scaled_spacing,
+        circle_config,
+    )
+    candidate = segment_aorta_with_diagnostics(
+        lcc_image,
+        filtered_circles,
+        level_set_config,
+        use_gpu=config.get("USE_GPU", False),
+        circle_summary=filtered_summary,
+    )
+    candidate_state = candidate.diagnostics.get("aorta_level_set_controller_state")
+    filter_applied = bool(filter_diagnostics.get("aorta_circle_filter_applied"))
+    reject_candidate = (
+        fallback_enabled and filter_applied and candidate_state == "oversegmented"
+    )
+    filter_diagnostics.update(
+        {
+            "aorta_circle_filter_fallback_enabled": fallback_enabled,
+            "aorta_circle_filter_accepted": filter_applied and not reject_candidate,
+            "aorta_circle_filter_rejected": reject_candidate,
+            "aorta_circle_filter_rejection_reason": (
+                "filtered_mask_oversegmented" if reject_candidate else None
+            ),
+            "aorta_circle_filter_candidate_controller_state": candidate_state,
+            "aorta_circle_filter_fallback_controller_state": None,
+            "aorta_circle_filter_candidate_mask_voxel_count": int(
+                np.asarray(candidate.mask).sum()
+            ),
+        }
+    )
+    if not reject_candidate:
+        return filtered_circles, candidate, filter_diagnostics
+
+    # O fallback repete apenas o level set; Hough e pré-processamento são reutilizados.
+    original_summary = summarize_aorta_circles(
+        original_circles,
+        image_slice_count,
+        scaled_spacing,
+        circle_config,
+    )
+    fallback = segment_aorta_with_diagnostics(
+        lcc_image,
+        original_circles,
+        level_set_config,
+        use_gpu=config.get("USE_GPU", False),
+        circle_summary=original_summary,
+    )
+    filter_diagnostics.update(
+        {
+            "aorta_circle_used_count": len(original_circles),
+            "aorta_circle_filter_used_coverage": (
+                len(original_circles) / image_slice_count
+                if image_slice_count
+                else None
+            ),
+            "aorta_circle_filter_fallback_controller_state": fallback.diagnostics.get(
+                "aorta_level_set_controller_state"
+            ),
+        }
+    )
+    return original_circles, fallback, filter_diagnostics
+
+
+def _circle_result_fields(
+    detected_circles,
+    image_slice_count,
+    scaled_spacing=None,
+    circle_config=None,
+):
     """Compatibilidade interna para o antigo nome do resumo de círculos."""
-    return summarize_aorta_circles(detected_circles, image_slice_count)
+    return summarize_aorta_circles(
+        detected_circles,
+        image_slice_count,
+        scaled_spacing,
+        circle_config,
+    )
 
 
 def _ostia_result_fields(ostia_eval):
@@ -205,6 +557,24 @@ def process_image(img_id, config, base_path, visual_output_dir=None):
     5. segmenta as artérias a partir dos óstios.
     """
     result = _new_image_result(img_id)
+    result["aorta_level_set_mode"] = config.get("LEVEL_SET", {}).get(
+        "iteration_mode", "fixed"
+    )
+    ostia_config = config.get("OSTIA_DETECTION", {})
+    result.update(
+        {
+            "ostia_surface_mode": ostia_config.get("surface_mode", "erosion"),
+            "ostia_surface_thickness_mm": ostia_config.get(
+                "surface_thickness_mm", 2.0
+            ),
+            "ostia_candidate_score_mode": ostia_config.get(
+                "candidate_score_mode", "voxel"
+            ),
+            "ostia_pair_selection_mode": ostia_config.get(
+                "pair_selection_mode", "greedy"
+            ),
+        }
+    )
 
     try:
         # Carrega imagem/label e gera o volume pré-processado (LCC).
@@ -238,20 +608,39 @@ def process_image(img_id, config, base_path, visual_output_dir=None):
             scaled_spacing,
             config["CIRCLE_DETECTION"],
         )
-        result.update(
-            summarize_aorta_circles(
+        original_detected_circles = [dict(circle) for circle in detected_circles]
+        circle_summary = summarize_aorta_circles(
+            detected_circles,
+            result["image_slice_count"],
+            scaled_spacing,
+            config["CIRCLE_DETECTION"],
+        )
+        result.update(circle_summary)
+
+        # Filtra somente a trajetória consumida pelas etapas seguintes. O
+        # resumo acima continua descrevendo a saída original do detector.
+        detected_circles, circle_filter_diagnostics = filter_located_aorta_circles(
+            detected_circles,
+            scaled_spacing,
+            result["image_slice_count"],
+            config["CIRCLE_DETECTION"],
+        )
+        # Segmenta a aorta e volta aos círculos originais quando o filtro
+        # opcional ainda resultar em uma máscara sobresegmentada.
+        detected_circles, aorta_segmentation, circle_filter_diagnostics = (
+            _segment_aorta_with_circle_filter_fallback(
+                lcc_image,
+                original_detected_circles,
                 detected_circles,
+                circle_filter_diagnostics,
                 result["image_slice_count"],
+                scaled_spacing,
+                config,
             )
         )
-
-        # Segmenta a aorta a partir dos círculos detectados.
-        aorta_mask = segment_aorta(
-            lcc_image,
-            detected_circles,
-            config["LEVEL_SET"],
-            use_gpu=config.get("USE_GPU", False),
-        )
+        result.update(circle_filter_diagnostics)
+        aorta_mask = aorta_segmentation.mask
+        result.update(aorta_segmentation.diagnostics)
         # Relaciona a máscara da aorta ao volume processado completo.
         result.update(
             summarize_aorta_volume(

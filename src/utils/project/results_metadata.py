@@ -72,6 +72,14 @@ def _runtime_config_metadata(config: dict[str, Any]) -> dict[str, Any]:
         "aorta_ostia_method": config.get("AORTA_OSTIA_METHOD", {}).get(
             "method", "standard"
         ),
+        "aorta_level_set_mode": config.get("LEVEL_SET", {}).get(
+            "iteration_mode", "fixed"
+        ),
+        "aorta_leak_correction": (
+            config.get("LEVEL_SET", {})
+            .get("experimental_leak_correction", {})
+            .get("method", "none")
+        ),
     }
 
 

@@ -12,6 +12,8 @@ O catálogo dos notebooks que produzem estas análises está em
 - `EXPERIMENTS_ARCHIVE.md`: decisões e métricas resumidas dos sweeps encerrados.
 - `aorta_circle_slices/`: métricas entre número de fatias e círculos da aorta.
 - `bad_cases/`: catálogo compacto de casos ruins usado pelas EDAs qualitativas.
+- `image_slices/`: cortes axiais exportados para inspeção ou publicação.
+- `visual_examples/`: exemplos 3D independentes de uma run específica.
 - `pipeline_failure_analysis/`: catálogo e coorte focada de validação usada
   pelo runner de correções.
 - `pipeline_parameter_validation/`: resultados compactos usados tanto pela
@@ -23,6 +25,13 @@ O catálogo dos notebooks que produzem estas análises está em
   resolution. O sweep recomendado compara morfologia, critérios do RG e sigmas
   do Frangi reutilizando as etapas comuns. Cada run mantém apenas configurações,
   CSV por imagem e resumo pareado por variante.
+- `threshold_pipeline_comparison/`: tabelas e figuras da comparação entre
+  threshold normal/fuzzy e segmentação por RG/FC.
+
+Cada subpasta possui um README com a origem dos arquivos e a regra de
+persistência. Pastas vazias funcionam apenas como destino reservado para uma
+execução futura; os resultados exibidos diretamente em notebooks não são
+duplicados aqui.
 
 ## Regra pratica
 

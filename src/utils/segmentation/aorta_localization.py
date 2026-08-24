@@ -18,6 +18,318 @@ from ..processing.gpu_utils import GPU_AVAILABLE, to_gpu, to_cpu, cu_ndi, cp
 OUT_OF_TOLERANCE = "out_of_tolerance"
 
 
+def _circle_geometry_departure(
+    circle: dict[str, Any],
+    reference: dict[str, float],
+    pixel_spacing: float,
+) -> tuple[float, float]:
+    """Mede o afastamento de raio e centro em relação a uma referência."""
+    radius_mm = abs(float(circle["radius"]) - reference["radius"]) * pixel_spacing
+    center_mm = float(
+        np.hypot(
+            float(circle["center_x"]) - reference["center_x"],
+            float(circle["center_y"]) - reference["center_y"],
+        )
+        * pixel_spacing
+    )
+    return radius_mm, center_mm
+
+
+def _circle_step_geometry(
+    previous: dict[str, Any],
+    current: dict[str, Any],
+    pixel_spacing: float,
+) -> tuple[float, float]:
+    """Calcula mudanças físicas de raio e centro normalizadas por fatia."""
+    slice_distance = max(
+        abs(int(current["slice_index"]) - int(previous["slice_index"])),
+        1,
+    )
+    reference = {
+        "radius": float(previous["radius"]),
+        "center_x": float(previous["center_x"]),
+        "center_y": float(previous["center_y"]),
+    }
+    radius_mm, center_mm = _circle_geometry_departure(
+        current,
+        reference,
+        pixel_spacing,
+    )
+    return radius_mm / slice_distance, center_mm / slice_distance
+
+
+def _median_circle_reference(circles: Sequence[dict[str, Any]]) -> dict[str, float]:
+    """Resume uma janela estável da trajetória por medianas geométricas."""
+    return {
+        "radius": float(np.median([float(circle["radius"]) for circle in circles])),
+        "center_x": float(
+            np.median([float(circle["center_x"]) for circle in circles])
+        ),
+        "center_y": float(
+            np.median([float(circle["center_y"]) for circle in circles])
+        ),
+    }
+
+
+def _find_incompatible_tail_start(
+    circles: Sequence[dict[str, Any]],
+    pixel_spacing: float,
+    config: dict[str, Any],
+) -> int | None:
+    """Localiza uma cauda que se afasta persistentemente da trajetória anterior."""
+    reference_window = max(3, int(config.get("reference_window", 5)))
+    persistence_window = max(3, int(config.get("persistence_window", 5)))
+    persistence_required = min(
+        persistence_window,
+        max(2, int(config.get("persistence_required", 4))),
+    )
+    min_tail_circles = max(
+        persistence_window,
+        int(config.get("min_tail_circles", 8)),
+    )
+    min_remaining = max(reference_window, int(config.get("min_remaining_circles", 30)))
+    search_start = max(
+        min_remaining,
+        int(round(len(circles) * float(config.get("tail_search_start_fraction", 0.35)))),
+    )
+    search_stop = len(circles) - min_tail_circles + 1
+
+    max_radius_step = float(config.get("max_radius_step_mm", 4.8))
+    max_center_step = float(config.get("max_center_step_mm", 8.0))
+    severe_radius_step = float(config.get("severe_radius_step_mm", 7.0))
+    severe_center_step = float(config.get("severe_center_step_mm", 12.0))
+    min_accumulator = float(config.get("min_hough_accumulator", 0.408))
+
+    for index in range(search_start, search_stop):
+        previous = circles[index - 1]
+        current = circles[index]
+        radius_step, center_step = _circle_step_geometry(
+            previous,
+            current,
+            pixel_spacing,
+        )
+        transition_is_abrupt = (
+            radius_step > max_radius_step
+            or center_step > max_center_step
+            or radius_step > severe_radius_step
+            or center_step > severe_center_step
+        )
+        if not transition_is_abrupt:
+            continue
+
+        reference = _median_circle_reference(
+            circles[index - reference_window : index]
+        )
+        incompatible = 0
+        geometry_incompatible = 0
+        for circle in circles[index : index + persistence_window]:
+            radius_departure, center_departure = _circle_geometry_departure(
+                circle,
+                reference,
+                pixel_spacing,
+            )
+            geometry_signal = (
+                radius_departure > max_radius_step
+                or center_departure > max_center_step
+            )
+            confidence_signal = (
+                circle.get("accum") is not None
+                and float(circle["accum"]) < min_accumulator
+            )
+            geometry_incompatible += int(geometry_signal)
+            incompatible += int(geometry_signal or confidence_signal)
+
+        # Confiança baixa isolada não basta: a cauda também deve divergir
+        # geometricamente da janela anterior.
+        if (
+            incompatible >= persistence_required
+            and geometry_incompatible >= max(2, persistence_required - 1)
+        ):
+            return index
+    return None
+
+
+def _replace_isolated_circle_outliers(
+    circles: Sequence[dict[str, Any]],
+    pixel_spacing: float,
+    config: dict[str, Any],
+) -> tuple[list[dict[str, Any]], int]:
+    """Substitui outliers internos isolados pela interpolação dos vizinhos."""
+    filtered = [dict(circle) for circle in circles]
+    max_radius_deviation = float(config.get("max_radius_step_mm", 4.8))
+    max_center_deviation = float(config.get("max_center_step_mm", 8.0))
+    min_accumulator = float(config.get("min_hough_accumulator", 0.408))
+    replaced_count = 0
+    previous_was_replaced = False
+
+    for index in range(1, len(filtered) - 1):
+        if previous_was_replaced:
+            previous_was_replaced = False
+            continue
+
+        previous = filtered[index - 1]
+        current = filtered[index]
+        following = filtered[index + 1]
+        interpolated = _interpolate_missing_circles(
+            previous,
+            following,
+            [int(current["slice_index"])],
+        )
+        if not interpolated:
+            continue
+
+        expected = interpolated[0]
+        radius_deviation, center_deviation = _circle_geometry_departure(
+            current,
+            {
+                "radius": float(expected["radius"]),
+                "center_x": float(expected["center_x"]),
+                "center_y": float(expected["center_y"]),
+            },
+            pixel_spacing,
+        )
+        neighbor_radius_step, neighbor_center_step = _circle_step_geometry(
+            previous,
+            following,
+            pixel_spacing,
+        )
+        neighbors_are_compatible = (
+            neighbor_radius_step <= max_radius_deviation
+            and neighbor_center_step <= max_center_deviation
+        )
+        low_confidence = (
+            current.get("accum") is not None
+            and float(current["accum"]) < min_accumulator
+        )
+        geometry_outlier = (
+            radius_deviation > max_radius_deviation
+            or center_deviation > max_center_deviation
+        )
+        if not (neighbors_are_compatible and geometry_outlier):
+            continue
+
+        expected.update(
+            {
+                "trajectory_filtered": True,
+                "trajectory_filter_action": "interpolated_outlier",
+                "original_center_x": float(current["center_x"]),
+                "original_center_y": float(current["center_y"]),
+                "original_radius": float(current["radius"]),
+                "original_accum": current.get("accum"),
+                "low_confidence_outlier": low_confidence,
+            }
+        )
+        filtered[index] = expected
+        replaced_count += 1
+        previous_was_replaced = True
+
+    return filtered, replaced_count
+
+
+def filter_aorta_circle_trajectory(
+    detected_circles: Sequence[dict[str, Any]],
+    pixel_spacing: float,
+    image_slice_count: int,
+    filter_config: dict[str, Any] | None = None,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Filtra outliers e caudas incompatíveis da trajetória da aorta.
+
+    O detector percorre o volume das fatias finais para as iniciais. Portanto,
+    uma cauda removida corresponde ao trecho final do rastreamento, depois que
+    a Hough deixa de acompanhar de forma consistente a trajetória inicial.
+    """
+    config = filter_config or {}
+    method = str(config.get("method", "none"))
+    original = sorted(
+        (dict(circle) for circle in detected_circles),
+        key=lambda circle: int(circle["slice_index"]),
+        reverse=True,
+    )
+    diagnostics = {
+        "aorta_circle_filter_method": method,
+        "aorta_circle_filter_applied": False,
+        "aorta_circle_original_count": len(original),
+        "aorta_circle_used_count": len(original),
+        "aorta_circle_filter_interpolated_count": 0,
+        "aorta_circle_filter_trimmed_tail_count": 0,
+        "aorta_circle_filter_trim_start_slice": None,
+        "aorta_circle_filter_original_coverage": (
+            len(original) / image_slice_count if image_slice_count else None
+        ),
+        "aorta_circle_filter_used_coverage": (
+            len(original) / image_slice_count if image_slice_count else None
+        ),
+        "aorta_circle_filter_reason": "disabled" if method == "none" else "unchanged",
+    }
+    if method == "none" or len(original) < 3:
+        return original, diagnostics
+    if method != "robust":
+        raise ValueError(f"Método de filtro de círculos desconhecido: {method}")
+    if pixel_spacing <= 0:
+        raise ValueError("pixel_spacing deve ser maior que zero")
+
+    # Primeiro elimina uma cauda persistentemente desviada; depois corrige
+    # pontos isolados somente no trecho ainda considerado confiável.
+    original_coverage = (
+        len(original) / image_slice_count if image_slice_count else 0.0
+    )
+    min_tail_coverage = float(config.get("min_tail_coverage", 0.8))
+    tail_start = None
+    if original_coverage >= min_tail_coverage:
+        tail_start = _find_incompatible_tail_start(
+            original,
+            pixel_spacing,
+            config,
+        )
+    if tail_start is None:
+        trimmed = original
+        trimmed_count = 0
+        trim_start_slice = None
+    else:
+        trimmed = original[:tail_start]
+        trimmed_count = len(original) - tail_start
+        trim_start_slice = int(original[tail_start]["slice_index"])
+
+    if bool(config.get("interpolate_isolated_outliers", False)):
+        filtered, interpolated_count = _replace_isolated_circle_outliers(
+            trimmed,
+            pixel_spacing,
+            config,
+        )
+    else:
+        filtered = [dict(circle) for circle in trimmed]
+        interpolated_count = 0
+    applied = bool(trimmed_count or interpolated_count)
+    reasons = []
+    if trimmed_count:
+        reasons.append("persistent_tail_trimmed")
+    if interpolated_count:
+        reasons.append("isolated_outliers_interpolated")
+
+    diagnostics.update(
+        {
+            "aorta_circle_filter_applied": applied,
+            "aorta_circle_used_count": len(filtered),
+            "aorta_circle_filter_interpolated_count": interpolated_count,
+            "aorta_circle_filter_trimmed_tail_count": trimmed_count,
+            "aorta_circle_filter_trim_start_slice": trim_start_slice,
+            "aorta_circle_filter_used_coverage": (
+                len(filtered) / image_slice_count if image_slice_count else None
+            ),
+            "aorta_circle_filter_reason": (
+                "+".join(reasons)
+                if reasons
+                else (
+                    "coverage_below_tail_threshold"
+                    if original_coverage < min_tail_coverage
+                    else "unchanged"
+                )
+            ),
+        }
+    )
+    return filtered, diagnostics
+
+
 def _interpolate_missing_circles(
     previous_circle: dict,
     next_circle: dict,
@@ -670,6 +982,7 @@ def detect_aorta_circles(
 __all__ = [
     "detect_aorta_circles",
     "detect_initial_circle",
+    "filter_aorta_circle_trajectory",
     "get_initial_circle_diagnostics",
     "refine_circle_with_neighbors",
 ]

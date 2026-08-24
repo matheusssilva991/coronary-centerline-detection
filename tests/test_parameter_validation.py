@@ -322,6 +322,30 @@ class ParameterValidationTests(unittest.TestCase):
         self.assertEqual(without_candidates["OSTIA_DETECTION"]["top_n"], 2000)
         self.assertEqual(fully_scaled["CIRCLE_DETECTION"]["radii_start_px"], 36)
 
+    def test_adaptive_level_set_iterations_follow_high_resolution_scaling(self) -> None:
+        config = load_config_json("config/pipeline_config.json", {})
+        config["DOWNSCALE_FACTORS"] = [1, 1, 1]
+
+        scaled = scale_config_to_resolution(config)
+
+        self.assertEqual(scaled["LEVEL_SET"]["num_iter"], 70)
+        self.assertEqual(scaled["LEVEL_SET"]["adaptive"]["min_iter"], 36)
+        self.assertEqual(scaled["LEVEL_SET"]["adaptive"]["check_interval"], 11)
+        self.assertEqual(
+            scaled["LEVEL_SET"]["adaptive"]["early_stop_iteration"],
+            59,
+        )
+        self.assertEqual(
+            scaled["LEVEL_SET"]["adaptive"]["permissive"]["target_iterations"],
+            81,
+        )
+        self.assertEqual(
+            scaled["LEVEL_SET"]["adaptive"][
+                "oversegmented_voxels_per_slice"
+            ],
+            11200.0,
+        )
+
     def test_resolution_scaling_rejects_unknown_group(self) -> None:
         config = load_config_json("config/article_cbeb_sensitivity.json", {})
         config["DOWNSCALE_FACTORS"] = [1, 1, 1]

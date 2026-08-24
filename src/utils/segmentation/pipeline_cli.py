@@ -38,6 +38,9 @@ Exemplos de uso:
   # Manter/restaurar a abordagem histórica de aorta e óstios
   python segmentation_pipeline.py --split val --aorta-ostia-method standard
 
+  # Ativar o controle adaptativo das iterações do level set da aorta
+  python segmentation_pipeline.py --split train --aorta-level-set-mode adaptive
+
   # Comparar candidatos do region growing com a média acumulada da região
   python segmentation_pipeline.py --split train --rg-comparison-window -1
 
@@ -193,6 +196,137 @@ def build_parser(default_base_path, default_output_dir):
         ),
     )
     parser.add_argument(
+        "--aorta-level-set-mode",
+        choices=["fixed", "adaptive"],
+        default=None,
+        help=(
+            "Controle de iterações do level set da aorta: 'fixed' preserva o "
+            "total configurado; 'adaptive' classifica checkpoints e pode "
+            "reiniciar uma evolução conservadora ou permissiva a partir de "
+            "um checkpoint anterior."
+        ),
+    )
+    parser.add_argument(
+        "--aorta-circle-filter",
+        choices=["none", "robust"],
+        default=None,
+        help=(
+            "Filtro experimental da trajetória da Hough. 'robust' interpola "
+            "outliers isolados e remove uma cauda geometricamente incompatível; "
+            "'none' preserva todos os círculos detectados."
+        ),
+    )
+    parser.add_argument(
+        "--aorta-circle-filter-min-coverage",
+        type=float,
+        default=None,
+        help=(
+            "Cobertura mínima da trajetória para permitir remoção de cauda. "
+            "Use 0.4 para reproduzir o filtro agressivo experimental."
+        ),
+    )
+    circle_interpolation_group = parser.add_mutually_exclusive_group()
+    circle_interpolation_group.add_argument(
+        "--aorta-circle-filter-interpolate",
+        dest="aorta_circle_filter_interpolate",
+        action="store_true",
+        default=None,
+        help="Interpola outliers circulares isolados no filtro robusto.",
+    )
+    circle_interpolation_group.add_argument(
+        "--no-aorta-circle-filter-interpolate",
+        dest="aorta_circle_filter_interpolate",
+        action="store_false",
+        help="Desativa a interpolação de outliers circulares isolados.",
+    )
+    circle_fallback_group = parser.add_mutually_exclusive_group()
+    circle_fallback_group.add_argument(
+        "--aorta-circle-filter-reject-oversegmented",
+        dest="aorta_circle_filter_reject_oversegmented",
+        action="store_true",
+        default=None,
+        help=(
+            "Rejeita a trajetória filtrada quando a máscara resultante ainda "
+            "for classificada como sobresegmentada e repete somente o level set "
+            "com os círculos originais."
+        ),
+    )
+    circle_fallback_group.add_argument(
+        "--no-aorta-circle-filter-reject-oversegmented",
+        dest="aorta_circle_filter_reject_oversegmented",
+        action="store_false",
+        help="Desativa o fallback para a trajetória original.",
+    )
+    parser.add_argument(
+        "--ostia-surface-mode",
+        choices=["erosion", "physical_distance"],
+        default=None,
+        help=(
+            "Superfície candidata dos óstios: casca por erosão ou faixa "
+            "interna definida em distância física."
+        ),
+    )
+    parser.add_argument(
+        "--ostia-surface-thickness-mm",
+        type=float,
+        default=None,
+        help="Espessura interna, em mm, da superfície candidata dos óstios.",
+    )
+    parser.add_argument(
+        "--ostia-candidate-score-mode",
+        choices=["voxel", "local_mean", "external_mean", "robust_percentile"],
+        default=None,
+        help="Score usado para ordenar candidatos de óstio.",
+    )
+    parser.add_argument(
+        "--ostia-pair-selection-mode",
+        choices=["greedy", "joint", "bilateral"],
+        default=None,
+        help="Estratégia para selecionar o par de óstios.",
+    )
+    parser.add_argument(
+        "--aorta-leak-correction",
+        choices=[
+            "none",
+            "circle_seeded_neck_pruning",
+            "circle_area_jump_pruning",
+        ],
+        default=None,
+        help=(
+            "Correção experimental posterior ao level set. "
+            "'circle_seeded_neck_pruning' tenta remover vazamentos inferiores "
+            "conectados por colos estreitos; 'circle_area_jump_pruning' busca "
+            "uma expansão abrupta da área axial. Ambas requerem adaptive."
+        ),
+    )
+    parser.add_argument(
+        "--aorta-neck-pruning-erosion-radius",
+        type=int,
+        default=None,
+        help=(
+            "Raio da erosão 3D usada pela poda experimental de colos estreitos. "
+            "Valores 3 e 4 são mais agressivos que o padrão 2."
+        ),
+    )
+    parser.add_argument(
+        "--aorta-neck-pruning-core-radius-factor",
+        type=float,
+        default=None,
+        help=(
+            "Fração do raio dos círculos preservada como núcleo da aorta pela "
+            "poda experimental."
+        ),
+    )
+    parser.add_argument(
+        "--aorta-neck-pruning-max-volume-loss",
+        type=float,
+        default=None,
+        help=(
+            "Perda relativa máxima de volume aceita pela poda experimental, "
+            "por exemplo 0.15 para 15%%."
+        ),
+    )
+    parser.add_argument(
         "--rg-comparison-window",
         type=int,
         default=None,
@@ -263,6 +397,15 @@ def build_parser(default_base_path, default_output_dir):
         type=str,
         default=str(default_output_dir),
         help=f"Diretório de saída (padrão: {default_output_dir})",
+    )
+    parser.add_argument(
+        "--run-group",
+        type=str,
+        default=None,
+        help=(
+            "Subpasta relativa dentro de runs/<resolução>_res para organizar "
+            "a execução, por exemplo aorta_segmentation_experiments/train/variant."
+        ),
     )
     parser.add_argument(
         "--base-path",
@@ -344,6 +487,10 @@ def parse_pipeline_args(default_base_path, default_output_dir):
         parser.error("--num-batches deve ser maior que 0")
     if args.merge_only and not args.resume_dir:
         parser.error("--merge-only requer --resume-dir com a pasta de saída existente")
+    if args.run_group:
+        run_group = Path(args.run_group)
+        if run_group.is_absolute() or ".." in run_group.parts:
+            parser.error("--run-group deve ser um caminho relativo sem '..'")
 
     try:
         resume_batches_overrides = parse_resume_batches(args.resume_batches)

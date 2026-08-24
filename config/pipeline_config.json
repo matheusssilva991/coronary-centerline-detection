@@ -8,9 +8,9 @@
         1
     ],
     "MIN_THRESHOLD": -300,
-    "MAX_THRESHOLD_PERCENTILE": 99.8,
+    "MAX_THRESHOLD_PERCENTILE": 99.9,
     "LOWER_THRESHOLD": {
-        "method": "percentile",
+        "method": "fixed",
         "fixed_hu": -300,
         "percentile": 10.75,
         "clip_min_hu": -700.0,
@@ -30,9 +30,8 @@
     "VESSELNESS_AORTA": {
         "method": "normal",
         "sigmas": [
-            2.0,
-            2.25,
-            2.5
+            2.5,
+            3.0
         ],
         "black_ridges": false,
         "alpha": 0.5,
@@ -74,11 +73,29 @@
         "use_local_roi": true,
         "local_roi_padding": 30,
         "interpolate_missed_circles": true,
-        "early_track_recovery": true,
+        "early_track_recovery": false,
         "early_recovery_search_slices": 8,
-        "early_recovery_min_circles": 10
+        "early_recovery_min_circles": 10,
+        "trajectory_filter": {
+            "method": "none",
+            "max_radius_step_mm": 4.8,
+            "max_center_step_mm": 8.0,
+            "severe_radius_step_mm": 7.0,
+            "severe_center_step_mm": 12.0,
+            "min_hough_accumulator": 0.408,
+            "reference_window": 5,
+            "persistence_window": 5,
+            "persistence_required": 4,
+            "min_tail_circles": 8,
+            "min_remaining_circles": 30,
+            "tail_search_start_fraction": 0.35,
+            "min_tail_coverage": 0.8,
+            "interpolate_isolated_outliers": false,
+            "reject_oversegmented_result": false
+        }
     },
     "LEVEL_SET": {
+        "iteration_mode": "fixed",
         "radius_reduction_factor": 0.15,
         "num_iter": 31,
         "balloon": 0.8,
@@ -88,7 +105,83 @@
         "use_roi": true,
         "alpha": 1000,
         "sigma": 2,
-        "leak_removal_radius": 2
+        "leak_removal_radius": 2,
+        "adaptive": {
+            "min_iter": 16,
+            "check_interval": 5,
+            "early_stop_iteration": 26,
+            "convergence_tolerance": 0.01,
+            "convergence_patience": 2,
+            "adequate_min_volume_fraction": 0.008,
+            "adequate_max_volume_fraction": 0.019,
+            "adequate_min_circle_fill_q25": 0.8,
+            "adequate_min_circle_area_ratio_p90": 1.3,
+            "adequate_max_circle_area_ratio_p90": 2.8,
+            "oversegmented_area_ratio_p90": 3.0,
+            "oversegmented_volume_fraction": 0.019,
+            "oversegmented_joint_area_ratio_p90": 2.8,
+            "oversegmented_voxels_per_slice": 2800.0,
+            "oversegmented_mean_slice_min_volume_fraction": 0.019,
+            "oversegmented_mean_slice_min_area_ratio_p90": 2.3,
+            "undersegmented_circle_fill_q25": 0.8,
+            "undersegmented_circle_area_ratio_p90": 1.3,
+            "undersegmented_volume_fraction": 0.008,
+            "localization_min_circle_fill_q25": 0.25,
+            "localization_signal_threshold": 4,
+            "localization_min_radius_median_mm": 13.9,
+            "localization_max_radius_step_mm": 4.8,
+            "localization_max_radius_p90_step_mm": 1.85,
+            "localization_min_hough_accumulator": 0.408,
+            "localization_max_lower_bound_fraction": 0.05,
+            "max_fill_loss": 0.01,
+            "max_axial_jump_increase_fraction": 0.1,
+            "permissive_start_iteration": 26,
+            "permissive_min_fill_gain": 0.01,
+            "permissive_max_circle_area_ratio_p90": 2.8,
+            "permissive_max_volume_fraction": 0.019,
+            "conservative": {
+                "balloon": 0.5,
+                "alpha": 1500,
+                "threshold_percentile": 55,
+                "smoothing": 2
+            },
+            "permissive": {
+                "balloon": 1.0,
+                "alpha": 800,
+                "threshold_percentile": 30,
+                "smoothing": 2,
+                "target_iterations": 36
+            }
+        },
+        "experimental_leak_correction": {
+            "method": "none",
+            "circle_seeded_neck_pruning": {
+                "erosion_radius": 2,
+                "area_ratio_threshold": 3.0,
+                "core_radius_factor": 0.85,
+                "inferior_fraction": 0.5,
+                "anomaly_margin_slices": 5,
+                "max_fill_loss": 0.01,
+                "max_volume_loss_fraction": 0.3,
+                "max_axial_jump_increase_fraction": 0.1
+            },
+            "circle_area_jump_pruning": {
+                "inferior_fraction": 0.5,
+                "area_ratio_threshold": 2.8,
+                "min_ratio_jump": 0.5,
+                "min_relative_area_growth": 0.25,
+                "baseline_window_slices": 6,
+                "neck_search_slices": 8,
+                "cut_half_width_slices": 2,
+                "cut_radius_factor": 1.35,
+                "cut_transition_step": 0.2,
+                "core_radius_factor": 0.85,
+                "min_removed_fraction": 0.005,
+                "max_volume_loss_fraction": 0.15,
+                "max_fill_loss": 0.01,
+                "max_axial_jump_increase_fraction": 0.25
+            }
+        }
     },
     "OSTIA_DETECTION": {
         "top_n": 2000,
@@ -97,6 +190,9 @@
         "min_center_distance_factor": 0.85,
         "min_lateral_factor": 0.4,
         "erosion_radius": 4,
+        "surface_mode": "erosion",
+        "surface_thickness_mm": 2.0,
+        "candidate_score_mode": "voxel",
         "pair_selection_mode": "greedy",
         "bilateral_top_k_per_side": 50
     },

@@ -11,7 +11,7 @@ descartadas e execuções completas duplicadas. Runs oficiais continuam em
 |---|---|---|
 | Threshold normal | piso percentil 10,75 e teto percentil 99,8 | Dice médio 0,6407 e sucesso dos óstios 93,3% em 30 imagens de treino |
 | Threshold fuzzy | piso percentil 10,5; centros P99,8/P99,96; margem 100 HU; sem suavização; `object_argmax` | Dice médio 0,6429 em 30 imagens de treino |
-| Vesselness da aorta | sigmas `[2.0, 2.25, 2.5]`, gamma 30 | sucesso 88,3% e Dice 0,6183 em 60 imagens de validação |
+| Vesselness da aorta | baseline final `[2.5, 3.0]`, gamma 30 | pertence ao melhor run completo P99.9; `[2.0, 2.25, 2.5]` teve ganho isolado em 60 imagens, mas não compõe o baseline promovido |
 | Rastreamento da aorta | candidato geométrico válido mais próximo e recuperação precoce em 8 fatias | sucesso 90,0% e Dice 0,6301 em 60 imagens de validação |
 | Region growing | implementação refinada atual, com busca local e múltiplas sementes | melhor método de segmentação arterial nos comparativos amplos |
 | Fuzzy connectedness | alpha 0,16; sigma HU 100; vizinhança 26; piso vesselness 0,018; peso vesselness 0,9 | melhor configuração FC mantida para comparação científica |

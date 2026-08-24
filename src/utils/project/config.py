@@ -185,7 +185,33 @@ def scale_config_to_resolution(
 
     if "level_set_iterations" in groups and "LEVEL_SET" in cfg:
         if factor_xy == 1:  # HIGH RESOLUTION (sem downscale)
+            original_num_iter = int(cfg["LEVEL_SET"]["num_iter"])
             cfg["LEVEL_SET"]["num_iter"] = 70
+
+            # Mantém as proporções temporais do controle adaptativo quando o
+            # checkpoint nominal é ampliado para alta resolução.
+            adaptive = cfg["LEVEL_SET"].get("adaptive")
+            if adaptive and original_num_iter > 0:
+                iteration_scale = cfg["LEVEL_SET"]["num_iter"] / original_num_iter
+                for key in (
+                    "min_iter",
+                    "check_interval",
+                    "early_stop_iteration",
+                    "permissive_start_iteration",
+                ):
+                    if key in adaptive:
+                        adaptive[key] = max(
+                            1,
+                            int(round(adaptive[key] * iteration_scale)),
+                        )
+                permissive = adaptive.get("permissive")
+                if permissive and "target_iterations" in permissive:
+                    permissive["target_iterations"] = max(
+                        1,
+                        int(round(permissive["target_iterations"] * iteration_scale)),
+                    )
+                if "oversegmented_voxels_per_slice" in adaptive:
+                    adaptive["oversegmented_voxels_per_slice"] *= scale_area
 
     # Se não há scaling necessário, retorna configuração sem mudanças
     if scale == 1.0:
@@ -225,6 +251,15 @@ def scale_config_to_resolution(
         cfg["LEVEL_SET"]["leak_removal_radius"] = max(
             1, round(cfg["LEVEL_SET"]["leak_removal_radius"] * scale)
         )
+        pruning = (
+            cfg["LEVEL_SET"]
+            .get("experimental_leak_correction", {})
+            .get("circle_seeded_neck_pruning")
+        )
+        if pruning:
+            pruning["erosion_radius"] = max(
+                1, round(pruning["erosion_radius"] * scale)
+            )
 
     # =========================================================================
     # PARÂMETROS DE DETECÇÃO DE ÓSTIOS

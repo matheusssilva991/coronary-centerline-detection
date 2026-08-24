@@ -90,10 +90,11 @@ Interpretacao:
 
 ### `LOWER_THRESHOLD` (object)
 
-- `method`: `percentile` e o padrão validado; `fixed` permanece para reproduzir
-  o baseline histórico.
-- `percentile`: `10.75` no threshold normal.
-- `fixed_hu`: `-300`, usado apenas quando `method = "fixed"`.
+- `method`: `fixed` é o padrão promovido após a validação completa do baseline
+  P99.9; `percentile` permanece disponível para experimentos.
+- `fixed_hu`: `-300`, limite inferior usado pelo baseline.
+- `percentile`: `10.75`, referência mantida para reproduzir o threshold
+  inferior adaptativo anterior.
 - `clip_min_hu`/`clip_max_hu`: faixa válida para estimar o percentil.
 
 ### `THRESHOLDING` (object)
@@ -106,7 +107,7 @@ Interpretacao:
 
 ### `MAX_THRESHOLD_PERCENTILE` (float)
 
-- Valor atual: `99.8`
+- Valor atual: `99.9`
 - Percentil usado para limitar/clamp de intensidade em alguma etapa de limiarizacao normalizada.
 
 Efeito pratico:
@@ -132,8 +133,12 @@ Interpretacao:
 
 ### `sigmas` (array[float])
 
-- Valor atual: `[2.0, 2.25, 2.5]`
+- Valor atual: `[2.5, 3.0]`
 - Escalas gaussianas para analise multiescala.
+
+Esse conjunto pertence ao baseline P99.9 promovido. A grade
+`[2.0, 2.25, 2.5]` permanece documentada no histórico de experimentos, mas não
+é mais o padrão do pipeline.
 
 Interpretacao:
 
@@ -313,12 +318,38 @@ Trade-off:
 - Padding maior: menos risco de cortar estrutura valida, mais custo/falso positivo.
 - Padding menor: mais foco, risco de truncar alvo.
 
+### `trajectory_filter` (objeto)
+
+- `method`: `none` preserva a trajetória original; `robust` ativa a filtragem
+  experimental antes do level set.
+- `max_radius_step_mm` e `max_center_step_mm`: limites físicos usados para
+  identificar mudanças geométricas incompatíveis.
+- `min_hough_accumulator`: sinal auxiliar de baixa confiança. Ele nunca remove
+  uma cauda sem que também exista divergência geométrica.
+- `reference_window`, `persistence_window` e `persistence_required`: controlam
+  quanto histórico estável e quantas detecções incompatíveis são necessárias.
+- `min_tail_circles` e `min_remaining_circles`: impedem cortes curtos ou que
+  descartariam quase toda a trajetória.
+- `min_tail_coverage`: exige cobertura extrema do volume antes de permitir a
+  remoção da cauda. O valor conservador `0.8` evita os cortes prematuros vistos
+  em trajetórias normais.
+- `interpolate_isolated_outliers`: mantém disponível a interpolação de pontos
+  isolados, mas fica desativada por padrão até demonstrar benefício próprio.
+- `reject_oversegmented_result`: quando habilitado, rejeita uma trajetória
+  filtrada que ainda produza estado `oversegmented` e repete somente o level
+  set com os círculos originais. O padrão permanece `false`.
+
+O filtro substitui outliers isolados pela interpolação dos círculos vizinhos.
+Quando a divergência persiste até o final do rastreamento, remove somente essa
+cauda. O padrão permanece `method: none`.
+
 ### Rastreamento validado
 
 - Filtra candidatos pelas tolerâncias de raio/distância e escolhe o válido mais
   próximo do último círculo aceito.
-- `early_track_recovery = true` tenta novas inicializações nas 8 fatias
-  anteriores quando a trajetória inicial tem menos de 10 círculos.
+- `early_track_recovery = false` preserva o comportamento do melhor run P99.9.
+  Quando ativado experimentalmente, tenta novas inicializações nas 8 fatias
+  anteriores se a trajetória inicial tiver menos de 10 círculos.
 - Candidatos fora da tolerância interrompem o rastreamento; eles não são mais
   tratados como misses.
 
@@ -367,6 +398,61 @@ Efeito:
 - Valor atual: `2`
 - Raio estrutural para limpar pequenos vazamentos apos evolucao.
 
+### Controle adaptativo de iteracoes
+
+- `iteration_mode`: `fixed` preserva o comportamento historico; `adaptive`
+  classifica a mascara em checkpoints e pode reiniciar a evolucao a partir de
+  um checkpoint anterior.
+- `min_iter` e `check_interval`: definem os checkpoints de monitoramento.
+- `early_stop_iteration`, `convergence_tolerance` e `convergence_patience`:
+  permitem parada segura na iteracao 26 quando dois checkpoints adequados
+  mudam no maximo 1%.
+- limites `adequate_*`, `oversegmented_*` e `undersegmented_*`: classificam a
+  mascara nominal como adequada, sobresegmentada ou subsegmentada.
+- limites `localization_*`: combinam preenchimento dos circulos, raio em mm,
+  saltos de raio, confianca da Hough e saturacao no limite inferior. Uma
+  localizacao suspeita e apenas registrada; a mascara nominal e preservada.
+- `conservative`: reinicia antes do vazamento com `balloon=0.5`, `alpha=1500`,
+  percentil 55 do gradiente e `smoothing=2`.
+- `permissive`: reinicia na iteracao 26 e evolui ate 36 com `balloon=1.0`,
+  `alpha=800`, percentil 30 do gradiente e `smoothing=2`.
+- `max_fill_loss`, `max_axial_jump_increase_fraction` e limites `permissive_*`:
+  rejeitam alternativas que prejudiquem preenchimento, volume ou continuidade.
+
+Se uma evolução alternativa for rejeitada, o controlador retorna exatamente a
+mascara nominal. Os campos antigos `refinement_*` continuam apenas para leitura
+de runs contrativos anteriores.
+
+### Poda experimental de colos estreitos
+
+- `experimental_leak_correction.method`: `none` mantém a máscara escolhida pelo
+  controlador; `circle_seeded_neck_pruning` ativa a correção experimental.
+- A poda atua apenas no modo `adaptive` e em máscaras classificadas como
+  `oversegmented`.
+- `erosion_radius`: raio usado para romper conexões estreitas.
+- `area_ratio_threshold` e `inferior_fraction`: definem as fatias inferiores
+  candidatas pela razão entre área segmentada e área circular.
+- `core_radius_factor`: cria o núcleo circular que identifica as componentes
+  pertencentes à aorta após a erosão.
+- `max_fill_loss`, `max_volume_loss_fraction` e
+  `max_axial_jump_increase_fraction`: rejeitam correções destrutivas.
+
+A correção permanece desativada por padrão. Quando rejeitada, a máscara anterior
+é devolvida sem alterações.
+
+### Poda experimental por salto de área
+
+- `circle_area_jump_pruning` analisa a curva axial
+  `área_da_máscara / área_do_círculo` na metade inferior da trajetória.
+- A expansão precisa superar o limite de razão e também o salto absoluto ou o
+  crescimento relativo configurado.
+- O algoritmo procura a menor seção anterior, restringe um pequeno plano ao
+  envelope circular e mantém a componente com maior contato com o núcleo.
+- `oversegmented_voxels_per_slice` adiciona ao controlador a largura média da
+  máscara observada no EDA. O valor mid resolution é escalado por área em high.
+- A máscara anterior é restaurada integralmente quando não há salto claro ou
+  quando a candidata perde preenchimento, fatias, volume ou continuidade.
+
 ### Correcao condicional pela trajetoria
 
 - `trajectory_area_ratio_threshold`: quando definido, corrige somente fatias
@@ -380,6 +466,16 @@ Efeito:
 ## 6) Deteccao de Ostios - `OSTIA_DETECTION`
 
 Seleciona candidatos de ostio e filtra por regras anatomicas/geometricas.
+
+### Superfície candidata
+
+- `surface_mode: erosion`: superfície interna histórica obtida por erosão.
+- `surface_mode: physical_distance`: faixa interna com espessura física.
+- `surface_thickness_mm`: espessura interna da banda física.
+- `candidate_score_mode`: define se o ranking usa o valor pontual ou uma
+  agregação local do vesselness.
+- `pair_selection_mode: bilateral`: busca um candidato de cada lado da
+  trajetória circular da aorta.
 
 ### `top_n` (int)
 

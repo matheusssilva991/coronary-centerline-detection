@@ -146,6 +146,77 @@ def _apply_execution_overrides(config, args):
         if value is not None:
             config.setdefault(section, {})[config_key] = value
 
+    level_set_mode = getattr(args, "aorta_level_set_mode", None)
+    if level_set_mode is not None:
+        config.setdefault("LEVEL_SET", {})["iteration_mode"] = level_set_mode
+
+    circle_filter = getattr(args, "aorta_circle_filter", None)
+    circle_filter_config = config.setdefault("CIRCLE_DETECTION", {}).setdefault(
+        "trajectory_filter", {}
+    )
+    if circle_filter is not None:
+        circle_filter_config["method"] = circle_filter
+    circle_filter_min_coverage = getattr(
+        args, "aorta_circle_filter_min_coverage", None
+    )
+    if circle_filter_min_coverage is not None:
+        circle_filter_config["min_tail_coverage"] = circle_filter_min_coverage
+    circle_filter_interpolate = getattr(
+        args, "aorta_circle_filter_interpolate", None
+    )
+    if circle_filter_interpolate is not None:
+        circle_filter_config["interpolate_isolated_outliers"] = bool(
+            circle_filter_interpolate
+        )
+    reject_oversegmented = getattr(
+        args,
+        "aorta_circle_filter_reject_oversegmented",
+        None,
+    )
+    if reject_oversegmented is not None:
+        circle_filter_config["reject_oversegmented_result"] = bool(
+            reject_oversegmented
+        )
+
+    ostia_overrides = {
+        "surface_mode": getattr(args, "ostia_surface_mode", None),
+        "surface_thickness_mm": getattr(args, "ostia_surface_thickness_mm", None),
+        "candidate_score_mode": getattr(args, "ostia_candidate_score_mode", None),
+        "pair_selection_mode": getattr(args, "ostia_pair_selection_mode", None),
+    }
+    ostia_config = config.setdefault("OSTIA_DETECTION", {})
+    for config_key, value in ostia_overrides.items():
+        if value is not None:
+            ostia_config[config_key] = value
+
+    leak_correction = getattr(args, "aorta_leak_correction", None)
+    if leak_correction is not None:
+        level_set_config = config.setdefault("LEVEL_SET", {})
+        level_set_config.setdefault("experimental_leak_correction", {})[
+            "method"
+        ] = leak_correction
+
+    pruning_overrides = {
+        "erosion_radius": getattr(
+            args, "aorta_neck_pruning_erosion_radius", None
+        ),
+        "core_radius_factor": getattr(
+            args, "aorta_neck_pruning_core_radius_factor", None
+        ),
+        "max_volume_loss_fraction": getattr(
+            args, "aorta_neck_pruning_max_volume_loss", None
+        ),
+    }
+    if any(value is not None for value in pruning_overrides.values()):
+        pruning_config = (
+            config.setdefault("LEVEL_SET", {})
+            .setdefault("experimental_leak_correction", {})
+            .setdefault("circle_seeded_neck_pruning", {})
+        )
+        for config_key, value in pruning_overrides.items():
+            if value is not None:
+                pruning_config[config_key] = value
+
 
 def _apply_aorta_ostia_override(config, args):
     """Aplica o perfil de aorta/óstios configurado ou informado pela CLI."""
@@ -224,11 +295,17 @@ def print_run_settings(args, config, base_path):
         f"{'habilitada' if config.get('USE_GPU', False) else 'desabilitada'}"
     )
     circle_config = config.get("CIRCLE_DETECTION", {})
+    circle_filter_config = circle_config.get("trajectory_filter", {})
     print("🔎 LCC: por fatia")
     print(
         "⭕ Localização da aorta: "
         f"miss_count={circle_config.get('max_slice_miss_threshold')}, "
-        f"recuperação inicial={circle_config.get('early_track_recovery', True)}"
+        f"recuperação inicial={circle_config.get('early_track_recovery', True)}, "
+        "filtro de trajetória="
+        f"{circle_filter_config.get('method', 'none')} "
+        f"(cobertura mínima={circle_filter_config.get('min_tail_coverage', 0.8)}, "
+        "fallback sobresegmentado="
+        f"{circle_filter_config.get('reject_oversegmented_result', False)})"
     )
     artery_config = config.get("ARTERY_SEGMENTATION", {})
     thresholding_config = config.get("THRESHOLDING", {})
@@ -237,6 +314,16 @@ def print_run_settings(args, config, base_path):
     print(
         "🫁 Aorta/óstios: "
         f"{config.get('AORTA_OSTIA_METHOD', {}).get('method', 'standard')}"
+    )
+    ostia_config = config.get("OSTIA_DETECTION", {})
+    print(
+        "🎯 Superfície/seleção dos óstios: "
+        f"{ostia_config.get('surface_mode', 'erosion')} / "
+        f"{ostia_config.get('pair_selection_mode', 'greedy')}"
+    )
+    print(
+        "🔄 Level set da aorta: "
+        f"{config.get('LEVEL_SET', {}).get('iteration_mode', 'fixed')}"
     )
     print(f"🧩 Threshold: {thresholding_config.get('method', 'normal')}")
     print(
@@ -279,9 +366,12 @@ def resolve_output_dir(args, output_root_dir):
         )
         raise SystemExit(1)
 
+    experiment_name = f"segmentation/runs/{args.resolution}_res"
+    if args.run_group:
+        experiment_name = f"{experiment_name}/{Path(args.run_group).as_posix()}"
     run_dir = create_timestamped_output_dir(
         output_root_dir,
-        experiment_name=f"segmentation/runs/{args.resolution}_res",
+        experiment_name=experiment_name,
     )
     output_dirs = build_structured_output_dirs(run_dir)
     print(f"📁 Diretório da execução: {output_dirs['run_dir']}")

@@ -281,3 +281,37 @@ por imagem. Para preservar excepcionalmente os runs internos completos, use
 
 Experimentos encerrados e as razões para descarte estão documentados em
 [`output/segmentation/analysis/EXPERIMENTS_ARCHIVE.md`](../../output/segmentation/analysis/EXPERIMENTS_ARCHIVE.md).
+
+## Cobertura da trajetória circular da aorta
+
+O runner abaixo testa, por padrão, cobertura mínima de 65% com rejeição da
+trajetória quando a máscara filtrada continua `oversegmented`. Ele executa
+treino-30 e validação-60, salva os HTMLs para inspeção visual e usa como base
+`config/article_cbeb_sensitivity.json` (`-300 HU`/P99.9):
+
+```bash
+bash src/experiments/runners/run_aorta_circle_coverage_tests.sh
+```
+
+Use `RUN_TRAIN=0` ou `RUN_VAL=0` para executar somente um subconjunto, e
+`SAVE_VISUALS=0` quando forem necessários apenas os resultados numéricos.
+
+Para repetir o filtro agressivo nas 30 imagens de treino e gerar os HTMLs, use:
+
+```bash
+FILTER_PROFILE=aggressive RUN_VAL=0 SAVE_VISUALS=1 \
+  bash src/experiments/runners/run_aorta_circle_coverage_tests.sh
+```
+
+Esse perfil usa cobertura mínima de 40%, não interpola outliers isolados e não
+aplica fallback. O resultado é salvo em
+`runs/mid_res/aorta_segmentation_experiments/train/circle_filter_aggressive_p999/`.
+
+Os parâmetros `COVERAGE`, `RUN_WITHOUT_FALLBACK` e `RUN_WITH_FALLBACK` permitem
+reutilizar o runner. Por exemplo, a comparação histórica de 60% com e sem
+fallback pode ser reproduzida com:
+
+```bash
+COVERAGE=0.60 RUN_WITHOUT_FALLBACK=1 \
+  bash src/experiments/runners/run_aorta_circle_coverage_tests.sh
+```

@@ -10,6 +10,84 @@ from utils.segmentation.pipeline_visuals import save_segmentation_visual
 
 
 class PipelineVisualTests(unittest.TestCase):
+    def test_cli_accepts_conservative_circle_filter_and_run_group(self):
+        parser = build_parser(Path("/dataset"), Path("/output"))
+
+        args = parser.parse_args(
+            [
+                "--aorta-circle-filter",
+                "robust",
+                "--aorta-circle-filter-min-coverage",
+                "0.8",
+                "--no-aorta-circle-filter-interpolate",
+                "--aorta-circle-filter-reject-oversegmented",
+                "--ostia-surface-mode",
+                "physical_distance",
+                "--ostia-surface-thickness-mm",
+                "2.0",
+                "--ostia-candidate-score-mode",
+                "voxel",
+                "--ostia-pair-selection-mode",
+                "greedy",
+                "--run-group",
+                "aorta_segmentation_experiments/val/circle_filter_conservative",
+            ]
+        )
+
+        self.assertEqual(args.aorta_circle_filter_min_coverage, 0.8)
+        self.assertFalse(args.aorta_circle_filter_interpolate)
+        self.assertTrue(args.aorta_circle_filter_reject_oversegmented)
+        self.assertEqual(args.ostia_surface_mode, "physical_distance")
+        self.assertEqual(args.ostia_candidate_score_mode, "voxel")
+        self.assertEqual(args.ostia_pair_selection_mode, "greedy")
+        self.assertEqual(
+            args.run_group,
+            "aorta_segmentation_experiments/val/circle_filter_conservative",
+        )
+
+    def test_cli_selects_adaptive_aorta_level_set(self):
+        parser = build_parser(Path("/dataset"), Path("/output"))
+
+        default_args = parser.parse_args([])
+        adaptive_args = parser.parse_args(["--aorta-level-set-mode", "adaptive"])
+
+        self.assertIsNone(default_args.aorta_level_set_mode)
+        self.assertEqual(adaptive_args.aorta_level_set_mode, "adaptive")
+
+    def test_cli_selects_experimental_aorta_leak_correction(self):
+        parser = build_parser(Path("/dataset"), Path("/output"))
+
+        default_args = parser.parse_args([])
+        pruning_args = parser.parse_args(
+            [
+                "--aorta-leak-correction",
+                "circle_seeded_neck_pruning",
+                "--aorta-neck-pruning-erosion-radius",
+                "3",
+                "--aorta-neck-pruning-core-radius-factor",
+                "0.85",
+                "--aorta-neck-pruning-max-volume-loss",
+                "0.15",
+            ]
+        )
+
+        self.assertIsNone(default_args.aorta_leak_correction)
+        self.assertEqual(
+            pruning_args.aorta_leak_correction,
+            "circle_seeded_neck_pruning",
+        )
+        self.assertEqual(pruning_args.aorta_neck_pruning_erosion_radius, 3)
+        self.assertEqual(pruning_args.aorta_neck_pruning_core_radius_factor, 0.85)
+        self.assertEqual(pruning_args.aorta_neck_pruning_max_volume_loss, 0.15)
+
+        area_jump_args = parser.parse_args(
+            ["--aorta-leak-correction", "circle_area_jump_pruning"]
+        )
+        self.assertEqual(
+            area_jump_args.aorta_leak_correction,
+            "circle_area_jump_pruning",
+        )
+
     def test_cli_enables_segmentation_visuals_explicitly(self):
         parser = build_parser(Path("/dataset"), Path("/output"))
 
