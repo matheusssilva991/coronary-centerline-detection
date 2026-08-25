@@ -35,13 +35,11 @@ run_variant() {
     --split-config "$split_config" \
     --resolution mid \
     --config-file "$BASE_CONFIG" \
-    --aorta-ostia-method standard \
     --aorta-circle-filter robust \
     --aorta-circle-filter-min-coverage "$COVERAGE" \
     --no-aorta-circle-filter-interpolate \
     "$fallback_arg" \
     --aorta-level-set-mode adaptive \
-    --aorta-leak-correction circle_area_jump_pruning \
     --run-group "aorta_segmentation_experiments/${split}/${variant}" \
     --num-batches 5 \
     "${VISUAL_ARGS[@]}" \

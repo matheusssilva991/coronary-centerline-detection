@@ -265,7 +265,6 @@ def _prepare_hybrid_resolution_image(
         mid_label,
         mid_spacing,
         mid_config,
-        detected_circles=detected_circles,
     )
     result["mid_aorta_ostia_seconds"] = time.perf_counter() - stage_started
     mid_ostia_left = tuple(int(value) for value in ostia_results["ostia_left"])

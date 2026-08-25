@@ -373,7 +373,6 @@ def evaluate_prepared_image(
         context["down_label"],
         context["spacing"],
         config,
-        detected_circles=context["detected_circles"],
     )
     both_correct = bool(ostia_eval["both_correct"])
     both_tolerable = bool(ostia_eval["both_tolerable"])

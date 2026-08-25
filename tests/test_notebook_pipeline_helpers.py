@@ -51,12 +51,10 @@ class NotebookPipelineHelperTests(TestCase):
         self.assertIn("Valor preditivo positivo: 0.5000", output)
 
     @patch("utils.project.notebook_env.scale_config_to_resolution")
-    @patch("utils.project.notebook_env.apply_aorta_ostia_method")
     @patch("utils.project.notebook_env.load_config_json")
     def test_loads_high_resolution_config_in_original_order(
         self,
         load_config,
-        apply_method,
         scale_config,
     ) -> None:
         with TemporaryDirectory() as temporary_dir:
@@ -64,14 +62,11 @@ class NotebookPipelineHelperTests(TestCase):
             config_path.write_text("{}", encoding="utf-8")
             loaded = {
                 "DOWNSCALE_FACTORS": [2, 2, 1],
-                "AORTA_OSTIA_METHOD": {"method": "bilateral_thin"},
             }
             load_config.return_value = loaded
-            apply_method.side_effect = lambda config, method: config
             scale_config.side_effect = lambda config: config
 
             result = load_notebook_pipeline_config(config_path, "high")
 
         self.assertEqual(result["DOWNSCALE_FACTORS"], [1, 1, 1])
-        apply_method.assert_called_once_with(loaded, method="bilateral_thin")
         scale_config.assert_called_once()

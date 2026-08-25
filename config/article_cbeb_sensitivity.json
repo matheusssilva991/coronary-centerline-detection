@@ -85,12 +85,6 @@
         "erosion_radius": 4,
         "pair_selection_mode": "greedy"
     },
-    "AORTA_OSTIA_METHOD": {
-        "method": "standard",
-        "profiles": {
-            "standard": {}
-        }
-    },
     "OSTIA_VALIDATION": {
         "distance_threshold_mm": 7.0
     },

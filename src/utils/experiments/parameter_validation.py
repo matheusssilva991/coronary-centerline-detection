@@ -324,7 +324,7 @@ def summarize_intensity_histograms(
 
     subsets = {
         "full": finite_values,
-        "above_300_hu": finite_values[finite_values > dense_min_hu],
+        "dense_hu": finite_values[finite_values >= dense_min_hu],
     }
     summary: dict[str, float | int] = {
         "IMG_ID": int(image_id),
@@ -333,7 +333,7 @@ def summarize_intensity_histograms(
     histogram_frames = []
 
     for subset_name, subset_values in subsets.items():
-        prefix = "full" if subset_name == "full" else "above_300"
+        prefix = "full" if subset_name == "full" else "dense"
         summary[f"{prefix}_voxel_count"] = int(subset_values.size)
         if subset_values.size == 0:
             for metric in (
@@ -371,8 +371,8 @@ def summarize_intensity_histograms(
             )
         )
 
-    summary["above_300_voxel_percent"] = (
-        100 * int(summary["above_300_voxel_count"]) / int(summary["full_voxel_count"])
+    summary["dense_voxel_percent"] = (
+        100 * int(summary["dense_voxel_count"]) / int(summary["full_voxel_count"])
     )
     histogram_df = (
         pd.concat(histogram_frames, ignore_index=True)
@@ -488,8 +488,36 @@ def build_mean_intensity_histogram(
     if profiles.empty:
         return pd.DataFrame()
 
+    return build_mean_normalized_intensity_histogram(profiles)
+
+
+def build_mean_normalized_intensity_histogram(
+    profiles: pd.DataFrame,
+    *,
+    image_ids: list[int] | None = None,
+) -> pd.DataFrame:
+    """Resume perfis normalizados já alinhados em uma grade HU comum."""
+    required_columns = {
+        "IMG_ID",
+        "histogram",
+        "bin_left_hu",
+        "bin_right_hu",
+        "bin_center_hu",
+        "probability",
+    }
+    missing = required_columns.difference(profiles.columns)
+    if missing:
+        raise ValueError(f"Colunas de perfis ausentes: {sorted(missing)}")
+
+    selected = profiles
+    if image_ids is not None:
+        selected_ids = {int(image_id) for image_id in image_ids}
+        selected = profiles.loc[profiles["IMG_ID"].astype(int).isin(selected_ids)]
+    if selected.empty:
+        return pd.DataFrame()
+
     return (
-        profiles.groupby(
+        selected.groupby(
             [
                 "histogram",
                 "bin_left_hu",
@@ -875,7 +903,6 @@ def validate_parameter_validation_append(
     split: str,
     image_ids: list[int],
     resolution: str,
-    aorta_ostia_method: str,
     config_path: Path,
     use_gpu: bool,
 ) -> None:
@@ -884,7 +911,6 @@ def validate_parameter_validation_append(
         "split": split,
         "ids": image_ids,
         "resolution": resolution,
-        "aorta_ostia_method": aorta_ostia_method,
         "config_path": str(config_path),
         "use_gpu": use_gpu,
     }

@@ -7,6 +7,7 @@ import pandas as pd
 
 from utils.experiments.parameter_validation import (
     build_mean_intensity_histogram,
+    build_mean_normalized_intensity_histogram,
     build_normalized_intensity_histograms,
     build_parameter_pairwise_summary,
     build_parameter_sensitivity_summary,
@@ -61,6 +62,13 @@ class ParameterValidationTests(unittest.TestCase):
         self.assertEqual(profiles.groupby("IMG_ID")["bin_center_hu"].nunique().nunique(), 1)
         self.assertTrue(np.allclose(probability_by_image, 1.0))
 
+        selected_mean = build_mean_normalized_intensity_histogram(
+            profiles,
+            image_ids=[1],
+        )
+        self.assertEqual(int(selected_mean["images"].iloc[0]), 1)
+        self.assertAlmostEqual(selected_mean["mean_probability"].sum(), 1.0)
+
     def test_summarizes_full_and_dense_intensity_histograms(self) -> None:
         values = np.array(
             [-1000.0, -500.0, 0.0, 300.0, 301.0, 500.0, 1000.0, np.nan]
@@ -77,16 +85,16 @@ class ParameterValidationTests(unittest.TestCase):
         self.assertEqual(summary["full_voxel_count"], 7)
         self.assertAlmostEqual(summary["full_median_hu"], 300.0)
         self.assertAlmostEqual(summary["full_max_hu"], 1000.0)
-        self.assertEqual(summary["above_300_voxel_count"], 3)
+        self.assertEqual(summary["dense_voxel_count"], 4)
         self.assertAlmostEqual(
-            summary["above_300_mean_hu"], 1801.0 / 3.0, places=4
+            summary["dense_mean_hu"], 2101.0 / 4.0, places=4
         )
-        self.assertAlmostEqual(summary["above_300_median_hu"], 500.0)
-        self.assertAlmostEqual(summary["above_300_max_hu"], 1000.0)
-        self.assertAlmostEqual(summary["above_300_voxel_percent"], 300.0 / 7.0)
+        self.assertAlmostEqual(summary["dense_median_hu"], 400.5)
+        self.assertAlmostEqual(summary["dense_max_hu"], 1000.0)
+        self.assertAlmostEqual(summary["dense_voxel_percent"], 400.0 / 7.0)
         self.assertEqual(histogram.groupby("histogram")["count"].sum()["full"], 7)
         self.assertEqual(
-            histogram.groupby("histogram")["count"].sum()["above_300_hu"], 3
+            histogram.groupby("histogram")["count"].sum()["dense_hu"], 4
         )
 
     def test_rejects_invalid_histogram_progress_interval(self) -> None:
@@ -220,7 +228,6 @@ class ParameterValidationTests(unittest.TestCase):
             "split": "val",
             "ids": [1, 2, 3],
             "resolution": "mid",
-            "aorta_ostia_method": "standard",
             "config_path": "config/reference.json",
             "use_gpu": True,
         }
@@ -230,7 +237,6 @@ class ParameterValidationTests(unittest.TestCase):
             split="val",
             image_ids=[1, 2, 3],
             resolution="mid",
-            aorta_ostia_method="standard",
             config_path=Path("config/reference.json"),
             use_gpu=True,
         )
@@ -240,7 +246,6 @@ class ParameterValidationTests(unittest.TestCase):
             "split": "val",
             "ids": [1, 2, 3],
             "resolution": "mid",
-            "aorta_ostia_method": "standard",
             "config_path": "config/reference.json",
             "use_gpu": True,
         }
@@ -251,7 +256,6 @@ class ParameterValidationTests(unittest.TestCase):
                 split="val",
                 image_ids=[1, 2, 4],
                 resolution="mid",
-                aorta_ostia_method="standard",
                 config_path=Path("config/reference.json"),
                 use_gpu=True,
             )
@@ -321,6 +325,14 @@ class ParameterValidationTests(unittest.TestCase):
         self.assertEqual(fully_scaled["OSTIA_DETECTION"]["top_n"], 8000)
         self.assertEqual(without_candidates["OSTIA_DETECTION"]["top_n"], 2000)
         self.assertEqual(fully_scaled["CIRCLE_DETECTION"]["radii_start_px"], 36)
+
+    def test_default_config_uses_standard_aorta_ostia_values_directly(self) -> None:
+        config = load_config_json("config/pipeline_config.json", {})
+
+        self.assertNotIn("AORTA_OSTIA_METHOD", config)
+        self.assertEqual(config["OSTIA_DETECTION"]["erosion_radius"], 4)
+        self.assertEqual(config["OSTIA_DETECTION"]["pair_selection_mode"], "greedy")
+        self.assertNotIn("experimental_leak_correction", config["LEVEL_SET"])
 
     def test_adaptive_level_set_iterations_follow_high_resolution_scaling(self) -> None:
         config = load_config_json("config/pipeline_config.json", {})

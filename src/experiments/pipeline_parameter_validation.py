@@ -50,7 +50,6 @@ from utils.experiments.sweep_common import (  # noqa: E402
 )
 from utils.project.config import (  # noqa: E402
     RESOLUTION_SCALING_GROUPS,
-    apply_aorta_ostia_method,
     scale_config_to_resolution,
 )
 from utils.project.notebook_env import resolve_imagecas_base_path  # noqa: E402
@@ -87,11 +86,6 @@ def build_parser() -> argparse.ArgumentParser:
         "--variants",
         default=None,
         help="Nomes separados por vírgula. Por padrão executa todas as variantes.",
-    )
-    parser.add_argument(
-        "--aorta-ostia-method",
-        choices=["standard", "bilateral_thin"],
-        default="standard",
     )
     parser.add_argument(
         "--append",
@@ -246,10 +240,7 @@ def main() -> None:
         resolution=args.resolution,
         use_gpu=args.use_gpu,
     )
-    base_config = apply_aorta_ostia_method(
-        build_base_config(base_args),
-        args.aorta_ostia_method,
-    )
+    base_config = build_base_config(base_args)
     image_ids = select_ids(
         args.split,
         args.sample_size,
@@ -286,7 +277,6 @@ def main() -> None:
             split=args.split,
             image_ids=image_ids,
             resolution=args.resolution,
-            aorta_ostia_method=args.aorta_ostia_method,
             config_path=args.config_path,
             use_gpu=bool(base_config.get("USE_GPU")),
         )
@@ -341,7 +331,6 @@ def main() -> None:
             "ids_argument": args.ids,
             "ids": image_ids,
             "resolution": args.resolution,
-            "aorta_ostia_method": args.aorta_ostia_method,
             "config_path": str(args.config_path),
             "base_path": str(base_path),
             "use_gpu": base_config.get("USE_GPU"),

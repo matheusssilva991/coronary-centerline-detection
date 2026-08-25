@@ -65,7 +65,6 @@ def run_qualitative_pipeline_case(
         label,
         scaled_spacing,
         config,
-        detected_circles=detected_circles,
     )
     artery_results = segment_arteries_from_ostia(
         lcc_image,

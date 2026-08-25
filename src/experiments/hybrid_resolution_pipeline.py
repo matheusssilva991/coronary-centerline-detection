@@ -34,7 +34,6 @@ from utils.experiments.sweep_common import (  # noqa: E402
     write_json,
 )
 from utils.project.config import (  # noqa: E402
-    apply_aorta_ostia_method,
     load_config_json,
     scale_config_to_resolution,
     serialize_config_for_json,
@@ -105,12 +104,6 @@ def build_parser() -> argparse.ArgumentParser:
         choices=["rg", "fc", "region_growing", "fuzzy_connectedness"],
         default=None,
         help="Método usado somente na segmentação arterial high resolution.",
-    )
-    parser.add_argument(
-        "--aorta-ostia-method",
-        choices=["standard", "bilateral_thin"],
-        default=None,
-        help="Perfil usado na localização mid resolution.",
     )
     parser.add_argument(
         "--variants",
@@ -195,10 +188,6 @@ def _build_resolution_config(
         }.get(args.artery_method, args.artery_method)
         config.setdefault("ARTERY_SEGMENTATION", {})["method"] = artery_method
 
-    selected_aorta_method = args.aorta_ostia_method or config.get(
-        "AORTA_OSTIA_METHOD", {}
-    ).get("method", "standard")
-    config = apply_aorta_ostia_method(config, method=selected_aorta_method)
     return scale_config_to_resolution(config)
 
 

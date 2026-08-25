@@ -128,33 +128,6 @@ RESULT_COLUMNS: list[str] = [
     "aorta_level_set_nominal_circle_area_ratio_p90",
     "aorta_level_set_final_volume_fraction",
     "aorta_level_set_decision_reason",
-    "aorta_neck_pruning_method",
-    "aorta_neck_pruning_attempted",
-    "aorta_neck_pruning_accepted",
-    "aorta_neck_pruning_anomalous_slice_count",
-    "aorta_neck_pruning_removed_voxels",
-    "aorta_neck_pruning_volume_loss_fraction",
-    "aorta_neck_pruning_area_ratio_before",
-    "aorta_neck_pruning_area_ratio_after",
-    "aorta_neck_pruning_fill_q25_before",
-    "aorta_neck_pruning_fill_q25_after",
-    "aorta_neck_pruning_slice_area_jump_p95_before",
-    "aorta_neck_pruning_slice_area_jump_p95_after",
-    "aorta_neck_pruning_rejection_reason",
-    "aorta_area_jump_pruning_method",
-    "aorta_area_jump_pruning_attempted",
-    "aorta_area_jump_pruning_accepted",
-    "aorta_area_jump_pruning_trigger_slice",
-    "aorta_area_jump_pruning_neck_slice",
-    "aorta_area_jump_pruning_removed_voxels",
-    "aorta_area_jump_pruning_volume_loss_fraction",
-    "aorta_area_jump_pruning_area_ratio_before",
-    "aorta_area_jump_pruning_area_ratio_after",
-    "aorta_area_jump_pruning_fill_q25_before",
-    "aorta_area_jump_pruning_fill_q25_after",
-    "aorta_area_jump_pruning_voxels_per_slice_before",
-    "aorta_area_jump_pruning_voxels_per_slice_after",
-    "aorta_area_jump_pruning_rejection_reason",
     "ostia_surface_mode",
     "ostia_surface_thickness_mm",
     "ostia_candidate_score_mode",
@@ -297,33 +270,6 @@ READABLE_COLUMN_NAMES: dict[str, str] = {
     "aorta_level_set_nominal_circle_area_ratio_p90": "aorta_level_set_nominal_circle_area_ratio_p90",
     "aorta_level_set_final_volume_fraction": "aorta_level_set_final_volume_fraction",
     "aorta_level_set_decision_reason": "aorta_level_set_decision_reason",
-    "aorta_neck_pruning_method": "aorta_neck_pruning_method",
-    "aorta_neck_pruning_attempted": "aorta_neck_pruning_attempted",
-    "aorta_neck_pruning_accepted": "aorta_neck_pruning_accepted",
-    "aorta_neck_pruning_anomalous_slice_count": "aorta_neck_pruning_anomalous_slice_count",
-    "aorta_neck_pruning_removed_voxels": "aorta_neck_pruning_removed_voxels",
-    "aorta_neck_pruning_volume_loss_fraction": "aorta_neck_pruning_volume_loss_fraction",
-    "aorta_neck_pruning_area_ratio_before": "aorta_neck_pruning_area_ratio_before",
-    "aorta_neck_pruning_area_ratio_after": "aorta_neck_pruning_area_ratio_after",
-    "aorta_neck_pruning_fill_q25_before": "aorta_neck_pruning_fill_q25_before",
-    "aorta_neck_pruning_fill_q25_after": "aorta_neck_pruning_fill_q25_after",
-    "aorta_neck_pruning_slice_area_jump_p95_before": "aorta_neck_pruning_slice_area_jump_p95_before",
-    "aorta_neck_pruning_slice_area_jump_p95_after": "aorta_neck_pruning_slice_area_jump_p95_after",
-    "aorta_neck_pruning_rejection_reason": "aorta_neck_pruning_rejection_reason",
-    "aorta_area_jump_pruning_method": "aorta_area_jump_pruning_method",
-    "aorta_area_jump_pruning_attempted": "aorta_area_jump_pruning_attempted",
-    "aorta_area_jump_pruning_accepted": "aorta_area_jump_pruning_accepted",
-    "aorta_area_jump_pruning_trigger_slice": "aorta_area_jump_pruning_trigger_slice",
-    "aorta_area_jump_pruning_neck_slice": "aorta_area_jump_pruning_neck_slice",
-    "aorta_area_jump_pruning_removed_voxels": "aorta_area_jump_pruning_removed_voxels",
-    "aorta_area_jump_pruning_volume_loss_fraction": "aorta_area_jump_pruning_volume_loss_fraction",
-    "aorta_area_jump_pruning_area_ratio_before": "aorta_area_jump_pruning_area_ratio_before",
-    "aorta_area_jump_pruning_area_ratio_after": "aorta_area_jump_pruning_area_ratio_after",
-    "aorta_area_jump_pruning_fill_q25_before": "aorta_area_jump_pruning_fill_q25_before",
-    "aorta_area_jump_pruning_fill_q25_after": "aorta_area_jump_pruning_fill_q25_after",
-    "aorta_area_jump_pruning_voxels_per_slice_before": "aorta_area_jump_pruning_voxels_per_slice_before",
-    "aorta_area_jump_pruning_voxels_per_slice_after": "aorta_area_jump_pruning_voxels_per_slice_after",
-    "aorta_area_jump_pruning_rejection_reason": "aorta_area_jump_pruning_rejection_reason",
     "ostia_surface_mode": "ostia_surface_mode",
     "ostia_surface_thickness_mm": "ostia_surface_thickness_mm",
     "ostia_candidate_score_mode": "ostia_candidate_score_mode",
@@ -350,7 +296,6 @@ READABLE_COLUMN_NAMES: dict[str, str] = {
     "lcc_per_slice": "lcc_per_slice",
     "lcc_mode": "lcc_mode",
     "configured_artery_segmentation_method": "configured_artery_segmentation_method",
-    "aorta_ostia_method": "aorta_ostia_method",
     "aorta_miss_count": "aorta_miss_count",
     "aorta_interpolate_missed_circles": "aorta_interpolate_missed_circles",
 }
@@ -382,10 +327,6 @@ READABLE_BOOL_COLUMNS: set[str] = {
     "aorta_level_set_conservative_accepted",
     "aorta_level_set_permissive_attempted",
     "aorta_level_set_permissive_accepted",
-    "aorta_neck_pruning_attempted",
-    "aorta_neck_pruning_accepted",
-    "aorta_area_jump_pruning_attempted",
-    "aorta_area_jump_pruning_accepted",
 }
 
 OSTIA_STATUS_READABLE_LABELS: dict[str, str] = {
@@ -856,87 +797,6 @@ def build_result_row(result: dict[str, Any]) -> dict[str, Any]:
         "aorta_level_set_decision_reason": _get_result_value(
             result, "aorta_level_set_decision_reason"
         ),
-        "aorta_neck_pruning_method": _get_result_value(
-            result, "aorta_neck_pruning_method"
-        ),
-        "aorta_neck_pruning_attempted": _as_bool_value(
-            _get_result_value(result, "aorta_neck_pruning_attempted", False)
-        ),
-        "aorta_neck_pruning_accepted": _as_bool_value(
-            _get_result_value(result, "aorta_neck_pruning_accepted", False)
-        ),
-        "aorta_neck_pruning_anomalous_slice_count": _get_result_value(
-            result, "aorta_neck_pruning_anomalous_slice_count", 0
-        ),
-        "aorta_neck_pruning_removed_voxels": _get_result_value(
-            result, "aorta_neck_pruning_removed_voxels", 0
-        ),
-        "aorta_neck_pruning_volume_loss_fraction": _get_result_value(
-            result, "aorta_neck_pruning_volume_loss_fraction", 0.0
-        ),
-        "aorta_neck_pruning_area_ratio_before": _get_result_value(
-            result, "aorta_neck_pruning_area_ratio_before"
-        ),
-        "aorta_neck_pruning_area_ratio_after": _get_result_value(
-            result, "aorta_neck_pruning_area_ratio_after"
-        ),
-        "aorta_neck_pruning_fill_q25_before": _get_result_value(
-            result, "aorta_neck_pruning_fill_q25_before"
-        ),
-        "aorta_neck_pruning_fill_q25_after": _get_result_value(
-            result, "aorta_neck_pruning_fill_q25_after"
-        ),
-        "aorta_neck_pruning_slice_area_jump_p95_before": _get_result_value(
-            result, "aorta_neck_pruning_slice_area_jump_p95_before"
-        ),
-        "aorta_neck_pruning_slice_area_jump_p95_after": _get_result_value(
-            result, "aorta_neck_pruning_slice_area_jump_p95_after"
-        ),
-        "aorta_neck_pruning_rejection_reason": _get_result_value(
-            result, "aorta_neck_pruning_rejection_reason"
-        ),
-        "aorta_area_jump_pruning_method": _get_result_value(
-            result, "aorta_area_jump_pruning_method"
-        ),
-        "aorta_area_jump_pruning_attempted": _as_bool_value(
-            _get_result_value(result, "aorta_area_jump_pruning_attempted", False)
-        ),
-        "aorta_area_jump_pruning_accepted": _as_bool_value(
-            _get_result_value(result, "aorta_area_jump_pruning_accepted", False)
-        ),
-        "aorta_area_jump_pruning_trigger_slice": _get_result_value(
-            result, "aorta_area_jump_pruning_trigger_slice"
-        ),
-        "aorta_area_jump_pruning_neck_slice": _get_result_value(
-            result, "aorta_area_jump_pruning_neck_slice"
-        ),
-        "aorta_area_jump_pruning_removed_voxels": _get_result_value(
-            result, "aorta_area_jump_pruning_removed_voxels", 0
-        ),
-        "aorta_area_jump_pruning_volume_loss_fraction": _get_result_value(
-            result, "aorta_area_jump_pruning_volume_loss_fraction", 0.0
-        ),
-        "aorta_area_jump_pruning_area_ratio_before": _get_result_value(
-            result, "aorta_area_jump_pruning_area_ratio_before"
-        ),
-        "aorta_area_jump_pruning_area_ratio_after": _get_result_value(
-            result, "aorta_area_jump_pruning_area_ratio_after"
-        ),
-        "aorta_area_jump_pruning_fill_q25_before": _get_result_value(
-            result, "aorta_area_jump_pruning_fill_q25_before"
-        ),
-        "aorta_area_jump_pruning_fill_q25_after": _get_result_value(
-            result, "aorta_area_jump_pruning_fill_q25_after"
-        ),
-        "aorta_area_jump_pruning_voxels_per_slice_before": _get_result_value(
-            result, "aorta_area_jump_pruning_voxels_per_slice_before"
-        ),
-        "aorta_area_jump_pruning_voxels_per_slice_after": _get_result_value(
-            result, "aorta_area_jump_pruning_voxels_per_slice_after"
-        ),
-        "aorta_area_jump_pruning_rejection_reason": _get_result_value(
-            result, "aorta_area_jump_pruning_rejection_reason"
-        ),
         "ostia_surface_mode": _get_result_value(result, "ostia_surface_mode"),
         "ostia_surface_thickness_mm": _get_result_value(
             result, "ostia_surface_thickness_mm"
@@ -1009,9 +869,6 @@ def add_config_columns(df: pd.DataFrame, config: dict[str, Any]) -> pd.DataFrame
     df["lcc_mode"] = "per_slice"
     df["configured_artery_segmentation_method"] = (
         _configured_artery_segmentation_method(config)
-    )
-    df["aorta_ostia_method"] = config.get("AORTA_OSTIA_METHOD", {}).get(
-        "method", "standard"
     )
     df["aorta_miss_count"] = circle_config.get("max_slice_miss_threshold", "N/A")
     df["aorta_interpolate_missed_circles"] = circle_config.get(

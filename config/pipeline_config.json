@@ -152,35 +152,6 @@
                 "smoothing": 2,
                 "target_iterations": 36
             }
-        },
-        "experimental_leak_correction": {
-            "method": "none",
-            "circle_seeded_neck_pruning": {
-                "erosion_radius": 2,
-                "area_ratio_threshold": 3.0,
-                "core_radius_factor": 0.85,
-                "inferior_fraction": 0.5,
-                "anomaly_margin_slices": 5,
-                "max_fill_loss": 0.01,
-                "max_volume_loss_fraction": 0.3,
-                "max_axial_jump_increase_fraction": 0.1
-            },
-            "circle_area_jump_pruning": {
-                "inferior_fraction": 0.5,
-                "area_ratio_threshold": 2.8,
-                "min_ratio_jump": 0.5,
-                "min_relative_area_growth": 0.25,
-                "baseline_window_slices": 6,
-                "neck_search_slices": 8,
-                "cut_half_width_slices": 2,
-                "cut_radius_factor": 1.35,
-                "cut_transition_step": 0.2,
-                "core_radius_factor": 0.85,
-                "min_removed_fraction": 0.005,
-                "max_volume_loss_fraction": 0.15,
-                "max_fill_loss": 0.01,
-                "max_axial_jump_increase_fraction": 0.25
-            }
         }
     },
     "OSTIA_DETECTION": {
@@ -193,35 +164,7 @@
         "surface_mode": "erosion",
         "surface_thickness_mm": 2.0,
         "candidate_score_mode": "voxel",
-        "pair_selection_mode": "greedy",
-        "bilateral_top_k_per_side": 50
-    },
-    "AORTA_OSTIA_METHOD": {
-        "method": "standard",
-        "profiles": {
-            "standard": {
-                "LEVEL_SET": {
-                    "trajectory_area_ratio_threshold": null,
-                    "trajectory_correction_radius_factor": 1.75
-                },
-                "OSTIA_DETECTION": {
-                    "erosion_radius": 4,
-                    "pair_selection_mode": "greedy",
-                    "bilateral_top_k_per_side": 50
-                }
-            },
-            "bilateral_thin": {
-                "LEVEL_SET": {
-                    "trajectory_area_ratio_threshold": 2.0,
-                    "trajectory_correction_radius_factor": 1.75
-                },
-                "OSTIA_DETECTION": {
-                    "erosion_radius": 2,
-                    "pair_selection_mode": "bilateral",
-                    "bilateral_top_k_per_side": 50
-                }
-            }
-        }
+        "pair_selection_mode": "greedy"
     },
     "OSTIA_VALIDATION": {
         "distance_threshold_mm": 7.0

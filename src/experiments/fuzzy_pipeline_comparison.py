@@ -40,10 +40,7 @@ from utils.experiments.sweep_common import (  # noqa: E402
     select_ids,
     write_json,
 )
-from utils.project.config import (  # noqa: E402
-    apply_aorta_ostia_method,
-    scale_config_to_resolution,
-)
+from utils.project.config import scale_config_to_resolution  # noqa: E402
 from utils.project.notebook_env import resolve_imagecas_base_path  # noqa: E402
 
 
@@ -389,12 +386,6 @@ def build_parser() -> argparse.ArgumentParser:
         help="Named variant set. 'corrections' adds focused RG/FC/fuzzy tests.",
     )
     parser.add_argument(
-        "--aorta-ostia-method",
-        choices=["standard", "bilateral_thin"],
-        default="standard",
-        help="Aorta/ostia profile. The focused runner explicitly uses bilateral_thin.",
-    )
-    parser.add_argument(
         "--variant-limit",
         type=int,
         default=None,
@@ -571,10 +562,6 @@ def main() -> None:
         use_gpu=args.use_gpu,
     )
     base_config = build_base_config(base_config_args)
-    base_config = apply_aorta_ostia_method(
-        base_config,
-        args.aorta_ostia_method,
-    )
     if args.ids and args.ids_file:
         raise ValueError("Use only one of --ids or --ids-file.")
     if args.ids_file and args.split_sizes:
@@ -621,7 +608,6 @@ def main() -> None:
                 for split_name, img_id in image_items
             ],
             "resolution": args.resolution,
-            "aorta_ostia_method": args.aorta_ostia_method,
             "variant_set": args.variant_set,
             "config_path": str(args.config_path),
             "base_path": str(base_path),

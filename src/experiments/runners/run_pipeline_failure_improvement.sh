@@ -8,7 +8,6 @@ cd "$REPO_ROOT"
 MODE="${MODE:-baseline}"
 SPLIT="${SPLIT:-val}"
 RESOLUTION="${RESOLUTION:-mid}"
-AORTA_OSTIA_METHOD="${AORTA_OSTIA_METHOD:-bilateral_thin}"
 USE_GPU="${USE_GPU:-1}"
 COHORT_FILE="${COHORT_FILE:-output/segmentation/analysis/pipeline_failure_analysis/focused_cohort.csv}"
 OUTPUT_ROOT="${OUTPUT_ROOT:-output/segmentation/analysis/pipeline_failure_improvement}"
@@ -43,7 +42,6 @@ EXTRA_ARGS=()
 echo "Mode: $MODE"
 echo "Split: $SPLIT"
 echo "Cohort: $COHORT_FILE"
-echo "Aorta/ostia: $AORTA_OSTIA_METHOD"
 echo "Run: $OUTPUT_ROOT/$RUN_NAME"
 
 uv run python src/experiments/fuzzy_pipeline_comparison.py \
@@ -51,7 +49,6 @@ uv run python src/experiments/fuzzy_pipeline_comparison.py \
   --ids-file "$COHORT_FILE" \
   --resolution "$RESOLUTION" \
   --variant-set "$VARIANT_SET" \
-  --aorta-ostia-method "$AORTA_OSTIA_METHOD" \
   --output-root "$OUTPUT_ROOT" \
   --run-name "$RUN_NAME" \
   "$GPU_ARG" \

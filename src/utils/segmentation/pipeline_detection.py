@@ -13,12 +13,9 @@ from .aorta_segmentation import (
     calculate_circle_mask_metrics,
     calculate_mask_change_fraction,
     calculate_slice_area_jump_p95,
-    correct_anomalous_aorta_slices,
     iter_level_set_checkpoints,
     level_set_segmentation,
     prepare_level_set_evolution,
-    prune_aorta_at_circle_area_jump,
-    prune_circle_seeded_narrow_necks,
     remove_leaks_morphology,
     restrict_mask_to_circle_trajectory,
 )
@@ -142,17 +139,6 @@ def _postprocess_aorta_mask(
             aorta_mask,
             detected_circles,
             radius_factor=float(trajectory_radius_factor),
-        )
-    area_ratio_threshold = level_set_config.get("trajectory_area_ratio_threshold")
-    if area_ratio_threshold is not None:
-        # Corrige somente fatias com área incompatível com o círculo rastreado.
-        aorta_mask = correct_anomalous_aorta_slices(
-            aorta_mask,
-            detected_circles,
-            area_ratio_threshold=float(area_ratio_threshold),
-            radius_factor=float(
-                level_set_config.get("trajectory_correction_radius_factor", 1.75)
-            ),
         )
     aorta_mask = keep_largest_component(aorta_mask, gpu=False)
     return np.asarray(aorta_mask, dtype=np.uint8)
@@ -740,185 +726,6 @@ def _adaptive_level_set_result(
     )
 
 
-def _neck_pruning_defaults(method: str, reason: str) -> Dict[str, Any]:
-    """Cria os campos persistidos quando a correção não é executada."""
-    return {
-        "aorta_neck_pruning_method": method,
-        "aorta_neck_pruning_attempted": False,
-        "aorta_neck_pruning_accepted": False,
-        "aorta_neck_pruning_anomalous_slice_count": 0,
-        "aorta_neck_pruning_removed_voxels": 0,
-        "aorta_neck_pruning_volume_loss_fraction": 0.0,
-        "aorta_neck_pruning_area_ratio_before": None,
-        "aorta_neck_pruning_area_ratio_after": None,
-        "aorta_neck_pruning_fill_q25_before": None,
-        "aorta_neck_pruning_fill_q25_after": None,
-        "aorta_neck_pruning_slice_area_jump_p95_before": None,
-        "aorta_neck_pruning_slice_area_jump_p95_after": None,
-        "aorta_neck_pruning_rejection_reason": reason,
-    }
-
-
-def _area_jump_pruning_defaults(method: str, reason: str) -> Dict[str, Any]:
-    """Cria os diagnósticos da poda axial quando ela não é executada."""
-    return {
-        "aorta_area_jump_pruning_method": method,
-        "aorta_area_jump_pruning_attempted": False,
-        "aorta_area_jump_pruning_accepted": False,
-        "aorta_area_jump_pruning_trigger_slice": None,
-        "aorta_area_jump_pruning_neck_slice": None,
-        "aorta_area_jump_pruning_removed_voxels": 0,
-        "aorta_area_jump_pruning_volume_loss_fraction": 0.0,
-        "aorta_area_jump_pruning_area_ratio_before": None,
-        "aorta_area_jump_pruning_area_ratio_after": None,
-        "aorta_area_jump_pruning_fill_q25_before": None,
-        "aorta_area_jump_pruning_fill_q25_after": None,
-        "aorta_area_jump_pruning_voxels_per_slice_before": None,
-        "aorta_area_jump_pruning_voxels_per_slice_after": None,
-        "aorta_area_jump_pruning_rejection_reason": reason,
-    }
-
-
-def _apply_experimental_neck_pruning(
-    result: AortaSegmentationResult,
-    detected_circles: Sequence[Dict[str, Any]],
-    level_set_config: Dict[str, Any],
-) -> AortaSegmentationResult:
-    """Aplica a poda experimental somente a estados sobresegmentados."""
-    correction_config = level_set_config.get("experimental_leak_correction", {})
-    method = str(correction_config.get("method", "none")).lower()
-    diagnostics = dict(result.diagnostics)
-
-    if method == "none":
-        diagnostics.update(_neck_pruning_defaults(method, "disabled"))
-        diagnostics.update(_area_jump_pruning_defaults(method, "disabled"))
-        return AortaSegmentationResult(result.mask, diagnostics)
-    if method not in {"circle_seeded_neck_pruning", "circle_area_jump_pruning"}:
-        raise ValueError(
-            "LEVEL_SET.experimental_leak_correction.method deve ser "
-            "'none', 'circle_seeded_neck_pruning' ou "
-            "'circle_area_jump_pruning'"
-        )
-    if diagnostics.get("aorta_level_set_mode") != "adaptive":
-        diagnostics.update(_neck_pruning_defaults(method, "requires_adaptive_mode"))
-        diagnostics.update(
-            _area_jump_pruning_defaults(method, "requires_adaptive_mode")
-        )
-        return AortaSegmentationResult(result.mask, diagnostics)
-    if diagnostics.get("aorta_level_set_controller_state") != "oversegmented":
-        diagnostics.update(
-            _neck_pruning_defaults(method, "controller_state_not_oversegmented")
-        )
-        diagnostics.update(
-            _area_jump_pruning_defaults(
-                method, "controller_state_not_oversegmented"
-            )
-        )
-        return AortaSegmentationResult(result.mask, diagnostics)
-
-    if method == "circle_area_jump_pruning":
-        diagnostics.update(_neck_pruning_defaults(method, "different_method"))
-        area_config = correction_config.get("circle_area_jump_pruning", {})
-        pruning = prune_aorta_at_circle_area_jump(
-            result.mask,
-            detected_circles,
-            **area_config,
-        )
-        diagnostics.update(
-            {
-                "aorta_area_jump_pruning_method": method,
-                "aorta_area_jump_pruning_attempted": pruning.attempted,
-                "aorta_area_jump_pruning_accepted": pruning.accepted,
-                "aorta_area_jump_pruning_trigger_slice": pruning.trigger_slice,
-                "aorta_area_jump_pruning_neck_slice": pruning.neck_slice,
-                "aorta_area_jump_pruning_removed_voxels": pruning.removed_voxels,
-                "aorta_area_jump_pruning_volume_loss_fraction": pruning.volume_loss_fraction,
-                "aorta_area_jump_pruning_area_ratio_before": pruning.area_ratio_p90_before,
-                "aorta_area_jump_pruning_area_ratio_after": pruning.area_ratio_p90_after,
-                "aorta_area_jump_pruning_fill_q25_before": pruning.fill_q25_before,
-                "aorta_area_jump_pruning_fill_q25_after": pruning.fill_q25_after,
-                "aorta_area_jump_pruning_voxels_per_slice_before": pruning.voxels_per_slice_before,
-                "aorta_area_jump_pruning_voxels_per_slice_after": pruning.voxels_per_slice_after,
-                "aorta_area_jump_pruning_rejection_reason": pruning.rejection_reason,
-            }
-        )
-        if pruning.accepted:
-            diagnostics["aorta_level_set_correction_applied"] = True
-            diagnostics["aorta_level_set_correction_method"] = method
-            diagnostics["aorta_level_set_circle_fill_q25"] = pruning.fill_q25_after
-            diagnostics["aorta_level_set_circle_area_ratio_p90"] = (
-                pruning.area_ratio_p90_after
-            )
-            diagnostics["aorta_level_set_voxels_per_segmented_slice"] = (
-                pruning.voxels_per_slice_after
-            )
-            diagnostics["aorta_level_set_final_volume_fraction"] = (
-                int(pruning.mask.sum()) / pruning.mask.size
-            )
-            diagnostics["aorta_level_set_decision_reason"] = (
-                "area_jump_pruning_accepted"
-            )
-        return AortaSegmentationResult(pruning.mask, diagnostics)
-
-    diagnostics.update(_area_jump_pruning_defaults(method, "different_method"))
-    pruning_config = correction_config.get("circle_seeded_neck_pruning", {})
-    pruning = prune_circle_seeded_narrow_necks(
-        result.mask,
-        detected_circles,
-        erosion_radius=int(pruning_config.get("erosion_radius", 2)),
-        area_ratio_threshold=float(
-            pruning_config.get("area_ratio_threshold", 3.0)
-        ),
-        core_radius_factor=float(pruning_config.get("core_radius_factor", 0.85)),
-        inferior_fraction=float(pruning_config.get("inferior_fraction", 0.50)),
-        anomaly_margin_slices=int(
-            pruning_config.get("anomaly_margin_slices", 5)
-        ),
-        max_fill_loss=float(pruning_config.get("max_fill_loss", 0.01)),
-        max_volume_loss_fraction=float(
-            pruning_config.get("max_volume_loss_fraction", 0.30)
-        ),
-        max_axial_jump_increase_fraction=float(
-            pruning_config.get("max_axial_jump_increase_fraction", 0.10)
-        ),
-    )
-    diagnostics.update(
-        {
-            "aorta_neck_pruning_method": method,
-            "aorta_neck_pruning_attempted": pruning.attempted,
-            "aorta_neck_pruning_accepted": pruning.accepted,
-            "aorta_neck_pruning_anomalous_slice_count": pruning.anomalous_slice_count,
-            "aorta_neck_pruning_removed_voxels": pruning.removed_voxels,
-            "aorta_neck_pruning_volume_loss_fraction": pruning.volume_loss_fraction,
-            "aorta_neck_pruning_area_ratio_before": pruning.area_ratio_before,
-            "aorta_neck_pruning_area_ratio_after": pruning.area_ratio_after,
-            "aorta_neck_pruning_fill_q25_before": pruning.fill_q25_before,
-            "aorta_neck_pruning_fill_q25_after": pruning.fill_q25_after,
-            "aorta_neck_pruning_slice_area_jump_p95_before": pruning.slice_area_jump_p95_before,
-            "aorta_neck_pruning_slice_area_jump_p95_after": pruning.slice_area_jump_p95_after,
-            "aorta_neck_pruning_rejection_reason": pruning.rejection_reason,
-        }
-    )
-    if pruning.accepted:
-        previous_method = diagnostics.get("aorta_level_set_correction_method")
-        diagnostics["aorta_level_set_correction_applied"] = True
-        diagnostics["aorta_level_set_correction_method"] = (
-            f"{previous_method}+{method}"
-            if previous_method not in {None, "none"}
-            else method
-        )
-        diagnostics["aorta_level_set_circle_fill_q25"] = pruning.fill_q25_after
-        diagnostics["aorta_level_set_circle_area_ratio_p90"] = pruning.area_ratio_after
-        diagnostics["aorta_level_set_final_volume_fraction"] = (
-            int(pruning.mask.sum()) / pruning.mask.size
-        )
-        diagnostics["aorta_level_set_slice_area_jump_p95_after"] = (
-            pruning.slice_area_jump_p95_after
-        )
-        diagnostics["aorta_level_set_decision_reason"] = "neck_pruning_accepted"
-    return AortaSegmentationResult(pruning.mask, diagnostics)
-
-
 def segment_aorta_with_diagnostics(
     lcc_image: Any,
     detected_circles: List[Dict[str, Any]],
@@ -930,19 +737,13 @@ def segment_aorta_with_diagnostics(
     del use_gpu  # O MorphGAC e o pós-processamento permanecem na CPU.
     mode = str(level_set_config.get("iteration_mode", "fixed")).lower()
     if mode == "fixed":
-        result = _fixed_level_set_result(lcc_image, detected_circles, level_set_config)
-        return _apply_experimental_neck_pruning(
-            result, detected_circles, level_set_config
-        )
+        return _fixed_level_set_result(lcc_image, detected_circles, level_set_config)
     if mode == "adaptive":
-        result = _adaptive_level_set_result(
+        return _adaptive_level_set_result(
             lcc_image,
             detected_circles,
             level_set_config,
             circle_summary=circle_summary,
-        )
-        return _apply_experimental_neck_pruning(
-            result, detected_circles, level_set_config
         )
     raise ValueError("LEVEL_SET.iteration_mode deve ser 'fixed' ou 'adaptive'")
 
@@ -969,7 +770,6 @@ def detect_and_evaluate_ostia(
     label: Any,
     scaled_spacing: Sequence[float],
     config: Dict[str, Any],
-    detected_circles: Sequence[Dict[str, Any]] | None = None,
 ) -> Dict[str, Any]:
     """Detecta os óstios e avalia correção/tolerância contra o label."""
     dx, dy, dz = scaled_spacing
@@ -996,8 +796,6 @@ def detect_and_evaluate_ostia(
         ),
         pair_selection_mode=ostia_config.get("pair_selection_mode", "greedy"),
         joint_pair_top_k=ostia_config.get("joint_pair_top_k", 100),
-        bilateral_top_k_per_side=ostia_config.get("bilateral_top_k_per_side", 50),
-        detected_circles=detected_circles,
         pair_distance_mode=ostia_config.get("pair_distance_mode", "voxel_xyz"),
     )
 

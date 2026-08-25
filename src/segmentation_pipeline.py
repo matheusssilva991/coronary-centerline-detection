@@ -15,7 +15,6 @@ os.environ.setdefault("CUDA_VISIBLE_DEVICES", "0")
 
 from utils.processing.gpu_utils import use_gpu
 from utils.project.config import (
-    apply_aorta_ostia_method,
     load_config_json,
     scale_config_to_resolution,
 )
@@ -193,46 +192,6 @@ def _apply_execution_overrides(config, args):
         if value is not None:
             ostia_config[config_key] = value
 
-    leak_correction = getattr(args, "aorta_leak_correction", None)
-    if leak_correction is not None:
-        level_set_config = config.setdefault("LEVEL_SET", {})
-        level_set_config.setdefault("experimental_leak_correction", {})[
-            "method"
-        ] = leak_correction
-
-    pruning_overrides = {
-        "erosion_radius": getattr(
-            args, "aorta_neck_pruning_erosion_radius", None
-        ),
-        "core_radius_factor": getattr(
-            args, "aorta_neck_pruning_core_radius_factor", None
-        ),
-        "max_volume_loss_fraction": getattr(
-            args, "aorta_neck_pruning_max_volume_loss", None
-        ),
-    }
-    if any(value is not None for value in pruning_overrides.values()):
-        pruning_config = (
-            config.setdefault("LEVEL_SET", {})
-            .setdefault("experimental_leak_correction", {})
-            .setdefault("circle_seeded_neck_pruning", {})
-        )
-        for config_key, value in pruning_overrides.items():
-            if value is not None:
-                pruning_config[config_key] = value
-
-
-def _apply_aorta_ostia_override(config, args):
-    """Aplica o perfil de aorta/óstios configurado ou informado pela CLI."""
-    configured_method = config.get("AORTA_OSTIA_METHOD", {}).get(
-        "method",
-        "standard",
-    )
-    if args.aorta_ostia_method is None and configured_method == "standard":
-        return config
-    return apply_aorta_ostia_method(config, method=args.aorta_ostia_method)
-
-
 def _apply_threshold_overrides(config, args):
     """Aplica opções de threshold normal/fuzzy e piso inferior."""
     thresholding_config = config.setdefault("THRESHOLDING", {})
@@ -275,7 +234,6 @@ def build_effective_config(args):
         effective_config["DOWNSCALE_FACTORS"] = [1, 1, 1]
 
     _apply_execution_overrides(effective_config, args)
-    effective_config = _apply_aorta_ostia_override(effective_config, args)
     _apply_threshold_overrides(effective_config, args)
 
     effective_config["NUM_BATCHES"] = args.num_batches
@@ -315,10 +273,6 @@ def print_run_settings(args, config, base_path):
     thresholding_config = config.get("THRESHOLDING", {})
     lower_threshold_config = config.get("LOWER_THRESHOLD", {})
     print(f"🫀 Segmentação arterial: {artery_config.get('method', 'region_growing')}")
-    print(
-        "🫁 Aorta/óstios: "
-        f"{config.get('AORTA_OSTIA_METHOD', {}).get('method', 'standard')}"
-    )
     ostia_config = config.get("OSTIA_DETECTION", {})
     print(
         "🎯 Superfície/seleção dos óstios: "

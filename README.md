@@ -45,7 +45,7 @@ coronary-centerline-detection/
 │   │   ├── segmentation_method_comparison.ipynb # Threshold normal/fuzzy e RG/FC
 │   │   ├── pipeline_sensitivity_analysis.ipynb # Sensibilidade OFAT
 │   │   ├── upper_threshold_analysis.ipynb # Percentis e thresholds HU
-│   │   ├── aorta_circle_slice_analysis.ipynb # Fatias e círculos da aorta
+│   │   ├── aorta_circle_slice_analysis.ipynb # Círculos e extensão axial da máscara
 │   │   ├── fuzzy_membership_functions.ipynb # Funções de pertinência fuzzy
 │   │   └── morphological_operations_example.ipynb # Operações morfológicas
 │   └── utils/                      # Módulos utilitários

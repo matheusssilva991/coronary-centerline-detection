@@ -32,12 +32,6 @@ Exemplos de uso:
   # Escolher método de segmentação arterial
   python segmentation_pipeline.py --split val --artery-method fc
 
-  # Usar a seleção bilateral com superfície fina e correção condicional da aorta
-  python segmentation_pipeline.py --split val --aorta-ostia-method bilateral_thin
-
-  # Manter/restaurar a abordagem histórica de aorta e óstios
-  python segmentation_pipeline.py --split val --aorta-ostia-method standard
-
   # Ativar o controle adaptativo das iterações do level set da aorta
   python segmentation_pipeline.py --split train --aorta-level-set-mode adaptive
 
@@ -185,20 +179,6 @@ def build_parser(default_base_path, default_output_dir):
         ),
     )
     parser.add_argument(
-        "--aorta-ostia-method",
-        choices=[
-            "standard",
-            "bilateral_thin",
-            "bilateral_thin_conditional",
-        ],
-        default=None,
-        help=(
-            "Método conjunto de aorta/óstios: 'standard' mantém o pipeline "
-            "histórico; 'bilateral_thin' ativa superfície fina, seleção "
-            "bilateral e correção condicional da máscara da aorta."
-        ),
-    )
-    parser.add_argument(
         "--aorta-level-set-mode",
         choices=["fixed", "adaptive"],
         default=None,
@@ -283,51 +263,9 @@ def build_parser(default_base_path, default_output_dir):
     )
     parser.add_argument(
         "--ostia-pair-selection-mode",
-        choices=["greedy", "joint", "bilateral"],
+        choices=["greedy", "joint"],
         default=None,
         help="Estratégia para selecionar o par de óstios.",
-    )
-    parser.add_argument(
-        "--aorta-leak-correction",
-        choices=[
-            "none",
-            "circle_seeded_neck_pruning",
-            "circle_area_jump_pruning",
-        ],
-        default=None,
-        help=(
-            "Correção experimental posterior ao level set. "
-            "'circle_seeded_neck_pruning' tenta remover vazamentos inferiores "
-            "conectados por colos estreitos; 'circle_area_jump_pruning' busca "
-            "uma expansão abrupta da área axial. Ambas requerem adaptive."
-        ),
-    )
-    parser.add_argument(
-        "--aorta-neck-pruning-erosion-radius",
-        type=int,
-        default=None,
-        help=(
-            "Raio da erosão 3D usada pela poda experimental de colos estreitos. "
-            "Valores 3 e 4 são mais agressivos que o padrão 2."
-        ),
-    )
-    parser.add_argument(
-        "--aorta-neck-pruning-core-radius-factor",
-        type=float,
-        default=None,
-        help=(
-            "Fração do raio dos círculos preservada como núcleo da aorta pela "
-            "poda experimental."
-        ),
-    )
-    parser.add_argument(
-        "--aorta-neck-pruning-max-volume-loss",
-        type=float,
-        default=None,
-        help=(
-            "Perda relativa máxima de volume aceita pela poda experimental, "
-            "por exemplo 0.15 para 15%%."
-        ),
     )
     parser.add_argument(
         "--rg-comparison-window",

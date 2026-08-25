@@ -56,39 +56,15 @@ class PipelineVisualTests(unittest.TestCase):
         self.assertIsNone(default_args.aorta_level_set_mode)
         self.assertEqual(adaptive_args.aorta_level_set_mode, "adaptive")
 
-    def test_cli_selects_experimental_aorta_leak_correction(self):
+    def test_cli_rejects_removed_aorta_correction_flags(self):
         parser = build_parser(Path("/dataset"), Path("/output"))
+        with self.assertRaises(SystemExit):
+            parser.parse_args(["--aorta-leak-correction", "circle_area_jump_pruning"])
 
-        default_args = parser.parse_args([])
-        pruning_args = parser.parse_args(
-            [
-                "--aorta-leak-correction",
-                "circle_seeded_neck_pruning",
-                "--aorta-neck-pruning-erosion-radius",
-                "3",
-                "--aorta-neck-pruning-core-radius-factor",
-                "0.85",
-                "--aorta-neck-pruning-max-volume-loss",
-                "0.15",
-            ]
-        )
-
-        self.assertIsNone(default_args.aorta_leak_correction)
-        self.assertEqual(
-            pruning_args.aorta_leak_correction,
-            "circle_seeded_neck_pruning",
-        )
-        self.assertEqual(pruning_args.aorta_neck_pruning_erosion_radius, 3)
-        self.assertEqual(pruning_args.aorta_neck_pruning_core_radius_factor, 0.85)
-        self.assertEqual(pruning_args.aorta_neck_pruning_max_volume_loss, 0.15)
-
-        area_jump_args = parser.parse_args(
-            ["--aorta-leak-correction", "circle_area_jump_pruning"]
-        )
-        self.assertEqual(
-            area_jump_args.aorta_leak_correction,
-            "circle_area_jump_pruning",
-        )
+    def test_cli_rejects_removed_aorta_ostia_profile(self):
+        parser = build_parser(Path("/dataset"), Path("/output"))
+        with self.assertRaises(SystemExit):
+            parser.parse_args(["--aorta-ostia-method", "bilateral_thin"])
 
     def test_cli_enables_segmentation_visuals_explicitly(self):
         parser = build_parser(Path("/dataset"), Path("/output"))

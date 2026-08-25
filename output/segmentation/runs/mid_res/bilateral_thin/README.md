@@ -1,6 +1,7 @@
-# Perfil bilateral thin
+# Perfil bilateral thin (histórico)
 
-Este grupo testa o perfil opcional `bilateral_thin` em resolução média. O
+Este grupo preserva os resultados históricos do antigo perfil
+`bilateral_thin` em resolução média. O
 objetivo foi reduzir dois problemas observados no perfil histórico: máscaras da
 aorta excessivamente largas próximas aos óstios e seleção dos dois candidatos
 no mesmo lado da aorta.
@@ -49,8 +50,9 @@ mesmo ramo, mas depende de uma trajetória de círculos bem localizada.
 |---|---|---:|---:|---:|---:|
 | Train | `2026-08-11_13-49-22` | 30 | 93,33% | 0,6018 | 0,6281 |
 
-O perfil foi mantido como opcao experimental; ele nao substitui o perfil
-`standard` por padrão. O único run completo disponível usa 30 imagens de
-treino, portanto o resultado mostra viabilidade, mas não constitui validação
-suficiente para promover o perfil. A configuração exata deve sempre ser
-consultada em `config/effective_pipeline_config.json` dentro do run.
+O perfil, seu alias e sua flag de CLI foram removidos do runtime. Apesar de
+ganhos históricos em algumas coortes, ele não pertence ao baseline atual e
+adicionava uma segunda família de parâmetros sem benefício confirmado nos
+runs recentes. O único run completo disponível usa 30 imagens de treino. A
+configuração exata continua preservada em
+`config/effective_pipeline_config.json` dentro do run.

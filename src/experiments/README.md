@@ -303,8 +303,9 @@ FILTER_PROFILE=aggressive RUN_VAL=0 SAVE_VISUALS=1 \
   bash src/experiments/runners/run_aorta_circle_coverage_tests.sh
 ```
 
-Esse perfil usa cobertura mínima de 40%, não interpola outliers isolados e não
-aplica fallback. O resultado é salvo em
+Esse perfil usa cobertura mínima de 40%, não interpola outliers isolados, não
+aplica fallback e executa o level set adaptativo com o pós-processamento
+padrão. As podas posteriores à segmentação foram removidas. O resultado é salvo em
 `runs/mid_res/aorta_segmentation_experiments/train/circle_filter_aggressive_p99_9/`.
 
 Os parâmetros `COVERAGE`, `RUN_WITHOUT_FALLBACK` e `RUN_WITH_FALLBACK` permitem

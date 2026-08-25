@@ -423,43 +423,12 @@ Se uma evolução alternativa for rejeitada, o controlador retorna exatamente a
 mascara nominal. Os campos antigos `refinement_*` continuam apenas para leitura
 de runs contrativos anteriores.
 
-### Poda experimental de colos estreitos
+### Correções experimentais removidas
 
-- `experimental_leak_correction.method`: `none` mantém a máscara escolhida pelo
-  controlador; `circle_seeded_neck_pruning` ativa a correção experimental.
-- A poda atua apenas no modo `adaptive` e em máscaras classificadas como
-  `oversegmented`.
-- `erosion_radius`: raio usado para romper conexões estreitas.
-- `area_ratio_threshold` e `inferior_fraction`: definem as fatias inferiores
-  candidatas pela razão entre área segmentada e área circular.
-- `core_radius_factor`: cria o núcleo circular que identifica as componentes
-  pertencentes à aorta após a erosão.
-- `max_fill_loss`, `max_volume_loss_fraction` e
-  `max_axial_jump_increase_fraction`: rejeitam correções destrutivas.
-
-A correção permanece desativada por padrão. Quando rejeitada, a máscara anterior
-é devolvida sem alterações.
-
-### Poda experimental por salto de área
-
-- `circle_area_jump_pruning` analisa a curva axial
-  `área_da_máscara / área_do_círculo` na metade inferior da trajetória.
-- A expansão precisa superar o limite de razão e também o salto absoluto ou o
-  crescimento relativo configurado.
-- O algoritmo procura a menor seção anterior, restringe um pequeno plano ao
-  envelope circular e mantém a componente com maior contato com o núcleo.
-- `oversegmented_voxels_per_slice` adiciona ao controlador a largura média da
-  máscara observada no EDA. O valor mid resolution é escalado por área em high.
-- A máscara anterior é restaurada integralmente quando não há salto claro ou
-  quando a candidata perde preenchimento, fatias, volume ou continuidade.
-
-### Correcao condicional pela trajetoria
-
-- `trajectory_area_ratio_threshold`: quando definido, corrige somente fatias
-  cuja area da mascara excede a area esperada pelo circulo rastreado. Fica
-  desativado (`null`) no metodo `standard` e vale `2.0` em `bilateral_thin`.
-- `trajectory_correction_radius_factor`: fator `1.75` usado para reconstruir
-  as fatias consideradas anomalas.
+As podas por colo estreito, por salto de área e a correção rígida por trajetória
+foram removidas do runtime. Nos experimentos, elas não produziram ganho agregado
+ou reduziram Dice e sucesso dos óstios. As configurações permanecem somente nos
+snapshots de runs históricos, para rastreabilidade.
 
 ---
 
@@ -474,8 +443,6 @@ Seleciona candidatos de ostio e filtra por regras anatomicas/geometricas.
 - `surface_thickness_mm`: espessura interna da banda física.
 - `candidate_score_mode`: define se o ranking usa o valor pontual ou uma
   agregação local do vesselness.
-- `pair_selection_mode: bilateral`: busca um candidato de cada lado da
-  trajetória circular da aorta.
 
 ### `top_n` (int)
 
@@ -512,35 +479,17 @@ Seleciona candidatos de ostio e filtra por regras anatomicas/geometricas.
 - `pair_selection_mode = "greedy"`: comportamento historico, que escolhe o
   primeiro candidato pelo vesselness e procura o segundo pelas restricoes
   geometricas.
-- `pair_selection_mode = "bilateral"`: separa candidatos pelos dois lados da
-  trajetoria da aorta e procura um par bilateral consistente.
-- `bilateral_top_k_per_side = 50`: quantidade maxima de candidatos avaliada em
-  cada lado no metodo bilateral.
+- `pair_selection_mode = "joint"`: avalia pares de candidatos conjuntamente,
+  sem dividir previamente a superfície em lados.
 
 ---
 
-## 6.1) Metodo conjunto de aorta e ostios - `AORTA_OSTIA_METHOD`
+## 6.1) Configuração padrão de aorta e óstios
 
-O campo `method` permite alternar entre dois perfis sem editar manualmente os
-parametros internos:
-
-- `standard`: preserva o comportamento historico, com erosao 4, selecao
-  `greedy` e sem correcao condicional da mascara da aorta.
-- `bilateral_thin`: usa erosao 2, selecao bilateral com 50 candidatos por lado
-  e corrige fatias cuja area excede duas vezes a area esperada pela trajetoria.
-
-Pela linha de comando:
-
-```bash
-# Comportamento historico
-uv run python src/segmentation_pipeline.py --aorta-ostia-method standard
-
-# Nova abordagem validada
-uv run python src/segmentation_pipeline.py --aorta-ostia-method bilateral_thin
-```
-
-O alias `bilateral_thin_conditional` tambem e aceito pela CLI e resolve para o
-perfil `bilateral_thin`.
+O pipeline usa diretamente a configuração padrão: erosão de raio `4`, seleção
+`greedy` e nenhuma correção rígida da máscara por razão de área. O perfil
+experimental `bilateral_thin` e sua flag de CLI foram removidos; seus resultados
+continuam documentados nos arquivos históricos de experimentos.
 
 ---
 

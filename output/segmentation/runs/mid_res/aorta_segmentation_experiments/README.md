@@ -29,7 +29,7 @@ dos óstios e inspeção dos HTMLs precisam ser analisados em conjunto.
   runs mostraram que métricas geométricas ajudam no diagnóstico, mas ainda não
   garantem melhora visual da aorta.
 
-### Correções aplicadas depois do level set
+### Correções aplicadas depois do level set (removidas)
 
 - `neck_pruning_*` erode a máscara para tentar romper uma conexão estreita
   entre a aorta e um vazamento. As componentes que ainda tocam o núcleo definido
@@ -39,8 +39,10 @@ dos óstios e inspeção dos HTMLs precisam ser analisados em conjunto.
   círculos. Ao detectar crescimento abrupto nas fatias inferiores, procura uma
   seção estreita anterior e tenta remover a região que surgiu depois dela. A
   correção é rejeitada se perder preenchimento, fatias ou volume em excesso.
-- Essas famílias modificam a máscara já segmentada. Elas não corrigem uma
-  trajetória de círculos localizada sobre a estrutura anatômica errada.
+- Essas famílias foram removidas do runtime após não apresentarem ganho
+  agregado; permanecem documentadas somente para interpretar runs antigos.
+  Elas modificavam a máscara já segmentada e não corrigiam uma trajetória de
+  círculos localizada sobre a estrutura anatômica errada.
 
 ### Filtros da trajetória circular
 

@@ -1,7 +1,9 @@
 """Shared utilities for manual experiment runners."""
 
 from .aorta_visual_review import (
+    add_aorta_extent_metrics,
     get_aorta_visual_review,
+    load_aorta_review_cohort,
     load_aorta_visual_reviews,
     resolve_aorta_review_summary_path,
 )
@@ -20,6 +22,7 @@ from .parameter_validation import (
     build_parameter_pairwise_summary,
     build_parameter_sensitivity_summary,
     build_mean_intensity_histogram,
+    build_mean_normalized_intensity_histogram,
     build_normalized_intensity_histograms,
     build_threshold_performance_data,
     compute_intensity_histogram_analysis,
@@ -39,9 +42,11 @@ from .parameter_validation import (
 )
 
 __all__ = [
+    "add_aorta_extent_metrics",
     "build_parameter_pairwise_summary",
     "build_parameter_sensitivity_summary",
     "build_mean_intensity_histogram",
+    "build_mean_normalized_intensity_histogram",
     "build_normalized_intensity_histograms",
     "build_threshold_performance_data",
     "compute_intensity_histogram_analysis",
@@ -51,6 +56,7 @@ __all__ = [
     "image_load_cache_key",
     "load_downscaled_intensity_values",
     "load_aorta_visual_reviews",
+    "load_aorta_review_cohort",
     "load_parameter_validation_run",
     "display_qualitative_pipeline_case",
     "parameter_validation_variants",

@@ -7,8 +7,12 @@ from pathlib import Path
 import tempfile
 import unittest
 
+import pandas as pd
+
 from utils.experiments.aorta_visual_review import (
+    add_aorta_extent_metrics,
     get_aorta_visual_review,
+    load_aorta_review_cohort,
     load_aorta_visual_reviews,
     resolve_aorta_review_summary_path,
 )
@@ -101,6 +105,56 @@ class AortaVisualReviewTests(unittest.TestCase):
         self.assertEqual(review["aorta_good_ids"], {1, 2})
         self.assertEqual(review["aorta_bad_ids"], {3})
         self.assertNotIn("ostia_good_ids", review)
+
+    def test_add_extent_metrics_measures_expansion_and_retraction(self) -> None:
+        dataframe = pd.DataFrame(
+            {
+                "image_slice_count": [100, 100],
+                "aorta_circle_count": [40, 50],
+                "aorta_segmented_slice_count": [44, 45],
+            }
+        )
+
+        result = add_aorta_extent_metrics(dataframe)
+
+        self.assertEqual(result["segmented_minus_circle_slices"].tolist(), [4, -5])
+        self.assertEqual(
+            result["segmented_vs_circle_change_fraction"].tolist(),
+            [0.1, -0.1],
+        )
+
+    def test_load_review_cohort_adds_visual_and_ostia_labels(self) -> None:
+        review = {
+            "run_dir": "output/example",
+            "aorta_good_ids": {1},
+            "aorta_bad_ids": {2},
+            "ostia_good_ids": {1},
+            "ostia_bad_ids": {2},
+            "notes": {2: "leak"},
+        }
+        numeric_dir = self.root / review["run_dir"] / "numeric"
+        numeric_dir.mkdir(parents=True)
+        pd.DataFrame(
+            {
+                "IMG_ID": [1, 2],
+                "ostia_detection_status": ["both correct", "both correct"],
+                "image_slice_count": [100, 100],
+                "aorta_circle_count": [40, 50],
+                "aorta_segmented_slice_count": [44, 45],
+            }
+        ).to_csv(numeric_dir / "ostios_train_summary.csv", index=False)
+
+        result = load_aorta_review_cohort(
+            self.root,
+            review,
+            "train",
+            cohort_name="treino",
+            use_reviewed_ostia_labels=True,
+        )
+
+        self.assertEqual(result["visual_aorta_quality"].tolist(), ["boa", "ruim"])
+        self.assertEqual(result["ostia_success"].tolist(), [True, False])
+        self.assertEqual(result["segmented_minus_circle_slices"].tolist(), [4, -5])
 
 
 if __name__ == "__main__":

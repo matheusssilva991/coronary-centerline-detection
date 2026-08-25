@@ -346,11 +346,7 @@ class PipelineSimplificationTests(TestCase):
             ostia_surface_mode="physical_distance",
             ostia_surface_thickness_mm=2.0,
             ostia_candidate_score_mode="local_mean",
-            ostia_pair_selection_mode="bilateral",
-            aorta_leak_correction="circle_seeded_neck_pruning",
-            aorta_neck_pruning_erosion_radius=3,
-            aorta_neck_pruning_core_radius_factor=0.85,
-            aorta_neck_pruning_max_volume_loss=0.15,
+            ostia_pair_selection_mode="joint",
             rg_comparison_window=-1,
             threshold_method="fuzzy",
             upper_threshold_percentile=99.9,
@@ -384,18 +380,8 @@ class PipelineSimplificationTests(TestCase):
         )
         self.assertEqual(
             config["OSTIA_DETECTION"]["pair_selection_mode"],
-            "bilateral",
+            "joint",
         )
-        self.assertEqual(
-            config["LEVEL_SET"]["experimental_leak_correction"]["method"],
-            "circle_seeded_neck_pruning",
-        )
-        pruning = config["LEVEL_SET"]["experimental_leak_correction"][
-            "circle_seeded_neck_pruning"
-        ]
-        self.assertEqual(pruning["erosion_radius"], 3)
-        self.assertEqual(pruning["core_radius_factor"], 0.85)
-        self.assertEqual(pruning["max_volume_loss_fraction"], 0.15)
         self.assertEqual(config["THRESHOLDING"]["method"], "fuzzy")
         self.assertEqual(config["MAX_THRESHOLD_PERCENTILE"], 99.9)
         self.assertEqual(

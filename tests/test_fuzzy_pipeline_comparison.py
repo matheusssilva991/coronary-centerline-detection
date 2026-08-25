@@ -54,7 +54,7 @@ class RunImageTest(TestCase):
     @patch("utils.experiments.fuzzy_pipeline_comparison.compute_vesselness")
     @patch("utils.experiments.fuzzy_pipeline_comparison.build_preprocessed_inputs")
     @patch("utils.experiments.fuzzy_pipeline_comparison.load_downsampled_case")
-    def test_passes_detected_circles_to_bilateral_ostia_selection(
+    def test_detects_ostia_with_standard_selection_interface(
         self,
         load_case,
         build_inputs,
@@ -107,10 +107,7 @@ class RunImageTest(TestCase):
         )
 
         self.assertIsNone(result["error"])
-        self.assertEqual(
-            detect_ostia.call_args.kwargs["detected_circles"],
-            circles,
-        )
+        self.assertNotIn("detected_circles", detect_ostia.call_args.kwargs)
 
     @patch("utils.experiments.fuzzy_pipeline_comparison.postprocess_artery_mask")
     @patch("utils.experiments.fuzzy_pipeline_comparison.normal_region_growing_from_ostia")

@@ -168,33 +168,6 @@ IMAGE_RESULT_DEFAULTS = {
     "aorta_level_set_nominal_circle_area_ratio_p90": None,
     "aorta_level_set_final_volume_fraction": None,
     "aorta_level_set_decision_reason": None,
-    "aorta_neck_pruning_method": None,
-    "aorta_neck_pruning_attempted": False,
-    "aorta_neck_pruning_accepted": False,
-    "aorta_neck_pruning_anomalous_slice_count": 0,
-    "aorta_neck_pruning_removed_voxels": 0,
-    "aorta_neck_pruning_volume_loss_fraction": 0.0,
-    "aorta_neck_pruning_area_ratio_before": None,
-    "aorta_neck_pruning_area_ratio_after": None,
-    "aorta_neck_pruning_fill_q25_before": None,
-    "aorta_neck_pruning_fill_q25_after": None,
-    "aorta_neck_pruning_slice_area_jump_p95_before": None,
-    "aorta_neck_pruning_slice_area_jump_p95_after": None,
-    "aorta_neck_pruning_rejection_reason": None,
-    "aorta_area_jump_pruning_method": None,
-    "aorta_area_jump_pruning_attempted": False,
-    "aorta_area_jump_pruning_accepted": False,
-    "aorta_area_jump_pruning_trigger_slice": None,
-    "aorta_area_jump_pruning_neck_slice": None,
-    "aorta_area_jump_pruning_removed_voxels": 0,
-    "aorta_area_jump_pruning_volume_loss_fraction": 0.0,
-    "aorta_area_jump_pruning_area_ratio_before": None,
-    "aorta_area_jump_pruning_area_ratio_after": None,
-    "aorta_area_jump_pruning_fill_q25_before": None,
-    "aorta_area_jump_pruning_fill_q25_after": None,
-    "aorta_area_jump_pruning_voxels_per_slice_before": None,
-    "aorta_area_jump_pruning_voxels_per_slice_after": None,
-    "aorta_area_jump_pruning_rejection_reason": None,
 }
 
 
@@ -657,7 +630,6 @@ def process_image(img_id, config, base_path, visual_output_dir=None):
                 label,
                 scaled_spacing,
                 config,
-                detected_circles=detected_circles,
             )
         except ValueError as ostia_exc:
             result["ostia_status"] = "not_found"

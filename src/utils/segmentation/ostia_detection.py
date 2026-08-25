@@ -276,90 +276,6 @@ def _find_best_ostium_pair(
     return best_pair[0].copy(), best_pair[1].copy()
 
 
-def _aorta_center_x_at_slices(
-    slice_indices: NDArray[Any],
-    detected_circles: Sequence[dict[str, Any]],
-) -> NDArray[np.float64]:
-    """Interpola a coordenada x do centro da aorta nas fatias solicitadas."""
-    circles_by_slice = {
-        int(circle["slice_index"]): float(circle["center_x"])
-        for circle in detected_circles
-        if circle.get("slice_index") is not None and circle.get("center_x") is not None
-    }
-    if not circles_by_slice:
-        raise ValueError("Seleção bilateral requer círculos válidos da aorta")
-    source_z = np.array(sorted(circles_by_slice), dtype=float)
-    source_x = np.array([circles_by_slice[int(z)] for z in source_z], dtype=float)
-    return np.interp(np.asarray(slice_indices, dtype=float), source_z, source_x)
-
-
-def _find_best_bilateral_pair(
-    candidates: NDArray[Any],
-    score_map: NDArray[Any],
-    aorta_mask: NDArray[Any],
-    detected_circles: Sequence[dict[str, Any]],
-    min_center_distance_factor: float,
-    max_z_diff_mm: float,
-    min_lateral_factor: float,
-    spacing: Sequence[float],
-    distance_mode: str,
-    top_k_per_side: int,
-) -> Tuple[Optional[NDArray[Any]], Optional[NDArray[Any]]]:
-    """Escolhe um candidato de cada lado do centro interpolado da aorta."""
-    if top_k_per_side < 1:
-        raise ValueError("bilateral_top_k_per_side deve ser >= 1")
-
-    center_x = _aorta_center_x_at_slices(candidates[:, 2], detected_circles)
-    left_candidates: list[NDArray[Any]] = []
-    right_candidates: list[NDArray[Any]] = []
-    for candidate, center in zip(candidates, center_x):
-        target = left_candidates if float(candidate[1]) >= center else right_candidates
-        if len(target) < top_k_per_side:
-            target.append(candidate)
-        if (
-            len(left_candidates) >= top_k_per_side
-            and len(right_candidates) >= top_k_per_side
-        ):
-            break
-    if not left_candidates or not right_candidates:
-        return None, None
-
-    best_pair: tuple[NDArray[Any], NDArray[Any]] | None = None
-    best_score = -np.inf
-    for first in left_candidates:
-        for second in right_candidates:
-            diameter_ref = 0.5 * (
-                calculate_robust_diameter(aorta_mask[:, :, int(first[2])])
-                + calculate_robust_diameter(aorta_mask[:, :, int(second[2])])
-            )
-            min_center_dist = diameter_ref * min_center_distance_factor
-            min_lateral_sep = min_center_dist * min_lateral_factor
-            if distance_mode == "physical_xy":
-                xy_spacing = float(np.mean(spacing[:2]))
-                min_center_dist *= xy_spacing
-                min_lateral_sep *= xy_spacing
-            if not _validate_ostium_pair(
-                first,
-                second,
-                min_center_dist,
-                max_z_diff_mm,
-                min_lateral_sep,
-                spacing,
-                distance_mode,
-            ):
-                continue
-            pair_score = float(score_map[tuple(first)]) + float(
-                score_map[tuple(second)]
-            )
-            if pair_score > best_score:
-                best_score = pair_score
-                best_pair = (first, second)
-
-    if best_pair is None:
-        return None, None
-    return best_pair[0].copy(), best_pair[1].copy()
-
-
 def _classify_left_right(
     ostium_1: NDArray[Any], ostium_2: NDArray[Any]
 ) -> Tuple[NDArray[Any], NDArray[Any]]:
@@ -507,8 +423,6 @@ def find_ostia(
     candidate_suppression_radius_mm: float = 0.0,
     pair_selection_mode: str = "greedy",
     joint_pair_top_k: int = 100,
-    bilateral_top_k_per_side: int = 50,
-    detected_circles: Optional[Sequence[dict[str, Any]]] = None,
     pair_distance_mode: str = "voxel_xyz",
     verbose: bool = True,
 ) -> Tuple[NDArray[Any], Optional[NDArray[Any]]]:
@@ -566,28 +480,8 @@ def find_ostia(
         if ostium_1 is None or ostium_2 is None:
             return top_candidates[0].copy(), None
         return _classify_left_right(ostium_1, ostium_2)
-    if pair_selection_mode == "bilateral":
-        if not detected_circles:
-            raise ValueError("pair_selection_mode bilateral requer detected_circles")
-        ostium_1, ostium_2 = _find_best_bilateral_pair(
-            top_candidates,
-            score_map,
-            aorta_mask,
-            detected_circles,
-            min_center_distance_factor,
-            max_z_diff_mm,
-            min_lateral_factor,
-            spacing,
-            pair_distance_mode,
-            bilateral_top_k_per_side,
-        )
-        if ostium_1 is None or ostium_2 is None:
-            return top_candidates[0].copy(), None
-        return _classify_left_right(ostium_1, ostium_2)
     if pair_selection_mode != "greedy":
-        raise ValueError(
-            "pair_selection_mode deve ser 'greedy', 'joint' ou 'bilateral'"
-        )
+        raise ValueError("pair_selection_mode deve ser 'greedy' ou 'joint'")
 
     # Primeiro óstio: maior vesselness na região candidata.
     ostium_1 = top_candidates[0]

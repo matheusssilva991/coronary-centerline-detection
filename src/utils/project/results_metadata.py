@@ -71,16 +71,8 @@ def _runtime_config_metadata(config: dict[str, Any]) -> dict[str, Any]:
             "interpolate_missed_circles"
         ),
         "artery_segmentation_method": str(artery_method),
-        "aorta_ostia_method": config.get("AORTA_OSTIA_METHOD", {}).get(
-            "method", "standard"
-        ),
         "aorta_level_set_mode": config.get("LEVEL_SET", {}).get(
             "iteration_mode", "fixed"
-        ),
-        "aorta_leak_correction": (
-            config.get("LEVEL_SET", {})
-            .get("experimental_leak_correction", {})
-            .get("method", "none")
         ),
     }
 
@@ -149,7 +141,6 @@ def build_metadata(
         "circle_detection_config": config.get("CIRCLE_DETECTION"),
         "level_set_config": config.get("LEVEL_SET"),
         "ostia_detection_config": config.get("OSTIA_DETECTION"),
-        "aorta_ostia_method_config": config.get("AORTA_OSTIA_METHOD"),
         "artery_segmentation_config": config.get("ARTERY_SEGMENTATION"),
         "thresholding_config": config.get("THRESHOLDING"),
         "region_growing_config": config.get("REGION_GROWING"),

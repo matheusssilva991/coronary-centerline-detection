@@ -13,8 +13,6 @@ from utils.segmentation.aorta_segmentation import (
     calculate_slice_area_jump_p95,
     iter_level_set_checkpoints,
     level_set_segmentation,
-    prune_aorta_at_circle_area_jump,
-    prune_circle_seeded_narrow_necks,
     remove_leaks_morphology,
 )
 from utils.segmentation.pipeline_detection import (
@@ -187,113 +185,6 @@ class AortaLevelSetRegressionTests(TestCase):
         self.assertGreater(calculate_mask_change_fraction(previous, current), 0)
         self.assertGreaterEqual(calculate_slice_area_jump_p95(current), 0)
         self.assertIn("circle_fill_q25", calculate_circle_mask_metrics(current, [_circle()]))
-
-
-class CircleSeededNeckPruningTests(TestCase):
-    @staticmethod
-    def _leaking_mask():
-        shape = (40, 40, 10)
-        mask = np.zeros(shape, dtype=np.uint8)
-        circles = []
-        yy, xx = np.ogrid[: shape[0], : shape[1]]
-        aorta_disk = (yy - 15) ** 2 + (xx - 15) ** 2 <= 5**2
-        leak_disk = (yy - 29) ** 2 + (xx - 15) ** 2 <= 6**2
-        for z in range(shape[2]):
-            mask[:, :, z][aorta_disk] = 1
-            circles.append(
-                {
-                    "slice_index": z,
-                    "center_x": 15.0,
-                    "center_y": 15.0,
-                    "radius": 5.0,
-                }
-            )
-        for z in range(5):
-            mask[:, :, z][leak_disk] = 1
-            mask[20:24, 15, z] = 1
-        return mask, circles
-
-    def test_removes_inferior_component_connected_by_narrow_neck(self):
-        mask, circles = self._leaking_mask()
-
-        result = prune_circle_seeded_narrow_necks(
-            mask,
-            circles,
-            erosion_radius=2,
-            area_ratio_threshold=2.0,
-            core_radius_factor=0.85,
-            inferior_fraction=0.6,
-            anomaly_margin_slices=1,
-            max_volume_loss_fraction=0.7,
-        )
-
-        self.assertTrue(result.attempted)
-        self.assertTrue(result.accepted, result.rejection_reason)
-        self.assertGreater(result.removed_voxels, 0)
-        self.assertLess(result.area_ratio_after, result.area_ratio_before)
-        np.testing.assert_array_equal(result.mask[:, :, 7], mask[:, :, 7])
-
-    def test_returns_original_mask_when_no_inferior_slice_is_anomalous(self):
-        mask, circles = self._leaking_mask()
-
-        result = prune_circle_seeded_narrow_necks(
-            mask,
-            circles,
-            erosion_radius=2,
-            area_ratio_threshold=20.0,
-        )
-
-        self.assertFalse(result.attempted)
-        self.assertFalse(result.accepted)
-        self.assertEqual(result.rejection_reason, "no_inferior_anomalous_slices")
-        np.testing.assert_array_equal(result.mask, mask)
-
-
-class CircleAreaJumpPruningTests(TestCase):
-    def test_removes_distal_expansion_after_area_jump(self):
-        shape = (44, 44, 10)
-        mask = np.zeros(shape, dtype=np.uint8)
-        yy, xx = np.ogrid[: shape[0], : shape[1]]
-        aorta = (yy - 15) ** 2 + (xx - 15) ** 2 <= 4**2
-        leak = (yy - 30) ** 2 + (xx - 15) ** 2 <= 7**2
-        circles = []
-        for z in range(shape[2]):
-            mask[:, :, z][aorta] = 1
-            circles.append(
-                {
-                    "slice_index": z,
-                    "center_x": 15.0,
-                    "center_y": 15.0,
-                    "radius": 4.0,
-                }
-            )
-        for z in range(4, shape[2]):
-            mask[:, :, z][leak] = 1
-        mask[19:25, 15, 4] = 1
-
-        result = prune_aorta_at_circle_area_jump(
-            mask,
-            circles,
-            max_volume_loss_fraction=0.8,
-            min_removed_fraction=0.001,
-        )
-
-        self.assertTrue(result.attempted)
-        self.assertTrue(result.accepted, result.rejection_reason)
-        self.assertEqual(result.trigger_slice, 4)
-        self.assertEqual(result.neck_slice, 3)
-        self.assertGreater(result.removed_voxels, 0)
-        self.assertLess(result.area_ratio_p90_after, result.area_ratio_p90_before)
-
-    def test_returns_original_without_abrupt_expansion(self):
-        mask, circles = CircleSeededNeckPruningTests._leaking_mask()
-        mask[:, :, :5] = mask[:, :, 5:6]
-
-        result = prune_aorta_at_circle_area_jump(mask, circles)
-
-        self.assertFalse(result.attempted)
-        self.assertEqual(result.rejection_reason, "no_abrupt_inferior_expansion")
-        np.testing.assert_array_equal(result.mask, mask)
 
 
 class AdaptiveStateTests(TestCase):

@@ -60,9 +60,10 @@ final. Foi mantido somente o run final de 90 imagens, além deste resumo.
 
 Nos dois blocos independentes de 60 e 90 imagens, a abordagem passou de
 122/150 (81,3%) para 129/150 (86,0%) sucessos. Houve oito recuperações e uma
-regressão, com Dice médio de 0,5712 para 0,5931. O método foi incorporado como
-`bilateral_thin`, mas `standard` continua sendo o padrão para preservar
-reprodutibilidade com os runs históricos.
+regressão, com Dice médio de 0,5712 para 0,5931. O método chegou a ser
+incorporado como `bilateral_thin`, mas foi posteriormente removido do runtime
+para simplificar o pipeline. Os resultados e snapshots de configuração seguem
+preservados como evidência histórica.
 
 ## Observação
 

@@ -27,6 +27,9 @@ _SYMBOL_TO_MODULE = {
     "plot_volume_slice": "image_slices",
     "save_volume_slice_figure": "image_slices",
     "visualize_circles_on_slices": "image_slices",
+    # intensity
+    "calculate_binned_intensity_mean_median": "intensity",
+    "plot_binned_intensity_histogram": "intensity",
     # preprocessing_views
     "plot_preprocessing_grid": "preprocessing_views",
     "plot_pipeline_preprocessing_stages": "preprocessing_views",

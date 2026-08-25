@@ -85,11 +85,6 @@ class ResultAliasTests(unittest.TestCase):
                     "aorta_level_set_nominal_volume_fraction": 0.025,
                     "aorta_level_set_final_volume_fraction": 0.018,
                     "aorta_level_set_decision_reason": "accepted",
-                    "aorta_neck_pruning_method": "circle_seeded_neck_pruning",
-                    "aorta_neck_pruning_attempted": True,
-                    "aorta_neck_pruning_accepted": True,
-                    "aorta_neck_pruning_removed_voxels": 250,
-                    "aorta_neck_pruning_rejection_reason": "accepted",
                 }
             ]
         )
@@ -166,9 +161,6 @@ class ResultAliasTests(unittest.TestCase):
         self.assertEqual(
             readable.loc[0, "aorta_level_set_final_volume_fraction"], 0.018
         )
-        self.assertEqual(readable.loc[0, "aorta_neck_pruning_attempted"], "yes")
-        self.assertEqual(readable.loc[0, "aorta_neck_pruning_accepted"], "yes")
-        self.assertEqual(readable.loc[0, "aorta_neck_pruning_removed_voxels"], 250)
 
 
 if __name__ == "__main__":
