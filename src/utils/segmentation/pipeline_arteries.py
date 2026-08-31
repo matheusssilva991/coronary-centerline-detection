@@ -8,12 +8,10 @@ morfológico final antes de calcular métricas.
 from typing import Any, Dict, Optional, Sequence
 
 import numpy as np
-from scipy import ndimage as ndi
 from skimage.morphology import ball
 
 from ..processing.binary_operations import binary_closing, binary_dilation
 from ..utils.metrics import dice_score
-from ..utils.normalization import normalize_vesselness
 from .artery_segmentation import normal_region_growing_from_ostia
 from .pipeline_preprocessing import compute_vesselness
 
@@ -93,91 +91,6 @@ def postprocess_artery_mask(
         dilation_radius=dilation_radius,
     )
     return stages["final_mask"]
-
-
-def postprocess_artery_mask_conditioned(
-    mask: Any,
-    config: Dict[str, Any],
-    vesselness: Any,
-    *,
-    candidate_mask: Any = None,
-    closing_radius: int = 3,
-    base_dilation_radius: int = 1,
-    max_dilation_radius: int = 2,
-    support_percentile: float = 10.0,
-    support_factor: float = 0.5,
-    local_max_radius: int = 1,
-) -> tuple[np.ndarray, Dict[str, Any]]:
-    """Dilata a segunda camada somente onde há suporte de vesselness.
-
-    A primeira dilatação restaura livremente a espessura ao redor da máscara
-    bruta. A camada adicional até ``max_dilation_radius`` é aceita somente
-    quando o maior vesselness local ultrapassa um limiar adaptativo calculado
-    sobre os voxels já segmentados.
-    """
-    # Normaliza máscara e vesselness antes de construir as camadas morfológicas.
-    raw_mask = np.asarray(mask) > 0
-    vesselness_norm = normalize_vesselness(vesselness)
-    if raw_mask.shape != vesselness_norm.shape:
-        raise ValueError("mask e vesselness devem possuir o mesmo shape.")
-
-    closing_structure = np.asarray(ball(int(closing_radius)))
-    base_dilation_structure = np.asarray(ball(int(base_dilation_radius)))
-    max_dilation_structure = np.asarray(ball(int(max_dilation_radius)))
-    closed_mask = binary_closing(
-        raw_mask,
-        structure=closing_structure,
-        gpu=False,
-    ).astype(bool)
-    base_mask = binary_dilation(
-        closed_mask,
-        structure=base_dilation_structure,
-        gpu=False,
-    ).astype(bool)
-    maximum_mask = binary_dilation(
-        closed_mask,
-        structure=max_dilation_structure,
-        gpu=False,
-    ).astype(bool)
-    # Apenas a camada adicional será condicionada pelo suporte vascular.
-    outer_shell = maximum_mask & ~base_mask
-
-    # O suporte mínimo se adapta às respostas já aceitas pela segmentação bruta.
-    segmented_values = vesselness_norm[raw_mask]
-    positive_values = segmented_values[segmented_values > 0]
-    if positive_values.size:
-        reference = float(np.percentile(positive_values, support_percentile))
-        support_threshold = reference * float(support_factor)
-    else:
-        reference = 0.0
-        support_threshold = 0.0
-
-    radius = max(int(local_max_radius), 0)
-    local_vesselness = (
-        ndi.maximum_filter(vesselness_norm, size=2 * radius + 1, mode="nearest")
-        if radius > 0
-        else vesselness_norm
-    )
-    # Aceita a expansão somente onde existe vesselness local suficiente.
-    supported_shell = outer_shell & (local_vesselness >= support_threshold)
-    if candidate_mask is not None:
-        candidate = np.asarray(candidate_mask) > 0
-        if candidate.shape != raw_mask.shape:
-            raise ValueError("candidate_mask deve possuir o mesmo shape da máscara.")
-        supported_shell &= candidate
-
-    final_mask = base_mask | supported_shell
-    shell_voxels = int(outer_shell.sum())
-    accepted_voxels = int(supported_shell.sum())
-    return final_mask.astype(np.uint8), {
-        "conditioned_support_reference": reference,
-        "conditioned_support_threshold": support_threshold,
-        "conditioned_shell_voxels": shell_voxels,
-        "conditioned_accepted_voxels": accepted_voxels,
-        "conditioned_acceptance_rate": (
-            accepted_voxels / shell_voxels if shell_voxels else 0.0
-        ),
-    }
 
 
 def _segment_with_region_growing(

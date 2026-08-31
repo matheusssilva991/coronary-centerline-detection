@@ -1,0 +1,12 @@
+{
+  "source": "config/imagecas_splits_val60.json",
+  "splits": {
+    "val": [
+      384,
+      437,
+      2,
+      792,
+      35
+    ]
+  }
+}

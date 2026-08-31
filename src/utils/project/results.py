@@ -14,7 +14,7 @@ from .results_io import (
     save_results,
 )
 from .results_metadata import build_metadata, make_json_safe, save_metadata
-from .results_schema import (
+from .results_columns import (
     CANONICAL_COLUMN_NAMES,
     OSTIA_STATUS_INTERNAL_LABELS,
     OSTIA_STATUS_READABLE_LABELS,
@@ -22,6 +22,8 @@ from .results_schema import (
     READABLE_COLUMN_NAMES,
     RESULT_COLUMNS,
     STATUS_LABELS,
+)
+from .results_schema import (
     add_config_columns,
     add_internal_result_aliases,
     build_result_row,

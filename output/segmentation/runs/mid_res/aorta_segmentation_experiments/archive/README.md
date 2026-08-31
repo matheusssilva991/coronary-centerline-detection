@@ -9,6 +9,7 @@ mas não representam candidatos ativos para promoção ao pipeline.
 | Pasta | Configuração de origem | Situação |
 |---|---|---|
 | [`p10_75_p99_8/`](p10_75_p99_8/README.md) | Threshold inferior P10.75 e superior P99.8 | Histórico anterior à promoção do baseline P99.9/-300 |
+| [`p99_9_m300/`](p99_9_m300/README.md) | Threshold inferior -300 HU e superior P99.9 | Variantes dominadas ou substituídas por testes mais claros |
 
 Cada run mantém `config/`, `numeric/` e `logs/`. Os HTMLs foram removidos após a
 inspeção visual porque ocupavam aproximadamente 1,2 GB e pertenciam somente a

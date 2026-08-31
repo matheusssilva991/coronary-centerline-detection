@@ -1,52 +1,36 @@
-# Comparação das máscaras da aorta na validação
+# Aorta na validacao: baseline versus correcao de referencia
 
-Atalhos para as visualizações 3D das 60 imagens de validação processadas com
-limite inferior `-300 HU` e superior `P99.9`. O catálogo contém somente exames
-com aorta visualmente ruim em pelo menos uma variante.
+Comparacao visual das oito falhas do baseline e de um exame sensivel na regiao
+dos ostios, entre as 60 imagens revisadas da validacao.
 
-## Runs comparados
+## Runs
 
-- **Normal:** `normal_p99_9_m300/2026-08-24_11-14-04`.
-- **Agressivo:** `circle_filter_aggressive_p99_9/2026-08-24_11-56-44`.
-- **Cobertura 80%:** `circle_filter_coverage_080/2026-08-24_14-10-36`.
-- **Cobertura 65% + fallback:** `circle_filter_coverage_065_fallback/2026-08-24_14-54-43`.
-- **Level set adaptativo:** `adaptive_current_p99_9_m300/2026-08-24_16-41-23`.
+- **Baseline:** `baseline_fixed_levelset_p99_9_m300/2026-08-24_11-14-04`.
+- **Correcao de referencia:**
+  `levelset_b0_6_r0_10_i26_p99_9_m300/2026-08-29_18-04-15`.
 
-## Inspeção rápida
+## Casos
 
-| IMG_ID | Avaliação visual | Normal | Agressivo | 80% | 65% + fallback | Adaptativo |
-|---:|---|---|---|---|---|---|
-| 11 | Vazamento no normal, coberturas e adaptativo | [abrir](by_image/img_11/normal.html) | [abrir](by_image/img_11/aggressive.html) | [abrir](by_image/img_11/coverage_080.html) | [abrir](by_image/img_11/coverage_065_fallback.html) | [abrir](by_image/img_11/adaptive_current.html) |
-| 134 | Ruim em todas as variantes | [abrir](by_image/img_134/normal.html) | [abrir](by_image/img_134/aggressive.html) | [abrir](by_image/img_134/coverage_080.html) | [abrir](by_image/img_134/coverage_065_fallback.html) | [abrir](by_image/img_134/adaptive_current.html) |
-| 184 | Ruim no normal, coberturas e adaptativo | [abrir](by_image/img_184/normal.html) | [abrir](by_image/img_184/aggressive.html) | [abrir](by_image/img_184/coverage_080.html) | [abrir](by_image/img_184/coverage_065_fallback.html) | [abrir](by_image/img_184/adaptive_current.html) |
-| 296 | Ruim no normal, coberturas e adaptativo | [abrir](by_image/img_296/normal.html) | [abrir](by_image/img_296/aggressive.html) | [abrir](by_image/img_296/coverage_080.html) | [abrir](by_image/img_296/coverage_065_fallback.html) | [abrir](by_image/img_296/adaptive_current.html) |
-| 307 | Ruim somente no agressivo | [abrir](by_image/img_307/normal.html) | [abrir](by_image/img_307/aggressive.html) | [abrir](by_image/img_307/coverage_080.html) | [abrir](by_image/img_307/coverage_065_fallback.html) | [abrir](by_image/img_307/adaptive_current.html) |
-| 384 | Adaptativo adicionou tortuosidade e tornou a aorta incorreta | [abrir](by_image/img_384/normal.html) | [abrir](by_image/img_384/aggressive.html) | [abrir](by_image/img_384/coverage_080.html) | [abrir](by_image/img_384/coverage_065_fallback.html) | [abrir](by_image/img_384/adaptive_current.html) |
-| 444 | Adaptativo reduziu o vazamento, mas ele permaneceu | [abrir](by_image/img_444/normal.html) | [abrir](by_image/img_444/aggressive.html) | [abrir](by_image/img_444/coverage_080.html) | [abrir](by_image/img_444/coverage_065_fallback.html) | [abrir](by_image/img_444/adaptive_current.html) |
-| 464 | Ruim em todas as variantes | [abrir](by_image/img_464/normal.html) | [abrir](by_image/img_464/aggressive.html) | [abrir](by_image/img_464/coverage_080.html) | [abrir](by_image/img_464/coverage_065_fallback.html) | [abrir](by_image/img_464/adaptive_current.html) |
-| 597 | Ruim em todas as variantes | [abrir](by_image/img_597/normal.html) | [abrir](by_image/img_597/aggressive.html) | [abrir](by_image/img_597/coverage_080.html) | [abrir](by_image/img_597/coverage_065_fallback.html) | [abrir](by_image/img_597/adaptive_current.html) |
-| 602 | Adaptativo reduziu o volume, mas o vazamento permaneceu | [abrir](by_image/img_602/normal.html) | [abrir](by_image/img_602/aggressive.html) | [abrir](by_image/img_602/coverage_080.html) | [abrir](by_image/img_602/coverage_065_fallback.html) | [abrir](by_image/img_602/adaptive_current.html) |
-| 705 | Ruim no normal, coberturas e adaptativo | [abrir](by_image/img_705/normal.html) | [abrir](by_image/img_705/aggressive.html) | [abrir](by_image/img_705/coverage_080.html) | [abrir](by_image/img_705/coverage_065_fallback.html) | [abrir](by_image/img_705/adaptive_current.html) |
-| 720 | Vazamento no normal, coberturas e adaptativo | [abrir](by_image/img_720/normal.html) | [abrir](by_image/img_720/aggressive.html) | [abrir](by_image/img_720/coverage_080.html) | [abrir](by_image/img_720/coverage_065_fallback.html) | [abrir](by_image/img_720/adaptive_current.html) |
-| 790 | Vazamento permaneceu ruim | [abrir](by_image/img_790/normal.html) | [abrir](by_image/img_790/aggressive.html) | [abrir](by_image/img_790/coverage_080.html) | [abrir](by_image/img_790/coverage_065_fallback.html) | [abrir](by_image/img_790/adaptive_current.html) |
-| 792 | Subsegmentada em todas as variantes | [abrir](by_image/img_792/normal.html) | [abrir](by_image/img_792/aggressive.html) | [abrir](by_image/img_792/coverage_080.html) | [abrir](by_image/img_792/coverage_065_fallback.html) | [abrir](by_image/img_792/adaptive_current.html) |
-| 838 | Adaptativo reduziu o volume, mas o vazamento permaneceu | [abrir](by_image/img_838/normal.html) | [abrir](by_image/img_838/aggressive.html) | [abrir](by_image/img_838/coverage_080.html) | [abrir](by_image/img_838/coverage_065_fallback.html) | [abrir](by_image/img_838/adaptive_current.html) |
+| IMG_ID | Baseline | Correcao | Avaliacao visual |
+|---:|---|---|---|
+| 11 | [abrir](by_image/img_11/baseline.html) | [abrir](by_image/img_11/corrected_levelset.html) | Vazamento permanece; `R_P90=3.81`. |
+| 134 | [abrir](by_image/img_134/baseline.html) | [abrir](by_image/img_134/corrected_levelset.html) | Corrigida. |
+| 444 | [abrir](by_image/img_444/baseline.html) | [abrir](by_image/img_444/corrected_levelset.html) | Corrigida. |
+| 464 | [abrir](by_image/img_464/baseline.html) | [abrir](by_image/img_464/corrected_levelset.html) | Sobresegmentacao lateral perto dos ostios. |
+| 597 | [abrir](by_image/img_597/baseline.html) | [abrir](by_image/img_597/corrected_levelset.html) | Aorta curta, mas visualmente plausivel. |
+| 602 | [abrir](by_image/img_602/baseline.html) | [abrir](by_image/img_602/corrected_levelset.html) | Corrigida. |
+| 790 | [abrir](by_image/img_790/baseline.html) | [abrir](by_image/img_790/corrected_levelset.html) | Vazamento em cauda; `R_P90=2.44`. |
+| 792 | [abrir](by_image/img_792/baseline.html) | [abrir](by_image/img_792/corrected_levelset.html) | Permanece subsegmentada. |
+| 513 | [abrir](by_image/img_513/baseline.html) | [abrir](by_image/img_513/corrected_levelset.html) | Globalmente correta, mas um pouco fina na regiao dos ostios. |
 
-## Casos alterados que permaneceram bons
+Resultado visual resumido: a correcao elevou os casos bons de `52/60` para
+`56/60`. Os vazamentos `11` e `790` compartilham `R_P90 > 2.0`, mais de 200
+circulos e baixa confianca media da Hough; nenhum dos 56 casos bons ultrapassou
+esse limite de `R_P90`. O exame `464` e um vazamento lateral localizado e nao e
+separado com a mesma clareza pelas metricas globais. O `792` apresenta o
+problema oposto, de subsegmentacao.
 
-- `384`: máscara um pouco mais modelada, embora tenha ocorrido perda de um dos
-  óstios; a qualidade visual da aorta permaneceu boa.
-- `437`: pequena adição na máscara, sem influência visual relevante.
-- No adaptativo, `437` também permaneceu visualmente correta.
-
-## Atalhos por variante
-
-- [`normal_bad_aorta/`](normal_bad_aorta/): 13 exames.
-- [`aggressive_bad_aorta/`](aggressive_bad_aorta/): 8 exames.
-- [`coverage_080_bad_aorta/`](coverage_080_bad_aorta/): 13 exames.
-- [`coverage_065_fallback_bad_aorta/`](coverage_065_fallback_bad_aorta/): 13 exames.
-- [`adaptive_current_bad_aorta/`](adaptive_current_bad_aorta/): 14 exames.
-
-Os casos ruins do normal sem mudança de voxels foram mantidos como ruins nas
-coberturas e no adaptativo. A única regressão visual adicional do adaptativo
-foi o exame `384`; o exame `437` permaneceu correto.
+As metricas usadas nessa comparacao estao em
+[`leak_indicator_summary.csv`](leak_indicator_summary.csv). A linha
+`good_cohort_p90` representa o percentil 90 calculado somente sobre as 56 aortas
+visualmente boas, e nao um novo limiar adotado pelo pipeline.

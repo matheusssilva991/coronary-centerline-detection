@@ -333,23 +333,29 @@ Trade-off:
 - `min_tail_coverage`: exige cobertura extrema do volume antes de permitir a
   remoção da cauda. O valor conservador `0.8` evita os cortes prematuros vistos
   em trajetórias normais.
-- `interpolate_isolated_outliers`: mantém disponível a interpolação de pontos
-  isolados, mas fica desativada por padrão até demonstrar benefício próprio.
-- `reject_oversegmented_result`: quando habilitado, rejeita uma trajetória
-  filtrada que ainda produza estado `oversegmented` e repete somente o level
-  set com os círculos originais. O padrão permanece `false`.
+- `max_tail_trim_fraction`: rejeita o corte quando a cauda proposta representa
+  uma fração excessiva da trajetória original. O padrão `1.0` não interfere no
+  pipeline; o valor experimental `0.4` protege contra cortes maiores que 40%.
+- `synthetic_tail_slices`: depois de remover uma cauda incompatível, prolonga a
+  última trajetória estável pelo número informado de fatias. Centro e raio são
+  extrapolados por tendências medianas e limitados pelas tolerâncias físicas.
+  O padrão `0` mantém esse recurso desativado.
+- `mask_guided_fallback`: segunda tentativa opcional quando o filtro geométrico
+  não remove a cauda. Ela usa o perfil `R_z` da máscara nominal, exige excesso
+  persistente de área, substitui a cauda por círculos sintéticos e só aceita a
+  nova máscara se `R_P90` diminuir sem perda relevante de preenchimento. O
+  padrão permanece `enabled: false`.
+Quando a divergência persiste até o final do rastreamento, o filtro remove
+somente essa cauda. O padrão permanece `method: none`.
 
-O filtro substitui outliers isolados pela interpolação dos círculos vizinhos.
-Quando a divergência persiste até o final do rastreamento, remove somente essa
-cauda. O padrão permanece `method: none`.
+O fallback simples por baixa cobertura continua apenas nos CSVs históricos. O
+fallback guiado pela máscara foi preservado como experimento por ter corrigido
+o exame 603 sem alterar os demais casos do treino na configuração avaliada.
 
 ### Rastreamento validado
 
 - Filtra candidatos pelas tolerâncias de raio/distância e escolhe o válido mais
   próximo do último círculo aceito.
-- `early_track_recovery = false` preserva o comportamento do melhor run P99.9.
-  Quando ativado experimentalmente, tenta novas inicializações nas 8 fatias
-  anteriores se a trajetória inicial tiver menos de 10 círculos.
 - Candidatos fora da tolerância interrompem o rastreamento; eles não são mais
   tratados como misses.
 
@@ -396,7 +402,19 @@ Efeito:
 ### `leak_removal_radius` (int)
 
 - Valor atual: `2`
-- Raio estrutural para limpar pequenos vazamentos apos evolucao.
+- Raio da abertura morfologica 3D aplicada apos a evolucao. A operacao remove
+  conexoes menores que o elemento esferico, mas valores altos podem afinar a
+  regiao dos ostios. Pode ser sobrescrito por `--aorta-opening-radius`; o valor
+  `0` desativa a abertura sem alterar as demais etapas.
+
+### Envelope experimental da trajetória
+
+- `trajectory_radius_factor`: quando definido, preserva somente a interseção
+  entre a máscara pós-level set e um tubo de raio `k*r_z` ao redor dos círculos.
+  O baseline não define esse parâmetro.
+- `trajectory_axial_margin_slices`: prolonga o tubo antes do primeiro e depois
+  do último círculo, repetindo o centro e o raio extremos. O padrão é `0`; nos
+  testes do envelope corrigido é usada uma margem de `5` fatias.
 
 ### Controle adaptativo de iteracoes
 
@@ -407,17 +425,38 @@ Efeito:
 - `early_stop_iteration`, `convergence_tolerance` e `convergence_patience`:
   permitem parada segura na iteracao 26 quando dois checkpoints adequados
   mudam no maximo 1%.
-- limites `adequate_*`, `oversegmented_*` e `undersegmented_*`: classificam a
-  mascara nominal como adequada, sobresegmentada ou subsegmentada.
+- `adequate_min_circle_fill_q25` e a faixa `adequate_*_area_ratio_p90`:
+  restringem a parada antecipada a checkpoints que ainda cobrem os círculos e
+  não apresentam excesso de área.
+- `oversegmented_area_ratio_p90`: é o único gatilho de sobresegmentação. O
+  limite padrão `2.7` veio da comparação com 90 classificações visuais.
 - limites `localization_*`: combinam preenchimento dos circulos, raio em mm,
   saltos de raio, confianca da Hough e saturacao no limite inferior. Uma
   localizacao suspeita e apenas registrada; a mascara nominal e preservada.
+- `localization_leak_override`: excecao experimental, desativada por padrao,
+  que permite testar a evolucao conservadora mesmo com localizacao suspeita
+  quando `R_P90`, preenchimento dos circulos e volume indicam juntos um
+  vazamento forte. O candidato continua sujeito aos criterios de seguranca.
 - `conservative`: reinicia antes do vazamento com `balloon=0.5`, `alpha=1500`,
   percentil 55 do gradiente e `smoothing=2`.
-- `permissive`: reinicia na iteracao 26 e evolui ate 36 com `balloon=1.0`,
-  `alpha=800`, percentil 30 do gradiente e `smoothing=2`.
-- `max_fill_loss`, `max_axial_jump_increase_fraction` e limites `permissive_*`:
-  rejeitam alternativas que prejudiquem preenchimento, volume ou continuidade.
+- `min_area_ratio_improvement_fraction`: redução relativa mínima de `R_P90`
+  exigida para aceitar a evolução conservadora; o padrão experimental é 5%.
+- `max_fill_loss` e `max_axial_jump_increase_fraction`: rejeitam uma evolução
+  conservadora que prejudique preenchimento ou continuidade.
+
+O CLI permite variar o perfil sem editar o JSON por meio de
+`--aorta-conservative-balloon`, `--aorta-conservative-alpha`,
+`--aorta-conservative-threshold-percentile` e
+`--aorta-conservative-min-ratio-improvement`.
+O override experimental pode ser configurado por
+`--aorta-localization-leak-override` e pelos tres limites
+`--aorta-localization-leak-min-*`.
+
+A expansão permissiva para subsegmentação foi retirada da decisão porque, na
+amostra visual de treino e validação, a regra anterior sinalizou somente
+aortas avaliadas como boas. Volume, voxels por fatia e mudança da máscara
+continuam persistidos como diagnósticos; `mask_change_fraction` participa apenas
+da verificação de convergência.
 
 Se uma evolução alternativa for rejeitada, o controlador retorna exatamente a
 mascara nominal. Os campos antigos `refinement_*` continuam apenas para leitura
@@ -438,11 +477,8 @@ Seleciona candidatos de ostio e filtra por regras anatomicas/geometricas.
 
 ### Superfície candidata
 
-- `surface_mode: erosion`: superfície interna histórica obtida por erosão.
-- `surface_mode: physical_distance`: faixa interna com espessura física.
-- `surface_thickness_mm`: espessura interna da banda física.
-- `candidate_score_mode`: define se o ranking usa o valor pontual ou uma
-  agregação local do vesselness.
+A superfície interna é obtida por erosão da máscara da aorta. Os candidatos
+são ordenados diretamente pelo vesselness de cada voxel.
 
 ### `top_n` (int)
 
@@ -476,11 +512,8 @@ Seleciona candidatos de ostio e filtra por regras anatomicas/geometricas.
 
 ### Selecao do par
 
-- `pair_selection_mode = "greedy"`: comportamento historico, que escolhe o
-  primeiro candidato pelo vesselness e procura o segundo pelas restricoes
-  geometricas.
-- `pair_selection_mode = "joint"`: avalia pares de candidatos conjuntamente,
-  sem dividir previamente a superfície em lados.
+A seleção é greedy: escolhe o primeiro candidato pelo vesselness e procura o
+segundo aplicando as restrições geométricas.
 
 ---
 

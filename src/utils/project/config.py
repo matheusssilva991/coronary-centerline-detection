@@ -166,21 +166,12 @@ def scale_config_to_resolution(
                     "min_iter",
                     "check_interval",
                     "early_stop_iteration",
-                    "permissive_start_iteration",
                 ):
                     if key in adaptive:
                         adaptive[key] = max(
                             1,
                             int(round(adaptive[key] * iteration_scale)),
                         )
-                permissive = adaptive.get("permissive")
-                if permissive and "target_iterations" in permissive:
-                    permissive["target_iterations"] = max(
-                        1,
-                        int(round(permissive["target_iterations"] * iteration_scale)),
-                    )
-                if "oversegmented_voxels_per_slice" in adaptive:
-                    adaptive["oversegmented_voxels_per_slice"] *= scale_area
 
     # Se não há scaling necessário, retorna configuração sem mudanças
     if scale == 1.0:

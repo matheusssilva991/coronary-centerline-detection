@@ -21,6 +21,12 @@ from ..project.results import (
     summarize_batch_timing_records,
 )
 from .pipeline_arteries import segment_arteries_from_ostia
+from .aorta_correction import (
+    calculate_aorta_candidate_metrics,
+    evaluate_mask_guided_tail_candidate,
+    find_mask_guided_tail_start,
+)
+from .aorta_localization import extrapolate_stable_circle_tail
 from .pipeline_detection import (
     detect_and_evaluate_ostia,
     filter_located_aorta_circles,
@@ -49,10 +55,6 @@ IMAGE_RESULT_DEFAULTS = {
     "proceeded_with_bad_ostia": False,
     "skip_reason": None,
     "ostia_error": None,
-    "ostia_surface_mode": None,
-    "ostia_surface_thickness_mm": None,
-    "ostia_candidate_score_mode": None,
-    "ostia_pair_selection_mode": None,
     "left_intersects": False,
     "right_intersects": False,
     "left_dist_voxels": None,
@@ -100,29 +102,36 @@ IMAGE_RESULT_DEFAULTS = {
     "aorta_circle_mean_hough_accumulator": None,
     "aorta_circle_lower_radius_bound_fraction": None,
     "aorta_circle_upper_radius_bound_fraction": None,
-    "aorta_recovered_initialization": False,
     "aorta_circle_filter_method": "none",
     "aorta_circle_filter_applied": False,
     "aorta_circle_original_count": None,
     "aorta_circle_used_count": None,
-    "aorta_circle_filter_interpolated_count": 0,
+    "aorta_circle_filter_synthetic_tail_count": 0,
     "aorta_circle_filter_trimmed_tail_count": 0,
     "aorta_circle_filter_trim_start_slice": None,
     "aorta_circle_filter_original_coverage": None,
     "aorta_circle_filter_used_coverage": None,
     "aorta_circle_filter_reason": None,
-    "aorta_circle_filter_fallback_enabled": False,
-    "aorta_circle_filter_accepted": False,
-    "aorta_circle_filter_rejected": False,
-    "aorta_circle_filter_rejection_reason": None,
-    "aorta_circle_filter_candidate_controller_state": None,
-    "aorta_circle_filter_fallback_controller_state": None,
     "aorta_circle_filter_candidate_mask_voxel_count": None,
+    "aorta_circle_filter_mask_guided_fallback_enabled": False,
+    "aorta_circle_filter_mask_guided_fallback_attempted": False,
+    "aorta_circle_filter_mask_guided_fallback_accepted": False,
+    "aorta_circle_filter_mask_guided_fallback_rejection_reason": None,
+    "aorta_circle_filter_mask_guided_trim_start_slice": None,
+    "aorta_circle_filter_mask_guided_trimmed_tail_count": 0,
+    "aorta_circle_filter_mask_guided_candidate_area_ratio_p90": None,
+    "aorta_circle_filter_mask_guided_retry_area_ratio_p90": None,
+    "aorta_circle_filter_mask_guided_candidate_fill_q25": None,
+    "aorta_circle_filter_mask_guided_retry_fill_q25": None,
     "aorta_mask_voxels": None,
     "aorta_segmented_slice_count": None,
     "aorta_voxels_per_segmented_slice": None,
     "aorta_volume_fraction": None,
     "aorta_level_set_mode": None,
+    "aorta_level_set_initial_voxel_count": None,
+    "aorta_level_set_raw_voxel_count": None,
+    "aorta_level_set_initial_volume_fraction": None,
+    "aorta_level_set_raw_volume_fraction": None,
     "aorta_level_set_iterations_used": None,
     "aorta_level_set_stop_reason": None,
     "aorta_level_set_checkpoint_count": None,
@@ -133,6 +142,7 @@ IMAGE_RESULT_DEFAULTS = {
     "aorta_level_set_circle_area_ratio_p90": None,
     "aorta_level_set_leak_suspected": False,
     "aorta_level_set_localization_suspected": False,
+    "aorta_level_set_localization_leak_override_triggered": False,
     "aorta_level_set_leak_signal_count": 0,
     "aorta_level_set_trigger_iteration": None,
     "aorta_level_set_trigger_volume_fraction": None,
@@ -142,17 +152,8 @@ IMAGE_RESULT_DEFAULTS = {
     "aorta_level_set_trigger_circle_area_ratio_p90": None,
     "aorta_level_set_correction_applied": False,
     "aorta_level_set_correction_method": None,
-    "aorta_level_set_refinement_applied": False,
-    "aorta_level_set_refinement_accepted": False,
-    "aorta_level_set_refinement_iterations": None,
-    "aorta_level_set_refinement_balloon": None,
-    "aorta_level_set_refinement_smoothing": None,
-    "aorta_level_set_refinement_transition_mode": None,
-    "aorta_level_set_refinement_anomaly_margin_slices": None,
-    "aorta_level_set_refinement_volume_loss_fraction": None,
     "aorta_level_set_slice_area_jump_p95_before": None,
     "aorta_level_set_slice_area_jump_p95_after": None,
-    "aorta_level_set_refinement_rejection_reason": None,
     "aorta_level_set_controller_state": None,
     "aorta_level_set_profile_used": None,
     "aorta_level_set_rollback_iteration": None,
@@ -166,6 +167,11 @@ IMAGE_RESULT_DEFAULTS = {
     "aorta_level_set_nominal_volume_fraction": None,
     "aorta_level_set_nominal_circle_fill_q25": None,
     "aorta_level_set_nominal_circle_area_ratio_p90": None,
+    "aorta_level_set_candidate_voxel_count": None,
+    "aorta_level_set_candidate_volume_fraction": None,
+    "aorta_level_set_candidate_circle_fill_q25": None,
+    "aorta_level_set_candidate_circle_area_ratio_p90": None,
+    "aorta_level_set_candidate_area_ratio_improvement_fraction": None,
     "aorta_level_set_final_volume_fraction": None,
     "aorta_level_set_decision_reason": None,
 }
@@ -335,10 +341,6 @@ def summarize_aorta_circles(
         "aorta_circle_coverage": (
             circle_count / image_slice_count if image_slice_count else None
         ),
-        "aorta_recovered_initialization": any(
-            bool(circle.get("recovered_initialization", False))
-            for circle in detected_circles
-        ),
         "aorta_detected_circle_radius_median_mm": _median_or_none(
             detected_radii_mm
         ),
@@ -393,14 +395,10 @@ def _segment_aorta_with_circle_filter_fallback(
     scaled_spacing,
     config,
 ):
-    """Segmenta a aorta e rejeita opcionalmente uma trajetória filtrada ruim."""
+    """Segmenta a aorta e aplica o fallback ativo guiado pela máscara."""
     circle_config = config["CIRCLE_DETECTION"]
     level_set_config = config["LEVEL_SET"]
     trajectory_filter = circle_config.get("trajectory_filter", {})
-    fallback_enabled = bool(
-        trajectory_filter.get("reject_oversegmented_result", False)
-    )
-
     # Primeiro avalia normalmente a trajetória resultante do filtro robusto.
     filtered_summary = summarize_aorta_circles(
         filtered_circles,
@@ -415,57 +413,158 @@ def _segment_aorta_with_circle_filter_fallback(
         use_gpu=config.get("USE_GPU", False),
         circle_summary=filtered_summary,
     )
-    candidate_state = candidate.diagnostics.get("aorta_level_set_controller_state")
+
+    # Quando a cobertura impede o filtro geométrico de agir, a própria máscara
+    # nominal pode revelar uma cauda com R_z persistentemente elevado.
+    mask_guided = trajectory_filter.get("mask_guided_fallback", {})
+    mask_guided_enabled = bool(mask_guided.get("enabled", False))
+    mask_guided_diagnostics = {
+        "aorta_circle_filter_mask_guided_fallback_enabled": mask_guided_enabled,
+        "aorta_circle_filter_mask_guided_fallback_attempted": False,
+        "aorta_circle_filter_mask_guided_fallback_accepted": False,
+        "aorta_circle_filter_mask_guided_fallback_rejection_reason": None,
+        "aorta_circle_filter_mask_guided_trim_start_slice": None,
+        "aorta_circle_filter_mask_guided_trimmed_tail_count": 0,
+        "aorta_circle_filter_mask_guided_candidate_area_ratio_p90": None,
+        "aorta_circle_filter_mask_guided_retry_area_ratio_p90": None,
+        "aorta_circle_filter_mask_guided_candidate_fill_q25": None,
+        "aorta_circle_filter_mask_guided_retry_fill_q25": None,
+    }
     filter_applied = bool(filter_diagnostics.get("aorta_circle_filter_applied"))
-    reject_candidate = (
-        fallback_enabled and filter_applied and candidate_state == "oversegmented"
+    baseline_metrics = None
+    baseline_ratio = None
+    if mask_guided_enabled and not filter_applied:
+        baseline_metrics = calculate_aorta_candidate_metrics(
+            candidate.mask,
+            original_circles,
+        )
+        baseline_ratio = baseline_metrics["circle_area_ratio_p90"]
+    should_try_mask_guided = (
+        baseline_metrics is not None
+        and baseline_ratio is not None
+        and baseline_ratio >= float(mask_guided.get("min_area_ratio_p90", 2.5))
     )
+    if should_try_mask_guided:
+        assert baseline_metrics is not None
+        mask_guided_diagnostics.update(
+            {
+                "aorta_circle_filter_mask_guided_fallback_attempted": True,
+                "aorta_circle_filter_mask_guided_candidate_area_ratio_p90": baseline_ratio,
+                "aorta_circle_filter_mask_guided_candidate_fill_q25": baseline_metrics[
+                    "circle_fill_q25"
+                ],
+            }
+        )
+        ordered_circles = sorted(
+            (dict(circle) for circle in original_circles),
+            key=lambda circle: int(circle["slice_index"]),
+            reverse=True,
+        )
+        tail_start = find_mask_guided_tail_start(
+            candidate.mask,
+            ordered_circles,
+            mask_guided,
+        )
+        if tail_start is None:
+            mask_guided_diagnostics[
+                "aorta_circle_filter_mask_guided_fallback_rejection_reason"
+            ] = "persistent_mask_tail_not_found"
+        else:
+            stable_circles = ordered_circles[:tail_start]
+            dx, dy, _ = scaled_spacing
+            pixel_spacing = (float(dx) + float(dy)) / 2.0
+            synthetic = extrapolate_stable_circle_tail(
+                stable_circles,
+                synthetic_slices=int(mask_guided.get("synthetic_tail_slices", 5)),
+                pixel_spacing=pixel_spacing,
+                reference_window=int(mask_guided.get("reference_window", 5)),
+                max_radius_step_mm=float(
+                    trajectory_filter.get("max_radius_step_mm", 4.8)
+                ),
+                max_center_step_mm=float(
+                    trajectory_filter.get("max_center_step_mm", 8.0)
+                ),
+            )
+            retry_circles = stable_circles + synthetic
+            retry_summary = summarize_aorta_circles(
+                retry_circles,
+                image_slice_count,
+                scaled_spacing,
+                circle_config,
+            )
+            retry = segment_aorta_with_diagnostics(
+                lcc_image,
+                retry_circles,
+                level_set_config,
+                use_gpu=config.get("USE_GPU", False),
+                circle_summary=retry_summary,
+            )
+            retry_metrics = calculate_aorta_candidate_metrics(
+                retry.mask,
+                original_circles,
+            )
+            rejection_reasons = evaluate_mask_guided_tail_candidate(
+                baseline_metrics,
+                retry_metrics,
+                mask_guided,
+            )
+            trimmed_count = len(ordered_circles) - tail_start
+            trim_start_slice = int(ordered_circles[tail_start]["slice_index"])
+            mask_guided_diagnostics.update(
+                {
+                    "aorta_circle_filter_mask_guided_trim_start_slice": trim_start_slice,
+                    "aorta_circle_filter_mask_guided_trimmed_tail_count": trimmed_count,
+                    "aorta_circle_filter_mask_guided_retry_area_ratio_p90": retry_metrics[
+                        "circle_area_ratio_p90"
+                    ],
+                    "aorta_circle_filter_mask_guided_retry_fill_q25": retry_metrics[
+                        "circle_fill_q25"
+                    ],
+                }
+            )
+            if rejection_reasons:
+                mask_guided_diagnostics[
+                    "aorta_circle_filter_mask_guided_fallback_rejection_reason"
+                ] = "+".join(rejection_reasons)
+            else:
+                candidate = retry
+                filtered_circles = retry_circles
+                filter_applied = True
+                mask_guided_diagnostics[
+                    "aorta_circle_filter_mask_guided_fallback_accepted"
+                ] = True
+                filter_diagnostics.update(
+                    {
+                        "aorta_circle_filter_applied": True,
+                        "aorta_circle_used_count": len(retry_circles),
+                        "aorta_circle_filter_synthetic_tail_count": len(synthetic),
+                        "aorta_circle_filter_trimmed_tail_count": trimmed_count,
+                        "aorta_circle_filter_trim_start_slice": trim_start_slice,
+                        "aorta_circle_filter_used_coverage": (
+                            len(retry_circles) / image_slice_count
+                            if image_slice_count
+                            else None
+                        ),
+                        "aorta_circle_filter_reason": (
+                            "mask_ratio_tail_trimmed"
+                            + (
+                                "+stable_tail_extrapolated"
+                                if synthetic
+                                else ""
+                            )
+                        ),
+                    }
+                )
+    filter_diagnostics.update(mask_guided_diagnostics)
+
     filter_diagnostics.update(
         {
-            "aorta_circle_filter_fallback_enabled": fallback_enabled,
-            "aorta_circle_filter_accepted": filter_applied and not reject_candidate,
-            "aorta_circle_filter_rejected": reject_candidate,
-            "aorta_circle_filter_rejection_reason": (
-                "filtered_mask_oversegmented" if reject_candidate else None
-            ),
-            "aorta_circle_filter_candidate_controller_state": candidate_state,
-            "aorta_circle_filter_fallback_controller_state": None,
             "aorta_circle_filter_candidate_mask_voxel_count": int(
                 np.asarray(candidate.mask).sum()
             ),
         }
     )
-    if not reject_candidate:
-        return filtered_circles, candidate, filter_diagnostics
-
-    # O fallback repete apenas o level set; Hough e pré-processamento são reutilizados.
-    original_summary = summarize_aorta_circles(
-        original_circles,
-        image_slice_count,
-        scaled_spacing,
-        circle_config,
-    )
-    fallback = segment_aorta_with_diagnostics(
-        lcc_image,
-        original_circles,
-        level_set_config,
-        use_gpu=config.get("USE_GPU", False),
-        circle_summary=original_summary,
-    )
-    filter_diagnostics.update(
-        {
-            "aorta_circle_used_count": len(original_circles),
-            "aorta_circle_filter_used_coverage": (
-                len(original_circles) / image_slice_count
-                if image_slice_count
-                else None
-            ),
-            "aorta_circle_filter_fallback_controller_state": fallback.diagnostics.get(
-                "aorta_level_set_controller_state"
-            ),
-        }
-    )
-    return original_circles, fallback, filter_diagnostics
+    return filtered_circles, candidate, filter_diagnostics
 
 
 def _circle_result_fields(
@@ -533,22 +632,6 @@ def process_image(img_id, config, base_path, visual_output_dir=None):
     result["aorta_level_set_mode"] = config.get("LEVEL_SET", {}).get(
         "iteration_mode", "fixed"
     )
-    ostia_config = config.get("OSTIA_DETECTION", {})
-    result.update(
-        {
-            "ostia_surface_mode": ostia_config.get("surface_mode", "erosion"),
-            "ostia_surface_thickness_mm": ostia_config.get(
-                "surface_thickness_mm", 2.0
-            ),
-            "ostia_candidate_score_mode": ostia_config.get(
-                "candidate_score_mode", "voxel"
-            ),
-            "ostia_pair_selection_mode": ostia_config.get(
-                "pair_selection_mode", "greedy"
-            ),
-        }
-    )
-
     try:
         # Carrega imagem/label e gera o volume pré-processado (LCC).
         image_data = load_and_preprocess_image(img_id, base_path, config)
@@ -598,8 +681,7 @@ def process_image(img_id, config, base_path, visual_output_dir=None):
             result["image_slice_count"],
             config["CIRCLE_DETECTION"],
         )
-        # Segmenta a aorta e volta aos círculos originais quando o filtro
-        # opcional ainda resultar em uma máscara sobresegmentada.
+        # Segmenta a aorta e, quando habilitado, testa o fallback guiado pela máscara.
         detected_circles, aorta_segmentation, circle_filter_diagnostics = (
             _segment_aorta_with_circle_filter_fallback(
                 lcc_image,

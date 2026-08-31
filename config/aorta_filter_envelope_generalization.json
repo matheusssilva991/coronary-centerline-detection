@@ -1,0 +1,54 @@
+{
+    "MIN_THRESHOLD": -300,
+    "MAX_THRESHOLD_PERCENTILE": 99.9,
+    "LOWER_THRESHOLD": {
+        "method": "fixed",
+        "fixed_hu": -300
+    },
+    "THRESHOLDING": {
+        "method": "normal"
+    },
+    "CIRCLE_DETECTION": {
+        "trajectory_filter": {
+            "method": "robust",
+            "max_radius_step_mm": 4.8,
+            "max_center_step_mm": 8.0,
+            "severe_radius_step_mm": 7.0,
+            "severe_center_step_mm": 12.0,
+            "min_hough_accumulator": 0.408,
+            "reference_window": 5,
+            "persistence_window": 5,
+            "persistence_required": 4,
+            "min_tail_circles": 8,
+            "min_remaining_circles": 30,
+            "tail_search_start_fraction": 0.35,
+            "min_tail_coverage": 0.4,
+            "max_tail_trim_fraction": 0.4,
+            "synthetic_tail_slices": 5,
+            "mask_guided_fallback": {
+                "enabled": true,
+                "tail_search_start_fraction": 0.35,
+                "persistence_window": 5,
+                "persistence_required": 4,
+                "min_tail_circles": 8,
+                "min_remaining_circles": 30,
+                "max_tail_trim_fraction": 0.4,
+                "slice_area_ratio_threshold": 2.5,
+                "min_area_ratio_p90": 2.5,
+                "min_ratio_improvement": 0.1,
+                "max_fill_loss": 0.015,
+                "synthetic_tail_slices": 5,
+                "reference_window": 5
+            }
+        }
+    },
+    "LEVEL_SET": {
+        "iteration_mode": "fixed",
+        "radius_reduction_factor": 0.1,
+        "num_iter": 26,
+        "balloon": 0.6,
+        "leak_removal_radius": 2,
+        "trajectory_radius_factor": 2.25,
+        "trajectory_axial_margin_slices": 10
+    }
+}

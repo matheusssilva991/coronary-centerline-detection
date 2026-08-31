@@ -166,3 +166,19 @@ O último `pipeline_failure_improvement` também foi removido: ele era apenas a
 saída do runner de correções e suas métricas já estavam registradas neste
 histórico. O catálogo `pipeline_failure_analysis` foi preservado porque seu
 `focused_cohort.csv` é uma entrada direta do runner.
+
+## Limpeza das abordagens experimentais descartadas
+
+Foram removidos do runtime a correção condicional da aorta, o modo
+`recovery_only`, a repetição da Hough para trajetórias curtas, a interpolação de
+outliers geométricos isolados e a rejeição posterior de máscaras ainda
+sobresegmentadas. Permaneceram o filtro robusto, o corte de cauda, os círculos
+sintéticos, o envelope, o fallback guiado pela máscara, o controlador adaptativo
+e o override de vazamento por localização.
+
+Também foram removidas as estratégias de óstios sem ganho comprovado (superfície
+por distância física, scores locais, NMS e seleção joint), o pós-processamento
+arterial condicionado sem consumidores e o experimento híbrido mid/high. Os
+runners concluídos de abertura, sweep focal da aorta e sweep de `R_P90` foram
+retirados. Seus resultados históricos permanecem documentados; os quatro
+métodos científicos ativos continuam sendo RG, FC, threshold normal e fuzzy.

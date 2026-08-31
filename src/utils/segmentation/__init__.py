@@ -48,7 +48,6 @@ _SYMBOL_TO_MODULE = {
     "normal_region_growing_from_ostia": "artery_segmentation",
     "get_artery_postprocessing_stages": "pipeline_arteries",
     "postprocess_artery_mask": "pipeline_arteries",
-    "postprocess_artery_mask_conditioned": "pipeline_arteries",
     "resolve_lower_threshold": "lower_threshold",
     "segment_arteries_from_ostia": "pipeline_arteries",
     "segment_arteries_from_vesselness": "pipeline_arteries",

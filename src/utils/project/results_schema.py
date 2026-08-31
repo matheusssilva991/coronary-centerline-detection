@@ -6,348 +6,15 @@ from typing import Any, cast
 
 import pandas as pd
 
-
-RESULT_COLUMNS: list[str] = [
-    "IMG_ID",
-    "dice_artery",
-    "dice_artery_before_morphology",
-    "dice_artery_after_morphology",
-    "dice_artery_morphology_delta",
-    "artery_voxels",
-    "artery_voxels_before_morphology",
-    "artery_voxels_after_morphology",
-    "artery_segmentation_method",
-    "fc_processed_voxels",
-    "fc_effective_alpha",
-    "fc_object_seed_count",
-    "fc_candidate_voxels_final",
-    "threshold_mode",
-    "fuzzy_mask_strategy",
-    "min_threshold",
-    "max_threshold",
-    "lower_threshold_method",
-    "lower_threshold_percentile",
-    "threshold_voxels",
-    "lcc_voxels",
-    "image_slice_count",
-    "image_voxels",
-    "aorta_circle_count",
-    "aorta_detected_circle_count",
-    "aorta_interpolated_circle_count",
-    "aorta_circle_first_slice",
-    "aorta_circle_last_slice",
-    "aorta_circle_coverage",
-    "aorta_circle_radius_min_px",
-    "aorta_circle_radius_max_px",
-    "aorta_circle_radius_mean_px",
-    "aorta_circle_radius_median_px",
-    "aorta_circle_radius_std_px",
-    "aorta_circle_radius_p10_px",
-    "aorta_circle_radius_p90_px",
-    "aorta_circle_radius_min_mm",
-    "aorta_circle_radius_max_mm",
-    "aorta_circle_radius_mean_mm",
-    "aorta_circle_radius_median_mm",
-    "aorta_circle_radius_std_mm",
-    "aorta_circle_radius_p10_mm",
-    "aorta_circle_radius_p90_mm",
-    "aorta_detected_circle_radius_median_mm",
-    "aorta_interpolated_circle_radius_median_mm",
-    "aorta_circle_radius_first_mm",
-    "aorta_circle_radius_last_mm",
-    "aorta_circle_radius_max_step_change_mm",
-    "aorta_circle_radius_p90_step_change_mm",
-    "aorta_circle_mean_hough_accumulator",
-    "aorta_circle_lower_radius_bound_fraction",
-    "aorta_circle_upper_radius_bound_fraction",
-    "aorta_recovered_initialization",
-    "aorta_circle_filter_method",
-    "aorta_circle_filter_applied",
-    "aorta_circle_original_count",
-    "aorta_circle_used_count",
-    "aorta_circle_filter_interpolated_count",
-    "aorta_circle_filter_trimmed_tail_count",
-    "aorta_circle_filter_trim_start_slice",
-    "aorta_circle_filter_original_coverage",
-    "aorta_circle_filter_used_coverage",
-    "aorta_circle_filter_reason",
-    "aorta_circle_filter_fallback_enabled",
-    "aorta_circle_filter_accepted",
-    "aorta_circle_filter_rejected",
-    "aorta_circle_filter_rejection_reason",
-    "aorta_circle_filter_candidate_controller_state",
-    "aorta_circle_filter_fallback_controller_state",
-    "aorta_circle_filter_candidate_mask_voxel_count",
-    "aorta_mask_voxels",
-    "aorta_segmented_slice_count",
-    "aorta_voxels_per_segmented_slice",
-    "aorta_volume_fraction",
-    "aorta_level_set_mode",
-    "aorta_level_set_iterations_used",
-    "aorta_level_set_stop_reason",
-    "aorta_level_set_checkpoint_count",
-    "aorta_level_set_rolled_back",
-    "aorta_level_set_mask_change_fraction",
-    "aorta_level_set_voxels_per_segmented_slice",
-    "aorta_level_set_circle_fill_q25",
-    "aorta_level_set_circle_area_ratio_p90",
-    "aorta_level_set_leak_suspected",
-    "aorta_level_set_localization_suspected",
-    "aorta_level_set_leak_signal_count",
-    "aorta_level_set_trigger_iteration",
-    "aorta_level_set_trigger_volume_fraction",
-    "aorta_level_set_trigger_relative_growth",
-    "aorta_level_set_trigger_mask_change_fraction",
-    "aorta_level_set_trigger_circle_fill_q25",
-    "aorta_level_set_trigger_circle_area_ratio_p90",
-    "aorta_level_set_correction_applied",
-    "aorta_level_set_correction_method",
-    "aorta_level_set_refinement_applied",
-    "aorta_level_set_refinement_accepted",
-    "aorta_level_set_refinement_iterations",
-    "aorta_level_set_refinement_balloon",
-    "aorta_level_set_refinement_smoothing",
-    "aorta_level_set_refinement_transition_mode",
-    "aorta_level_set_refinement_anomaly_margin_slices",
-    "aorta_level_set_refinement_volume_loss_fraction",
-    "aorta_level_set_slice_area_jump_p95_before",
-    "aorta_level_set_slice_area_jump_p95_after",
-    "aorta_level_set_refinement_rejection_reason",
-    "aorta_level_set_controller_state",
-    "aorta_level_set_profile_used",
-    "aorta_level_set_rollback_iteration",
-    "aorta_level_set_circle_confidence_signal_count",
-    "aorta_level_set_alternative_attempted",
-    "aorta_level_set_alternative_accepted",
-    "aorta_level_set_conservative_attempted",
-    "aorta_level_set_conservative_accepted",
-    "aorta_level_set_permissive_attempted",
-    "aorta_level_set_permissive_accepted",
-    "aorta_level_set_nominal_volume_fraction",
-    "aorta_level_set_nominal_circle_fill_q25",
-    "aorta_level_set_nominal_circle_area_ratio_p90",
-    "aorta_level_set_final_volume_fraction",
-    "aorta_level_set_decision_reason",
-    "ostia_surface_mode",
-    "ostia_surface_thickness_mm",
-    "ostia_candidate_score_mode",
-    "ostia_pair_selection_mode",
-    "ostia_found",
-    "ostia_status",
-    "segmentation_attempted",
-    "proceeded_with_bad_ostia",
-    "skip_reason",
-    "ostia_error",
-    "both_correct",
-    "both_tolerable",
-    "left_intersects",
-    "right_intersects",
-    "left_dist_mm",
-    "right_dist_mm",
-    "ostia_left",
-    "ostia_right",
-    "error",
-    "status",
-]
-
-READABLE_COLUMN_NAMES: dict[str, str] = {
-    "dice_artery": "artery_dice",
-    "dice_artery_before_morphology": "artery_dice_before_morphology",
-    "dice_artery_after_morphology": "artery_dice_after_morphology",
-    "dice_artery_morphology_delta": "artery_dice_morphology_delta",
-    "artery_voxels": "artery_voxel_count",
-    "artery_voxels_before_morphology": "artery_voxel_count_before_morphology",
-    "artery_voxels_after_morphology": "artery_voxel_count_after_morphology",
-    "artery_segmentation_method": "artery_segmentation_method",
-    "fc_processed_voxels": "fc_processed_voxels",
-    "fc_effective_alpha": "fc_effective_alpha",
-    "fc_object_seed_count": "fc_object_seed_count",
-    "fc_candidate_voxels_final": "fc_candidate_voxels_final",
-    "threshold_mode": "threshold_mode",
-    "fuzzy_mask_strategy": "fuzzy_mask_strategy",
-    "min_threshold": "min_threshold_hu",
-    "max_threshold": "max_threshold_hu",
-    "lower_threshold_method": "lower_threshold_method",
-    "lower_threshold_percentile": "lower_threshold_percentile",
-    "threshold_voxels": "threshold_voxel_count",
-    "lcc_voxels": "lcc_voxel_count",
-    "image_slice_count": "image_slice_count",
-    "image_voxels": "image_voxel_count",
-    "aorta_circle_count": "aorta_circle_count",
-    "aorta_detected_circle_count": "aorta_detected_circle_count",
-    "aorta_interpolated_circle_count": "aorta_interpolated_circle_count",
-    "aorta_circle_first_slice": "aorta_circle_first_slice",
-    "aorta_circle_last_slice": "aorta_circle_last_slice",
-    "aorta_circle_coverage": "aorta_circle_coverage",
-    "aorta_circle_radius_min_px": "aorta_circle_radius_min_px",
-    "aorta_circle_radius_max_px": "aorta_circle_radius_max_px",
-    "aorta_circle_radius_mean_px": "aorta_circle_radius_mean_px",
-    "aorta_circle_radius_median_px": "aorta_circle_radius_median_px",
-    "aorta_circle_radius_std_px": "aorta_circle_radius_std_px",
-    "aorta_circle_radius_p10_px": "aorta_circle_radius_p10_px",
-    "aorta_circle_radius_p90_px": "aorta_circle_radius_p90_px",
-    "aorta_circle_radius_min_mm": "aorta_circle_radius_min_mm",
-    "aorta_circle_radius_max_mm": "aorta_circle_radius_max_mm",
-    "aorta_circle_radius_mean_mm": "aorta_circle_radius_mean_mm",
-    "aorta_circle_radius_median_mm": "aorta_circle_radius_median_mm",
-    "aorta_circle_radius_std_mm": "aorta_circle_radius_std_mm",
-    "aorta_circle_radius_p10_mm": "aorta_circle_radius_p10_mm",
-    "aorta_circle_radius_p90_mm": "aorta_circle_radius_p90_mm",
-    "aorta_detected_circle_radius_median_mm": "aorta_detected_circle_radius_median_mm",
-    "aorta_interpolated_circle_radius_median_mm": "aorta_interpolated_circle_radius_median_mm",
-    "aorta_circle_radius_first_mm": "aorta_circle_radius_first_mm",
-    "aorta_circle_radius_last_mm": "aorta_circle_radius_last_mm",
-    "aorta_circle_radius_max_step_change_mm": "aorta_circle_radius_max_step_change_mm",
-    "aorta_circle_radius_p90_step_change_mm": "aorta_circle_radius_p90_step_change_mm",
-    "aorta_circle_mean_hough_accumulator": "aorta_circle_mean_hough_accumulator",
-    "aorta_circle_lower_radius_bound_fraction": "aorta_circle_lower_radius_bound_fraction",
-    "aorta_circle_upper_radius_bound_fraction": "aorta_circle_upper_radius_bound_fraction",
-    "aorta_recovered_initialization": "aorta_recovered_initialization",
-    "aorta_circle_filter_method": "aorta_circle_filter_method",
-    "aorta_circle_filter_applied": "aorta_circle_filter_applied",
-    "aorta_circle_original_count": "aorta_circle_original_count",
-    "aorta_circle_used_count": "aorta_circle_used_count",
-    "aorta_circle_filter_interpolated_count": "aorta_circle_filter_interpolated_count",
-    "aorta_circle_filter_trimmed_tail_count": "aorta_circle_filter_trimmed_tail_count",
-    "aorta_circle_filter_trim_start_slice": "aorta_circle_filter_trim_start_slice",
-    "aorta_circle_filter_original_coverage": "aorta_circle_filter_original_coverage",
-    "aorta_circle_filter_used_coverage": "aorta_circle_filter_used_coverage",
-    "aorta_circle_filter_reason": "aorta_circle_filter_reason",
-    "aorta_circle_filter_fallback_enabled": "aorta_circle_filter_fallback_enabled",
-    "aorta_circle_filter_accepted": "aorta_circle_filter_accepted",
-    "aorta_circle_filter_rejected": "aorta_circle_filter_rejected",
-    "aorta_circle_filter_rejection_reason": "aorta_circle_filter_rejection_reason",
-    "aorta_circle_filter_candidate_controller_state": "aorta_circle_filter_candidate_controller_state",
-    "aorta_circle_filter_fallback_controller_state": "aorta_circle_filter_fallback_controller_state",
-    "aorta_circle_filter_candidate_mask_voxel_count": "aorta_circle_filter_candidate_mask_voxel_count",
-    "aorta_mask_voxels": "aorta_mask_voxel_count",
-    "aorta_segmented_slice_count": "aorta_segmented_slice_count",
-    "aorta_voxels_per_segmented_slice": "aorta_voxels_per_segmented_slice",
-    "aorta_volume_fraction": "aorta_volume_fraction",
-    "aorta_level_set_mode": "aorta_level_set_mode",
-    "aorta_level_set_iterations_used": "aorta_level_set_iterations_used",
-    "aorta_level_set_stop_reason": "aorta_level_set_stop_reason",
-    "aorta_level_set_checkpoint_count": "aorta_level_set_checkpoint_count",
-    "aorta_level_set_rolled_back": "aorta_level_set_rolled_back",
-    "aorta_level_set_mask_change_fraction": "aorta_level_set_mask_change_fraction",
-    "aorta_level_set_voxels_per_segmented_slice": "aorta_level_set_voxels_per_segmented_slice",
-    "aorta_level_set_circle_fill_q25": "aorta_level_set_circle_fill_q25",
-    "aorta_level_set_circle_area_ratio_p90": "aorta_level_set_circle_area_ratio_p90",
-    "aorta_level_set_leak_suspected": "aorta_level_set_leak_suspected",
-    "aorta_level_set_localization_suspected": "aorta_level_set_localization_suspected",
-    "aorta_level_set_leak_signal_count": "aorta_level_set_leak_signal_count",
-    "aorta_level_set_trigger_iteration": "aorta_level_set_trigger_iteration",
-    "aorta_level_set_trigger_volume_fraction": "aorta_level_set_trigger_volume_fraction",
-    "aorta_level_set_trigger_relative_growth": "aorta_level_set_trigger_relative_growth",
-    "aorta_level_set_trigger_mask_change_fraction": "aorta_level_set_trigger_mask_change_fraction",
-    "aorta_level_set_trigger_circle_fill_q25": "aorta_level_set_trigger_circle_fill_q25",
-    "aorta_level_set_trigger_circle_area_ratio_p90": "aorta_level_set_trigger_circle_area_ratio_p90",
-    "aorta_level_set_correction_applied": "aorta_level_set_correction_applied",
-    "aorta_level_set_correction_method": "aorta_level_set_correction_method",
-    "aorta_level_set_refinement_applied": "aorta_level_set_refinement_applied",
-    "aorta_level_set_refinement_accepted": "aorta_level_set_refinement_accepted",
-    "aorta_level_set_refinement_iterations": "aorta_level_set_refinement_iterations",
-    "aorta_level_set_refinement_balloon": "aorta_level_set_refinement_balloon",
-    "aorta_level_set_refinement_smoothing": "aorta_level_set_refinement_smoothing",
-    "aorta_level_set_refinement_transition_mode": "aorta_level_set_refinement_transition_mode",
-    "aorta_level_set_refinement_anomaly_margin_slices": "aorta_level_set_refinement_anomaly_margin_slices",
-    "aorta_level_set_refinement_volume_loss_fraction": "aorta_level_set_refinement_volume_loss_fraction",
-    "aorta_level_set_slice_area_jump_p95_before": "aorta_level_set_slice_area_jump_p95_before",
-    "aorta_level_set_slice_area_jump_p95_after": "aorta_level_set_slice_area_jump_p95_after",
-    "aorta_level_set_refinement_rejection_reason": "aorta_level_set_refinement_rejection_reason",
-    "aorta_level_set_controller_state": "aorta_level_set_controller_state",
-    "aorta_level_set_profile_used": "aorta_level_set_profile_used",
-    "aorta_level_set_rollback_iteration": "aorta_level_set_rollback_iteration",
-    "aorta_level_set_circle_confidence_signal_count": "aorta_level_set_circle_confidence_signal_count",
-    "aorta_level_set_alternative_attempted": "aorta_level_set_alternative_attempted",
-    "aorta_level_set_alternative_accepted": "aorta_level_set_alternative_accepted",
-    "aorta_level_set_conservative_attempted": "aorta_level_set_conservative_attempted",
-    "aorta_level_set_conservative_accepted": "aorta_level_set_conservative_accepted",
-    "aorta_level_set_permissive_attempted": "aorta_level_set_permissive_attempted",
-    "aorta_level_set_permissive_accepted": "aorta_level_set_permissive_accepted",
-    "aorta_level_set_nominal_volume_fraction": "aorta_level_set_nominal_volume_fraction",
-    "aorta_level_set_nominal_circle_fill_q25": "aorta_level_set_nominal_circle_fill_q25",
-    "aorta_level_set_nominal_circle_area_ratio_p90": "aorta_level_set_nominal_circle_area_ratio_p90",
-    "aorta_level_set_final_volume_fraction": "aorta_level_set_final_volume_fraction",
-    "aorta_level_set_decision_reason": "aorta_level_set_decision_reason",
-    "ostia_surface_mode": "ostia_surface_mode",
-    "ostia_surface_thickness_mm": "ostia_surface_thickness_mm",
-    "ostia_candidate_score_mode": "ostia_candidate_score_mode",
-    "ostia_pair_selection_mode": "ostia_pair_selection_mode",
-    "ostia_found": "ostia_detected",
-    "ostia_status": "ostia_detection_status",
-    "segmentation_attempted": "artery_segmentation_run",
-    "proceeded_with_bad_ostia": "segmented_with_incorrect_ostia",
-    "skip_reason": "segmentation_skip_reason",
-    "ostia_error": "ostia_detection_error",
-    "both_correct": "both_ostia_correct",
-    "both_tolerable": "both_ostia_tolerable",
-    "left_intersects": "left_ostium_correct",
-    "right_intersects": "right_ostium_correct",
-    "left_dist_mm": "left_ostium_distance_mm",
-    "right_dist_mm": "right_ostium_distance_mm",
-    "ostia_left": "left_ostium",
-    "ostia_right": "right_ostium",
-    "error": "pipeline_error",
-    "downscale_method": "downscale_method",
-    "opencv_interpolation": "opencv_interpolation",
-    "downscale_factors": "downscale_factors",
-    "max_threshold_percentile": "max_threshold_percentile",
-    "lcc_per_slice": "lcc_per_slice",
-    "lcc_mode": "lcc_mode",
-    "configured_artery_segmentation_method": "configured_artery_segmentation_method",
-    "aorta_miss_count": "aorta_miss_count",
-    "aorta_interpolate_missed_circles": "aorta_interpolate_missed_circles",
-}
-
-CANONICAL_COLUMN_NAMES: dict[str, str] = {
-    value: key for key, value in READABLE_COLUMN_NAMES.items()
-}
-
-READABLE_BOOL_COLUMNS: set[str] = {
-    "ostia_detected",
-    "artery_segmentation_run",
-    "segmented_with_incorrect_ostia",
-    "both_ostia_correct",
-    "both_ostia_tolerable",
-    "left_ostium_correct",
-    "right_ostium_correct",
-    "lcc_per_slice",
-    "aorta_interpolate_missed_circles",
-    "aorta_recovered_initialization",
-    "aorta_level_set_rolled_back",
-    "aorta_level_set_leak_suspected",
-    "aorta_level_set_localization_suspected",
-    "aorta_level_set_correction_applied",
-    "aorta_level_set_refinement_applied",
-    "aorta_level_set_refinement_accepted",
-    "aorta_level_set_alternative_attempted",
-    "aorta_level_set_alternative_accepted",
-    "aorta_level_set_conservative_attempted",
-    "aorta_level_set_conservative_accepted",
-    "aorta_level_set_permissive_attempted",
-    "aorta_level_set_permissive_accepted",
-}
-
-OSTIA_STATUS_READABLE_LABELS: dict[str, str] = {
-    "not_evaluated": "not evaluated",
-    "not_found": "not found",
-    "both_correct": "both correct",
-    "both_tolerable": "both tolerable",
-    "found_but_wrong": "found but incorrect",
-}
-OSTIA_STATUS_INTERNAL_LABELS: dict[str, str] = {
-    readable: internal for internal, readable in OSTIA_STATUS_READABLE_LABELS.items()
-}
-
-STATUS_LABELS: dict[str, str] = {
-    "not_found": "ostia not found",
-    "both_correct": "both ostia correct",
-    "both_tolerable": "both ostia tolerable",
-    "one_correct": "one ostium correct",
-    "error": "pipeline error",
-    "none_correct": "no ostium correct",
-}
+from .results_columns import (
+    CANONICAL_COLUMN_NAMES,
+    OSTIA_STATUS_INTERNAL_LABELS,
+    OSTIA_STATUS_READABLE_LABELS,
+    READABLE_BOOL_COLUMNS,
+    READABLE_COLUMN_NAMES,
+    RESULT_COLUMNS,
+    STATUS_LABELS,
+)
 
 
 def _readable_column_name(column: str) -> str:
@@ -589,9 +256,6 @@ def build_result_row(result: dict[str, Any]) -> dict[str, Any]:
         "aorta_circle_upper_radius_bound_fraction": _get_result_value(
             result, "aorta_circle_upper_radius_bound_fraction"
         ),
-        "aorta_recovered_initialization": _as_bool_value(
-            _get_result_value(result, "aorta_recovered_initialization", False)
-        ),
         "aorta_circle_filter_method": _get_result_value(
             result, "aorta_circle_filter_method", "none"
         ),
@@ -604,8 +268,8 @@ def build_result_row(result: dict[str, Any]) -> dict[str, Any]:
         "aorta_circle_used_count": _get_result_value(
             result, "aorta_circle_used_count"
         ),
-        "aorta_circle_filter_interpolated_count": _get_result_value(
-            result, "aorta_circle_filter_interpolated_count", 0
+        "aorta_circle_filter_synthetic_tail_count": _get_result_value(
+            result, "aorta_circle_filter_synthetic_tail_count", 0
         ),
         "aorta_circle_filter_trimmed_tail_count": _get_result_value(
             result, "aorta_circle_filter_trimmed_tail_count", 0
@@ -622,30 +286,64 @@ def build_result_row(result: dict[str, Any]) -> dict[str, Any]:
         "aorta_circle_filter_reason": _get_result_value(
             result, "aorta_circle_filter_reason"
         ),
-        "aorta_circle_filter_fallback_enabled": _as_bool_value(
+        "aorta_circle_filter_candidate_mask_voxel_count": _get_result_value(
+            result, "aorta_circle_filter_candidate_mask_voxel_count"
+        ),
+        "aorta_circle_filter_mask_guided_fallback_enabled": _as_bool_value(
             _get_result_value(
                 result,
-                "aorta_circle_filter_fallback_enabled",
+                "aorta_circle_filter_mask_guided_fallback_enabled",
                 False,
             )
         ),
-        "aorta_circle_filter_accepted": _as_bool_value(
-            _get_result_value(result, "aorta_circle_filter_accepted", False)
+        "aorta_circle_filter_mask_guided_fallback_attempted": _as_bool_value(
+            _get_result_value(
+                result,
+                "aorta_circle_filter_mask_guided_fallback_attempted",
+                False,
+            )
         ),
-        "aorta_circle_filter_rejected": _as_bool_value(
-            _get_result_value(result, "aorta_circle_filter_rejected", False)
+        "aorta_circle_filter_mask_guided_fallback_accepted": _as_bool_value(
+            _get_result_value(
+                result,
+                "aorta_circle_filter_mask_guided_fallback_accepted",
+                False,
+            )
         ),
-        "aorta_circle_filter_rejection_reason": _get_result_value(
-            result, "aorta_circle_filter_rejection_reason"
+        "aorta_circle_filter_mask_guided_fallback_rejection_reason": (
+            _get_result_value(
+                result,
+                "aorta_circle_filter_mask_guided_fallback_rejection_reason",
+            )
         ),
-        "aorta_circle_filter_candidate_controller_state": _get_result_value(
-            result, "aorta_circle_filter_candidate_controller_state"
+        "aorta_circle_filter_mask_guided_trim_start_slice": _get_result_value(
+            result,
+            "aorta_circle_filter_mask_guided_trim_start_slice",
         ),
-        "aorta_circle_filter_fallback_controller_state": _get_result_value(
-            result, "aorta_circle_filter_fallback_controller_state"
+        "aorta_circle_filter_mask_guided_trimmed_tail_count": _get_result_value(
+            result,
+            "aorta_circle_filter_mask_guided_trimmed_tail_count",
+            0,
         ),
-        "aorta_circle_filter_candidate_mask_voxel_count": _get_result_value(
-            result, "aorta_circle_filter_candidate_mask_voxel_count"
+        "aorta_circle_filter_mask_guided_candidate_area_ratio_p90": (
+            _get_result_value(
+                result,
+                "aorta_circle_filter_mask_guided_candidate_area_ratio_p90",
+            )
+        ),
+        "aorta_circle_filter_mask_guided_retry_area_ratio_p90": (
+            _get_result_value(
+                result,
+                "aorta_circle_filter_mask_guided_retry_area_ratio_p90",
+            )
+        ),
+        "aorta_circle_filter_mask_guided_candidate_fill_q25": _get_result_value(
+            result,
+            "aorta_circle_filter_mask_guided_candidate_fill_q25",
+        ),
+        "aorta_circle_filter_mask_guided_retry_fill_q25": _get_result_value(
+            result,
+            "aorta_circle_filter_mask_guided_retry_fill_q25",
         ),
         "aorta_mask_voxels": _get_result_value(result, "aorta_mask_voxels"),
         "aorta_segmented_slice_count": _get_result_value(
@@ -658,6 +356,18 @@ def build_result_row(result: dict[str, Any]) -> dict[str, Any]:
             result, "aorta_volume_fraction"
         ),
         "aorta_level_set_mode": _get_result_value(result, "aorta_level_set_mode"),
+        "aorta_level_set_initial_voxel_count": _get_result_value(
+            result, "aorta_level_set_initial_voxel_count"
+        ),
+        "aorta_level_set_raw_voxel_count": _get_result_value(
+            result, "aorta_level_set_raw_voxel_count"
+        ),
+        "aorta_level_set_initial_volume_fraction": _get_result_value(
+            result, "aorta_level_set_initial_volume_fraction"
+        ),
+        "aorta_level_set_raw_volume_fraction": _get_result_value(
+            result, "aorta_level_set_raw_volume_fraction"
+        ),
         "aorta_level_set_iterations_used": _get_result_value(
             result, "aorta_level_set_iterations_used"
         ),
@@ -692,6 +402,13 @@ def build_result_row(result: dict[str, Any]) -> dict[str, Any]:
                 False,
             )
         ),
+        "aorta_level_set_localization_leak_override_triggered": _as_bool_value(
+            _get_result_value(
+                result,
+                "aorta_level_set_localization_leak_override_triggered",
+                False,
+            )
+        ),
         "aorta_level_set_leak_signal_count": _get_result_value(
             result, "aorta_level_set_leak_signal_count"
         ),
@@ -719,38 +436,11 @@ def build_result_row(result: dict[str, Any]) -> dict[str, Any]:
         "aorta_level_set_correction_method": _get_result_value(
             result, "aorta_level_set_correction_method"
         ),
-        "aorta_level_set_refinement_applied": _as_bool_value(
-            _get_result_value(result, "aorta_level_set_refinement_applied", False)
-        ),
-        "aorta_level_set_refinement_accepted": _as_bool_value(
-            _get_result_value(result, "aorta_level_set_refinement_accepted", False)
-        ),
-        "aorta_level_set_refinement_iterations": _get_result_value(
-            result, "aorta_level_set_refinement_iterations"
-        ),
-        "aorta_level_set_refinement_balloon": _get_result_value(
-            result, "aorta_level_set_refinement_balloon"
-        ),
-        "aorta_level_set_refinement_smoothing": _get_result_value(
-            result, "aorta_level_set_refinement_smoothing"
-        ),
-        "aorta_level_set_refinement_transition_mode": _get_result_value(
-            result, "aorta_level_set_refinement_transition_mode"
-        ),
-        "aorta_level_set_refinement_anomaly_margin_slices": _get_result_value(
-            result, "aorta_level_set_refinement_anomaly_margin_slices"
-        ),
-        "aorta_level_set_refinement_volume_loss_fraction": _get_result_value(
-            result, "aorta_level_set_refinement_volume_loss_fraction"
-        ),
         "aorta_level_set_slice_area_jump_p95_before": _get_result_value(
             result, "aorta_level_set_slice_area_jump_p95_before"
         ),
         "aorta_level_set_slice_area_jump_p95_after": _get_result_value(
             result, "aorta_level_set_slice_area_jump_p95_after"
-        ),
-        "aorta_level_set_refinement_rejection_reason": _get_result_value(
-            result, "aorta_level_set_refinement_rejection_reason"
         ),
         "aorta_level_set_controller_state": _get_result_value(
             result, "aorta_level_set_controller_state"
@@ -791,21 +481,29 @@ def build_result_row(result: dict[str, Any]) -> dict[str, Any]:
         "aorta_level_set_nominal_circle_area_ratio_p90": _get_result_value(
             result, "aorta_level_set_nominal_circle_area_ratio_p90"
         ),
+        "aorta_level_set_candidate_voxel_count": _get_result_value(
+            result, "aorta_level_set_candidate_voxel_count"
+        ),
+        "aorta_level_set_candidate_volume_fraction": _get_result_value(
+            result, "aorta_level_set_candidate_volume_fraction"
+        ),
+        "aorta_level_set_candidate_circle_fill_q25": _get_result_value(
+            result, "aorta_level_set_candidate_circle_fill_q25"
+        ),
+        "aorta_level_set_candidate_circle_area_ratio_p90": _get_result_value(
+            result, "aorta_level_set_candidate_circle_area_ratio_p90"
+        ),
+        "aorta_level_set_candidate_area_ratio_improvement_fraction": (
+            _get_result_value(
+                result,
+                "aorta_level_set_candidate_area_ratio_improvement_fraction",
+            )
+        ),
         "aorta_level_set_final_volume_fraction": _get_result_value(
             result, "aorta_level_set_final_volume_fraction"
         ),
         "aorta_level_set_decision_reason": _get_result_value(
             result, "aorta_level_set_decision_reason"
-        ),
-        "ostia_surface_mode": _get_result_value(result, "ostia_surface_mode"),
-        "ostia_surface_thickness_mm": _get_result_value(
-            result, "ostia_surface_thickness_mm"
-        ),
-        "ostia_candidate_score_mode": _get_result_value(
-            result, "ostia_candidate_score_mode"
-        ),
-        "ostia_pair_selection_mode": _get_result_value(
-            result, "ostia_pair_selection_mode"
         ),
         # Resultado da localização e validação dos óstios.
         "ostia_found": _as_bool_value(_get_result_value(result, "ostia_found", False)),
@@ -851,6 +549,7 @@ def add_config_columns(df: pd.DataFrame, config: dict[str, Any]) -> pd.DataFrame
     df = df.copy()
     # Registra opções que ajudam a reproduzir e comparar execuções futuras.
     circle_config = config.get("CIRCLE_DETECTION", {})
+    level_set_config = config.get("LEVEL_SET", {})
     df["downscale_method"] = config.get("DOWNSCALE_METHOD", "N/A")
     df["opencv_interpolation"] = (
         config.get("OPENCV_INTERPOLATION", "N/A")
@@ -874,6 +573,13 @@ def add_config_columns(df: pd.DataFrame, config: dict[str, Any]) -> pd.DataFrame
     df["aorta_interpolate_missed_circles"] = circle_config.get(
         "interpolate_missed_circles", "N/A"
     )
+    df["aorta_trajectory_radius_factor"] = level_set_config.get(
+        "trajectory_radius_factor"
+    )
+    df["aorta_trajectory_axial_margin_slices"] = level_set_config.get(
+        "trajectory_axial_margin_slices", 0
+    )
+    df["aorta_opening_radius"] = level_set_config.get("leak_removal_radius", 0)
     return df
 
 

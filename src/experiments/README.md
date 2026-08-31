@@ -22,11 +22,6 @@ ficam em `output/segmentation/analysis/`.
   CBEB. Seus resultados alimentam a análise OFAT em
   `src/eda/pipeline_sensitivity_analysis.ipynb` e a investigação específica
   dos percentis em `src/eda/upper_threshold_analysis.ipynb`.
-- `hybrid_resolution_pipeline.py`: localiza a aorta e os óstios em mid
-  resolution, reescala as coordenadas `(y, x, z)` e executa somente o
-  pré-processamento e a segmentação arterial em high resolution. Salva o
-  progresso após cada exame em
-  `output/segmentation/analysis/hybrid_resolution_pipeline/`.
 
 Helpers reutilizáveis ficam em `src/utils/experiments/`.
 
@@ -162,63 +157,6 @@ P99.9 já concluído em
 Quando a execução for interrompida, repita o mesmo comando com `--append`; os
 pares já salvos em `results/image_results.csv` serão ignorados.
 
-Para fazer a triagem pareada das cinco variantes híbridas em cinco imagens:
-
-```bash
-uv run python src/experiments/hybrid_resolution_pipeline.py \
-  --split train \
-  --sample-size 5 \
-  --config-path config/article_cbeb_sensitivity.json \
-  --upper-threshold-percentile 99.9 \
-  --variants recommended \
-  --run-name hybrid_tuning_train_5 \
-  --gpu
-```
-
-As variantes recomendadas isolam uma mudança por vez:
-
-- `baseline_high_scaled`: configuração high atual, usada como referência;
-- `morphology_mid_radii`: mantém RG/Frangi high e usa fechamento 3, dilatação 2;
-- `rg_mid_thresholds`: usa divisor 7 e fração mínima de vesselness 0,078;
-- `rg_mid_thresholds_morphology_mid`: combina os dois ajustes anteriores;
-- `artery_sigmas_physical_x2`: testa sigmas `[3, 4, 5, 6]` em high.
-
-As quatro variantes com os sigmas originais compartilham o mesmo mapa de
-vesselness. O mapa com sigmas duplicados só é calculado depois e o mapa anterior
-é liberado, reduzindo tempo e pico de memória. Depois da triagem, confirme as
-variantes promissoras nas 30 imagens, por exemplo:
-
-```bash
-uv run python src/experiments/hybrid_resolution_pipeline.py \
-  --split train \
-  --sample-size 30 \
-  --config-path config/article_cbeb_sensitivity.json \
-  --upper-threshold-percentile 99.9 \
-  --variants baseline_high_scaled,morphology_mid_radii,rg_mid_thresholds_morphology_mid \
-  --run-name hybrid_confirmation_train_30 \
-  --gpu
-```
-
-Use `--sample-size 0` para todo o split ou `--ids 1,2,3` para exames
-específicos. Se a execução for interrompida, retome no mesmo diretório:
-
-```bash
-uv run python src/experiments/hybrid_resolution_pipeline.py \
-  --split train \
-  --sample-size 5 \
-  --config-path config/article_cbeb_sensitivity.json \
-  --upper-threshold-percentile 99.9 \
-  --variants recommended \
-  --resume-dir output/segmentation/analysis/hybrid_resolution_pipeline/SEU_RUN \
-  --gpu
-```
-
-O CSV registra variante, parâmetros efetivos, óstios antes/depois da reescala,
-Dice high antes/depois da morfologia, razão entre volumes predito/GT e tempos.
-O resumo inclui diferença pareada e vitórias contra `baseline_high_scaled`. O
-experimento não interpola máscaras mid para high: apenas as coordenadas dos
-óstios são transferidas.
-
 Para confirmar no conjunto completo de validação os parâmetros que precisam ser
 recalculados sobre o novo baseline P99.9:
 
@@ -282,37 +220,57 @@ por imagem. Para preservar excepcionalmente os runs internos completos, use
 Experimentos encerrados e as razões para descarte estão documentados em
 [`output/segmentation/analysis/EXPERIMENTS_ARCHIVE.md`](../../output/segmentation/analysis/EXPERIMENTS_ARCHIVE.md).
 
-## Cobertura da trajetória circular da aorta
+## Filtro e envelope da trajetória da aorta
 
-O runner abaixo testa, por padrão, cobertura mínima de 65% com rejeição da
-trajetória quando a máscara filtrada continua `oversegmented`. Ele executa
-treino-30 e validação-60, salva os HTMLs para inspeção visual e usa como base
-`config/article_cbeb_sensitivity.json` (`-300 HU`/P99.9):
+O runner `run_aorta_filter_envelope_generalization.sh` mantém fixos o threshold
+`-300 HU`/P99.9, o filtro robusto com cobertura mínima de 40%, o limite de corte
+de 40%, cinco círculos sintéticos e o level set fixo. A configuração de
+referência usa `balloon=0.6`, semente de 10% do raio e 26 iterações, combinação
+que obteve `30/30` aortas adequadas no treino e `56/60` na validação visual.
+Quando a cobertura impede o filtro geométrico de agir, o fallback guiado pela máscara procura uma cauda
+com `R_z > 2.5` persistente e só aceita a nova segmentação se reduzir `R_P90`
+sem perder mais de 1,5% de preenchimento.
 
-```bash
-bash src/experiments/runners/run_aorta_circle_coverage_tests.sh
-```
+As quatro variantes alteram somente o raio e a margem axial do envelope:
 
-Use `RUN_TRAIN=0` ou `RUN_VAL=0` para executar somente um subconjunto, e
-`SAVE_VISUALS=0` quando forem necessários apenas os resultados numéricos.
+| Variante | Raio | Margem axial | Objetivo |
+|---|---:|---:|---|
+| `reference` | `2.25r` | 10 | Reproduzir a referência atual |
+| `balanced` | `2.35r` | 10 | Pequena proteção contra subsegmentação |
+| `conservative` | `2.40r` | 12 | Preservar mais as extremidades da aorta |
+| `anti_leak` | `2.15r` | 12 | Restringir lateralmente sem cortar cedo no eixo z |
 
-Para repetir o filtro agressivo nas 30 imagens de treino e gerar os HTMLs, use:
-
-```bash
-FILTER_PROFILE=aggressive RUN_VAL=0 SAVE_VISUALS=1 \
-  bash src/experiments/runners/run_aorta_circle_coverage_tests.sh
-```
-
-Esse perfil usa cobertura mínima de 40%, não interpola outliers isolados, não
-aplica fallback e executa o level set adaptativo com o pós-processamento
-padrão. As podas posteriores à segmentação foram removidas. O resultado é salvo em
-`runs/mid_res/aorta_segmentation_experiments/train/circle_filter_aggressive_p99_9/`.
-
-Os parâmetros `COVERAGE`, `RUN_WITHOUT_FALLBACK` e `RUN_WITH_FALLBACK` permitem
-reutilizar o runner. Por exemplo, a comparação histórica de 60% com e sem
-fallback pode ser reproduzida com:
+Execute primeiro no treino:
 
 ```bash
-COVERAGE=0.60 RUN_WITHOUT_FALLBACK=1 \
-  bash src/experiments/runners/run_aorta_circle_coverage_tests.sh
+bash src/experiments/runners/run_aorta_filter_envelope_generalization.sh
 ```
+
+Depois, confirme as mesmas variantes nas 60 imagens de validação:
+
+```bash
+SPLIT=val bash src/experiments/runners/run_aorta_filter_envelope_generalization.sh
+```
+
+Use `VARIANTS="reference balanced"` para executar somente parte da grade e
+`SAVE_VISUALS=0` para omitir os HTMLs.
+
+As tentativas encerradas de level set adaptativo isolado, correção condicional
+e recuperação de trajetórias curtas estão resumidas no arquivo de experimentos.
+Seus runners foram removidos para evitar novas execuções acidentais.
+
+### Override de vazamento com localização suspeita
+
+O runner `run_aorta_localization_leak_override.sh` testa uma exceção
+conservadora para casos como 11 e 790, bloqueados anteriormente por quatro
+sinais de baixa confiança dos círculos. A tentativa só ocorre quando
+`R_P90 > 2.0`, `circle_fill_q25 >= 0.80` e a fração volumétrica é pelo menos
+`0.015`; a configuração padrão mantém essa exceção desativada.
+
+```bash
+bash src/experiments/runners/run_aorta_localization_leak_override.sh
+```
+
+O runner compara a exceção desligada, o perfil de referência com aceitação de
+5% e 10%, e perfis conservadores leve e forte nos mesmos nove casos focados.
+Os HTMLs são gravados no disco externo configurado por `VISUAL_OUTPUT_DIR`.

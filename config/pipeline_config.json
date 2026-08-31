@@ -73,9 +73,6 @@
         "use_local_roi": true,
         "local_roi_padding": 30,
         "interpolate_missed_circles": true,
-        "early_track_recovery": false,
-        "early_recovery_search_slices": 8,
-        "early_recovery_min_circles": 10,
         "trajectory_filter": {
             "method": "none",
             "max_radius_step_mm": 4.8,
@@ -90,8 +87,23 @@
             "min_remaining_circles": 30,
             "tail_search_start_fraction": 0.35,
             "min_tail_coverage": 0.8,
-            "interpolate_isolated_outliers": false,
-            "reject_oversegmented_result": false
+            "max_tail_trim_fraction": 1.0,
+            "synthetic_tail_slices": 0,
+            "mask_guided_fallback": {
+                "enabled": false,
+                "tail_search_start_fraction": 0.35,
+                "persistence_window": 5,
+                "persistence_required": 4,
+                "min_tail_circles": 8,
+                "min_remaining_circles": 30,
+                "max_tail_trim_fraction": 0.4,
+                "slice_area_ratio_threshold": 2.5,
+                "min_area_ratio_p90": 2.5,
+                "min_ratio_improvement": 0.1,
+                "max_fill_loss": 0.015,
+                "synthetic_tail_slices": 5,
+                "reference_window": 5
+            }
         }
     },
     "LEVEL_SET": {
@@ -106,26 +118,17 @@
         "alpha": 1000,
         "sigma": 2,
         "leak_removal_radius": 2,
+        "trajectory_axial_margin_slices": 0,
         "adaptive": {
             "min_iter": 16,
             "check_interval": 5,
             "early_stop_iteration": 26,
             "convergence_tolerance": 0.01,
             "convergence_patience": 2,
-            "adequate_min_volume_fraction": 0.008,
-            "adequate_max_volume_fraction": 0.019,
             "adequate_min_circle_fill_q25": 0.8,
             "adequate_min_circle_area_ratio_p90": 1.3,
-            "adequate_max_circle_area_ratio_p90": 2.8,
-            "oversegmented_area_ratio_p90": 3.0,
-            "oversegmented_volume_fraction": 0.019,
-            "oversegmented_joint_area_ratio_p90": 2.8,
-            "oversegmented_voxels_per_slice": 2800.0,
-            "oversegmented_mean_slice_min_volume_fraction": 0.019,
-            "oversegmented_mean_slice_min_area_ratio_p90": 2.3,
-            "undersegmented_circle_fill_q25": 0.8,
-            "undersegmented_circle_area_ratio_p90": 1.3,
-            "undersegmented_volume_fraction": 0.008,
+            "adequate_max_circle_area_ratio_p90": 2.7,
+            "oversegmented_area_ratio_p90": 2.7,
             "localization_min_circle_fill_q25": 0.25,
             "localization_signal_threshold": 4,
             "localization_min_radius_median_mm": 13.9,
@@ -133,24 +136,20 @@
             "localization_max_radius_p90_step_mm": 1.85,
             "localization_min_hough_accumulator": 0.408,
             "localization_max_lower_bound_fraction": 0.05,
+            "localization_leak_override": {
+                "enabled": false,
+                "min_area_ratio_p90": 2.0,
+                "min_circle_fill_q25": 0.8,
+                "min_volume_fraction": 0.015
+            },
             "max_fill_loss": 0.01,
             "max_axial_jump_increase_fraction": 0.1,
-            "permissive_start_iteration": 26,
-            "permissive_min_fill_gain": 0.01,
-            "permissive_max_circle_area_ratio_p90": 2.8,
-            "permissive_max_volume_fraction": 0.019,
+            "min_area_ratio_improvement_fraction": 0.05,
             "conservative": {
                 "balloon": 0.5,
                 "alpha": 1500,
                 "threshold_percentile": 55,
                 "smoothing": 2
-            },
-            "permissive": {
-                "balloon": 1.0,
-                "alpha": 800,
-                "threshold_percentile": 30,
-                "smoothing": 2,
-                "target_iterations": 36
             }
         }
     },
@@ -160,11 +159,7 @@
         "lower_fraction": 0.85,
         "min_center_distance_factor": 0.85,
         "min_lateral_factor": 0.4,
-        "erosion_radius": 4,
-        "surface_mode": "erosion",
-        "surface_thickness_mm": 2.0,
-        "candidate_score_mode": "voxel",
-        "pair_selection_mode": "greedy"
+        "erosion_radius": 4
     },
     "OSTIA_VALIDATION": {
         "distance_threshold_mm": 7.0

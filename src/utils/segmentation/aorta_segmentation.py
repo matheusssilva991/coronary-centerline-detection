@@ -395,15 +395,19 @@ def build_circle_trajectory_envelope(
     volume_shape: Sequence[int],
     detected_circles: Sequence[Dict[str, Any]],
     radius_factor: float = 1.5,
+    axial_margin_slices: int = 0,
 ) -> NDArray[np.uint8]:
     """Cria um envelope 3D interpolado ao redor da trajetória dos círculos.
 
     O envelope limita a máscara da aorta à região anatomicamente acompanhada
     pelo rastreamento circular. Centros e raios são interpolados nas fatias sem
-    círculo explícito entre a primeira e a última detecção.
+    círculo explícito. A margem axial prolonga os círculos extremos para evitar
+    cortes imediatamente antes da primeira ou depois da última detecção.
     """
     if radius_factor <= 0:
         raise ValueError("radius_factor deve ser maior que zero")
+    if axial_margin_slices < 0:
+        raise ValueError("axial_margin_slices deve ser zero ou maior")
     if not detected_circles:
         return np.zeros(volume_shape, dtype=np.uint8)
 
@@ -425,7 +429,13 @@ def build_circle_trajectory_envelope(
     radii = np.array(
         [circles_by_slice[int(z)]["radius"] for z in source_slices], dtype=float
     )
-    target_slices = np.arange(int(source_slices[0]), int(source_slices[-1]) + 1)
+    first_target_slice = max(0, int(source_slices[0]) - axial_margin_slices)
+    last_target_slice = min(
+        int(volume_shape[2]) - 1,
+        int(source_slices[-1]) + axial_margin_slices,
+    )
+    target_slices = np.arange(first_target_slice, last_target_slice + 1)
+    # np.interp mantém os valores extremos fora do intervalo das detecções.
     interp_x = np.interp(target_slices, source_slices, centers_x)
     interp_y = np.interp(target_slices, source_slices, centers_y)
     interp_radii = np.interp(target_slices, source_slices, radii)
@@ -448,12 +458,14 @@ def restrict_mask_to_circle_trajectory(
     aorta_mask: NDArray[Any],
     detected_circles: Sequence[Dict[str, Any]],
     radius_factor: float,
+    axial_margin_slices: int = 0,
 ) -> NDArray[np.uint8]:
     """Remove da máscara voxels fora do envelope da trajetória circular."""
     envelope = build_circle_trajectory_envelope(
         aorta_mask.shape,
         detected_circles,
         radius_factor=radius_factor,
+        axial_margin_slices=axial_margin_slices,
     )
     return (aorta_mask.astype(bool) & envelope.astype(bool)).astype(np.uint8)
 
@@ -629,17 +641,16 @@ def calculate_mask_change_fraction(
     return changed_count / union_count
 
 
-def calculate_circle_mask_metrics(
+def calculate_circle_mask_profile(
     aorta_mask: NDArray[Any],
     detected_circles: Sequence[Dict[str, Any]],
-) -> Dict[str, float | None]:
-    """Mede preenchimento dos círculos e excesso de área nas respectivas fatias."""
+) -> list[Dict[str, float | int]]:
+    """Calcula preenchimento e razão área/círculo para cada fatia rastreada."""
     mask = np.asarray(aorta_mask, dtype=bool)
     if mask.ndim != 3:
         raise ValueError("aorta_mask deve ser uma máscara 3D")
 
-    fill_ratios: list[float] = []
-    area_ratios: list[float] = []
+    profile: list[Dict[str, float | int]] = []
     height, width, depth = mask.shape
     segmented_area_by_slice = mask.sum(axis=(0, 1), dtype=np.int64)
     for circle in detected_circles:
@@ -657,15 +668,32 @@ def calculate_circle_mask_metrics(
         if disk_area == 0:
             continue
 
-        fill_ratios.append(float(mask[rr, cc, slice_index].sum()) / disk_area)
+        fill_ratio = float(mask[rr, cc, slice_index].sum()) / disk_area
         segmented_area = float(segmented_area_by_slice[slice_index])
-        area_ratios.append(segmented_area / (np.pi * radius**2))
+        profile.append(
+            {
+                "slice_index": slice_index,
+                "circle_fill_ratio": fill_ratio,
+                "circle_area_ratio": segmented_area / (np.pi * radius**2),
+            }
+        )
+    return profile
 
-    if not fill_ratios:
+
+def calculate_circle_mask_metrics(
+    aorta_mask: NDArray[Any],
+    detected_circles: Sequence[Dict[str, Any]],
+) -> Dict[str, float | None]:
+    """Resume o preenchimento dos círculos e o excesso de área da máscara."""
+    profile = calculate_circle_mask_profile(aorta_mask, detected_circles)
+
+    if not profile:
         return {
             "circle_fill_q25": None,
             "circle_area_ratio_p90": None,
         }
+    fill_ratios = [float(item["circle_fill_ratio"]) for item in profile]
+    area_ratios = [float(item["circle_area_ratio"]) for item in profile]
     return {
         "circle_fill_q25": float(np.quantile(fill_ratios, 0.25)),
         "circle_area_ratio_p90": float(np.quantile(area_ratios, 0.90)),

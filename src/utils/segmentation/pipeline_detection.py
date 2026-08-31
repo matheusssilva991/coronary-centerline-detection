@@ -14,7 +14,6 @@ from .aorta_segmentation import (
     calculate_mask_change_fraction,
     calculate_slice_area_jump_p95,
     iter_level_set_checkpoints,
-    level_set_segmentation,
     prepare_level_set_evolution,
     remove_leaks_morphology,
     restrict_mask_to_circle_trajectory,
@@ -45,6 +44,7 @@ class _AdaptiveCheckpoint:
     circle_fill_q25: float | None
     circle_area_ratio_p90: float | None
     leak_signal: bool
+    raw_voxel_count: int | None = None
 
 
 @dataclass(frozen=True)
@@ -92,14 +92,6 @@ def locate_aorta_circles(
         interpolate_missed_circles=circle_config.get(
             "interpolate_missed_circles", True
         ),
-        early_track_recovery=circle_config.get("early_track_recovery", True),
-        early_recovery_search_slices=circle_config.get(
-            "early_recovery_search_slices", 8
-        ),
-        early_recovery_min_circles=circle_config.get("early_recovery_min_circles", 10),
-        early_recovery_require_min_circles=circle_config.get(
-            "early_recovery_require_min_circles", False
-        ),
     )
     return detected_circles
 
@@ -139,6 +131,9 @@ def _postprocess_aorta_mask(
             aorta_mask,
             detected_circles,
             radius_factor=float(trajectory_radius_factor),
+            axial_margin_slices=int(
+                level_set_config.get("trajectory_axial_margin_slices", 0)
+            ),
         )
     aorta_mask = keep_largest_component(aorta_mask, gpu=False)
     return np.asarray(aorta_mask, dtype=np.uint8)
@@ -151,20 +146,28 @@ def _fixed_level_set_result(
 ) -> AortaSegmentationResult:
     """Executa o comportamento histórico com número fixo de iterações."""
     num_iter = int(level_set_config["num_iter"])
-    mask_refined = level_set_segmentation(
-        lcc_image,
-        detected_circles,
-        radius_reduction_factor=level_set_config["radius_reduction_factor"],
-        num_iter=num_iter,
-        balloon=level_set_config["balloon"],
-        smoothing=level_set_config["smoothing"],
-        threshold=level_set_config.get("threshold", "auto"),
-        roi_margin=level_set_config.get("roi_margin", 10),
-        use_roi=level_set_config.get("use_roi", True),
-        alpha=level_set_config.get("alpha", 1000),
-        sigma=level_set_config.get("sigma", 2),
-        use_gpu=False,
-    )
+    if detected_circles:
+        context = prepare_level_set_evolution(
+            lcc_image,
+            detected_circles,
+            radius_reduction_factor=level_set_config["radius_reduction_factor"],
+            roi_margin=level_set_config.get("roi_margin", 10),
+            use_roi=level_set_config.get("use_roi", True),
+            alpha=level_set_config.get("alpha", 1000),
+            sigma=level_set_config.get("sigma", 2),
+            use_gpu=False,
+        )
+        initial_voxel_count = int(np.count_nonzero(context.current_mask))
+        mask_refined = context.evolve(
+            num_iter,
+            balloon=level_set_config["balloon"],
+            smoothing=level_set_config["smoothing"],
+            threshold=level_set_config.get("threshold", "auto"),
+        )
+    else:
+        initial_voxel_count = 0
+        mask_refined = np.zeros_like(lcc_image, dtype=np.uint8)
+    raw_voxel_count = int(np.count_nonzero(mask_refined))
     aorta_mask = _postprocess_aorta_mask(
         mask_refined,
         detected_circles,
@@ -176,6 +179,14 @@ def _fixed_level_set_result(
         mask=aorta_mask,
         diagnostics={
             "aorta_level_set_mode": "fixed",
+            "aorta_level_set_initial_voxel_count": initial_voxel_count,
+            "aorta_level_set_raw_voxel_count": raw_voxel_count,
+            "aorta_level_set_initial_volume_fraction": (
+                initial_voxel_count / mask_refined.size
+            ),
+            "aorta_level_set_raw_volume_fraction": (
+                raw_voxel_count / mask_refined.size
+            ),
             "aorta_level_set_iterations_used": num_iter,
             "aorta_level_set_stop_reason": "fixed_complete",
             "aorta_level_set_checkpoint_count": 1,
@@ -187,6 +198,7 @@ def _fixed_level_set_result(
             ],
             "aorta_level_set_leak_suspected": False,
             "aorta_level_set_localization_suspected": False,
+            "aorta_level_set_localization_leak_override_triggered": False,
             "aorta_level_set_leak_signal_count": 0,
             "aorta_level_set_trigger_iteration": None,
             "aorta_level_set_trigger_volume_fraction": None,
@@ -196,17 +208,8 @@ def _fixed_level_set_result(
             "aorta_level_set_trigger_circle_area_ratio_p90": None,
             "aorta_level_set_correction_applied": False,
             "aorta_level_set_correction_method": "none",
-            "aorta_level_set_refinement_applied": False,
-            "aorta_level_set_refinement_accepted": False,
-            "aorta_level_set_refinement_iterations": None,
-            "aorta_level_set_refinement_balloon": None,
-            "aorta_level_set_refinement_smoothing": None,
-            "aorta_level_set_refinement_transition_mode": None,
-            "aorta_level_set_refinement_anomaly_margin_slices": None,
-            "aorta_level_set_refinement_volume_loss_fraction": None,
             "aorta_level_set_slice_area_jump_p95_before": slice_area_jump_p95,
             "aorta_level_set_slice_area_jump_p95_after": slice_area_jump_p95,
-            "aorta_level_set_refinement_rejection_reason": "not_attempted",
             "aorta_level_set_controller_state": "fixed",
             "aorta_level_set_profile_used": "nominal",
             "aorta_level_set_rollback_iteration": None,
@@ -265,6 +268,7 @@ def _build_adaptive_checkpoint(
     adaptive: Dict[str, Any],
 ) -> _AdaptiveCheckpoint:
     """Pós-processa um snapshot e calcula as métricas usadas pelo controlador."""
+    raw_voxel_count = int(np.count_nonzero(raw_mask))
     mask = _postprocess_aorta_mask(raw_mask, detected_circles, level_set_config)
     voxel_count = int(mask.sum())
     segmented_slice_count = int(np.count_nonzero(mask.sum(axis=(0, 1))))
@@ -279,14 +283,8 @@ def _build_adaptive_checkpoint(
     volume_fraction = voxel_count / mask.size
     leak_signal = bool(
         previous is not None
-        and (
-            (area_ratio is not None and area_ratio > float(adaptive["oversegmented_area_ratio_p90"]))
-            or (
-                volume_fraction > float(adaptive["oversegmented_volume_fraction"])
-                and area_ratio is not None
-                and area_ratio > float(adaptive["oversegmented_joint_area_ratio_p90"])
-            )
-        )
+        and area_ratio is not None
+        and area_ratio > float(adaptive["oversegmented_area_ratio_p90"])
     )
     return _AdaptiveCheckpoint(
         iterations=iterations,
@@ -303,6 +301,7 @@ def _build_adaptive_checkpoint(
         circle_fill_q25=_finite_float(circle_metrics["circle_fill_q25"]),
         circle_area_ratio_p90=area_ratio,
         leak_signal=leak_signal,
+        raw_voxel_count=raw_voxel_count,
     )
 
 
@@ -357,44 +356,30 @@ def _classify_adaptive_state(
     ):
         return "localization_suspected"
 
-    if area is not None and (
-        area > float(adaptive["oversegmented_area_ratio_p90"])
-        or (
-            checkpoint.volume_fraction
-            > float(adaptive["oversegmented_volume_fraction"])
-            and area > float(adaptive["oversegmented_joint_area_ratio_p90"])
-        )
-        or (
-            checkpoint.voxels_per_segmented_slice
-            > float(adaptive.get("oversegmented_voxels_per_slice", np.inf))
-            and checkpoint.volume_fraction
-            > float(
-                adaptive.get(
-                    "oversegmented_mean_slice_min_volume_fraction",
-                    np.inf,
-                )
-            )
-            and area
-            > float(
-                adaptive.get(
-                    "oversegmented_mean_slice_min_area_ratio_p90",
-                    np.inf,
-                )
-            )
-        )
-    ):
+    if area is not None and area > float(adaptive["oversegmented_area_ratio_p90"]):
         return "oversegmented"
+    return "adequate"
 
-    undersegmented_signals = sum(
-        (
-            fill < float(adaptive["undersegmented_circle_fill_q25"]),
-            area is not None
-            and area < float(adaptive["undersegmented_circle_area_ratio_p90"]),
-            checkpoint.volume_fraction
-            < float(adaptive["undersegmented_volume_fraction"]),
-        )
+
+def _should_override_localization_for_leak(
+    checkpoint: _AdaptiveCheckpoint,
+    controller_state: str,
+    adaptive: Dict[str, Any],
+) -> bool:
+    """Permite diagnosticar vazamento mesmo quando os círculos são suspeitos."""
+    override = adaptive.get("localization_leak_override", {})
+    area = checkpoint.circle_area_ratio_p90
+    fill = checkpoint.circle_fill_q25
+    return bool(
+        controller_state == "localization_suspected"
+        and override.get("enabled", False)
+        and area is not None
+        and area > float(override["min_area_ratio_p90"])
+        and fill is not None
+        and fill >= float(override["min_circle_fill_q25"])
+        and checkpoint.volume_fraction
+        >= float(override["min_volume_fraction"])
     )
-    return "undersegmented" if undersegmented_signals >= 2 else "adequate"
 
 
 def _is_adequate_checkpoint(
@@ -411,9 +396,6 @@ def _is_adequate_checkpoint(
         and float(adaptive["adequate_min_circle_area_ratio_p90"])
         <= area
         <= float(adaptive["adequate_max_circle_area_ratio_p90"])
-        and float(adaptive["adequate_min_volume_fraction"])
-        <= checkpoint.volume_fraction
-        <= float(adaptive["adequate_max_volume_fraction"])
     )
 
 
@@ -455,13 +437,25 @@ def _run_alternative_evolution(
         level_set_config["adaptive"],
     )
     # O nome é usado nos diagnósticos pelo chamador; evita um parâmetro silencioso.
-    if profile_name not in {"conservative", "permissive"}:
+    if profile_name != "conservative":
         raise ValueError(f"Perfil adaptativo desconhecido: {profile_name}")
     return checkpoint
 
 
 def _segmented_slice_count(mask: np.ndarray) -> int:
     return int(np.count_nonzero(np.asarray(mask).any(axis=(0, 1))))
+
+
+def _area_ratio_improvement_fraction(
+    nominal: _AdaptiveCheckpoint,
+    candidate: _AdaptiveCheckpoint,
+) -> float | None:
+    """Calcula quanto o candidato reduziu R_P90 em relacao ao nominal."""
+    nominal_ratio = nominal.circle_area_ratio_p90
+    candidate_ratio = candidate.circle_area_ratio_p90
+    if nominal_ratio is None or candidate_ratio is None or nominal_ratio <= 0:
+        return None
+    return float((nominal_ratio - candidate_ratio) / nominal_ratio)
 
 
 def _accept_conservative_candidate(
@@ -474,6 +468,12 @@ def _accept_conservative_candidate(
         return False, "missing_circle_metrics"
     if candidate.circle_area_ratio_p90 >= nominal.circle_area_ratio_p90:
         return False, "area_not_reduced"
+    ratio_improvement = _area_ratio_improvement_fraction(nominal, candidate)
+    min_improvement = float(
+        adaptive.get("min_area_ratio_improvement_fraction", 0.0)
+    )
+    if ratio_improvement is None or ratio_improvement < min_improvement:
+        return False, "area_reduction_below_minimum"
     if candidate.volume_fraction >= nominal.volume_fraction:
         return False, "volume_not_reduced"
     if candidate.circle_fill_q25 is None or nominal.circle_fill_q25 is None:
@@ -482,31 +482,6 @@ def _accept_conservative_candidate(
         return False, "circle_fill_loss"
     if _segmented_slice_count(candidate.mask) != _segmented_slice_count(nominal.mask):
         return False, "segmented_slice_change"
-    nominal_jump = calculate_slice_area_jump_p95(nominal.mask)
-    candidate_jump = calculate_slice_area_jump_p95(candidate.mask)
-    if candidate_jump > nominal_jump * (1 + float(adaptive["max_axial_jump_increase_fraction"])) + 1e-12:
-        return False, "axial_jump_increased"
-    return True, "accepted"
-
-
-def _accept_permissive_candidate(
-    nominal: _AdaptiveCheckpoint,
-    candidate: _AdaptiveCheckpoint,
-    adaptive: Dict[str, Any],
-) -> tuple[bool, str]:
-    """Aceita expansão apenas quando há ganho real sem sinais de vazamento."""
-    if candidate.circle_fill_q25 is None or nominal.circle_fill_q25 is None:
-        return False, "missing_circle_fill"
-    if candidate.circle_fill_q25 < nominal.circle_fill_q25 + float(adaptive["permissive_min_fill_gain"]):
-        return False, "insufficient_fill_gain"
-    if candidate.circle_area_ratio_p90 is None:
-        return False, "missing_circle_metrics"
-    if candidate.circle_area_ratio_p90 > float(adaptive["permissive_max_circle_area_ratio_p90"]):
-        return False, "area_limit_exceeded"
-    if candidate.volume_fraction > float(adaptive["permissive_max_volume_fraction"]):
-        return False, "volume_limit_exceeded"
-    if _segmented_slice_count(candidate.mask) < _segmented_slice_count(nominal.mask):
-        return False, "segmented_slice_loss"
     nominal_jump = calculate_slice_area_jump_p95(nominal.mask)
     candidate_jump = calculate_slice_area_jump_p95(candidate.mask)
     if candidate_jump > nominal_jump * (1 + float(adaptive["max_axial_jump_increase_fraction"])) + 1e-12:
@@ -525,14 +500,42 @@ def _adaptive_diagnostics(
     rollback_iteration: int | None,
     circle_signal_count: int,
     alternative: _AdaptiveAlternative | None,
+    localization_leak_override_triggered: bool = False,
+    initial_voxel_count: int | None = None,
+    image_voxel_count: int | None = None,
 ) -> Dict[str, Any]:
     """Converte a decisão do controlador em campos persistíveis no CSV."""
     attempted_profile = alternative.profile if alternative and alternative.attempted else None
     accepted = bool(alternative and alternative.accepted)
+    candidate = alternative.checkpoint if alternative and alternative.attempted else None
+    candidate_ratio_improvement = (
+        _area_ratio_improvement_fraction(nominal, candidate)
+        if nominal is not None and candidate is not None
+        else None
+    )
     jump_before = calculate_slice_area_jump_p95(nominal.mask) if nominal is not None else None
     jump_after = calculate_slice_area_jump_p95(selected.mask) if selected is not None else None
+    raw_voxel_count = None
+    if selected is not None:
+        raw_voxel_count = (
+            selected.raw_voxel_count
+            if selected.raw_voxel_count is not None
+            else selected.voxel_count
+        )
     return {
         "aorta_level_set_mode": "adaptive",
+        "aorta_level_set_initial_voxel_count": initial_voxel_count,
+        "aorta_level_set_raw_voxel_count": raw_voxel_count,
+        "aorta_level_set_initial_volume_fraction": (
+            initial_voxel_count / image_voxel_count
+            if initial_voxel_count is not None and image_voxel_count
+            else None
+        ),
+        "aorta_level_set_raw_volume_fraction": (
+            raw_voxel_count / image_voxel_count
+            if raw_voxel_count is not None and image_voxel_count
+            else None
+        ),
         "aorta_level_set_iterations_used": selected.iterations if selected else 0,
         "aorta_level_set_stop_reason": stop_reason,
         "aorta_level_set_checkpoint_count": checkpoint_count,
@@ -543,10 +546,17 @@ def _adaptive_diagnostics(
         ),
         "aorta_level_set_circle_fill_q25": selected.circle_fill_q25 if selected else None,
         "aorta_level_set_circle_area_ratio_p90": selected.circle_area_ratio_p90 if selected else None,
-        "aorta_level_set_leak_suspected": controller_state == "oversegmented",
+        "aorta_level_set_leak_suspected": (
+            controller_state == "oversegmented"
+            or localization_leak_override_triggered
+        ),
         "aorta_level_set_localization_suspected": controller_state == "localization_suspected",
+        "aorta_level_set_localization_leak_override_triggered": (
+            localization_leak_override_triggered
+        ),
         "aorta_level_set_leak_signal_count": int(
             controller_state == "oversegmented"
+            or localization_leak_override_triggered
         ),
         "aorta_level_set_trigger_iteration": nominal.iterations if nominal else None,
         "aorta_level_set_trigger_volume_fraction": nominal.volume_fraction if nominal else None,
@@ -569,20 +579,25 @@ def _adaptive_diagnostics(
         "aorta_level_set_nominal_volume_fraction": nominal.volume_fraction if nominal else None,
         "aorta_level_set_nominal_circle_fill_q25": nominal.circle_fill_q25 if nominal else None,
         "aorta_level_set_nominal_circle_area_ratio_p90": nominal.circle_area_ratio_p90 if nominal else None,
+        "aorta_level_set_candidate_voxel_count": (
+            candidate.voxel_count if candidate is not None else None
+        ),
+        "aorta_level_set_candidate_volume_fraction": (
+            candidate.volume_fraction if candidate is not None else None
+        ),
+        "aorta_level_set_candidate_circle_fill_q25": (
+            candidate.circle_fill_q25 if candidate is not None else None
+        ),
+        "aorta_level_set_candidate_circle_area_ratio_p90": (
+            candidate.circle_area_ratio_p90 if candidate is not None else None
+        ),
+        "aorta_level_set_candidate_area_ratio_improvement_fraction": (
+            candidate_ratio_improvement
+        ),
         "aorta_level_set_final_volume_fraction": selected.volume_fraction if selected else None,
         "aorta_level_set_decision_reason": alternative.decision_reason if alternative else stop_reason,
-        # Campos históricos permanecem vazios para que runs contrativos antigos sejam legíveis.
-        "aorta_level_set_refinement_applied": False,
-        "aorta_level_set_refinement_accepted": False,
-        "aorta_level_set_refinement_iterations": None,
-        "aorta_level_set_refinement_balloon": None,
-        "aorta_level_set_refinement_smoothing": None,
-        "aorta_level_set_refinement_transition_mode": None,
-        "aorta_level_set_refinement_anomaly_margin_slices": None,
-        "aorta_level_set_refinement_volume_loss_fraction": None,
         "aorta_level_set_slice_area_jump_p95_before": jump_before,
         "aorta_level_set_slice_area_jump_p95_after": jump_after,
-        "aorta_level_set_refinement_rejection_reason": "not_attempted",
     }
 
 
@@ -607,6 +622,7 @@ def _adaptive_level_set_result(
                 controller_state="localization_suspected",
                 stop_reason="localization_suspected", profile_used="nominal",
                 rollback_iteration=None, circle_signal_count=0, alternative=None,
+                initial_voxel_count=0, image_voxel_count=empty.size,
             ),
         )
 
@@ -621,6 +637,8 @@ def _adaptive_level_set_result(
         use_gpu=False,
         reset_curvature_cycle=True,
     )
+    initial_voxel_count = int(np.count_nonzero(context.current_mask))
+    image_voxel_count = int(np.prod(lcc_image.shape))
     raw_checkpoints = iter_level_set_checkpoints(
         lcc_image,
         detected_circles,
@@ -668,12 +686,21 @@ def _adaptive_level_set_result(
                     controller_state="adequate", stop_reason="early_stable",
                     profile_used="nominal", rollback_iteration=None,
                     circle_signal_count=circle_signals, alternative=None,
+                    initial_voxel_count=initial_voxel_count,
+                    image_voxel_count=image_voxel_count,
                 ),
             )
 
     nominal = results[-1]
     state = _classify_adaptive_state(nominal, circle_signals, adaptive)
-    if state in {"adequate", "localization_suspected"}:
+    localization_leak_override = _should_override_localization_for_leak(
+        nominal,
+        state,
+        adaptive,
+    )
+    if state == "adequate" or (
+        state == "localization_suspected" and not localization_leak_override
+    ):
         reason = "nominal_complete" if state == "adequate" else "localization_suspected"
         return AortaSegmentationResult(
             nominal.mask,
@@ -682,30 +709,32 @@ def _adaptive_level_set_result(
                 controller_state=state, stop_reason=reason, profile_used="nominal",
                 rollback_iteration=None, circle_signal_count=circle_signals,
                 alternative=None,
+                initial_voxel_count=initial_voxel_count,
+                image_voxel_count=image_voxel_count,
             ),
         )
 
-    if state == "oversegmented":
-        safe = [item for item in results[:-1] if _classify_adaptive_state(item, 0, adaptive) != "oversegmented"]
-        start = safe[-1] if safe else results[0]
-        profile_name = "conservative"
-        target_iterations = nominal_iter
-        accept = _accept_conservative_candidate
-    else:
-        desired_start = int(adaptive["permissive_start_iteration"])
-        eligible = [item for item in results if item.iterations <= desired_start]
-        start = eligible[-1] if eligible else results[-2]
-        profile_name = "permissive"
-        target_iterations = int(adaptive["permissive"]["target_iterations"])
-        accept = _accept_permissive_candidate
+    safe = [
+        item
+        for item in results[:-1]
+        if _classify_adaptive_state(item, 0, adaptive) != "oversegmented"
+    ]
+    start = safe[-1] if safe else results[0]
+    profile_name = "conservative"
+    target_iterations = nominal_iter
 
     candidate = _run_alternative_evolution(
         lcc_image, detected_circles, level_set_config, start,
         target_iterations, profile_name, adaptive[profile_name],
     )
-    accepted, decision_reason = accept(nominal, candidate, adaptive)
+    accepted, decision_reason = _accept_conservative_candidate(
+        nominal,
+        candidate,
+        adaptive,
+    )
     alternative = _AdaptiveAlternative(
-        checkpoint=candidate if accepted else None,
+        # Mantem as metricas do candidato para diagnosticar tambem as rejeicoes.
+        checkpoint=candidate,
         profile=profile_name,
         start_iteration=start.iterations,
         attempted=True,
@@ -722,6 +751,9 @@ def _adaptive_level_set_result(
             profile_used=profile_name if accepted else "nominal",
             rollback_iteration=start.iterations,
             circle_signal_count=circle_signals, alternative=alternative,
+            localization_leak_override_triggered=localization_leak_override,
+            initial_voxel_count=initial_voxel_count,
+            image_voxel_count=image_voxel_count,
         ),
     )
 
@@ -785,17 +817,6 @@ def detect_and_evaluate_ostia(
         min_center_distance_factor=ostia_config["min_center_distance_factor"],
         min_lateral_factor=ostia_config["min_lateral_factor"],
         erosion_radius=ostia_config["erosion_radius"],
-        surface_mode=ostia_config.get("surface_mode", "erosion"),
-        surface_thickness_mm=ostia_config.get("surface_thickness_mm", 2.0),
-        candidate_score_mode=ostia_config.get("candidate_score_mode", "voxel"),
-        candidate_score_radius=ostia_config.get("candidate_score_radius", 2),
-        candidate_local_percentile=ostia_config.get("candidate_local_percentile", 90.0),
-        candidate_point_weight=ostia_config.get("candidate_point_weight", 0.7),
-        candidate_suppression_radius_mm=ostia_config.get(
-            "candidate_suppression_radius_mm", 0.0
-        ),
-        pair_selection_mode=ostia_config.get("pair_selection_mode", "greedy"),
-        joint_pair_top_k=ostia_config.get("joint_pair_top_k", 100),
         pair_distance_mode=ostia_config.get("pair_distance_mode", "voxel_xyz"),
     )
 

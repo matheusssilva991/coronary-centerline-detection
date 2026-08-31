@@ -125,23 +125,6 @@ def make_grid_variants(grid: dict[str, Any]) -> list[dict[str, Any]]:
     return variants
 
 
-def load_variants(
-    grid_json: str | None,
-    default_variants: list[dict[str, Any]],
-) -> list[dict[str, Any]]:
-    """Load explicit variants, a grid, or the script default variants."""
-    data = load_json_arg(grid_json)
-    if data is None:
-        return copy.deepcopy(default_variants)
-    if isinstance(data, list):
-        return data
-    if "variants" in data:
-        return data["variants"]
-    if "grid" in data:
-        return make_grid_variants(data["grid"])
-    return make_grid_variants(data)
-
-
 def select_ids(
     split: str,
     sample_size: int,

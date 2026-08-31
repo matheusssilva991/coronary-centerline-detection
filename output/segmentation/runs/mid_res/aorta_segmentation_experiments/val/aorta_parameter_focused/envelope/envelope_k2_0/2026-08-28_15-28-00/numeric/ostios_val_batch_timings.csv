@@ -1,0 +1,2 @@
+split_name,batch_number,total_batches,num_images,first_img_id,last_img_id,result_file,started_at,finished_at,duration_seconds,duration_minutes,duration_hours
+val,1,1,12,384,134,ostios_val_lote_1_summary.csv,2026-08-28T15:28:00,2026-08-28T15:37:37,576.9841632843018,9.616402721405029,0.16027337869008382

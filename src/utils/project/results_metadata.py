@@ -49,6 +49,7 @@ def _vesselness_metadata(config: dict[str, Any], key: str) -> dict[str, Any]:
 def _runtime_config_metadata(config: dict[str, Any]) -> dict[str, Any]:
     """Resume os parâmetros efetivos que diferenciam runs completos."""
     circle_config = config.get("CIRCLE_DETECTION", {})
+    level_set_config = config.get("LEVEL_SET", {})
     artery_method = config.get("ARTERY_SEGMENTATION", {}).get(
         "method", "region_growing"
     )
@@ -71,9 +72,14 @@ def _runtime_config_metadata(config: dict[str, Any]) -> dict[str, Any]:
             "interpolate_missed_circles"
         ),
         "artery_segmentation_method": str(artery_method),
-        "aorta_level_set_mode": config.get("LEVEL_SET", {}).get(
-            "iteration_mode", "fixed"
+        "aorta_level_set_mode": level_set_config.get("iteration_mode", "fixed"),
+        "aorta_trajectory_radius_factor": level_set_config.get(
+            "trajectory_radius_factor"
         ),
+        "aorta_trajectory_axial_margin_slices": level_set_config.get(
+            "trajectory_axial_margin_slices", 0
+        ),
+        "aorta_opening_radius": level_set_config.get("leak_removal_radius", 0),
     }
 
 

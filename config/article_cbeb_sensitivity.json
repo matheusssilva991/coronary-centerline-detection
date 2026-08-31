@@ -61,8 +61,7 @@
         "canny_sigma": 3,
         "use_local_roi": true,
         "local_roi_padding": 30,
-        "interpolate_missed_circles": true,
-        "early_track_recovery": false
+        "interpolate_missed_circles": true
     },
     "LEVEL_SET": {
         "radius_reduction_factor": 0.15,
@@ -82,8 +81,7 @@
         "lower_fraction": 0.85,
         "min_center_distance_factor": 0.85,
         "min_lateral_factor": 0.4,
-        "erosion_radius": 4,
-        "pair_selection_mode": "greedy"
+        "erosion_radius": 4
     },
     "OSTIA_VALIDATION": {
         "distance_threshold_mm": 7.0

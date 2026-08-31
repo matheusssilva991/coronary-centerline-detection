@@ -3,7 +3,7 @@
   "variants": {
     "normal": {
       "train": {
-        "run_dir": "output/segmentation/runs/mid_res/aorta_segmentation_experiments/train/normal_p99_9_m300/2026-08-24_11-09-38",
+        "run_dir": "output/segmentation/runs/mid_res/aorta_segmentation_experiments/train/baseline_fixed_levelset_p99_9_m300/2026-08-24_11-09-38",
         "aorta_good_ids": [13, 28, 90, 129, 194, 305, 315, 344, 380, 428, 447, 518, 538, 550, 631, 676, 696, 793, 836, 854, 887, 937, 965],
         "aorta_bad_ids": [44, 175, 330, 603, 608, 752, 760],
         "ostia_good_ids": [13, 28, 44, 90, 129, 175, 194, 305, 315, 330, 344, 380, 428, 518, 538, 550, 608, 631, 676, 696, 760, 793, 836, 854, 887, 937, 965],
@@ -14,22 +14,23 @@
         }
       },
       "val": {
-        "run_dir": "output/segmentation/runs/mid_res/aorta_segmentation_experiments/val/normal_p99_9_m300/2026-08-24_11-14-04",
-        "aorta_good_ids": [2, 6, 35, 89, 110, 116, 156, 187, 227, 294, 307, 308, 341, 384, 437, 449, 450, 468, 490, 507, 510, 513, 545, 552, 570, 614, 656, 672, 730, 737, 772, 776, 802, 805, 810, 813, 821, 832, 835, 870, 873, 881, 886, 907, 913, 961, 978],
-        "aorta_bad_ids": [11, 134, 184, 296, 444, 464, 597, 602, 705, 720, 790, 792, 838],
+        "run_dir": "output/segmentation/runs/mid_res/aorta_segmentation_experiments/val/baseline_fixed_levelset_p99_9_m300/2026-08-24_11-14-04",
+        "aorta_good_ids": [2, 6, 35, 89, 110, 116, 156, 184, 187, 227, 294, 296, 307, 308, 341, 384, 437, 449, 450, 468, 490, 507, 510, 513, 545, 552, 570, 614, 656, 672, 705, 720, 730, 737, 772, 776, 802, 805, 810, 813, 821, 832, 835, 838, 870, 873, 881, 886, 907, 913, 961, 978],
+        "aorta_bad_ids": [11, 134, 444, 464, 597, 602, 790, 792],
         "ostia_good_ids": [2, 6, 35, 89, 110, 156, 184, 227, 294, 296, 308, 341, 384, 437, 444, 449, 450, 464, 468, 490, 507, 510, 513, 545, 552, 570, 614, 656, 672, 720, 730, 737, 772, 776, 802, 805, 810, 813, 821, 832, 870, 873, 881, 886, 907, 913, 961, 978],
         "ostia_bad_ids": [11, 116, 134, 187, 307, 597, 602, 705, 790, 792, 835, 838],
         "ostia_review_source": "visual",
         "notes": {
           "705": "ostios muito proximos entre si",
           "792": "aorta subsegmentada",
-          "821": "aorta precisa ser segmentada um pouco mais"
+          "821": "aorta levemente subsegmentada; poderia ter mais circulos",
+          "978": "aorta levemente subsegmentada; poderia ter mais circulos"
         }
       }
     },
     "aggressive": {
       "train": {
-        "run_dir": "output/segmentation/runs/mid_res/aorta_segmentation_experiments/train/circle_filter_aggressive_p99_9/2026-08-24_11-32-23",
+        "run_dir": "output/segmentation/runs/mid_res/aorta_segmentation_experiments/train/robust_tail_filter_cov040_adaptive_levelset_p99_9_m300/2026-08-24_11-32-23",
         "aorta_good_ids": [13, 28, 44, 90, 129, 175, 194, 305, 315, 330, 344, 380, 447, 518, 538, 550, 608, 631, 676, 696, 752, 760, 793, 836, 854, 887, 937, 965],
         "aorta_bad_ids": [428, 603],
         "ostia_good_ids": [13, 28, 44, 90, 129, 175, 194, 305, 330, 344, 380, 518, 538, 550, 608, 631, 696, 752, 760, 793, 836, 854, 887, 937, 965],
@@ -38,7 +39,7 @@
         "notes": {}
       },
       "val": {
-        "run_dir": "output/segmentation/runs/mid_res/aorta_segmentation_experiments/val/circle_filter_aggressive_p99_9/2026-08-24_11-56-44",
+        "run_dir": "output/segmentation/runs/mid_res/aorta_segmentation_experiments/val/robust_tail_filter_cov040_adaptive_levelset_p99_9_m300/2026-08-24_11-56-44",
         "aorta_good_ids": [2, 6, 11, 35, 89, 110, 116, 156, 184, 187, 227, 294, 296, 308, 341, 384, 437, 449, 450, 468, 490, 507, 510, 513, 545, 552, 570, 614, 656, 672, 705, 720, 730, 737, 772, 776, 802, 805, 810, 813, 821, 832, 835, 838, 870, 873, 881, 886, 907, 913, 961, 978],
         "aorta_bad_ids": [134, 307, 444, 464, 597, 602, 790, 792],
         "ostia_good_ids": [2, 6, 11, 35, 89, 110, 156, 184, 227, 294, 296, 308, 341, 437, 449, 450, 468, 490, 507, 510, 513, 545, 552, 570, 614, 656, 672, 720, 730, 737, 772, 776, 802, 805, 810, 813, 821, 832, 838, 870, 873, 881, 886, 907, 913, 961, 978],
@@ -53,7 +54,7 @@
     },
     "coverage_080": {
       "train": {
-        "run_dir": "output/segmentation/runs/mid_res/aorta_segmentation_experiments/train/circle_filter_coverage_080/2026-08-24_14-10-36",
+        "run_dir": "output/segmentation/runs/mid_res/aorta_segmentation_experiments/archive/p99_9_m300/train/circle_filter_coverage_080/2026-08-24_14-10-36",
         "aorta_good_ids": [13, 28, 90, 129, 194, 305, 315, 344, 380, 447, 518, 538, 550, 631, 676, 696, 793, 836, 854, 887, 937, 965],
         "aorta_bad_ids": [44, 175, 330, 428, 603, 608, 752, 760],
         "notes": {
@@ -62,7 +63,7 @@
         }
       },
       "val": {
-        "run_dir": "output/segmentation/runs/mid_res/aorta_segmentation_experiments/val/circle_filter_coverage_080/2026-08-24_14-10-36",
+        "run_dir": "output/segmentation/runs/mid_res/aorta_segmentation_experiments/archive/p99_9_m300/val/circle_filter_coverage_080/2026-08-24_14-10-36",
         "aorta_good_ids": [2, 6, 35, 89, 110, 116, 156, 187, 227, 294, 307, 308, 341, 384, 437, 449, 450, 468, 490, 507, 510, 513, 545, 552, 570, 614, 656, 672, 730, 737, 772, 776, 802, 805, 810, 813, 821, 832, 835, 870, 873, 881, 886, 907, 913, 961, 978],
         "aorta_bad_ids": [11, 134, 184, 296, 444, 464, 597, 602, 705, 720, 790, 792, 838],
         "notes": {
@@ -78,7 +79,7 @@
     },
     "coverage_065_fallback": {
       "train": {
-        "run_dir": "output/segmentation/runs/mid_res/aorta_segmentation_experiments/train/circle_filter_coverage_065_fallback/2026-08-24_14-54-43",
+        "run_dir": "output/segmentation/runs/mid_res/aorta_segmentation_experiments/archive/p99_9_m300/train/circle_filter_coverage_065_fallback/2026-08-24_14-54-43",
         "aorta_good_ids": [13, 28, 90, 129, 194, 305, 315, 344, 380, 447, 518, 538, 550, 631, 676, 696, 793, 836, 854, 887, 937, 965],
         "aorta_bad_ids": [44, 175, 330, 428, 603, 608, 752, 760],
         "notes": {
@@ -87,7 +88,7 @@
         }
       },
       "val": {
-        "run_dir": "output/segmentation/runs/mid_res/aorta_segmentation_experiments/val/circle_filter_coverage_065_fallback/2026-08-24_14-54-43",
+        "run_dir": "output/segmentation/runs/mid_res/aorta_segmentation_experiments/archive/p99_9_m300/val/circle_filter_coverage_065_fallback/2026-08-24_14-54-43",
         "aorta_good_ids": [2, 6, 35, 89, 110, 116, 156, 187, 227, 294, 307, 308, 341, 384, 437, 449, 450, 468, 490, 507, 510, 513, 545, 552, 570, 614, 656, 672, 730, 737, 772, 776, 802, 805, 810, 813, 821, 832, 835, 870, 873, 881, 886, 907, 913, 961, 978],
         "aorta_bad_ids": [11, 134, 184, 296, 444, 464, 597, 602, 705, 720, 790, 792, 838],
         "notes": {
@@ -102,9 +103,55 @@
         }
       }
     },
+    "filter_envelope_current": {
+      "train": {
+        "run_dir": "output/segmentation/runs/mid_res/aorta_segmentation_experiments/train/filter_envelope_generalization/filter_envelope_no_recovery_reference_k2_25_margin10_p99_9_m300/2026-08-28_10-01-36",
+        "aorta_good_ids": [13, 28, 44, 90, 129, 175, 194, 305, 315, 330, 344, 380, 428, 447, 518, 538, 550, 608, 631, 676, 696, 752, 760, 793, 836, 854, 887, 937, 965],
+        "aorta_bad_ids": [603],
+        "ostia_review_source": "pipeline_summary",
+        "notes": {
+          "603": "vazamento permaneceu"
+        }
+      },
+      "val": {
+        "run_dir": "output/segmentation/runs/mid_res/aorta_segmentation_experiments/val/filter_envelope_generalization/filter_envelope_no_recovery_reference_k2_25_margin10_p99_9_m300/2026-08-28_10-01-49",
+        "aorta_good_ids": [2, 6, 35, 89, 110, 116, 156, 184, 187, 227, 294, 296, 307, 308, 341, 384, 437, 449, 450, 468, 490, 507, 510, 513, 545, 552, 570, 614, 656, 672, 705, 720, 730, 737, 772, 776, 802, 805, 810, 813, 821, 832, 835, 838, 870, 873, 881, 886, 907, 913, 961, 978],
+        "aorta_bad_ids": [11, 134, 444, 464, 597, 602, 790, 792],
+        "ostia_review_source": "pipeline_summary",
+        "notes": {
+          "792": "aorta subsegmentada"
+        }
+      }
+    },
+    "levelset_b0_6_r0_10_i26": {
+      "train": {
+        "run_dir": "output/segmentation/runs/mid_res/aorta_segmentation_experiments/train/levelset_b0_6_r0_10_i26_p99_9_m300/2026-08-29_18-03-58",
+        "aorta_good_ids": [13, 28, 44, 90, 129, 175, 194, 305, 315, 330, 344, 380, 428, 447, 518, 538, 550, 603, 608, 631, 676, 696, 752, 760, 793, 836, 854, 887, 937, 965],
+        "aorta_bad_ids": [],
+        "ostia_review_source": "pipeline_summary",
+        "notes": {
+          "315": "aorta globalmente correta, mas levemente subsegmentada na regiao dos ostios",
+          "428": "aorta globalmente correta, mas levemente subsegmentada na regiao dos ostios"
+        }
+      },
+      "val": {
+        "run_dir": "output/segmentation/runs/mid_res/aorta_segmentation_experiments/val/levelset_b0_6_r0_10_i26_p99_9_m300/2026-08-29_18-04-15",
+        "aorta_good_ids": [2, 6, 35, 89, 110, 116, 134, 156, 184, 187, 227, 294, 296, 307, 308, 341, 384, 437, 444, 449, 450, 468, 490, 507, 510, 513, 545, 552, 570, 597, 602, 614, 656, 672, 705, 720, 730, 737, 772, 776, 802, 805, 810, 813, 821, 832, 835, 838, 870, 873, 881, 886, 907, 913, 961, 978],
+        "aorta_bad_ids": [11, 464, 790, 792],
+        "ostia_review_source": "pipeline_summary",
+        "notes": {
+          "11": "sobresegmentacao persistente",
+          "464": "sobresegmentacao lateral na regiao dos ostios",
+          "513": "aorta globalmente correta, mas levemente subsegmentada na regiao dos ostios",
+          "597": "aorta curta, mas visualmente compativel com o exame",
+          "790": "sobresegmentacao na cauda",
+          "792": "aorta subsegmentada"
+        }
+      }
+    },
     "adaptive_current": {
       "train": {
-        "run_dir": "output/segmentation/runs/mid_res/aorta_segmentation_experiments/train/adaptive_current_p99_9_m300/2026-08-24_16-41-06",
+        "run_dir": "output/segmentation/runs/mid_res/aorta_segmentation_experiments/archive/p99_9_m300/train/adaptive_current_p99_9_m300/2026-08-24_16-41-06",
         "aorta_good_ids": [13, 28, 90, 129, 194, 305, 315, 344, 380, 447, 518, 538, 550, 631, 676, 696, 793, 836, 854, 887, 937, 965],
         "aorta_bad_ids": [44, 175, 330, 428, 603, 608, 752, 760],
         "notes": {
@@ -113,7 +160,7 @@
         }
       },
       "val": {
-        "run_dir": "output/segmentation/runs/mid_res/aorta_segmentation_experiments/val/adaptive_current_p99_9_m300/2026-08-24_16-41-23",
+        "run_dir": "output/segmentation/runs/mid_res/aorta_segmentation_experiments/archive/p99_9_m300/val/adaptive_current_p99_9_m300/2026-08-24_16-41-23",
         "aorta_good_ids": [2, 6, 35, 89, 110, 116, 156, 187, 227, 294, 307, 308, 341, 437, 449, 450, 468, 490, 507, 510, 513, 545, 552, 570, 614, 656, 672, 730, 737, 772, 776, 802, 805, 810, 813, 821, 832, 835, 870, 873, 881, 886, 907, 913, 961, 978],
         "aorta_bad_ids": [11, 134, 184, 296, 384, 444, 464, 597, 602, 705, 720, 790, 792, 838],
         "notes": {

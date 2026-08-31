@@ -1,0 +1,7 @@
+group,img_id,visual_status,aorta_volume_fraction,circle_area_ratio_p90,circle_fill_q25,circle_count,circle_coverage,mean_hough_accumulator,max_radius_step_mm,p90_radius_step_mm
+bad,11,oversegmented,0.037775,3.813885,0.944730,216,0.785455,0.396131,6.601563,1.980469
+bad,464,lateral_oversegmentation,0.013962,1.852779,0.942587,107,0.433198,0.436989,2.546875,1.082422
+bad,790,tail_oversegmentation,0.017915,2.442640,0.823004,226,0.821818,0.365028,7.003906,2.546875
+bad,792,undersegmented,0.005675,1.851679,0.929729,42,0.188341,0.390356,5.093750,0.742839
+good_cohort_median,,good,0.009856,1.517282,0.921853,98.5,0.404199,0.447923,3.039225,1.071296
+good_cohort_p90,,good,0.014883,1.766025,0.964946,135,0.490909,0.483523,6.207031,1.655753

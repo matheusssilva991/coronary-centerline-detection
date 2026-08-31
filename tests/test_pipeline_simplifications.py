@@ -2,6 +2,7 @@
 
 from contextlib import redirect_stdout
 from io import StringIO
+from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 from unittest import TestCase
@@ -11,6 +12,7 @@ import numpy as np
 import pandas as pd
 
 import segmentation_pipeline
+from utils.segmentation.pipeline_cli import _parse_rg_comparison_window
 from utils.segmentation.pipeline_orchestration import (
     _circle_result_fields,
     _ostia_result_fields,
@@ -55,87 +57,123 @@ def _preprocessing_config(method):
 
 
 class PipelineSimplificationTests(TestCase):
+    @patch("segmentation_pipeline.print_statistics")
+    @patch("segmentation_pipeline.get_data_splits")
+    def test_build_splits_filters_explicit_image_ids(
+        self,
+        get_data_splits,
+        _print_statistics,
+    ):
+        get_data_splits.return_value = ([1, 2, 3], [4, 5], [6], [1, 2, 3, 4, 5, 6])
+        args = SimpleNamespace(
+            split=["train", "val"],
+            merge_only=False,
+            split_config=None,
+            image_ids=[2, 5],
+        )
+
+        splits = segmentation_pipeline.build_splits_to_run(args, Path("/dataset"))
+
+        self.assertEqual(splits, [("train", [2]), ("val", [5])])
+
+    @patch("segmentation_pipeline.print_statistics")
+    @patch("segmentation_pipeline.get_data_splits")
+    def test_build_splits_rejects_ids_outside_selected_split(
+        self,
+        get_data_splits,
+        _print_statistics,
+    ):
+        get_data_splits.return_value = ([1, 2, 3], [4, 5], [6], [1, 2, 3, 4, 5, 6])
+        args = SimpleNamespace(
+            split=["train"],
+            merge_only=False,
+            split_config=None,
+            image_ids=[4],
+        )
+
+        with self.assertRaisesRegex(ValueError, "não pertencem"):
+            segmentation_pipeline.build_splits_to_run(args, Path("/dataset"))
+
+    def test_rg_comparison_window_accepts_all_alias(self):
+        self.assertEqual(_parse_rg_comparison_window("ALL"), -1)
+        self.assertEqual(_parse_rg_comparison_window("all"), -1)
+        self.assertEqual(_parse_rg_comparison_window("-1"), -1)
+        self.assertEqual(_parse_rg_comparison_window("5"), 5)
+
+    @patch(
+        "utils.segmentation.pipeline_orchestration.extrapolate_stable_circle_tail"
+    )
+    @patch("utils.segmentation.pipeline_orchestration.find_mask_guided_tail_start")
     @patch(
         "utils.segmentation.pipeline_orchestration.segment_aorta_with_diagnostics"
     )
-    def test_circle_filter_fallback_restores_original_trajectory(
+    def test_mask_guided_fallback_resegments_persistent_mask_tail(
         self,
         segment_aorta,
+        find_tail_start,
+        extrapolate_tail,
     ):
-        candidate = SimpleNamespace(
-            mask=np.ones((2, 2, 2), dtype=np.uint8),
-            diagnostics={"aorta_level_set_controller_state": "oversegmented"},
-        )
-        fallback = SimpleNamespace(
-            mask=np.ones((2, 2, 2), dtype=np.uint8),
-            diagnostics={"aorta_level_set_controller_state": "adequate"},
-        )
-        segment_aorta.side_effect = [candidate, fallback]
-        original = [{"slice_index": z} for z in range(5, 0, -1)]
-        filtered = original[:3]
-        filter_diagnostics = {"aorta_circle_filter_applied": True}
+        shape = (32, 32, 6)
+        candidate_mask = np.ones(shape, dtype=np.uint8)
+        retry_mask = np.zeros(shape, dtype=np.uint8)
+        yy, xx = np.ogrid[:32, :32]
+        disk_mask = (yy - 16) ** 2 + (xx - 16) ** 2 <= 4**2
+        retry_mask[disk_mask, :] = 1
+        candidate = SimpleNamespace(mask=candidate_mask, diagnostics={})
+        retry = SimpleNamespace(mask=retry_mask, diagnostics={})
+        segment_aorta.side_effect = [candidate, retry]
+        find_tail_start.return_value = 3
+
+        original = [
+            {
+                "slice_index": z,
+                "center_x": 16.0,
+                "center_y": 16.0,
+                "radius": 4.0,
+            }
+            for z in range(5, 0, -1)
+        ]
+        extrapolate_tail.return_value = [dict(original[3])]
         config = {
             "USE_GPU": False,
             "CIRCLE_DETECTION": {
-                "trajectory_filter": {"reject_oversegmented_result": True}
+                "radii_start_px": 2,
+                "radii_end_px": 8,
+                "radius_step_px": 1,
+                "trajectory_filter": {
+                    "mask_guided_fallback": {
+                        "enabled": True,
+                        "min_area_ratio_p90": 2.5,
+                        "slice_area_ratio_threshold": 2.5,
+                        "min_ratio_improvement": 0.1,
+                        "max_fill_loss": 0.015,
+                        "synthetic_tail_slices": 1,
+                    },
+                }
             },
             "LEVEL_SET": {},
         }
 
         circles, result, diagnostics = _segment_aorta_with_circle_filter_fallback(
-            np.ones((2, 2, 6), dtype=np.float32),
+            np.ones(shape, dtype=np.float32),
             original,
-            filtered,
-            filter_diagnostics,
-            6,
+            original,
+            {"aorta_circle_filter_applied": False},
+            shape[2],
             (1.0, 1.0, 1.0),
             config,
         )
 
-        self.assertEqual(circles, original)
-        self.assertIs(result, fallback)
+        self.assertIs(result, retry)
+        self.assertEqual(len(circles), 4)
         self.assertEqual(segment_aorta.call_count, 2)
-        self.assertTrue(diagnostics["aorta_circle_filter_rejected"])
-        self.assertFalse(diagnostics["aorta_circle_filter_accepted"])
-        self.assertEqual(diagnostics["aorta_circle_used_count"], len(original))
+        self.assertTrue(
+            diagnostics["aorta_circle_filter_mask_guided_fallback_accepted"]
+        )
         self.assertEqual(
-            diagnostics["aorta_circle_filter_rejection_reason"],
-            "filtered_mask_oversegmented",
+            diagnostics["aorta_circle_filter_reason"],
+            "mask_ratio_tail_trimmed+stable_tail_extrapolated",
         )
-
-    @patch(
-        "utils.segmentation.pipeline_orchestration.segment_aorta_with_diagnostics"
-    )
-    def test_circle_filter_fallback_keeps_adequate_candidate(self, segment_aorta):
-        candidate = SimpleNamespace(
-            mask=np.ones((2, 2, 2), dtype=np.uint8),
-            diagnostics={"aorta_level_set_controller_state": "adequate"},
-        )
-        segment_aorta.return_value = candidate
-        original = [{"slice_index": z} for z in range(5, 0, -1)]
-        filtered = original[:3]
-
-        circles, result, diagnostics = _segment_aorta_with_circle_filter_fallback(
-            np.ones((2, 2, 6), dtype=np.float32),
-            original,
-            filtered,
-            {"aorta_circle_filter_applied": True},
-            6,
-            (1.0, 1.0, 1.0),
-            {
-                "USE_GPU": False,
-                "CIRCLE_DETECTION": {
-                    "trajectory_filter": {"reject_oversegmented_result": True}
-                },
-                "LEVEL_SET": {},
-            },
-        )
-
-        self.assertEqual(circles, filtered)
-        self.assertIs(result, candidate)
-        segment_aorta.assert_called_once()
-        self.assertTrue(diagnostics["aorta_circle_filter_accepted"])
-        self.assertFalse(diagnostics["aorta_circle_filter_rejected"])
 
     @patch("utils.segmentation.pipeline_preprocessing.downscale_image_ndi")
     @patch("utils.segmentation.pipeline_preprocessing.largest_connected_component")
@@ -241,21 +279,20 @@ class PipelineSimplificationTests(TestCase):
             [
                 {"slice_index": 9},
                 {"slice_index": 8, "interpolated": True},
-                {"slice_index": 7, "recovered_initialization": True},
+                {"slice_index": 7},
             ],
             10,
         )
         self.assertEqual(circles["aorta_circle_count"], 3)
         self.assertEqual(circles["aorta_detected_circle_count"], 2)
         self.assertEqual(circles["aorta_circle_coverage"], 0.3)
-        self.assertTrue(circles["aorta_recovered_initialization"])
         self.assertEqual(
             circles,
             summarize_aorta_circles(
                 [
                     {"slice_index": 9},
                     {"slice_index": 8, "interpolated": True},
-                    {"slice_index": 7, "recovered_initialization": True},
+                    {"slice_index": 7},
                 ],
                 10,
             ),
@@ -342,12 +379,10 @@ class PipelineSimplificationTests(TestCase):
             aorta_level_set_mode="adaptive",
             aorta_circle_filter="robust",
             aorta_circle_filter_min_coverage=0.4,
-            aorta_circle_filter_interpolate=True,
-            ostia_surface_mode="physical_distance",
-            ostia_surface_thickness_mm=2.0,
-            ostia_candidate_score_mode="local_mean",
-            ostia_pair_selection_mode="joint",
             rg_comparison_window=-1,
+            aorta_trajectory_radius_factor=2.0,
+            aorta_trajectory_axial_margin_slices=5,
+            aorta_oversegmented_area_ratio_p90=2.7,
             threshold_method="fuzzy",
             upper_threshold_percentile=99.9,
             lower_threshold_method="percentile",
@@ -366,22 +401,24 @@ class PipelineSimplificationTests(TestCase):
         self.assertEqual(config["ARTERY_SEGMENTATION"]["method"], "fc")
         self.assertEqual(config["REGION_GROWING"]["comparison_window"], -1)
         self.assertEqual(config["LEVEL_SET"]["iteration_mode"], "adaptive")
+        self.assertEqual(config["LEVEL_SET"]["trajectory_radius_factor"], 2.0)
+        self.assertEqual(
+            config["LEVEL_SET"]["trajectory_axial_margin_slices"],
+            5,
+        )
+        self.assertEqual(
+            config["LEVEL_SET"]["adaptive"]["oversegmented_area_ratio_p90"],
+            2.7,
+        )
+        self.assertEqual(
+            config["LEVEL_SET"]["adaptive"][
+                "adequate_max_circle_area_ratio_p90"
+            ],
+            2.7,
+        )
         circle_filter = config["CIRCLE_DETECTION"]["trajectory_filter"]
         self.assertEqual(circle_filter["method"], "robust")
         self.assertEqual(circle_filter["min_tail_coverage"], 0.4)
-        self.assertTrue(circle_filter["interpolate_isolated_outliers"])
-        self.assertEqual(
-            config["OSTIA_DETECTION"]["surface_mode"],
-            "physical_distance",
-        )
-        self.assertEqual(
-            config["OSTIA_DETECTION"]["candidate_score_mode"],
-            "local_mean",
-        )
-        self.assertEqual(
-            config["OSTIA_DETECTION"]["pair_selection_mode"],
-            "joint",
-        )
         self.assertEqual(config["THRESHOLDING"]["method"], "fuzzy")
         self.assertEqual(config["MAX_THRESHOLD_PERCENTILE"], 99.9)
         self.assertEqual(

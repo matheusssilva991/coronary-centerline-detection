@@ -1,11 +1,22 @@
 """Crescimento de região para segmentação de artérias coronárias.
 
-O módulo mantém apenas duas entradas públicas:
+Entradas públicas:
 
-- ``normal_region_growing_from_ostia``: método usado pelo pipeline principal;
+- ``normal_region_growing_from_ostia``: segmentação usada pelo pipeline;
+- ``expand_region_from_mask_mean``: segunda expansão experimental iniciada por
+  uma máscara já segmentada.
 
-As demais funções são helpers privados usados para validar sementes, selecionar
-sementes locais e controlar os critérios de aceitação do crescimento de região.
+No crescimento padrão, ``comparison_window`` define a referência de vesselness:
+``1`` usa o voxel atual, ``ALL``/``-1`` usa a média de toda a região aceita e um
+inteiro maior que um usa a média dos últimos N voxels aceitos.
+
+A conectividade pode considerar 6, 18 ou 26 vizinhos. A vizinhança 26 contém
+todos os voxels do cubo 3 x 3 x 3 ao redor do voxel atual, exceto o próprio
+centro: 6 compartilham uma face, 12 compartilham uma aresta e 8 compartilham
+somente um vértice.
+
+As demais funções são helpers privados usados para validar e selecionar
+sementes e controlar os critérios de aceitação do crescimento.
 """
 
 from __future__ import annotations
@@ -200,7 +211,7 @@ def _region_growing_from_seeds(
     max_volume: int,
     relaxed_floor_factor: float,
     switch_at_voxels: int,
-    comparison_window: int,
+    comparison_window: int | str,
     smooth_relaxation: bool,
     neighborhood: int = 26,
     verbose: bool = False,
@@ -213,7 +224,14 @@ def _region_growing_from_seeds(
 
     use_running_mean = False
     value_history: deque[float] | None = None
-    if comparison_window == -1 or isinstance(comparison_window, str):
+    if isinstance(comparison_window, str):
+        if comparison_window.strip().upper() != "ALL":
+            raise ValueError(
+                "comparison_window deve ser ALL, -1 ou um inteiro positivo"
+            )
+        comparison_window = -1
+
+    if comparison_window == -1:
         comparison_window = -1
         use_running_mean = True
     elif comparison_window > 1:
@@ -312,6 +330,95 @@ def _region_growing_from_seeds(
     if verbose:
         print(f"Voxels segmentados: {count}")
     return mask
+
+
+def expand_region_from_mask_mean(
+    vesselness_map: NDArray[Any],
+    initial_mask: NDArray[Any],
+    *,
+    tolerance: float,
+    min_vesselness: float,
+    max_new_voxels: int,
+    neighborhood: int = 26,
+    update_reference: bool = True,
+) -> tuple[NDArray[np.uint8], dict[str, float | int]]:
+    """Expande uma máscara usando sua vesselness média como referência.
+
+    A máscara inicial é preservada integralmente, inclusive nos voxels inseridos
+    pela morfologia. A expansão parte de sua fronteira e aceita cada candidato
+    quando ele supera o piso de vesselness e permanece dentro da tolerância em
+    relação à média da região. Quando ``update_reference`` está ativo, a média é
+    atualizada incrementalmente após cada novo voxel aceito.
+    """
+    score_map = np.asarray(vesselness_map, dtype=float)
+    region = np.asarray(initial_mask) > 0
+    if score_map.ndim != 3 or region.ndim != 3:
+        raise ValueError("vesselness_map e initial_mask devem ser volumes 3D.")
+    if score_map.shape != region.shape:
+        raise ValueError("vesselness_map e initial_mask devem possuir o mesmo shape.")
+    if tolerance < 0:
+        raise ValueError("tolerance deve ser maior ou igual a zero.")
+    if max_new_voxels < 0:
+        raise ValueError("max_new_voxels deve ser maior ou igual a zero.")
+
+    initial_values = score_map[region & np.isfinite(score_map)]
+    if initial_values.size == 0:
+        raise ValueError("A máscara inicial não possui vesselness finita.")
+
+    initial_voxels = int(region.sum())
+    running_sum = float(initial_values.sum())
+    running_count = int(initial_values.size)
+    initial_mean = running_sum / running_count
+    reference = initial_mean
+
+    # Todos os voxels iniciais entram na fila, mas cada candidato externo é
+    # avaliado apenas uma vez para manter custo e resultado determinísticos.
+    queue: deque[tuple[int, int, int]] = deque(
+        tuple(map(int, coord)) for coord in np.argwhere(region)
+    )
+    evaluated = region.copy()
+    offsets = _neighbor_offsets(int(neighborhood))
+    dims = score_map.shape
+    added_voxels = 0
+
+    while queue and added_voxels < int(max_new_voxels):
+        cy, cx, cz = queue.popleft()
+        for dy, dx, dz in offsets:
+            ny, nx, nz = cy + dy, cx + dx, cz + dz
+            if not (0 <= ny < dims[0] and 0 <= nx < dims[1] and 0 <= nz < dims[2]):
+                continue
+            if evaluated[ny, nx, nz]:
+                continue
+            evaluated[ny, nx, nz] = True
+
+            neighbor_value = float(score_map[ny, nx, nz])
+            if not np.isfinite(neighbor_value) or not _neighbor_is_acceptable(
+                neighbor_value,
+                reference,
+                float(min_vesselness),
+                float(tolerance),
+            ):
+                continue
+
+            region[ny, nx, nz] = True
+            queue.append((ny, nx, nz))
+            added_voxels += 1
+            if update_reference:
+                running_sum += neighbor_value
+                running_count += 1
+                reference = running_sum / running_count
+            if added_voxels >= int(max_new_voxels):
+                break
+
+    return region.astype(np.uint8), {
+        "initial_voxels": initial_voxels,
+        "added_voxels": added_voxels,
+        "final_voxels": int(region.sum()),
+        "initial_mean_vesselness": initial_mean,
+        "final_mean_vesselness": reference,
+        "tolerance": float(tolerance),
+        "min_vesselness": float(min_vesselness),
+    }
 
 
 def normal_region_growing_from_ostia(
@@ -416,5 +523,6 @@ def normal_region_growing_from_ostia(
 
 __all__ = [
     "NEIGHBORS_26",
+    "expand_region_from_mask_mean",
     "normal_region_growing_from_ostia",
 ]

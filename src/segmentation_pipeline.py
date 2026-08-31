@@ -152,6 +152,110 @@ def _apply_execution_overrides(config, args):
     level_set_mode = getattr(args, "aorta_level_set_mode", None)
     if level_set_mode is not None:
         config.setdefault("LEVEL_SET", {})["iteration_mode"] = level_set_mode
+    level_set_config = config.setdefault("LEVEL_SET", {})
+    level_set_overrides = {
+        "num_iter": getattr(args, "aorta_level_set_iterations", None),
+        "radius_reduction_factor": getattr(
+            args,
+            "aorta_level_set_radius_reduction_factor",
+            None,
+        ),
+        "balloon": getattr(args, "aorta_level_set_balloon", None),
+        "alpha": getattr(args, "aorta_level_set_alpha", None),
+        "leak_removal_radius": getattr(args, "aorta_opening_radius", None),
+    }
+    for config_key, value in level_set_overrides.items():
+        if value is not None:
+            level_set_config[config_key] = value
+    trajectory_radius_factor = getattr(
+        args,
+        "aorta_trajectory_radius_factor",
+        None,
+    )
+    if trajectory_radius_factor is not None:
+        config.setdefault("LEVEL_SET", {})["trajectory_radius_factor"] = float(
+            trajectory_radius_factor
+        )
+    trajectory_axial_margin = getattr(
+        args,
+        "aorta_trajectory_axial_margin_slices",
+        None,
+    )
+    if trajectory_axial_margin is not None:
+        config.setdefault("LEVEL_SET", {})["trajectory_axial_margin_slices"] = int(
+            trajectory_axial_margin
+        )
+    oversegmented_area_ratio = getattr(
+        args,
+        "aorta_oversegmented_area_ratio_p90",
+        None,
+    )
+    if oversegmented_area_ratio is not None:
+        adaptive_config = config.setdefault("LEVEL_SET", {}).setdefault(
+            "adaptive",
+            {},
+        )
+        adaptive_config["oversegmented_area_ratio_p90"] = float(
+            oversegmented_area_ratio
+        )
+        adaptive_config["adequate_max_circle_area_ratio_p90"] = float(
+            oversegmented_area_ratio
+        )
+
+    adaptive_config = config.setdefault("LEVEL_SET", {}).setdefault("adaptive", {})
+    conservative_config = adaptive_config.setdefault("conservative", {})
+    conservative_overrides = {
+        "balloon": getattr(args, "aorta_conservative_balloon", None),
+        "alpha": getattr(args, "aorta_conservative_alpha", None),
+        "threshold_percentile": getattr(
+            args,
+            "aorta_conservative_threshold_percentile",
+            None,
+        ),
+    }
+    for config_key, value in conservative_overrides.items():
+        if value is not None:
+            conservative_config[config_key] = float(value)
+    min_ratio_improvement = getattr(
+        args,
+        "aorta_conservative_min_ratio_improvement",
+        None,
+    )
+    if min_ratio_improvement is not None:
+        adaptive_config["min_area_ratio_improvement_fraction"] = float(
+            min_ratio_improvement
+        )
+    localization_override = adaptive_config.setdefault(
+        "localization_leak_override",
+        {},
+    )
+    localization_override_enabled = getattr(
+        args,
+        "aorta_localization_leak_override",
+        None,
+    )
+    if localization_override_enabled is not None:
+        localization_override["enabled"] = bool(localization_override_enabled)
+    localization_override_values = {
+        "min_area_ratio_p90": getattr(
+            args,
+            "aorta_localization_leak_min_area_ratio_p90",
+            None,
+        ),
+        "min_circle_fill_q25": getattr(
+            args,
+            "aorta_localization_leak_min_circle_fill_q25",
+            None,
+        ),
+        "min_volume_fraction": getattr(
+            args,
+            "aorta_localization_leak_min_volume_fraction",
+            None,
+        ),
+    }
+    for config_key, value in localization_override_values.items():
+        if value is not None:
+            localization_override[config_key] = float(value)
 
     circle_filter = getattr(args, "aorta_circle_filter", None)
     circle_filter_config = config.setdefault("CIRCLE_DETECTION", {}).setdefault(
@@ -164,33 +268,42 @@ def _apply_execution_overrides(config, args):
     )
     if circle_filter_min_coverage is not None:
         circle_filter_config["min_tail_coverage"] = circle_filter_min_coverage
-    circle_filter_interpolate = getattr(
-        args, "aorta_circle_filter_interpolate", None
+    circle_filter_max_trim_fraction = getattr(
+        args, "aorta_circle_filter_max_trim_fraction", None
     )
-    if circle_filter_interpolate is not None:
-        circle_filter_config["interpolate_isolated_outliers"] = bool(
-            circle_filter_interpolate
+    if circle_filter_max_trim_fraction is not None:
+        circle_filter_config["max_tail_trim_fraction"] = float(
+            circle_filter_max_trim_fraction
         )
-    reject_oversegmented = getattr(
+    synthetic_tail_slices = getattr(
+        args, "aorta_circle_filter_synthetic_tail_slices", None
+    )
+    if synthetic_tail_slices is not None:
+        circle_filter_config["synthetic_tail_slices"] = int(synthetic_tail_slices)
+    mask_guided = getattr(args, "aorta_circle_filter_mask_guided", None)
+    mask_guided_config = circle_filter_config.setdefault("mask_guided_fallback", {})
+    if mask_guided is not None:
+        mask_guided_config["enabled"] = bool(mask_guided)
+    mask_guided_ratio = getattr(args, "aorta_mask_guided_area_ratio_p90", None)
+    if mask_guided_ratio is not None:
+        mask_guided_config["min_area_ratio_p90"] = float(mask_guided_ratio)
+        mask_guided_config["slice_area_ratio_threshold"] = float(mask_guided_ratio)
+    mask_guided_max_fill_loss = getattr(
         args,
-        "aorta_circle_filter_reject_oversegmented",
+        "aorta_mask_guided_max_fill_loss",
         None,
     )
-    if reject_oversegmented is not None:
-        circle_filter_config["reject_oversegmented_result"] = bool(
-            reject_oversegmented
+    if mask_guided_max_fill_loss is not None:
+        mask_guided_config["max_fill_loss"] = float(mask_guided_max_fill_loss)
+    mask_guided_min_improvement = getattr(
+        args,
+        "aorta_mask_guided_min_ratio_improvement",
+        None,
+    )
+    if mask_guided_min_improvement is not None:
+        mask_guided_config["min_ratio_improvement"] = float(
+            mask_guided_min_improvement
         )
-
-    ostia_overrides = {
-        "surface_mode": getattr(args, "ostia_surface_mode", None),
-        "surface_thickness_mm": getattr(args, "ostia_surface_thickness_mm", None),
-        "candidate_score_mode": getattr(args, "ostia_candidate_score_mode", None),
-        "pair_selection_mode": getattr(args, "ostia_pair_selection_mode", None),
-    }
-    ostia_config = config.setdefault("OSTIA_DETECTION", {})
-    for config_key, value in ostia_overrides.items():
-        if value is not None:
-            ostia_config[config_key] = value
 
 def _apply_threshold_overrides(config, args):
     """Aplica opções de threshold normal/fuzzy e piso inferior."""
@@ -262,23 +375,17 @@ def print_run_settings(args, config, base_path):
     print(
         "⭕ Localização da aorta: "
         f"miss_count={circle_config.get('max_slice_miss_threshold')}, "
-        f"recuperação inicial={circle_config.get('early_track_recovery', True)}, "
         "filtro de trajetória="
         f"{circle_filter_config.get('method', 'none')} "
         f"(cobertura mínima={circle_filter_config.get('min_tail_coverage', 0.8)}, "
-        "fallback sobresegmentado="
-        f"{circle_filter_config.get('reject_oversegmented_result', False)})"
+        "fallback guiado pela máscara="
+        f"{circle_filter_config.get('mask_guided_fallback', {}).get('enabled', False)})"
     )
     artery_config = config.get("ARTERY_SEGMENTATION", {})
     thresholding_config = config.get("THRESHOLDING", {})
     lower_threshold_config = config.get("LOWER_THRESHOLD", {})
     print(f"🫀 Segmentação arterial: {artery_config.get('method', 'region_growing')}")
-    ostia_config = config.get("OSTIA_DETECTION", {})
-    print(
-        "🎯 Superfície/seleção dos óstios: "
-        f"{ostia_config.get('surface_mode', 'erosion')} / "
-        f"{ostia_config.get('pair_selection_mode', 'greedy')}"
-    )
+    print("🎯 Superfície/seleção dos óstios: erosion / greedy")
     print(
         "🔄 Level set da aorta: "
         f"{config.get('LEVEL_SET', {}).get('iteration_mode', 'fixed')}"
@@ -475,7 +582,33 @@ def build_splits_to_run(args, base_path):
         "val": val_ids,
         "test": test_ids,
     }
-    return [(name, split_map[name]) for name in split_names_to_run]
+    requested_ids = getattr(args, "image_ids", None)
+    if not requested_ids:
+        return [(name, split_map[name]) for name in split_names_to_run]
+
+    selected_id_set = {
+        int(img_id)
+        for name in split_names_to_run
+        for img_id in split_map[name]
+    }
+    missing_ids = sorted(set(requested_ids).difference(selected_id_set))
+    if missing_ids:
+        raise ValueError(
+            "IDs de --image-ids não pertencem aos splits selecionados: "
+            f"{missing_ids}"
+        )
+
+    requested_id_set = set(requested_ids)
+    filtered_splits = [
+        (
+            name,
+            [img_id for img_id in split_map[name] if int(img_id) in requested_id_set],
+        )
+        for name in split_names_to_run
+    ]
+    selected_count = sum(len(ids) for _, ids in filtered_splits)
+    print(f"🎯 Seleção explícita: {selected_count} imagens (--image-ids)")
+    return filtered_splits
 
 
 def save_split_metadata(

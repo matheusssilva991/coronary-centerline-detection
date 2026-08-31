@@ -331,7 +331,7 @@ class ParameterValidationTests(unittest.TestCase):
 
         self.assertNotIn("AORTA_OSTIA_METHOD", config)
         self.assertEqual(config["OSTIA_DETECTION"]["erosion_radius"], 4)
-        self.assertEqual(config["OSTIA_DETECTION"]["pair_selection_mode"], "greedy")
+        self.assertNotIn("pair_selection_mode", config["OSTIA_DETECTION"])
         self.assertNotIn("experimental_leak_correction", config["LEVEL_SET"])
 
     def test_adaptive_level_set_iterations_follow_high_resolution_scaling(self) -> None:
@@ -347,15 +347,10 @@ class ParameterValidationTests(unittest.TestCase):
             scaled["LEVEL_SET"]["adaptive"]["early_stop_iteration"],
             59,
         )
-        self.assertEqual(
-            scaled["LEVEL_SET"]["adaptive"]["permissive"]["target_iterations"],
-            81,
-        )
-        self.assertEqual(
-            scaled["LEVEL_SET"]["adaptive"][
-                "oversegmented_voxels_per_slice"
-            ],
-            11200.0,
+        self.assertNotIn("permissive", scaled["LEVEL_SET"]["adaptive"])
+        self.assertNotIn(
+            "oversegmented_voxels_per_slice",
+            scaled["LEVEL_SET"]["adaptive"],
         )
 
     def test_resolution_scaling_rejects_unknown_group(self) -> None:
