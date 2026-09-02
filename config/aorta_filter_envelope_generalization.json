@@ -9,6 +9,8 @@
         "method": "normal"
     },
     "CIRCLE_DETECTION": {
+        "radii_start_px": 18,
+        "radii_end_px": 30,
         "trajectory_filter": {
             "method": "robust",
             "max_radius_step_mm": 4.8,
@@ -43,7 +45,6 @@
         }
     },
     "LEVEL_SET": {
-        "iteration_mode": "fixed",
         "radius_reduction_factor": 0.1,
         "num_iter": 26,
         "balloon": 0.6,

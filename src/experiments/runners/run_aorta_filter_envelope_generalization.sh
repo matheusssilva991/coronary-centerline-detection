@@ -6,9 +6,6 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
 cd "$REPO_ROOT"
 
 SPLIT="${SPLIT:-train}"
-# A referencia foi a unica variante mantida apos a avaliacao quantitativa e visual.
-# As demais continuam disponiveis somente quando solicitadas explicitamente.
-VARIANTS="${VARIANTS:-reference}"
 USE_GPU="${USE_GPU:-1}"
 SAVE_VISUALS="${SAVE_VISUALS:-1}"
 VISUAL_OUTPUT_DIR="${VISUAL_OUTPUT_DIR:-/media/matheus/HD/ImageCAS_pipeline_results}"
@@ -33,53 +30,28 @@ if [[ "$SAVE_VISUALS" == "1" ]]; then
   [[ -n "$VISUAL_OUTPUT_DIR" ]] && VISUAL_ARGS+=(--visual-output-dir "$VISUAL_OUTPUT_DIR")
 fi
 
-run_variant() {
-  local variant="$1"
-  local radius_factor="$2"
-  local axial_margin="$3"
-  local radius_tag="${radius_factor//./_}"
-  local run_name="filter_envelope_${variant}_k${radius_tag}_margin${axial_margin}_p99_9_m300"
-
+run_selected_configuration() {
   echo
-  echo "Executando ${variant}: envelope=${radius_factor}r, margem=${axial_margin}"
+  echo "Executando configuração selecionada: Hough 18-29 px, envelope=2.25r, margem=10"
   uv run python src/segmentation_pipeline.py \
     --split "$SPLIT" \
     --split-config "$SPLIT_CONFIG" \
     --resolution mid \
     --config-file "$BASE_CONFIG" \
+    --aorta-hough-radii-start-px 18 \
+    --aorta-hough-radii-end-px 30 \
     --aorta-circle-filter robust \
     --aorta-circle-filter-min-coverage 0.40 \
     --aorta-circle-filter-max-trim-fraction 0.40 \
     --aorta-circle-filter-synthetic-tail-slices 5 \
     --aorta-circle-filter-mask-guided \
-    --aorta-level-set-mode fixed \
-    --aorta-trajectory-radius-factor "$radius_factor" \
-    --aorta-trajectory-axial-margin-slices "$axial_margin" \
+    --aorta-trajectory-radius-factor 2.25 \
+    --aorta-trajectory-axial-margin-slices 10 \
     --run-group \
-      "aorta_segmentation_experiments/${SPLIT}/filter_envelope_generalization/${run_name}" \
+      "aorta_segmentation_experiments/${SPLIT}/selected_hough18_29_filter_envelope_p99_9_m300" \
     --num-batches "$NUM_BATCHES" \
     "${VISUAL_ARGS[@]}" \
     "${GPU_ARGS[@]}"
 }
 
-for variant in $VARIANTS; do
-  case "$variant" in
-    reference)
-      run_variant reference 2.25 10
-      ;;
-    balanced)
-      run_variant balanced 2.35 10
-      ;;
-    conservative)
-      run_variant conservative 2.40 12
-      ;;
-    anti_leak)
-      run_variant anti_leak 2.15 12
-      ;;
-    *)
-      echo "Variante desconhecida: ${variant}" >&2
-      echo "Use: reference balanced conservative anti_leak" >&2
-      exit 2
-      ;;
-  esac
-done
+run_selected_configuration

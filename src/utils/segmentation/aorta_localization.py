@@ -62,12 +62,8 @@ def _median_circle_reference(circles: Sequence[dict[str, Any]]) -> dict[str, flo
     """Resume uma janela estável da trajetória por medianas geométricas."""
     return {
         "radius": float(np.median([float(circle["radius"]) for circle in circles])),
-        "center_x": float(
-            np.median([float(circle["center_x"]) for circle in circles])
-        ),
-        "center_y": float(
-            np.median([float(circle["center_y"]) for circle in circles])
-        ),
+        "center_x": float(np.median([float(circle["center_x"]) for circle in circles])),
+        "center_y": float(np.median([float(circle["center_y"]) for circle in circles])),
     }
 
 
@@ -90,7 +86,9 @@ def _find_incompatible_tail_start(
     min_remaining = max(reference_window, int(config.get("min_remaining_circles", 30)))
     search_start = max(
         min_remaining,
-        int(round(len(circles) * float(config.get("tail_search_start_fraction", 0.35)))),
+        int(
+            round(len(circles) * float(config.get("tail_search_start_fraction", 0.35)))
+        ),
     )
     search_stop = len(circles) - min_tail_circles + 1
 
@@ -117,9 +115,7 @@ def _find_incompatible_tail_start(
         if not transition_is_abrupt:
             continue
 
-        reference = _median_circle_reference(
-            circles[index - reference_window : index]
-        )
+        reference = _median_circle_reference(circles[index - reference_window : index])
         incompatible = 0
         geometry_incompatible = 0
         for circle in circles[index : index + persistence_window]:
@@ -129,8 +125,7 @@ def _find_incompatible_tail_start(
                 pixel_spacing,
             )
             geometry_signal = (
-                radius_departure > max_radius_step
-                or center_departure > max_center_step
+                radius_departure > max_radius_step or center_departure > max_center_step
             )
             confidence_signal = (
                 circle.get("accum") is not None
@@ -141,9 +136,8 @@ def _find_incompatible_tail_start(
 
         # Confiança baixa isolada não basta: a cauda também deve divergir
         # geometricamente da janela anterior.
-        if (
-            incompatible >= persistence_required
-            and geometry_incompatible >= max(2, persistence_required - 1)
+        if incompatible >= persistence_required and geometry_incompatible >= max(
+            2, persistence_required - 1
         ):
             return index
     return None
@@ -292,6 +286,7 @@ def filter_aorta_circle_trajectory(
         "aorta_circle_filter_synthetic_tail_count": 0,
         "aorta_circle_filter_trimmed_tail_count": 0,
         "aorta_circle_filter_trim_start_slice": None,
+        "aorta_circle_filter_detected_tail_start_slice": None,
         "aorta_circle_filter_original_coverage": (
             len(original) / image_slice_count if image_slice_count else None
         ),
@@ -308,20 +303,22 @@ def filter_aorta_circle_trajectory(
         raise ValueError("pixel_spacing deve ser maior que zero")
 
     # Elimina uma cauda persistentemente desviada e preserva o trecho estável.
-    original_coverage = (
-        len(original) / image_slice_count if image_slice_count else 0.0
-    )
+    original_coverage = len(original) / image_slice_count if image_slice_count else 0.0
     min_tail_coverage = float(config.get("min_tail_coverage", 0.8))
     max_tail_trim_fraction = float(config.get("max_tail_trim_fraction", 1.0))
     if not 0.0 < max_tail_trim_fraction <= 1.0:
         raise ValueError("max_tail_trim_fraction deve estar no intervalo (0, 1]")
-    tail_start = None
+    search_start_fraction = float(config.get("tail_search_start_fraction", 0.35))
+    if not 0.0 <= search_start_fraction < 1.0:
+        raise ValueError("tail_search_start_fraction deve estar no intervalo [0, 1)")
+    detected_tail_start = None
     if original_coverage >= min_tail_coverage:
-        tail_start = _find_incompatible_tail_start(
+        detected_tail_start = _find_incompatible_tail_start(
             original,
             pixel_spacing,
             config,
         )
+    tail_start = detected_tail_start
     trim_rejected = False
     synthetic_tail: list[dict[str, Any]] = []
     if tail_start is None:
@@ -339,7 +336,7 @@ def filter_aorta_circle_trajectory(
             trim_start_slice = None
             tail_start = None
             trim_rejected = True
-        else:
+        if not trim_rejected:
             trimmed = original[:tail_start]
             trimmed_count = candidate_trimmed_count
             trim_start_slice = int(original[tail_start]["slice_index"])
@@ -369,21 +366,22 @@ def filter_aorta_circle_trajectory(
             "aorta_circle_filter_synthetic_tail_count": len(synthetic_tail),
             "aorta_circle_filter_trimmed_tail_count": trimmed_count,
             "aorta_circle_filter_trim_start_slice": trim_start_slice,
+            "aorta_circle_filter_detected_tail_start_slice": (
+                int(original[detected_tail_start]["slice_index"])
+                if detected_tail_start is not None
+                else None
+            ),
             "aorta_circle_filter_used_coverage": (
                 len(filtered) / image_slice_count if image_slice_count else None
             ),
             "aorta_circle_filter_reason": (
                 "+".join(reasons)
                 if reasons
-                else (
-                    "tail_trim_fraction_exceeded"
-                    if trim_rejected
-                    else (
-                        "coverage_below_tail_threshold"
-                        if original_coverage < min_tail_coverage
-                        else "unchanged"
-                    )
-                )
+                else "tail_trim_fraction_exceeded"
+                if trim_rejected
+                else "coverage_below_tail_threshold"
+                if original_coverage < min_tail_coverage
+                else "unchanged"
             ),
         }
     )

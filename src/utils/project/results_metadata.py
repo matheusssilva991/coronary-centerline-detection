@@ -72,7 +72,6 @@ def _runtime_config_metadata(config: dict[str, Any]) -> dict[str, Any]:
             "interpolate_missed_circles"
         ),
         "artery_segmentation_method": str(artery_method),
-        "aorta_level_set_mode": level_set_config.get("iteration_mode", "fixed"),
         "aorta_trajectory_radius_factor": level_set_config.get(
             "trajectory_radius_factor"
         ),
@@ -99,6 +98,15 @@ def build_metadata(
     # Recalcula os agregados a partir das linhas efetivamente persistidas.
     df = make_result_dataframe(results)
     results_summary = summarize_results_df(df)
+    feedback_by_image = [
+        {
+            "IMG_ID": row.IMG_ID,
+            "feedback": row.aorta_segmentation_feedback,
+        }
+        for row in df[["IMG_ID", "aorta_segmentation_feedback"]].itertuples(
+            index=False
+        )
+    ]
 
     execution_duration = duration_breakdown(execution_time)
     current_run_duration = duration_breakdown(current_run_execution_time)
@@ -158,6 +166,15 @@ def build_metadata(
             ],
         },
         "results_summary": results_summary,
+        "aorta_segmentation_feedback": {
+            "role": "diagnostic_only",
+            "thresholds": config.get("LEVEL_SET", {}).get(
+                "quality_feedback",
+                {},
+            ),
+            "counts": results_summary["aorta_segmentation_feedback_counts"],
+            "by_image": feedback_by_image,
+        },
     }
 
     # Caminhos são opcionais para manter o helper útil em testes isolados.

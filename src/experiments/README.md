@@ -252,25 +252,14 @@ Depois, confirme as mesmas variantes nas 60 imagens de validação:
 SPLIT=val bash src/experiments/runners/run_aorta_filter_envelope_generalization.sh
 ```
 
-Use `VARIANTS="reference balanced"` para executar somente parte da grade e
-`SAVE_VISUALS=0` para omitir os HTMLs.
+Use `SAVE_VISUALS=0` para omitir os HTMLs. O runner reproduz apenas a
+configuração selecionada: Hough `18-29 px`, filtro robusto, cinco círculos
+sintéticos e envelope `2.25r` com margem axial 10.
 
 As tentativas encerradas de level set adaptativo isolado, correção condicional
 e recuperação de trajetórias curtas estão resumidas no arquivo de experimentos.
 Seus runners foram removidos para evitar novas execuções acidentais.
 
-### Override de vazamento com localização suspeita
-
-O runner `run_aorta_localization_leak_override.sh` testa uma exceção
-conservadora para casos como 11 e 790, bloqueados anteriormente por quatro
-sinais de baixa confiança dos círculos. A tentativa só ocorre quando
-`R_P90 > 2.0`, `circle_fill_q25 >= 0.80` e a fração volumétrica é pelo menos
-`0.015`; a configuração padrão mantém essa exceção desativada.
-
-```bash
-bash src/experiments/runners/run_aorta_localization_leak_override.sh
-```
-
-O runner compara a exceção desligada, o perfil de referência com aceitação de
-5% e 10%, e perfis conservadores leve e forte nos mesmos nove casos focados.
-Os HTMLs são gravados no disco externo configurado por `VISUAL_OUTPUT_DIR`.
+O sweep de raios e o override de vazamento foram encerrados e removidos. A
+comparação completa de 90 imagens selecionou `18-29 px`; as demais faixas e o
+override não apresentaram ganho robusto e permanecem apenas no histórico.

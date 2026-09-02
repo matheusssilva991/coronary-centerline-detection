@@ -154,24 +154,7 @@ def scale_config_to_resolution(
 
     if "level_set_iterations" in groups and "LEVEL_SET" in cfg:
         if factor_xy == 1:  # HIGH RESOLUTION (sem downscale)
-            original_num_iter = int(cfg["LEVEL_SET"]["num_iter"])
             cfg["LEVEL_SET"]["num_iter"] = 70
-
-            # Mantém as proporções temporais do controle adaptativo quando o
-            # checkpoint nominal é ampliado para alta resolução.
-            adaptive = cfg["LEVEL_SET"].get("adaptive")
-            if adaptive and original_num_iter > 0:
-                iteration_scale = cfg["LEVEL_SET"]["num_iter"] / original_num_iter
-                for key in (
-                    "min_iter",
-                    "check_interval",
-                    "early_stop_iteration",
-                ):
-                    if key in adaptive:
-                        adaptive[key] = max(
-                            1,
-                            int(round(adaptive[key] * iteration_scale)),
-                        )
 
     # Se não há scaling necessário, retorna configuração sem mudanças
     if scale == 1.0:

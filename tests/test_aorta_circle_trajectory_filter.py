@@ -80,9 +80,7 @@ class AortaCircleTrajectoryFilterTests(unittest.TestCase):
     def test_cli_accepts_trajectory_axial_margin(self):
         parser = build_parser(Path("/dataset"), Path("/output"))
 
-        args = parser.parse_args(
-            ["--aorta-trajectory-axial-margin-slices", "5"]
-        )
+        args = parser.parse_args(["--aorta-trajectory-axial-margin-slices", "5"])
 
         self.assertEqual(args.aorta_trajectory_axial_margin_slices, 5)
 
@@ -103,8 +101,7 @@ class AortaCircleTrajectoryFilterTests(unittest.TestCase):
     def test_trims_persistently_incompatible_tracking_tail(self):
         stable = [_circle(z) for z in range(100, 60, -1)]
         incompatible_tail = [
-            _circle(z, center_x=35.0, radius=30.0, accum=0.3)
-            for z in range(60, 40, -1)
+            _circle(z, center_x=35.0, radius=30.0, accum=0.3) for z in range(60, 40, -1)
         ]
 
         filtered, diagnostics = filter_aorta_circle_trajectory(
@@ -125,8 +122,7 @@ class AortaCircleTrajectoryFilterTests(unittest.TestCase):
     def test_does_not_trim_tail_below_minimum_coverage(self):
         stable = [_circle(z) for z in range(100, 60, -1)]
         incompatible_tail = [
-            _circle(z, center_x=35.0, radius=30.0, accum=0.3)
-            for z in range(60, 40, -1)
+            _circle(z, center_x=35.0, radius=30.0, accum=0.3) for z in range(60, 40, -1)
         ]
 
         filtered, diagnostics = filter_aorta_circle_trajectory(
@@ -146,8 +142,7 @@ class AortaCircleTrajectoryFilterTests(unittest.TestCase):
     def test_rejects_tail_that_exceeds_maximum_trim_fraction(self):
         stable = [_circle(z) for z in range(100, 60, -1)]
         incompatible_tail = [
-            _circle(z, center_x=35.0, radius=30.0, accum=0.3)
-            for z in range(60, 20, -1)
+            _circle(z, center_x=35.0, radius=30.0, accum=0.3) for z in range(60, 20, -1)
         ]
         original = stable + incompatible_tail
 
@@ -172,17 +167,29 @@ class AortaCircleTrajectoryFilterTests(unittest.TestCase):
     def test_cli_accepts_maximum_tail_trim_fraction(self):
         parser = build_parser(Path("/dataset"), Path("/output"))
 
-        args = parser.parse_args(
-            ["--aorta-circle-filter-max-trim-fraction", "0.4"]
-        )
+        args = parser.parse_args(["--aorta-circle-filter-max-trim-fraction", "0.4"])
 
         self.assertEqual(args.aorta_circle_filter_max_trim_fraction, 0.4)
+
+    def test_cli_accepts_hough_radius_interval(self):
+        parser = build_parser(Path("/dataset"), Path("/output"))
+
+        args = parser.parse_args(
+            [
+                "--aorta-hough-radii-start-px",
+                "19",
+                "--aorta-hough-radii-end-px",
+                "31",
+            ]
+        )
+
+        self.assertEqual(args.aorta_hough_radii_start_px, 19)
+        self.assertEqual(args.aorta_hough_radii_end_px, 31)
 
     def test_extrapolates_short_synthetic_tail_from_stable_circles(self):
         stable = [_circle(z) for z in range(100, 60, -1)]
         incompatible_tail = [
-            _circle(z, center_x=35.0, radius=30.0, accum=0.3)
-            for z in range(60, 40, -1)
+            _circle(z, center_x=35.0, radius=30.0, accum=0.3) for z in range(60, 40, -1)
         ]
 
         filtered, diagnostics = filter_aorta_circle_trajectory(
@@ -216,9 +223,7 @@ class AortaCircleTrajectoryFilterTests(unittest.TestCase):
     def test_cli_accepts_synthetic_tail_slice_count(self):
         parser = build_parser(Path("/dataset"), Path("/output"))
 
-        args = parser.parse_args(
-            ["--aorta-circle-filter-synthetic-tail-slices", "5"]
-        )
+        args = parser.parse_args(["--aorta-circle-filter-synthetic-tail-slices", "5"])
 
         self.assertEqual(args.aorta_circle_filter_synthetic_tail_slices, 5)
 
@@ -240,7 +245,10 @@ class AortaCircleTrajectoryFilterTests(unittest.TestCase):
             parser.parse_args(["--aorta-correction", "conditional"])
 
     def test_mask_guided_fallback_finds_persistent_high_area_tail(self):
-        circles = [_circle(z, center_x=24.0, center_y=24.0, radius=5.0) for z in range(39, -1, -1)]
+        circles = [
+            _circle(z, center_x=24.0, center_y=24.0, radius=5.0)
+            for z in range(39, -1, -1)
+        ]
         mask = np.zeros((48, 48, 40), dtype=np.uint8)
         for circle in circles:
             z = int(circle["slice_index"])

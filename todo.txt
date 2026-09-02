@@ -2,6 +2,7 @@ verificar histogramas dos 4 casos
 media e mediana do histograma completo e acima 300hu
 maximo de cada histograma
 definir numero de voxel da aorta em relação a imagem e usar como critério de parada/refinamento/continuação
-fazer um segundo region growing
 
+adicioanar indicador de possível subsegmentação, sobresegmentação
+fazer um segundo region growing
 verifica se um ramo foi subsegmentado no rg e afroxar um pouco os critérios

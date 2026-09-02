@@ -27,6 +27,7 @@ from .aorta_correction import (
     find_mask_guided_tail_start,
 )
 from .aorta_localization import extrapolate_stable_circle_tail
+from .aorta_segmentation import classify_aorta_segmentation_feedback
 from .pipeline_detection import (
     detect_and_evaluate_ostia,
     filter_located_aorta_circles,
@@ -109,6 +110,7 @@ IMAGE_RESULT_DEFAULTS = {
     "aorta_circle_filter_synthetic_tail_count": 0,
     "aorta_circle_filter_trimmed_tail_count": 0,
     "aorta_circle_filter_trim_start_slice": None,
+    "aorta_circle_filter_detected_tail_start_slice": None,
     "aorta_circle_filter_original_coverage": None,
     "aorta_circle_filter_used_coverage": None,
     "aorta_circle_filter_reason": None,
@@ -127,53 +129,15 @@ IMAGE_RESULT_DEFAULTS = {
     "aorta_segmented_slice_count": None,
     "aorta_voxels_per_segmented_slice": None,
     "aorta_volume_fraction": None,
-    "aorta_level_set_mode": None,
     "aorta_level_set_initial_voxel_count": None,
     "aorta_level_set_raw_voxel_count": None,
     "aorta_level_set_initial_volume_fraction": None,
     "aorta_level_set_raw_volume_fraction": None,
     "aorta_level_set_iterations_used": None,
-    "aorta_level_set_stop_reason": None,
-    "aorta_level_set_checkpoint_count": None,
-    "aorta_level_set_rolled_back": False,
-    "aorta_level_set_mask_change_fraction": None,
-    "aorta_level_set_voxels_per_segmented_slice": None,
     "aorta_level_set_circle_fill_q25": None,
     "aorta_level_set_circle_area_ratio_p90": None,
-    "aorta_level_set_leak_suspected": False,
-    "aorta_level_set_localization_suspected": False,
-    "aorta_level_set_localization_leak_override_triggered": False,
-    "aorta_level_set_leak_signal_count": 0,
-    "aorta_level_set_trigger_iteration": None,
-    "aorta_level_set_trigger_volume_fraction": None,
-    "aorta_level_set_trigger_relative_growth": None,
-    "aorta_level_set_trigger_mask_change_fraction": None,
-    "aorta_level_set_trigger_circle_fill_q25": None,
-    "aorta_level_set_trigger_circle_area_ratio_p90": None,
-    "aorta_level_set_correction_applied": False,
-    "aorta_level_set_correction_method": None,
-    "aorta_level_set_slice_area_jump_p95_before": None,
-    "aorta_level_set_slice_area_jump_p95_after": None,
-    "aorta_level_set_controller_state": None,
-    "aorta_level_set_profile_used": None,
-    "aorta_level_set_rollback_iteration": None,
-    "aorta_level_set_circle_confidence_signal_count": 0,
-    "aorta_level_set_alternative_attempted": False,
-    "aorta_level_set_alternative_accepted": False,
-    "aorta_level_set_conservative_attempted": False,
-    "aorta_level_set_conservative_accepted": False,
-    "aorta_level_set_permissive_attempted": False,
-    "aorta_level_set_permissive_accepted": False,
-    "aorta_level_set_nominal_volume_fraction": None,
-    "aorta_level_set_nominal_circle_fill_q25": None,
-    "aorta_level_set_nominal_circle_area_ratio_p90": None,
-    "aorta_level_set_candidate_voxel_count": None,
-    "aorta_level_set_candidate_volume_fraction": None,
-    "aorta_level_set_candidate_circle_fill_q25": None,
-    "aorta_level_set_candidate_circle_area_ratio_p90": None,
-    "aorta_level_set_candidate_area_ratio_improvement_fraction": None,
-    "aorta_level_set_final_volume_fraction": None,
-    "aorta_level_set_decision_reason": None,
+    "aorta_slice_area_jump_p95": None,
+    "aorta_segmentation_feedback": "insufficient_data",
 }
 
 
@@ -255,8 +219,7 @@ def summarize_aorta_circles(
     valid_circles = [
         circle
         for circle in detected_circles
-        if circle.get("radius") is not None
-        and math.isfinite(float(circle["radius"]))
+        if circle.get("radius") is not None and math.isfinite(float(circle["radius"]))
     ]
     radii_px = [float(circle["radius"]) for circle in valid_circles]
 
@@ -323,14 +286,17 @@ def summarize_aorta_circles(
         if hough_radii.size:
             upper_bound = float(hough_radii[-1])
             detected_array = np.asarray(detected_radii_px)
-            lower_bound_fraction = float(np.mean(np.isclose(detected_array, lower_bound)))
-            upper_bound_fraction = float(np.mean(np.isclose(detected_array, upper_bound)))
+            lower_bound_fraction = float(
+                np.mean(np.isclose(detected_array, lower_bound))
+            )
+            upper_bound_fraction = float(
+                np.mean(np.isclose(detected_array, upper_bound))
+            )
 
     accumulators = [
         float(circle["accum"])
         for circle in detected_valid
-        if circle.get("accum") is not None
-        and math.isfinite(float(circle["accum"]))
+        if circle.get("accum") is not None and math.isfinite(float(circle["accum"]))
     ]
     summary = {
         "aorta_circle_count": circle_count,
@@ -341,9 +307,7 @@ def summarize_aorta_circles(
         "aorta_circle_coverage": (
             circle_count / image_slice_count if image_slice_count else None
         ),
-        "aorta_detected_circle_radius_median_mm": _median_or_none(
-            detected_radii_mm
-        ),
+        "aorta_detected_circle_radius_median_mm": _median_or_none(detected_radii_mm),
         "aorta_interpolated_circle_radius_median_mm": _median_or_none(
             interpolated_radii_mm
         ),
@@ -376,9 +340,7 @@ def summarize_aorta_volume(aorta_mask, image_voxel_count):
         "aorta_mask_voxels": aorta_mask_voxels,
         "aorta_segmented_slice_count": segmented_slice_count,
         "aorta_voxels_per_segmented_slice": (
-            aorta_mask_voxels / segmented_slice_count
-            if segmented_slice_count
-            else None
+            aorta_mask_voxels / segmented_slice_count if segmented_slice_count else None
         ),
         "aorta_volume_fraction": (
             aorta_mask_voxels / image_voxel_count if image_voxel_count else None
@@ -400,18 +362,11 @@ def _segment_aorta_with_circle_filter_fallback(
     level_set_config = config["LEVEL_SET"]
     trajectory_filter = circle_config.get("trajectory_filter", {})
     # Primeiro avalia normalmente a trajetória resultante do filtro robusto.
-    filtered_summary = summarize_aorta_circles(
-        filtered_circles,
-        image_slice_count,
-        scaled_spacing,
-        circle_config,
-    )
     candidate = segment_aorta_with_diagnostics(
         lcc_image,
         filtered_circles,
         level_set_config,
         use_gpu=config.get("USE_GPU", False),
-        circle_summary=filtered_summary,
     )
 
     # Quando a cobertura impede o filtro geométrico de agir, a própria máscara
@@ -486,18 +441,11 @@ def _segment_aorta_with_circle_filter_fallback(
                 ),
             )
             retry_circles = stable_circles + synthetic
-            retry_summary = summarize_aorta_circles(
-                retry_circles,
-                image_slice_count,
-                scaled_spacing,
-                circle_config,
-            )
             retry = segment_aorta_with_diagnostics(
                 lcc_image,
                 retry_circles,
                 level_set_config,
                 use_gpu=config.get("USE_GPU", False),
-                circle_summary=retry_summary,
             )
             retry_metrics = calculate_aorta_candidate_metrics(
                 retry.mask,
@@ -547,11 +495,7 @@ def _segment_aorta_with_circle_filter_fallback(
                         ),
                         "aorta_circle_filter_reason": (
                             "mask_ratio_tail_trimmed"
-                            + (
-                                "+stable_tail_extrapolated"
-                                if synthetic
-                                else ""
-                            )
+                            + ("+stable_tail_extrapolated" if synthetic else "")
                         ),
                     }
                 )
@@ -629,9 +573,6 @@ def process_image(img_id, config, base_path, visual_output_dir=None):
     5. segmenta as artérias a partir dos óstios.
     """
     result = _new_image_result(img_id)
-    result["aorta_level_set_mode"] = config.get("LEVEL_SET", {}).get(
-        "iteration_mode", "fixed"
-    )
     try:
         # Carrega imagem/label e gera o volume pré-processado (LCC).
         image_data = load_and_preprocess_image(img_id, base_path, config)
@@ -701,6 +642,15 @@ def process_image(img_id, config, base_path, visual_output_dir=None):
             summarize_aorta_volume(
                 aorta_mask,
                 result["image_voxels"],
+            )
+        )
+        # Gera apenas um alerta de qualidade; a classificação não modifica a máscara.
+        result["aorta_segmentation_feedback"] = (
+            classify_aorta_segmentation_feedback(
+                result.get("aorta_level_set_circle_fill_q25"),
+                result.get("aorta_level_set_circle_area_ratio_p90"),
+                result.get("aorta_volume_fraction"),
+                config.get("LEVEL_SET", {}).get("quality_feedback"),
             )
         )
 

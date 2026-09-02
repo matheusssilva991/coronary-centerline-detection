@@ -6,7 +6,11 @@ from unittest.mock import patch
 
 import numpy as np
 
-from segmentation_pipeline import _apply_execution_overrides, resolve_visual_output_dir
+from segmentation_pipeline import (
+    _apply_execution_overrides,
+    resolve_visual_output_dir,
+    run_processing_split,
+)
 from utils.segmentation.pipeline_cli import build_parser
 from utils.segmentation.pipeline_visuals import save_segmentation_visual
 
@@ -32,16 +36,7 @@ class PipelineVisualTests(unittest.TestCase):
             "aorta_segmentation_experiments/val/circle_filter_conservative",
         )
 
-    def test_cli_selects_adaptive_aorta_level_set(self):
-        parser = build_parser(Path("/dataset"), Path("/output"))
-
-        default_args = parser.parse_args([])
-        adaptive_args = parser.parse_args(["--aorta-level-set-mode", "adaptive"])
-
-        self.assertIsNone(default_args.aorta_level_set_mode)
-        self.assertEqual(adaptive_args.aorta_level_set_mode, "adaptive")
-
-    def test_cli_overrides_aorta_level_set_and_mask_guided_parameters(self):
+    def test_cli_overrides_fixed_level_set_and_mask_guided_parameters(self):
         parser = build_parser(Path("/dataset"), Path("/output"))
         args = parser.parse_args(
             [
@@ -55,21 +50,6 @@ class PipelineVisualTests(unittest.TestCase):
                 "1250",
                 "--aorta-opening-radius",
                 "1",
-                "--aorta-conservative-balloon",
-                "0.4",
-                "--aorta-conservative-alpha",
-                "1750",
-                "--aorta-conservative-threshold-percentile",
-                "60",
-                "--aorta-conservative-min-ratio-improvement",
-                "0.1",
-                "--aorta-localization-leak-override",
-                "--aorta-localization-leak-min-area-ratio-p90",
-                "2.0",
-                "--aorta-localization-leak-min-circle-fill-q25",
-                "0.8",
-                "--aorta-localization-leak-min-volume-fraction",
-                "0.015",
                 "--aorta-mask-guided-area-ratio-p90",
                 "2.3",
                 "--aorta-mask-guided-max-fill-loss",
@@ -87,19 +67,6 @@ class PipelineVisualTests(unittest.TestCase):
         self.assertEqual(config["LEVEL_SET"]["balloon"], 0.7)
         self.assertEqual(config["LEVEL_SET"]["alpha"], 1250.0)
         self.assertEqual(config["LEVEL_SET"]["leak_removal_radius"], 1)
-        adaptive = config["LEVEL_SET"]["adaptive"]
-        self.assertEqual(adaptive["conservative"]["balloon"], 0.4)
-        self.assertEqual(adaptive["conservative"]["alpha"], 1750.0)
-        self.assertEqual(
-            adaptive["conservative"]["threshold_percentile"],
-            60.0,
-        )
-        self.assertEqual(adaptive["min_area_ratio_improvement_fraction"], 0.1)
-        localization_override = adaptive["localization_leak_override"]
-        self.assertTrue(localization_override["enabled"])
-        self.assertEqual(localization_override["min_area_ratio_p90"], 2.0)
-        self.assertEqual(localization_override["min_circle_fill_q25"], 0.8)
-        self.assertEqual(localization_override["min_volume_fraction"], 0.015)
         mask_guided = config["CIRCLE_DETECTION"]["trajectory_filter"][
             "mask_guided_fallback"
         ]
@@ -112,6 +79,17 @@ class PipelineVisualTests(unittest.TestCase):
         parser = build_parser(Path("/dataset"), Path("/output"))
         with self.assertRaises(SystemExit):
             parser.parse_args(["--aorta-recovery-max-extra-slices", "15"])
+
+    def test_cli_rejects_removed_adaptive_level_set_flags(self):
+        parser = build_parser(Path("/dataset"), Path("/output"))
+        for option in (
+            "--aorta-level-set-mode",
+            "--aorta-conservative-balloon",
+            "--aorta-localization-leak-override",
+        ):
+            with self.subTest(option=option), self.assertRaises(SystemExit):
+                values = [option, "adaptive"] if option.endswith("mode") else [option]
+                parser.parse_args(values)
 
     def test_cli_rejects_removed_aorta_correction_flags(self):
         parser = build_parser(Path("/dataset"), Path("/output"))
@@ -167,6 +145,43 @@ class PipelineVisualTests(unittest.TestCase):
         visual_dir = resolve_visual_output_dir(args, run_dir, Path("/repo/output"))
 
         self.assertEqual(visual_dir, run_dir / "visual")
+
+    @patch("segmentation_pipeline.print_split_summary")
+    @patch("segmentation_pipeline.make_result_dataframe")
+    @patch("segmentation_pipeline.save_split_metadata")
+    @patch("segmentation_pipeline.merge_batch_results")
+    @patch("segmentation_pipeline.run_pipeline")
+    def test_processing_does_not_repeat_split_inside_visual_directory(
+        self,
+        run_pipeline,
+        _merge_batch_results,
+        _save_split_metadata,
+        make_result_dataframe,
+        _print_split_summary,
+    ):
+        run_pipeline.return_value = {
+            "details": [],
+            "execution_time": 1.0,
+            "batch_timing_summary": {},
+        }
+        make_result_dataframe.return_value = []
+        visual_dir = Path("/external/run/visual")
+
+        run_processing_split(
+            "train",
+            [13],
+            Path("/run/numeric"),
+            {"SAVE_SEGMENTATION_VISUALS": True},
+            SimpleNamespace(resume_batch=0),
+            Path("/dataset"),
+            Path("/output"),
+            visual_dir,
+        )
+
+        self.assertEqual(
+            run_pipeline.call_args.kwargs["visual_output_dir"],
+            visual_dir,
+        )
 
     @patch("utils.segmentation.pipeline_visuals.visualize_aorta_ostia_artery")
     def test_saves_combined_visual_in_requested_directory(self, visualize):

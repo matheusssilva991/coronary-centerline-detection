@@ -24,14 +24,17 @@ output/segmentation/
 ## Convencoes
 
 - `mid_res/` e `high_res/` identificam a resolucao efetiva do pipeline.
-- `train/`, `val/` e `test/` identificam o conjunto processado.
+- `train/`, `val/`, `test/` e `full/` identificam a coorte processada. Cada
+  execução do pipeline processa somente uma delas; `full` usa todos os exames
+  como uma coorte única, sem criar a divisão train/val/test.
 - Pastas no formato `AAAA-MM-DD_HH-MM-SS` identificam uma execucao.
 - Grupos nomeados, como `fuzzy_comparison/`, reúnem runs do mesmo experimento.
 - Resultados brutos pertencem a `runs/`; artefatos derivados pertencem a
   `analysis/`.
 - Os HTMLs 3D podem ser mantidos fora do repositório com
   `--visual-output-dir /caminho/externo`; CSVs, configurações e logs continuam
-  dentro do run, enquanto a hierarquia da pasta `visual/` é espelhada na raiz
+  dentro do run. Os arquivos são salvos diretamente em `visual/`, sem repetir
+  o nome do split dentro dessa pasta, e a hierarquia do run é espelhada na raiz
   externa.
 
 Consulte primeiro o README da pasta de interesse antes de reutilizar um run.

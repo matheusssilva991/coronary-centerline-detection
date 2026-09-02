@@ -10,8 +10,10 @@ segmentação arterial. Todos os candidatos atuais usam threshold inferior de
 | Pasta | Método | Situação |
 |---|---|---|
 | `baseline_fixed_levelset_p99_9_m300` | Círculos originais + level set fixo | Referência quantitativa |
-| `mask_guided_tail_fillloss015_rp90_2_5_rz2_5_synthetic5_envelope_k2_25_margin10_p99_9_m300` | Filtro robusto, cinco círculos sintéticos, envelope `2.25r`, margem axial de 10 fatias e fallback guiado por `R_z` | Melhor candidato atual; corrige o exame 603 sem perder sucessos de óstios |
-| `filter_envelope_generalization/` | Variações próximas do envelope atual | Confirmação de estabilidade antes da validação completa |
+| `levelset_b0_6_r0_10_i26_p99_9_m300` | Level set fixo com pressão, semente e iterações refinadas | Melhor configuração isolada do level set |
+| `robust_filter_synthetic5_envelope_k2_25_margin10_p99_9_m300` | Filtro robusto, cinco círculos sintéticos e envelope | Referência visual do filtro combinado |
+| `filter_envelope_generalization/` | Confirmação histórica do envelope `2.25r` com margem axial 10 | Evidência da seleção |
+| `selected_hough18_29_filter_envelope_p99_9_m300/` | Hough `18-29 px`, filtro robusto, cinco círculos sintéticos e envelope `2.25r` | Configuração ativa selecionada em 90 imagens |
 
 `train/` e `val/` identificam a coorte. Dentro de cada timestamp, `config/`
 registra a configuração efetiva, `numeric/` contém CSVs e metadados e `logs/`
@@ -26,8 +28,7 @@ Os nomes descrevem os mecanismos usados:
   trajetória de círculos antes do level set;
 - `cov040`: exige cobertura original mínima de 40% das fatias;
 - `maxtrim040`: rejeita cortes que removeriam mais de 40% da trajetória;
-- `adaptive_levelset` ou `fixed_levelset`: identifica o controlador de
-  iterações;
+- `fixed_levelset`: identifica a evolução com número fixo de iterações;
 - `trajectory_envelope_k2_25_margin5`: limita a máscara ao tubo de raio
   `2.25r` e prolonga o envelope por cinco fatias nas extremidades;
 - `synthetic5`: prolonga a última região estável com cinco círculos estimados
@@ -48,10 +49,9 @@ altera automaticamente o baseline do projeto.
 SPLIT=train bash src/experiments/runners/run_aorta_filter_envelope_generalization.sh
 ```
 
-Os runs de `filter_envelope_generalization/` comparam quatro combinações
-próximas da referência visual. Todos usam filtro robusto, cinco círculos
-sintéticos e, por padrão, nenhuma recuperação posterior; os nomes registram o
-fator radial `k` e a margem axial.
+O runner ativo reproduz somente a configuração selecionada. Grades anteriores
+de envelope, raios e controle adaptativo foram encerradas para evitar novas
+execuções acidentais.
 
 Na combinação atual, cinco círculos sintéticos recuperaram os exames `315` e
 `676`. Dez círculos não alteraram Dice ou sucesso dos óstios e reintroduziram

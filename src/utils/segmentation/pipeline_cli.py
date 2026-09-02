@@ -20,22 +20,20 @@ def _parse_rg_comparison_window(value: str) -> int:
         ) from exc
 
     if window == 0 or window < -1:
-        raise argparse.ArgumentTypeError(
-            "use ALL, -1 ou um número inteiro positivo"
-        )
+        raise argparse.ArgumentTypeError("use ALL, -1 ou um número inteiro positivo")
     return window
 
 
 PIPELINE_EPILOG = """
 Exemplos de uso:
-  # Processar todos os conjuntos
+  # Processar o dataset completo como um único conjunto
   python segmentation_pipeline.py
 
   # Processar apenas treino
   python segmentation_pipeline.py --split train
 
-  # Processar validação e teste
-  python segmentation_pipeline.py --split val test
+  # Processar validação
+  python segmentation_pipeline.py --split val
 
   # Usar OpenCV para downscaling com interpolação AREA
   python segmentation_pipeline.py --downscale-method opencv
@@ -51,9 +49,6 @@ Exemplos de uso:
 
   # Escolher método de segmentação arterial
   python segmentation_pipeline.py --split val --artery-method fc
-
-  # Ativar o controle adaptativo das iterações do level set da aorta
-  python segmentation_pipeline.py --split train --aorta-level-set-mode adaptive
 
   # Comparar candidatos do region growing com a média acumulada da região
   python segmentation_pipeline.py --split train --rg-comparison-window ALL
@@ -88,9 +83,6 @@ Exemplos de uso:
   # Se falhar no lote 3, retomar no MESMO diretório:
     python segmentation_pipeline.py --split test --num-batches 70 --resume-batch 3 --resume-dir output/segmentation/runs/mid_res/2026-03-14_10-30-00
 
-    # Retomada explícita por subset:
-    python segmentation_pipeline.py --split all --num-batches 70 --resume-batches train=0,val=3,test=0
-
   # Versão curta (se no mesmo diretório):
     python segmentation_pipeline.py --split test --num-batches 70 --resume-batch 3 --resume-dir ./output/segmentation/runs/mid_res/2026-03-14_10-30-00
 
@@ -105,51 +97,10 @@ Arquivos de saída:
   - numeric/ostios_{split}_lote_1_summary.csv, numeric/ostios_{split}_lote_2_summary.csv, etc: Resultados de cada lote
   - numeric/ostios_{split}_metadata.json: Metadados completos
   - config/effective_pipeline_config.json: Config efetiva usada no run
-  - config/split_ids.json: IDs processados por split
+  - config/split_ids.json: IDs processados na coorte selecionada
   - logs/pipeline.log: Log da execução
-  - visual/{split}/*.html: Visualizações 3D; pode ser redirecionado com --visual-output-dir
+  - visual/*.html: Visualizações 3D; pode ser redirecionado com --visual-output-dir
 """
-
-
-def parse_resume_batches(resume_batches_arg):
-    """Converte um argumento no formato 'train=1,val=0,test=3' em um dicionário."""
-    valid_splits = {"train", "val", "test"}
-    resume_map = {}
-
-    if not resume_batches_arg:
-        return resume_map
-
-    entries = [
-        entry.strip() for entry in resume_batches_arg.split(",") if entry.strip()
-    ]
-    for entry in entries:
-        if "=" not in entry:
-            raise ValueError(
-                "Formato inválido para --resume-batches. Use algo como 'train=1,val=0,test=3'."
-            )
-
-        split_name, batch_text = entry.split("=", 1)
-        split_name = split_name.strip()
-        batch_text = batch_text.strip()
-
-        if split_name not in valid_splits:
-            raise ValueError(
-                f"Split inválido em --resume-batches: {split_name}. Use train, val ou test."
-            )
-
-        try:
-            batch_num = int(batch_text)
-        except ValueError as exc:
-            raise ValueError(
-                f"Valor inválido para o split '{split_name}' em --resume-batches: {batch_text}"
-            ) from exc
-        if batch_num < 0:
-            raise ValueError(
-                f"Valor inválido para o split '{split_name}' em --resume-batches: {batch_text}. Use 0 ou maior."
-            )
-        resume_map[split_name] = batch_num
-
-    return resume_map
 
 
 def build_parser(default_base_path, default_output_dir):
@@ -162,10 +113,12 @@ def build_parser(default_base_path, default_output_dir):
 
     parser.add_argument(
         "--split",
-        nargs="+",
-        choices=["train", "val", "test", "all"],
-        default=["all"],
-        help="Conjunto(s) para processar (padrão: all)",
+        choices=["train", "val", "test", "full"],
+        default="full",
+        help=(
+            "Conjunto único para processar. 'full' usa todos os exames como "
+            "uma única coorte, sem dividi-los em train/val/test (padrão: full)."
+        ),
     )
     parser.add_argument(
         "--resolution",
@@ -196,17 +149,6 @@ def build_parser(default_base_path, default_output_dir):
         help=(
             "Método de segmentação arterial: 'rg'/'region_growing' ou "
             "'fc'/'fuzzy_connectedness'."
-        ),
-    )
-    parser.add_argument(
-        "--aorta-level-set-mode",
-        choices=["fixed", "adaptive"],
-        default=None,
-        help=(
-            "Controle de iterações do level set da aorta: 'fixed' preserva o "
-            "total configurado; 'adaptive' classifica checkpoints e pode "
-            "reiniciar uma evolução conservadora a partir de um checkpoint "
-            "anterior quando R_P90 indicar sobresegmentação."
         ),
     )
     parser.add_argument(
@@ -272,79 +214,19 @@ def build_parser(default_base_path, default_output_dir):
         ),
     )
     parser.add_argument(
-        "--aorta-oversegmented-area-ratio-p90",
-        type=float,
+        "--aorta-hough-radii-start-px",
+        type=int,
+        default=None,
+        help="Menor raio, em pixels, incluído na busca circular da aorta.",
+    )
+    parser.add_argument(
+        "--aorta-hough-radii-end-px",
+        type=int,
         default=None,
         help=(
-            "Sobrescreve o limiar de R_P90 que aciona a evolução conservadora "
-            "do level set adaptativo."
+            "Limite superior exclusivo dos raios da Hough. Por exemplo, 30 "
+            "testa raios até 29 pixels."
         ),
-    )
-    parser.add_argument(
-        "--aorta-conservative-balloon",
-        type=float,
-        default=None,
-        help="Forca balloon usada na evolucao conservadora da aorta.",
-    )
-    parser.add_argument(
-        "--aorta-conservative-alpha",
-        type=float,
-        default=None,
-        help="Sensibilidade ao mapa de bordas na evolucao conservadora.",
-    )
-    parser.add_argument(
-        "--aorta-conservative-threshold-percentile",
-        type=float,
-        default=None,
-        help=(
-            "Percentil do mapa de gradiente usado como threshold na evolucao "
-            "conservadora. Deve estar entre 0 e 100."
-        ),
-    )
-    parser.add_argument(
-        "--aorta-conservative-min-ratio-improvement",
-        type=float,
-        default=None,
-        help=(
-            "Reducao relativa minima de R_P90 exigida para aceitar a evolucao "
-            "conservadora. Deve estar entre 0 e 1."
-        ),
-    )
-    localization_leak_override_group = parser.add_mutually_exclusive_group()
-    localization_leak_override_group.add_argument(
-        "--aorta-localization-leak-override",
-        dest="aorta_localization_leak_override",
-        action="store_true",
-        default=None,
-        help=(
-            "Permite tentar a evolucao conservadora quando a localizacao dos "
-            "circulos e suspeita, mas R_P90, preenchimento e volume indicam "
-            "conjuntamente um vazamento forte."
-        ),
-    )
-    localization_leak_override_group.add_argument(
-        "--no-aorta-localization-leak-override",
-        dest="aorta_localization_leak_override",
-        action="store_false",
-        help="Desativa a excecao de vazamento para localizacoes suspeitas.",
-    )
-    parser.add_argument(
-        "--aorta-localization-leak-min-area-ratio-p90",
-        type=float,
-        default=None,
-        help="R_P90 minimo, exclusivo, para superar o bloqueio por localizacao.",
-    )
-    parser.add_argument(
-        "--aorta-localization-leak-min-circle-fill-q25",
-        type=float,
-        default=None,
-        help="Preenchimento Q25 minimo dos circulos para permitir a excecao.",
-    )
-    parser.add_argument(
-        "--aorta-localization-leak-min-volume-fraction",
-        type=float,
-        default=None,
-        help="Fracao volumetrica minima da aorta para permitir a excecao.",
     )
     parser.add_argument(
         "--aorta-circle-filter",
@@ -538,7 +420,7 @@ def build_parser(default_base_path, default_output_dir):
         default=None,
         help=(
             "Processa somente os IDs informados, separados por vírgula, dentro "
-            "dos splits selecionados. Exemplo: --image-ids 44,330,603."
+            "do split selecionado. Exemplo: --image-ids 44,330,603."
         ),
     )
     parser.add_argument(
@@ -576,12 +458,6 @@ def build_parser(default_base_path, default_output_dir):
         help="Número do lote para retomar, em numeração humana/arquivo (ex: 11 retoma salvando lote_11). Padrão: 0 = começar do início.",
     )
     parser.add_argument(
-        "--resume-batches",
-        type=str,
-        default=None,
-        help="Retomada explícita por subset no formato 'train=1,val=0,test=3'. Se informado, sobrescreve --resume-batch para os splits listados.",
-    )
-    parser.add_argument(
         "--resume-dir",
         type=str,
         default=None,
@@ -613,9 +489,7 @@ def parse_pipeline_args(default_base_path, default_output_dir):
         args.aorta_level_set_radius_reduction_factor is not None
         and args.aorta_level_set_radius_reduction_factor <= 0
     ):
-        parser.error(
-            "--aorta-level-set-radius-reduction-factor deve ser maior que 0"
-        )
+        parser.error("--aorta-level-set-radius-reduction-factor deve ser maior que 0")
     if args.aorta_level_set_alpha is not None and args.aorta_level_set_alpha <= 0:
         parser.error("--aorta-level-set-alpha deve ser maior que 0")
     if args.aorta_opening_radius is not None and args.aorta_opening_radius < 0:
@@ -624,59 +498,7 @@ def parse_pipeline_args(default_base_path, default_output_dir):
         args.aorta_trajectory_axial_margin_slices is not None
         and args.aorta_trajectory_axial_margin_slices < 0
     ):
-        parser.error(
-            "--aorta-trajectory-axial-margin-slices deve ser zero ou maior"
-        )
-    if (
-        args.aorta_oversegmented_area_ratio_p90 is not None
-        and args.aorta_oversegmented_area_ratio_p90 <= 0
-    ):
-        parser.error("--aorta-oversegmented-area-ratio-p90 deve ser maior que 0")
-    if (
-        args.aorta_conservative_balloon is not None
-        and args.aorta_conservative_balloon <= 0
-    ):
-        parser.error("--aorta-conservative-balloon deve ser maior que 0")
-    if (
-        args.aorta_conservative_alpha is not None
-        and args.aorta_conservative_alpha <= 0
-    ):
-        parser.error("--aorta-conservative-alpha deve ser maior que 0")
-    if (
-        args.aorta_conservative_threshold_percentile is not None
-        and not 0 <= args.aorta_conservative_threshold_percentile <= 100
-    ):
-        parser.error(
-            "--aorta-conservative-threshold-percentile deve estar entre 0 e 100"
-        )
-    if (
-        args.aorta_conservative_min_ratio_improvement is not None
-        and not 0 <= args.aorta_conservative_min_ratio_improvement <= 1
-    ):
-        parser.error(
-            "--aorta-conservative-min-ratio-improvement deve estar entre 0 e 1"
-        )
-    if (
-        args.aorta_localization_leak_min_area_ratio_p90 is not None
-        and args.aorta_localization_leak_min_area_ratio_p90 <= 0
-    ):
-        parser.error(
-            "--aorta-localization-leak-min-area-ratio-p90 deve ser maior que 0"
-        )
-    if (
-        args.aorta_localization_leak_min_circle_fill_q25 is not None
-        and not 0 <= args.aorta_localization_leak_min_circle_fill_q25 <= 1
-    ):
-        parser.error(
-            "--aorta-localization-leak-min-circle-fill-q25 deve estar entre 0 e 1"
-        )
-    if (
-        args.aorta_localization_leak_min_volume_fraction is not None
-        and not 0 <= args.aorta_localization_leak_min_volume_fraction <= 1
-    ):
-        parser.error(
-            "--aorta-localization-leak-min-volume-fraction deve estar entre 0 e 1"
-        )
+        parser.error("--aorta-trajectory-axial-margin-slices deve ser zero ou maior")
     if (
         args.aorta_mask_guided_area_ratio_p90 is not None
         and args.aorta_mask_guided_area_ratio_p90 <= 0
@@ -699,7 +521,9 @@ def parse_pipeline_args(default_base_path, default_output_dir):
                 if value.strip()
             ]
         except ValueError:
-            parser.error("--image-ids deve conter somente inteiros separados por vírgula")
+            parser.error(
+                "--image-ids deve conter somente inteiros separados por vírgula"
+            )
         if not args.image_ids:
             parser.error("--image-ids não pode ser vazio")
         args.image_ids = list(dict.fromkeys(args.image_ids))
@@ -712,10 +536,8 @@ def parse_pipeline_args(default_base_path, default_output_dir):
         if run_group.is_absolute() or ".." in run_group.parts:
             parser.error("--run-group deve ser um caminho relativo sem '..'")
 
-    try:
-        resume_batches_overrides = parse_resume_batches(args.resume_batches)
-    except ValueError as exc:
-        parser.error(str(exc))
+    if args.split == "full" and args.split_config:
+        parser.error("--split-config não se aplica a --split full")
 
     args.base_path = Path(args.base_path).expanduser()
     args.output_dir = Path(args.output_dir).expanduser()
@@ -726,14 +548,6 @@ def parse_pipeline_args(default_base_path, default_output_dir):
     args.split_config = (
         Path(args.split_config).expanduser() if args.split_config else None
     )
-    args.resume_batches_by_split = {
-        "train": args.resume_batch,
-        "val": args.resume_batch,
-        "test": args.resume_batch,
-    }
-    args.resume_batches_by_split.update(resume_batches_overrides)
-    args.resume_requested = any(
-        batch > 0 for batch in args.resume_batches_by_split.values()
-    )
+    args.resume_requested = args.resume_batch > 0
 
     return args

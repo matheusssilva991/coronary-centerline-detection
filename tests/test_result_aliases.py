@@ -53,47 +53,15 @@ class ResultAliasTests(unittest.TestCase):
                     "aorta_circle_radius_median_mm": 14.2,
                     "aorta_circle_radius_max_step_change_mm": 1.3,
                     "aorta_circle_upper_radius_bound_fraction": 0.25,
-                    "aorta_level_set_mode": "adaptive",
                     "aorta_level_set_initial_voxel_count": 40,
                     "aorta_level_set_raw_voxel_count": 180,
                     "aorta_level_set_initial_volume_fraction": 0.04,
                     "aorta_level_set_raw_volume_fraction": 0.18,
                     "aorta_level_set_iterations_used": 31,
-                    "aorta_level_set_stop_reason": "nominal_corrected",
-                    "aorta_level_set_checkpoint_count": 4,
-                    "aorta_level_set_rolled_back": True,
-                    "aorta_level_set_mask_change_fraction": 0.008,
                     "aorta_level_set_circle_fill_q25": 0.87,
                     "aorta_level_set_circle_area_ratio_p90": 1.4,
-                    "aorta_level_set_leak_suspected": True,
-                    "aorta_level_set_localization_suspected": False,
-                    "aorta_level_set_leak_signal_count": 2,
-                    "aorta_level_set_trigger_iteration": 26,
-                    "aorta_level_set_trigger_volume_fraction": 0.019,
-                    "aorta_level_set_trigger_relative_growth": 0.3,
-                    "aorta_level_set_trigger_mask_change_fraction": 0.2,
-                    "aorta_level_set_trigger_circle_fill_q25": 0.86,
-                    "aorta_level_set_trigger_circle_area_ratio_p90": 2.2,
-                    "aorta_level_set_correction_applied": True,
-                    "aorta_level_set_correction_method": "contractive_level_set",
-                    "aorta_level_set_slice_area_jump_p95_before": 0.3,
-                    "aorta_level_set_slice_area_jump_p95_after": 0.2,
-                    "aorta_level_set_controller_state": "oversegmented",
-                    "aorta_level_set_profile_used": "conservative",
-                    "aorta_level_set_rollback_iteration": 26,
-                    "aorta_level_set_circle_confidence_signal_count": 3,
-                    "aorta_level_set_alternative_attempted": True,
-                    "aorta_level_set_alternative_accepted": True,
-                    "aorta_level_set_conservative_attempted": True,
-                    "aorta_level_set_conservative_accepted": True,
-                    "aorta_level_set_nominal_volume_fraction": 0.025,
-                    "aorta_level_set_candidate_voxel_count": 110,
-                    "aorta_level_set_candidate_volume_fraction": 0.02,
-                    "aorta_level_set_candidate_circle_fill_q25": 0.865,
-                    "aorta_level_set_candidate_circle_area_ratio_p90": 1.8,
-                    "aorta_level_set_candidate_area_ratio_improvement_fraction": 0.1,
-                    "aorta_level_set_final_volume_fraction": 0.018,
-                    "aorta_level_set_decision_reason": "accepted",
+                    "aorta_slice_area_jump_p95": 0.2,
+                    "aorta_segmentation_feedback": "adequate",
                 }
             ]
         )
@@ -112,7 +80,6 @@ class ResultAliasTests(unittest.TestCase):
         self.assertEqual(
             readable.loc[0, "aorta_circle_upper_radius_bound_fraction"], 0.25
         )
-        self.assertEqual(readable.loc[0, "aorta_level_set_mode"], "adaptive")
         self.assertEqual(
             readable.loc[0, "aorta_level_set_initial_voxel_count"], 40
         )
@@ -124,77 +91,29 @@ class ResultAliasTests(unittest.TestCase):
             readable.loc[0, "aorta_level_set_raw_volume_fraction"], 0.18
         )
         self.assertEqual(readable.loc[0, "aorta_level_set_iterations_used"], 31)
-        self.assertEqual(
-            readable.loc[0, "aorta_level_set_stop_reason"], "nominal_corrected"
-        )
-        self.assertEqual(readable.loc[0, "aorta_level_set_checkpoint_count"], 4)
-        self.assertEqual(readable.loc[0, "aorta_level_set_rolled_back"], "yes")
-        self.assertEqual(readable.loc[0, "aorta_level_set_mask_change_fraction"], 0.008)
         self.assertEqual(readable.loc[0, "aorta_level_set_circle_fill_q25"], 0.87)
         self.assertEqual(readable.loc[0, "aorta_level_set_circle_area_ratio_p90"], 1.4)
-        self.assertEqual(readable.loc[0, "aorta_level_set_leak_suspected"], "yes")
+        self.assertEqual(readable.loc[0, "aorta_slice_area_jump_p95"], 0.2)
         self.assertEqual(
-            readable.loc[0, "aorta_level_set_localization_suspected"], "no"
-        )
-        self.assertEqual(readable.loc[0, "aorta_level_set_leak_signal_count"], 2)
-        self.assertEqual(readable.loc[0, "aorta_level_set_trigger_iteration"], 26)
-        self.assertEqual(
-            readable.loc[0, "aorta_level_set_correction_applied"], "yes"
-        )
-        self.assertEqual(
-            readable.loc[0, "aorta_level_set_correction_method"],
-            "contractive_level_set",
-        )
-        self.assertEqual(
-            readable.loc[0, "aorta_level_set_slice_area_jump_p95_after"], 0.2
-        )
-        self.assertEqual(
-            readable.loc[0, "aorta_level_set_controller_state"], "oversegmented"
-        )
-        self.assertEqual(
-            readable.loc[0, "aorta_level_set_profile_used"], "conservative"
-        )
-        self.assertEqual(readable.loc[0, "aorta_level_set_rollback_iteration"], 26)
-        self.assertEqual(
-            readable.loc[0, "aorta_level_set_alternative_accepted"], "yes"
-        )
-        self.assertEqual(
-            readable.loc[0, "aorta_level_set_candidate_voxel_count"],
-            110,
-        )
-        self.assertEqual(
-            readable.loc[
-                0,
-                "aorta_level_set_candidate_area_ratio_improvement_fraction",
-            ],
-            0.1,
-        )
-        self.assertEqual(
-            readable.loc[0, "aorta_level_set_final_volume_fraction"], 0.018
+            readable.loc[0, "aorta_segmentation_feedback"],
+            "adequate",
         )
 
-    def test_reads_legacy_contractive_refinement_columns(self):
-        historical = pd.DataFrame(
+    def test_omits_removed_aorta_controller_fields_from_new_results(self):
+        internal = make_result_dataframe(
             [
                 {
                     "IMG_ID": 1,
+                    "aorta_level_set_checkpoint_count": 4,
+                    "aorta_level_set_controller_state": "oversegmented",
                     "aorta_level_set_refinement_applied": True,
-                    "aorta_level_set_refinement_accepted": True,
-                    "aorta_level_set_refinement_iterations": 3,
-                    "aorta_level_set_refinement_transition_mode": "gradual",
                 }
             ]
         )
 
-        readable = make_readable_results_dataframe(historical)
-
-        self.assertEqual(readable.loc[0, "aorta_level_set_refinement_applied"], "yes")
-        self.assertEqual(readable.loc[0, "aorta_level_set_refinement_accepted"], "yes")
-        self.assertEqual(readable.loc[0, "aorta_level_set_refinement_iterations"], 3)
-        self.assertEqual(
-            readable.loc[0, "aorta_level_set_refinement_transition_mode"],
-            "gradual",
-        )
+        self.assertNotIn("aorta_level_set_checkpoint_count", internal.columns)
+        self.assertNotIn("aorta_level_set_controller_state", internal.columns)
+        self.assertNotIn("aorta_level_set_refinement_applied", internal.columns)
 
 
 if __name__ == "__main__":

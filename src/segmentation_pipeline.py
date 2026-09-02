@@ -18,7 +18,7 @@ from utils.project.config import (
     load_config_json,
     scale_config_to_resolution,
 )
-from utils.project.dataset import get_data_splits
+from utils.project.dataset import get_data_splits, list_dataset_image_ids
 from utils.project.results import (
     create_timestamped_output_dir,
     load_batch_timing_records,
@@ -149,9 +149,6 @@ def _apply_execution_overrides(config, args):
         if value is not None:
             config.setdefault(section, {})[config_key] = value
 
-    level_set_mode = getattr(args, "aorta_level_set_mode", None)
-    if level_set_mode is not None:
-        config.setdefault("LEVEL_SET", {})["iteration_mode"] = level_set_mode
     level_set_config = config.setdefault("LEVEL_SET", {})
     level_set_overrides = {
         "num_iter": getattr(args, "aorta_level_set_iterations", None),
@@ -185,87 +182,28 @@ def _apply_execution_overrides(config, args):
         config.setdefault("LEVEL_SET", {})["trajectory_axial_margin_slices"] = int(
             trajectory_axial_margin
         )
-    oversegmented_area_ratio = getattr(
-        args,
-        "aorta_oversegmented_area_ratio_p90",
-        None,
-    )
-    if oversegmented_area_ratio is not None:
-        adaptive_config = config.setdefault("LEVEL_SET", {}).setdefault(
-            "adaptive",
-            {},
+    circle_detection_config = config.setdefault("CIRCLE_DETECTION", {})
+    hough_radii_start = getattr(args, "aorta_hough_radii_start_px", None)
+    hough_radii_end = getattr(args, "aorta_hough_radii_end_px", None)
+    if hough_radii_start is not None:
+        circle_detection_config["radii_start_px"] = int(hough_radii_start)
+    if hough_radii_end is not None:
+        circle_detection_config["radii_end_px"] = int(hough_radii_end)
+    if (
+        "radii_start_px" in circle_detection_config
+        and "radii_end_px" in circle_detection_config
+        and float(circle_detection_config["radii_start_px"])
+        >= float(circle_detection_config["radii_end_px"])
+    ):
+        raise ValueError(
+            "CIRCLE_DETECTION.radii_start_px deve ser menor que radii_end_px"
         )
-        adaptive_config["oversegmented_area_ratio_p90"] = float(
-            oversegmented_area_ratio
-        )
-        adaptive_config["adequate_max_circle_area_ratio_p90"] = float(
-            oversegmented_area_ratio
-        )
-
-    adaptive_config = config.setdefault("LEVEL_SET", {}).setdefault("adaptive", {})
-    conservative_config = adaptive_config.setdefault("conservative", {})
-    conservative_overrides = {
-        "balloon": getattr(args, "aorta_conservative_balloon", None),
-        "alpha": getattr(args, "aorta_conservative_alpha", None),
-        "threshold_percentile": getattr(
-            args,
-            "aorta_conservative_threshold_percentile",
-            None,
-        ),
-    }
-    for config_key, value in conservative_overrides.items():
-        if value is not None:
-            conservative_config[config_key] = float(value)
-    min_ratio_improvement = getattr(
-        args,
-        "aorta_conservative_min_ratio_improvement",
-        None,
-    )
-    if min_ratio_improvement is not None:
-        adaptive_config["min_area_ratio_improvement_fraction"] = float(
-            min_ratio_improvement
-        )
-    localization_override = adaptive_config.setdefault(
-        "localization_leak_override",
-        {},
-    )
-    localization_override_enabled = getattr(
-        args,
-        "aorta_localization_leak_override",
-        None,
-    )
-    if localization_override_enabled is not None:
-        localization_override["enabled"] = bool(localization_override_enabled)
-    localization_override_values = {
-        "min_area_ratio_p90": getattr(
-            args,
-            "aorta_localization_leak_min_area_ratio_p90",
-            None,
-        ),
-        "min_circle_fill_q25": getattr(
-            args,
-            "aorta_localization_leak_min_circle_fill_q25",
-            None,
-        ),
-        "min_volume_fraction": getattr(
-            args,
-            "aorta_localization_leak_min_volume_fraction",
-            None,
-        ),
-    }
-    for config_key, value in localization_override_values.items():
-        if value is not None:
-            localization_override[config_key] = float(value)
 
     circle_filter = getattr(args, "aorta_circle_filter", None)
-    circle_filter_config = config.setdefault("CIRCLE_DETECTION", {}).setdefault(
-        "trajectory_filter", {}
-    )
+    circle_filter_config = circle_detection_config.setdefault("trajectory_filter", {})
     if circle_filter is not None:
         circle_filter_config["method"] = circle_filter
-    circle_filter_min_coverage = getattr(
-        args, "aorta_circle_filter_min_coverage", None
-    )
+    circle_filter_min_coverage = getattr(args, "aorta_circle_filter_min_coverage", None)
     if circle_filter_min_coverage is not None:
         circle_filter_config["min_tail_coverage"] = circle_filter_min_coverage
     circle_filter_max_trim_fraction = getattr(
@@ -301,9 +239,8 @@ def _apply_execution_overrides(config, args):
         None,
     )
     if mask_guided_min_improvement is not None:
-        mask_guided_config["min_ratio_improvement"] = float(
-            mask_guided_min_improvement
-        )
+        mask_guided_config["min_ratio_improvement"] = float(mask_guided_min_improvement)
+
 
 def _apply_threshold_overrides(config, args):
     """Aplica opções de threshold normal/fuzzy e piso inferior."""
@@ -386,10 +323,7 @@ def print_run_settings(args, config, base_path):
     lower_threshold_config = config.get("LOWER_THRESHOLD", {})
     print(f"🫀 Segmentação arterial: {artery_config.get('method', 'region_growing')}")
     print("🎯 Superfície/seleção dos óstios: erosion / greedy")
-    print(
-        "🔄 Level set da aorta: "
-        f"{config.get('LEVEL_SET', {}).get('iteration_mode', 'fixed')}"
-    )
+    print("🔄 Level set da aorta: fixed")
     print(f"🧩 Threshold: {thresholding_config.get('method', 'normal')}")
     print(
         "🧱 Piso inferior: "
@@ -404,13 +338,6 @@ def print_run_settings(args, config, base_path):
 
     if args.resume_batch > 0:
         print(f"🔄 Retomando a partir do lote {args.resume_batch}")
-    if args.resume_batches:
-        print(
-            "🔄 Retomada por subset: "
-            f"train={args.resume_batches_by_split['train']}, "
-            f"val={args.resume_batches_by_split['val']}, "
-            f"test={args.resume_batches_by_split['test']}"
-        )
 
 
 def resolve_output_dir(args, output_root_dir):
@@ -532,8 +459,14 @@ def setup_file_logging(logs_dir):
         logger.warning("Não foi possível criar arquivo de log no diretório de saída.")
 
 
-def save_run_snapshots(output_dirs, config, splits_to_run, split_config_path=None):
-    """Salva config efetiva e IDs por split dentro da pasta config da execução."""
+def save_run_snapshots(
+    output_dirs,
+    config,
+    split_name,
+    image_ids,
+    split_config_path=None,
+):
+    """Salva a configuração efetiva e os IDs da única coorte executada."""
     config_dir = output_dirs["config_dir"]
     config_dir.mkdir(parents=True, exist_ok=True)
 
@@ -541,13 +474,10 @@ def save_run_snapshots(output_dirs, config, splits_to_run, split_config_path=Non
     with config_path.open("w", encoding="utf-8") as file_handle:
         json.dump(make_json_safe(config), file_handle, indent=2, ensure_ascii=False)
 
-    split_ids = {
-        split_name: ids for split_name, ids in splits_to_run if ids is not None
-    }
-    if split_ids:
+    if image_ids is not None:
         split_payload = {
             "source": split_config_path,
-            "splits": split_ids,
+            "splits": {split_name: image_ids},
         }
         split_path = config_dir / "split_ids.json"
         with split_path.open("w", encoding="utf-8") as file_handle:
@@ -559,56 +489,47 @@ def save_run_snapshots(output_dirs, config, splits_to_run, split_config_path=Non
             )
 
 
-def split_names_from_args(args):
-    """Resolve a lista de splits solicitada pela CLI."""
-    if "all" in args.split:
-        return ["train", "val", "test"]
-    return args.split
-
-
-def build_splits_to_run(args, base_path):
-    """Retorna pares (split_name, ids), ou ids=None no modo merge-only."""
-    split_names_to_run = split_names_from_args(args)
+def build_split_to_run(args, base_path):
+    """Resolve a única coorte solicitada e seus IDs."""
     if args.merge_only:
-        return [(name, None) for name in split_names_to_run]
+        return args.split, None
 
-    train_ids, val_ids, test_ids, all_ids = get_data_splits(
-        base_path,
-        split_config_path=args.split_config,
-    )
-    print_statistics(train_ids, val_ids, test_ids, all_ids)
-    split_map = {
-        "train": train_ids,
-        "val": val_ids,
-        "test": test_ids,
-    }
+    if args.split == "full":
+        selected_ids = list_dataset_image_ids(base_path)
+        print(
+            f"📊 Total: {len(selected_ids)} imagens "
+            "(modo full, sem divisão train/val/test)"
+        )
+    else:
+        train_ids, val_ids, test_ids, all_ids = get_data_splits(
+            base_path,
+            split_config_path=args.split_config,
+        )
+        print_statistics(train_ids, val_ids, test_ids, all_ids)
+        split_map = {
+            "train": train_ids,
+            "val": val_ids,
+            "test": test_ids,
+        }
+        selected_ids = split_map[args.split]
+
     requested_ids = getattr(args, "image_ids", None)
     if not requested_ids:
-        return [(name, split_map[name]) for name in split_names_to_run]
+        return args.split, selected_ids
 
-    selected_id_set = {
-        int(img_id)
-        for name in split_names_to_run
-        for img_id in split_map[name]
-    }
+    selected_id_set = {int(img_id) for img_id in selected_ids}
     missing_ids = sorted(set(requested_ids).difference(selected_id_set))
     if missing_ids:
         raise ValueError(
-            "IDs de --image-ids não pertencem aos splits selecionados: "
-            f"{missing_ids}"
+            f"IDs de --image-ids não pertencem ao split {args.split!r}: {missing_ids}"
         )
 
     requested_id_set = set(requested_ids)
-    filtered_splits = [
-        (
-            name,
-            [img_id for img_id in split_map[name] if int(img_id) in requested_id_set],
-        )
-        for name in split_names_to_run
+    filtered_ids = [
+        img_id for img_id in selected_ids if int(img_id) in requested_id_set
     ]
-    selected_count = sum(len(ids) for _, ids in filtered_splits)
-    print(f"🎯 Seleção explícita: {selected_count} imagens (--image-ids)")
-    return filtered_splits
+    print(f"🎯 Seleção explícita: {len(filtered_ids)} imagens (--image-ids)")
+    return args.split, filtered_ids
 
 
 def save_split_metadata(
@@ -700,11 +621,9 @@ def run_processing_split(
         config,
         base_path,
         output_dir,
-        resume_from_batch=args.resume_batches_by_split.get(
-            split_name, args.resume_batch
-        ),
+        resume_from_batch=args.resume_batch,
         visual_output_dir=(
-            Path(visual_dir) / split_name
+            Path(visual_dir)
             if config.get("SAVE_SEGMENTATION_VISUALS") and visual_dir is not None
             else None
         ),
@@ -759,41 +678,41 @@ def run_processing_split(
     )
 
 
-def run_requested_splits(
+def run_requested_split(
     args,
-    splits_to_run,
+    split_name,
+    image_ids,
     output_dir,
     config,
     base_path,
     output_root_dir,
     visual_dir=None,
 ):
-    """Executa ou consolida todos os splits solicitados."""
-    for split_name, ids in splits_to_run:
-        print(f"\n{'=' * 60}")
-        action_label = "Consolidando" if args.merge_only else "Processando"
-        print(f"🔬 {action_label} conjunto: {split_name.upper()}")
-        print(f"{'=' * 60}")
+    """Executa ou consolida a única coorte solicitada."""
+    print(f"\n{'=' * 60}")
+    action_label = "Consolidando" if args.merge_only else "Processando"
+    print(f"🔬 {action_label} conjunto: {split_name.upper()}")
+    print(f"{'=' * 60}")
 
-        if args.merge_only:
-            run_merge_only_split(
-                split_name,
-                output_dir,
-                config,
-                base_path,
-                output_root_dir,
-            )
-        else:
-            run_processing_split(
-                split_name,
-                ids,
-                output_dir,
-                config,
-                args,
-                base_path,
-                output_root_dir,
-                visual_dir,
-            )
+    if args.merge_only:
+        run_merge_only_split(
+            split_name,
+            output_dir,
+            config,
+            base_path,
+            output_root_dir,
+        )
+    else:
+        run_processing_split(
+            split_name,
+            image_ids,
+            output_dir,
+            config,
+            args,
+            base_path,
+            output_root_dir,
+            visual_dir,
+        )
 
 
 def main():
@@ -810,17 +729,19 @@ def main():
     print_run_settings(args, effective_config, base_path)
     output_dirs = resolve_output_dir(args, output_root_dir)
     setup_file_logging(output_dirs["logs_dir"])
-    splits_to_run = build_splits_to_run(args, base_path)
+    split_name, image_ids = build_split_to_run(args, base_path)
     if not (args.resume_requested or args.merge_only):
         save_run_snapshots(
             output_dirs,
             effective_config,
-            splits_to_run,
+            split_name,
+            image_ids,
             split_config_path=args.split_config,
         )
-    run_requested_splits(
+    run_requested_split(
         args,
-        splits_to_run,
+        split_name,
+        image_ids,
         output_dirs["numeric_dir"],
         effective_config,
         base_path,

@@ -173,8 +173,9 @@ Foram removidos do runtime a correção condicional da aorta, o modo
 `recovery_only`, a repetição da Hough para trajetórias curtas, a interpolação de
 outliers geométricos isolados e a rejeição posterior de máscaras ainda
 sobresegmentadas. Permaneceram o filtro robusto, o corte de cauda, os círculos
-sintéticos, o envelope, o fallback guiado pela máscara, o controlador adaptativo
-e o override de vazamento por localização.
+sintéticos, o envelope e o fallback guiado pela máscara. O controlador
+adaptativo e o override de vazamento por localização foram removidos depois de
+não alterarem as falhas visuais relevantes.
 
 Também foram removidas as estratégias de óstios sem ganho comprovado (superfície
 por distância física, scores locais, NMS e seleção joint), o pós-processamento
@@ -182,3 +183,29 @@ arterial condicionado sem consumidores e o experimento híbrido mid/high. Os
 runners concluídos de abertura, sweep focal da aorta e sweep de `R_P90` foram
 retirados. Seus resultados históricos permanecem documentados; os quatro
 métodos científicos ativos continuam sendo RG, FC, threshold normal e fuzzy.
+
+O atraso do início do corte da cauda (`trim_start_offset_slices`) e seu guard
+de volume também foram removidos. No treino focado, o guard não aumentou o
+sucesso dos óstios; na validação focada, Dice e sucesso permaneceram idênticos
+à referência. O mecanismo apenas restaurou o offset zero em um caso e não
+justificou manter uma segunda evolução do level set no runtime.
+
+## Intervalo de raios da Hough
+
+A comparação final reuniu as 30 imagens de treino e 60 de validação, mantendo
+threshold P99.9/-300 HU, filtro e envelope constantes.
+
+| Intervalo | Dice médio | Sucesso dos óstios | Decisão |
+|---|---:|---:|---|
+| `18-30 px` | 0,58429 | 77/90 | referência anterior |
+| `18-29 px` | 0,58687 | 78/90 | selecionado; nenhum sucesso perdido |
+| `17-29 px` | 0,58767 | 76/90 | descartado por perder sucesso e produzir mudanças instáveis |
+
+As triagens `19-30 px` e `20-30 px` também foram descartadas após inspeção
+visual. O runtime passou a usar `radii_start_px=18` e `radii_end_px=30`, em que
+o limite superior é exclusivo.
+
+O override de vazamento por localização comparou perfis com balloon entre 0,50
+e 0,20. Todos mantiveram os mesmos casos ruins (`11`, `464`, `790` e `792`),
+sem ganho visual ou quantitativo suficiente; seu código e runner foram
+removidos junto com os checkpoints adaptativos.

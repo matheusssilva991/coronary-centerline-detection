@@ -240,13 +240,13 @@ Busca circulos candidatos (geralmente em cortes 2D) para localizar estruturas de
 
 ### `radii_start_px` (int)
 
-- Valor atual: `36`
+- Valor atual em `mid resolution`: `18`
 - Raio minimo (pixels) testado na busca de circulos.
 
 ### `radii_end_px` (int)
 
-- Valor atual: `62`
-- Raio maximo (pixels) testado.
+- Valor atual em `mid resolution`: `30`.
+- Limite superior exclusivo: com `30`, o maior raio testado e `29 px`.
 
 ### `radius_step_px` (int)
 
@@ -257,6 +257,8 @@ Trade-off do trio de raios:
 
 - Intervalo amplo + passo pequeno: maior cobertura, maior custo.
 - Intervalo estreito: mais rapido, risco de perder anatomias fora da faixa.
+- Em `high resolution`, os limites em pixels podem ser escalados pela
+  configuracao de resolucao para preservar aproximadamente a escala fisica.
 
 ### `tol_radius_mm` (float)
 
@@ -336,6 +338,9 @@ Trade-off:
 - `max_tail_trim_fraction`: rejeita o corte quando a cauda proposta representa
   uma fração excessiva da trajetória original. O padrão `1.0` não interfere no
   pipeline; o valor experimental `0.4` protege contra cortes maiores que 40%.
+- `tail_search_start_fraction`: define em que fração da trajetória começa a
+  busca por uma cauda incompatível. Reduzir o valor permite detectar vazamentos
+  mais precoces, mas aumenta o risco de cortar uma trajetória ainda válida.
 - `synthetic_tail_slices`: depois de remover uma cauda incompatível, prolonga a
   última trajetória estável pelo número informado de fatias. Centro e raio são
   extrapolados por tendências medianas e limitados pelas tolerâncias físicas.
@@ -416,51 +421,28 @@ Efeito:
   do último círculo, repetindo o centro e o raio extremos. O padrão é `0`; nos
   testes do envelope corrigido é usada uma margem de `5` fatias.
 
-### Controle adaptativo de iteracoes
+### Feedback automático de qualidade
 
-- `iteration_mode`: `fixed` preserva o comportamento historico; `adaptive`
-  classifica a mascara em checkpoints e pode reiniciar a evolucao a partir de
-  um checkpoint anterior.
-- `min_iter` e `check_interval`: definem os checkpoints de monitoramento.
-- `early_stop_iteration`, `convergence_tolerance` e `convergence_patience`:
-  permitem parada segura na iteracao 26 quando dois checkpoints adequados
-  mudam no maximo 1%.
-- `adequate_min_circle_fill_q25` e a faixa `adequate_*_area_ratio_p90`:
-  restringem a parada antecipada a checkpoints que ainda cobrem os círculos e
-  não apresentam excesso de área.
-- `oversegmented_area_ratio_p90`: é o único gatilho de sobresegmentação. O
-  limite padrão `2.7` veio da comparação com 90 classificações visuais.
-- limites `localization_*`: combinam preenchimento dos circulos, raio em mm,
-  saltos de raio, confianca da Hough e saturacao no limite inferior. Uma
-  localizacao suspeita e apenas registrada; a mascara nominal e preservada.
-- `localization_leak_override`: excecao experimental, desativada por padrao,
-  que permite testar a evolucao conservadora mesmo com localizacao suspeita
-  quando `R_P90`, preenchimento dos circulos e volume indicam juntos um
-  vazamento forte. O candidato continua sujeito aos criterios de seguranca.
-- `conservative`: reinicia antes do vazamento com `balloon=0.5`, `alpha=1500`,
-  percentil 55 do gradiente e `smoothing=2`.
-- `min_area_ratio_improvement_fraction`: redução relativa mínima de `R_P90`
-  exigida para aceitar a evolução conservadora; o padrão experimental é 5%.
-- `max_fill_loss` e `max_axial_jump_increase_fraction`: rejeitam uma evolução
-  conservadora que prejudique preenchimento ou continuidade.
+O bloco `quality_feedback` classifica a máscara final sem modificá-la. A coluna
+`aorta_segmentation_feedback` pode assumir:
 
-O CLI permite variar o perfil sem editar o JSON por meio de
-`--aorta-conservative-balloon`, `--aorta-conservative-alpha`,
-`--aorta-conservative-threshold-percentile` e
-`--aorta-conservative-min-ratio-improvement`.
-O override experimental pode ser configurado por
-`--aorta-localization-leak-override` e pelos tres limites
-`--aorta-localization-leak-min-*`.
+- `adequate`: nenhum alerta quantitativo foi disparado;
+- `suspected_undersegmentation`: ao menos dois sinais de baixo preenchimento,
+  baixa razão área/círculo ou baixo volume foram observados;
+- `suspected_oversegmentation`: `R_P90` excessivo, isoladamente ou combinado a
+  uma fração volumétrica alta;
+- `insufficient_data`: não há métricas suficientes para classificar a máscara.
 
-A expansão permissiva para subsegmentação foi retirada da decisão porque, na
-amostra visual de treino e validação, a regra anterior sinalizou somente
-aortas avaliadas como boas. Volume, voxels por fatia e mudança da máscara
-continuam persistidos como diagnósticos; `mask_change_fraction` participa apenas
-da verificação de convergência.
+Esse campo é um indicador para triagem. `adequate` não equivale a uma validação
+visual ou a uma comparação com ground truth da aorta.
 
-Se uma evolução alternativa for rejeitada, o controlador retorna exatamente a
-mascara nominal. Os campos antigos `refinement_*` continuam apenas para leitura
-de runs contrativos anteriores.
+### Evolução do level set
+
+O pipeline executa uma única evolução com `num_iter`, `balloon`, `alpha`,
+`sigma`, `smoothing` e `threshold`. Checkpoints, rollback e evoluções
+conservadora/permissiva foram removidos porque não melhoraram os resultados de
+treino e validação. Os campos correspondentes ainda podem aparecer em CSVs
+históricos, mas não fazem parte da configuração ativa.
 
 ### Correções experimentais removidas
 

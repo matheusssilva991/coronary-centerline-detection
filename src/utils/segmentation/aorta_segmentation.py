@@ -5,7 +5,6 @@ morfológicos (Morphological Geodesic Active Contour - MGAC) usando círculos
 detectados como inicialização.
 """
 
-from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import Any, Dict, Sequence, cast
 
@@ -15,7 +14,6 @@ from skimage.draw import disk
 from skimage.segmentation import (
     inverse_gaussian_gradient,
     morphological_geodesic_active_contour,
-    morphsnakes,
 )
 from skimage.morphology import ball
 
@@ -24,6 +22,12 @@ from ..processing.binary_operations import binary_opening
 
 # Utilitários de GPU usados em trechos pontuais do level set/morfologia.
 from ..processing.gpu_utils import GPU_AVAILABLE, to_gpu, to_cpu, cu_ndi, cp
+
+
+AORTA_FEEDBACK_ADEQUATE = "adequate"
+AORTA_FEEDBACK_UNDERSEGMENTED = "suspected_undersegmentation"
+AORTA_FEEDBACK_OVERSEGMENTED = "suspected_oversegmentation"
+AORTA_FEEDBACK_INSUFFICIENT_DATA = "insufficient_data"
 
 
 # =============================================================================
@@ -214,21 +218,6 @@ def _restore_level_set_mask(
     return full_mask
 
 
-def _crop_level_set_mask(
-    full_mask: NDArray[Any],
-    roi_bounds: Dict[str, int] | None,
-) -> NDArray[np.uint8]:
-    """Converte uma máscara completa para o sistema local usado pelo MorphGAC."""
-    mask = np.asarray(full_mask, dtype=np.uint8)
-    if roi_bounds is None:
-        return mask.copy()
-    return mask[
-        roi_bounds["y_min"] : roi_bounds["y_max"],
-        roi_bounds["x_min"] : roi_bounds["x_max"],
-        roi_bounds["z_min"] : roi_bounds["z_max"],
-    ].copy()
-
-
 def _evolve_level_set(
     gimage: NDArray[Any],
     init_level_set: NDArray[Any],
@@ -252,34 +241,9 @@ def _evolve_level_set(
     )
 
 
-def reset_morphgac_curvature_cycle() -> None:
-    """Reinicia a alternância global dos operadores de curvatura do MorphGAC.
-
-    O scikit-image mantém essa alternância em um iterador de módulo. O reset é
-    usado apenas pelo modo adaptativo para impedir que uma contração de uma
-    imagem altere a fase inicial da imagem seguinte.
-    """
-    cycle_factory = getattr(morphsnakes, "_fcycle")
-    setattr(
-        morphsnakes,
-        "_curvop",
-        cycle_factory(
-            [
-                lambda mask: morphsnakes.sup_inf(morphsnakes.inf_sup(mask)),
-                lambda mask: morphsnakes.inf_sup(morphsnakes.sup_inf(mask)),
-            ]
-        ),
-    )
-
-
 @dataclass
 class LevelSetEvolutionContext:
-    """Estado reutilizável do MorphGAC para expansão e refinamento.
-
-    O mapa de gradiente e a ROI são preparados uma única vez. A máscara de
-    trabalho pode evoluir em blocos consecutivos ou ser substituída por uma
-    máscara completa, como ocorre antes da segunda passagem contrativa.
-    """
+    """Mapa de gradiente, ROI e máscara usados pela evolução do MorphGAC."""
 
     gimage: NDArray[Any]
     current_mask: NDArray[np.uint8]
@@ -310,36 +274,6 @@ class LevelSetEvolutionContext:
             self.completed_iterations += num_iter
         return self.full_mask()
 
-    def reset_from_full_mask(self, full_mask: NDArray[Any]) -> None:
-        """Define uma nova inicialização sem recalcular gradiente ou ROI."""
-        if tuple(full_mask.shape) != self.volume_shape:
-            raise ValueError("A máscara de reinicialização deve ter o shape do volume")
-        self.current_mask = _crop_level_set_mask(full_mask, self.roi_bounds)
-        self.completed_iterations = 0
-
-    def iter_checkpoints(
-        self,
-        checkpoint_iterations: Sequence[int],
-        *,
-        smoothing: int,
-        balloon: float,
-        threshold: Any,
-    ) -> Iterator[tuple[int, NDArray[np.uint8]]]:
-        """Produz snapshots acumulados a partir do estado atual."""
-        checkpoints = sorted({int(value) for value in checkpoint_iterations})
-        if not checkpoints or checkpoints[0] <= 0:
-            raise ValueError("checkpoint_iterations deve conter inteiros positivos")
-
-        completed = 0
-        for checkpoint in checkpoints:
-            yield checkpoint, self.evolve(
-                checkpoint - completed,
-                smoothing=smoothing,
-                balloon=balloon,
-                threshold=threshold,
-            )
-            completed = checkpoint
-
     def full_mask(self) -> NDArray[np.uint8]:
         """Restaura a máscara de trabalho no volume completo."""
         return _restore_level_set_mask(
@@ -359,16 +293,12 @@ def prepare_level_set_evolution(
     alpha: float = 1000,
     sigma: float = 2,
     use_gpu: bool = False,
-    reset_curvature_cycle: bool = False,
 ) -> LevelSetEvolutionContext:
     """Prepara uma evolução reutilizável do level set para um volume 3D."""
     if volume_ccta.ndim != 3:
         raise ValueError(f"volume_ccta deve ser 3D, recebido shape={volume_ccta.shape}")
     if not detected_circles:
         raise ValueError("detected_circles não pode ser vazio")
-    if reset_curvature_cycle:
-        reset_morphgac_curvature_cycle()
-
     gimage, init_level_set, roi_bounds = _prepare_level_set_inputs(
         volume_ccta,
         detected_circles,
@@ -573,74 +503,6 @@ def level_set_segmentation(
     )
 
 
-def iter_level_set_checkpoints(
-    volume_ccta: NDArray[Any],
-    detected_circles: Sequence[Dict[str, Any]],
-    checkpoint_iterations: Sequence[int],
-    smoothing: int = 1,
-    balloon: float = 1,
-    threshold: Any = "auto",
-    radius_reduction_factor: float = 0.8,
-    roi_margin: int = 10,
-    use_roi: bool = True,
-    alpha: float = 1000,
-    sigma: float = 2,
-    use_gpu: bool = False,
-    context: LevelSetEvolutionContext | None = None,
-) -> Iterator[tuple[int, NDArray[np.uint8]]]:
-    """Produz máscaras em iterações acumuladas sem recalcular o gradiente.
-
-    Cada bloco começa na máscara produzida pelo bloco anterior. Como o MorphGAC
-    não mantém outro estado entre iterações, o último checkpoint é equivalente
-    a uma execução contínua com o mesmo total de iterações.
-    """
-    if context is None:
-        if volume_ccta.ndim != 3:
-            raise ValueError(
-                f"volume_ccta deve ser 3D, recebido shape={volume_ccta.shape}"
-            )
-        if not detected_circles:
-            return
-
-    checkpoints = sorted({int(value) for value in checkpoint_iterations})
-    if not checkpoints or checkpoints[0] <= 0:
-        raise ValueError("checkpoint_iterations deve conter inteiros positivos")
-
-    evolution = context or prepare_level_set_evolution(
-        volume_ccta,
-        detected_circles,
-        radius_reduction_factor=radius_reduction_factor,
-        roi_margin=roi_margin,
-        use_roi=use_roi,
-        alpha=alpha,
-        sigma=sigma,
-        use_gpu=use_gpu,
-    )
-    yield from evolution.iter_checkpoints(
-        checkpoints,
-        smoothing=smoothing,
-        balloon=balloon,
-        threshold=threshold,
-    )
-
-
-def calculate_mask_change_fraction(
-    previous_mask: NDArray[Any],
-    current_mask: NDArray[Any],
-) -> float:
-    """Calcula a fração alterada entre máscaras usando a união como referência."""
-    previous = np.asarray(previous_mask, dtype=bool)
-    current = np.asarray(current_mask, dtype=bool)
-    if previous.shape != current.shape:
-        raise ValueError("As máscaras comparadas devem possuir o mesmo shape")
-
-    union_count = int(np.logical_or(previous, current).sum())
-    if union_count == 0:
-        return 0.0
-    changed_count = int(np.logical_xor(previous, current).sum())
-    return changed_count / union_count
-
-
 def calculate_circle_mask_profile(
     aorta_mask: NDArray[Any],
     detected_circles: Sequence[Dict[str, Any]],
@@ -698,6 +560,53 @@ def calculate_circle_mask_metrics(
         "circle_fill_q25": float(np.quantile(fill_ratios, 0.25)),
         "circle_area_ratio_p90": float(np.quantile(area_ratios, 0.90)),
     }
+
+
+def classify_aorta_segmentation_feedback(
+    circle_fill_q25: float | None,
+    circle_area_ratio_p90: float | None,
+    volume_fraction: float | None,
+    feedback_config: Dict[str, Any] | None = None,
+) -> str:
+    """Classifica a qualidade provável da máscara sem alterar a segmentação.
+
+    A classificação combina informação espacial dos círculos com a ocupação
+    global do volume. O rótulo representa um alerta automático e não substitui
+    a inspeção visual ou uma máscara de referência da aorta.
+    """
+    config = feedback_config or {}
+    values = (circle_fill_q25, circle_area_ratio_p90, volume_fraction)
+    if any(value is None or not np.isfinite(value) for value in values):
+        return AORTA_FEEDBACK_INSUFFICIENT_DATA
+
+    fill = float(circle_fill_q25)
+    area_ratio = float(circle_area_ratio_p90)
+    volume = float(volume_fraction)
+
+    # Uma razão área/círculo muito alta sinaliza vazamento localizado. Volume
+    # alto reforça o alerta quando a razão está próxima do limite principal.
+    over_area_ratio = float(config.get("oversegmentation_area_ratio_p90", 3.0))
+    over_volume = float(config.get("oversegmentation_volume_fraction", 0.019))
+    over_paired_ratio = float(
+        config.get("oversegmentation_paired_area_ratio_p90", 2.8)
+    )
+    if area_ratio > over_area_ratio or (
+        volume > over_volume and area_ratio > over_paired_ratio
+    ):
+        return AORTA_FEEDBACK_OVERSEGMENTED
+
+    # A subsegmentação exige concordância entre pelo menos dois sinais para
+    # reduzir falsos alertas em aortas anatomicamente curtas ou pequenas.
+    under_signals = (
+        fill < float(config.get("undersegmentation_circle_fill_q25", 0.80)),
+        area_ratio < float(config.get("undersegmentation_area_ratio_p90", 1.30)),
+        volume < float(config.get("undersegmentation_volume_fraction", 0.008)),
+    )
+    required_signals = int(config.get("undersegmentation_required_signals", 2))
+    if sum(under_signals) >= required_signals:
+        return AORTA_FEEDBACK_UNDERSEGMENTED
+
+    return AORTA_FEEDBACK_ADEQUATE
 
 
 def calculate_slice_area_jump_p95(aorta_mask: NDArray[Any]) -> float:

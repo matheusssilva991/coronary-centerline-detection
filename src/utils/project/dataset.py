@@ -14,6 +14,20 @@ DEFAULT_SPLIT_CONFIG_PATH = (
 )
 
 
+def list_dataset_image_ids(base_path: str | Path) -> List[int]:
+    """Lista todos os IDs ImageCAS disponíveis, em ordem numérica."""
+    dataset_path = Path(base_path)
+    img_files = sorted(
+        dataset_path.glob("*.img.nii.gz"),
+        key=lambda path: int(path.name.split(".")[0]),
+    )
+    if not img_files:
+        raise FileNotFoundError(
+            f"Nenhuma imagem *.img.nii.gz encontrada em {dataset_path}"
+        )
+    return [int(path.name.split(".")[0]) for path in img_files]
+
+
 def _load_fixed_splits(
     split_config_path: Path,
     available_ids: List[int],
@@ -88,18 +102,8 @@ def get_data_splits(
     Returns:
         (train_ids, val_ids, test_ids, all_ids)
     """
-    dataset_path = Path(base_path)
-    # A ordenação numérica evita que o ID 10 apareça antes do ID 2.
-    img_files = sorted(
-        dataset_path.glob("*.img.nii.gz"),
-        key=lambda path: int(path.name.split(".")[0]),
-    )
-    if not img_files:
-        raise FileNotFoundError(
-            f"Nenhuma imagem *.img.nii.gz encontrada em {dataset_path}"
-        )
-
-    all_ids = [int(path.name.split(".")[0]) for path in img_files]
+    # A listagem compartilhada também sustenta o modo full sem criar splits.
+    all_ids = list_dataset_image_ids(base_path)
 
     # Um arquivo explícito tem precedência sobre o split canônico do projeto.
     fixed_split_path = Path(split_config_path) if split_config_path else None

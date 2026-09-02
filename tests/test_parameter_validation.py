@@ -334,24 +334,14 @@ class ParameterValidationTests(unittest.TestCase):
         self.assertNotIn("pair_selection_mode", config["OSTIA_DETECTION"])
         self.assertNotIn("experimental_leak_correction", config["LEVEL_SET"])
 
-    def test_adaptive_level_set_iterations_follow_high_resolution_scaling(self) -> None:
+    def test_level_set_iterations_follow_high_resolution_scaling(self) -> None:
         config = load_config_json("config/pipeline_config.json", {})
         config["DOWNSCALE_FACTORS"] = [1, 1, 1]
 
         scaled = scale_config_to_resolution(config)
 
         self.assertEqual(scaled["LEVEL_SET"]["num_iter"], 70)
-        self.assertEqual(scaled["LEVEL_SET"]["adaptive"]["min_iter"], 36)
-        self.assertEqual(scaled["LEVEL_SET"]["adaptive"]["check_interval"], 11)
-        self.assertEqual(
-            scaled["LEVEL_SET"]["adaptive"]["early_stop_iteration"],
-            59,
-        )
-        self.assertNotIn("permissive", scaled["LEVEL_SET"]["adaptive"])
-        self.assertNotIn(
-            "oversegmented_voxels_per_slice",
-            scaled["LEVEL_SET"]["adaptive"],
-        )
+        self.assertNotIn("adaptive", scaled["LEVEL_SET"])
 
     def test_resolution_scaling_rejects_unknown_group(self) -> None:
         config = load_config_json("config/article_cbeb_sensitivity.json", {})

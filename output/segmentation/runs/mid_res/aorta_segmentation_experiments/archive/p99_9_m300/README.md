@@ -1,8 +1,8 @@
 # Variantes arquivadas sobre P99.9/-300 HU
 
 Estas variantes foram executadas sobre o baseline atual, mas não permaneceram
-como candidatas ativas. Os nomes históricos foram preservados dentro do arquivo
-para que configurações e resultados continuem rastreáveis.
+como candidatas ativas. Os dados brutos foram removidos; os nomes, métricas e
+motivos abaixo preservam a rastreabilidade das decisões.
 
 ## Treino
 

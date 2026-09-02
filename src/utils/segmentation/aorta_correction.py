@@ -17,6 +17,7 @@ from .aorta_segmentation import (
     calculate_slice_area_jump_p95,
 )
 
+
 def find_mask_guided_tail_start(
     mask: np.ndarray,
     circles: Sequence[Mapping[str, Any]],
@@ -38,8 +39,7 @@ def find_mask_guided_tail_start(
 
     profile = calculate_circle_mask_profile(mask, ordered)
     ratio_by_slice = {
-        int(item["slice_index"]): float(item["circle_area_ratio"])
-        for item in profile
+        int(item["slice_index"]): float(item["circle_area_ratio"]) for item in profile
     }
     persistence_window = max(3, int(config.get("persistence_window", 5)))
     persistence_required = min(
@@ -53,7 +53,9 @@ def find_mask_guided_tail_start(
     min_remaining = max(1, int(config.get("min_remaining_circles", 30)))
     search_start = max(
         min_remaining,
-        int(round(len(ordered) * float(config.get("tail_search_start_fraction", 0.35)))),
+        int(
+            round(len(ordered) * float(config.get("tail_search_start_fraction", 0.35)))
+        ),
     )
     search_stop = len(ordered) - min_tail_circles + 1
     ratio_threshold = float(config.get("slice_area_ratio_threshold", 2.5))
@@ -62,8 +64,7 @@ def find_mask_guided_tail_start(
     for index in range(search_start, search_stop):
         window = ordered[index : index + persistence_window]
         high_ratio_count = sum(
-            ratio_by_slice.get(int(circle["slice_index"]), -np.inf)
-            > ratio_threshold
+            ratio_by_slice.get(int(circle["slice_index"]), -np.inf) > ratio_threshold
             for circle in window
         )
         if high_ratio_count < persistence_required:
@@ -137,4 +138,3 @@ def calculate_aorta_candidate_metrics(
         "circle_area_ratio_p90": circle_metrics["circle_area_ratio_p90"],
         "slice_area_jump_p95": calculate_slice_area_jump_p95(binary_mask),
     }
-

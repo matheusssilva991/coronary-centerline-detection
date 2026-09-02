@@ -25,6 +25,7 @@ _SYMBOL_TO_MODULE = {
     "vesselness_affinity": "fuzzy_connectedness",
     # aorta_segmentation
     "build_circle_trajectory_envelope": "aorta_segmentation",
+    "classify_aorta_segmentation_feedback": "aorta_segmentation",
     "level_set_segmentation": "aorta_segmentation",
     "remove_leaks_morphology": "aorta_segmentation",
     "restrict_mask_to_circle_trajectory": "aorta_segmentation",
