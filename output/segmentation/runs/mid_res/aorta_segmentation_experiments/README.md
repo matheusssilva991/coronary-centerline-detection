@@ -7,6 +7,20 @@ segmentação arterial. Todos os candidatos atuais usam threshold inferior de
 
 ## Runs ativos
 
+Organizacao geral:
+
+- `train/` e `val/`: referencias de aorta e filtro + envelope.
+- `{split}/ostia_localization/`: controle pad0 e candidatos pad2/pad3 da triagem 30/60.
+- `val/ostia_validation270/`: comparacao completa dos tres candidatos nas 270 imagens.
+- `test/ostia_comparison/`: destino dos novos runs de pad0/pad2 nos 700 exames.
+- `{split}/archive/ostia_pad3_sensitivity/`: referencia e smooth=0.5, sem promocao da suavizacao.
+- `archive/ostia_with_removed_fallback/`: pad2/pad3 historicos, preservando o efeito em 597.
+- `archive/trajectory_geometry_3_5_6/`: geometria nao promovida apos a validacao.
+
+As remocoes estao resumidas em `output/segmentation/analysis/EXPERIMENTS_ARCHIVE.md`.
+A tabela dos ostios esta em [OSTIA_COMPARISON.md](OSTIA_COMPARISON.md).
+Nao usar runs arquivados como configuracao atual.
+
 | Pasta | Método | Situação |
 |---|---|---|
 | `baseline_fixed_levelset_p99_9_m300` | Círculos originais + level set fixo | Referência quantitativa |

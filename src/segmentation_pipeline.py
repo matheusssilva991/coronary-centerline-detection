@@ -218,28 +218,6 @@ def _apply_execution_overrides(config, args):
     )
     if synthetic_tail_slices is not None:
         circle_filter_config["synthetic_tail_slices"] = int(synthetic_tail_slices)
-    mask_guided = getattr(args, "aorta_circle_filter_mask_guided", None)
-    mask_guided_config = circle_filter_config.setdefault("mask_guided_fallback", {})
-    if mask_guided is not None:
-        mask_guided_config["enabled"] = bool(mask_guided)
-    mask_guided_ratio = getattr(args, "aorta_mask_guided_area_ratio_p90", None)
-    if mask_guided_ratio is not None:
-        mask_guided_config["min_area_ratio_p90"] = float(mask_guided_ratio)
-        mask_guided_config["slice_area_ratio_threshold"] = float(mask_guided_ratio)
-    mask_guided_max_fill_loss = getattr(
-        args,
-        "aorta_mask_guided_max_fill_loss",
-        None,
-    )
-    if mask_guided_max_fill_loss is not None:
-        mask_guided_config["max_fill_loss"] = float(mask_guided_max_fill_loss)
-    mask_guided_min_improvement = getattr(
-        args,
-        "aorta_mask_guided_min_ratio_improvement",
-        None,
-    )
-    if mask_guided_min_improvement is not None:
-        mask_guided_config["min_ratio_improvement"] = float(mask_guided_min_improvement)
 
 
 def _apply_threshold_overrides(config, args):
@@ -314,9 +292,7 @@ def print_run_settings(args, config, base_path):
         f"miss_count={circle_config.get('max_slice_miss_threshold')}, "
         "filtro de trajetória="
         f"{circle_filter_config.get('method', 'none')} "
-        f"(cobertura mínima={circle_filter_config.get('min_tail_coverage', 0.8)}, "
-        "fallback guiado pela máscara="
-        f"{circle_filter_config.get('mask_guided_fallback', {}).get('enabled', False)})"
+        f"(cobertura mínima={circle_filter_config.get('min_tail_coverage', 0.8)})"
     )
     artery_config = config.get("ARTERY_SEGMENTATION", {})
     thresholding_config = config.get("THRESHOLDING", {})

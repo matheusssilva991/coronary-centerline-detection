@@ -212,6 +212,7 @@ def detect_and_evaluate_ostia(
         min_center_distance_factor=ostia_config["min_center_distance_factor"],
         min_lateral_factor=ostia_config["min_lateral_factor"],
         erosion_radius=ostia_config["erosion_radius"],
+        surface_padding_radius=ostia_config.get("surface_padding_radius", 0),
         pair_distance_mode=ostia_config.get("pair_distance_mode", "voxel_xyz"),
     )
 

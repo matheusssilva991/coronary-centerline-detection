@@ -128,9 +128,7 @@ def build_parameter_sensitivity_summary(
     )
     summary["ostia_success_percent"] = 100 * summary["ostia_success_rate"]
 
-    baseline_values = summary.loc[
-        summary["variant"].eq(baseline_variant), "mean_dice"
-    ]
+    baseline_values = summary.loc[summary["variant"].eq(baseline_variant), "mean_dice"]
     if baseline_values.empty:
         raise ValueError(f"Variante de referência ausente: {baseline_variant}")
     summary["delta_dice_vs_baseline"] = summary["mean_dice"] - baseline_values.iloc[0]
@@ -195,9 +193,11 @@ def build_parameter_pairwise_summary(
 
     if not rows:
         return pd.DataFrame()
-    return pd.DataFrame(rows).sort_values(
-        "mean_delta_dice", ascending=False
-    ).reset_index(drop=True)
+    return (
+        pd.DataFrame(rows)
+        .sort_values("mean_delta_dice", ascending=False)
+        .reset_index(drop=True)
+    )
 
 
 def build_threshold_performance_data(
@@ -409,9 +409,7 @@ def build_normalized_intensity_histograms(
     if missing:
         raise ValueError(f"Colunas de histograma ausentes: {sorted(missing)}")
 
-    selected = histogram_bins.loc[
-        histogram_bins["histogram"].eq(histogram_name)
-    ].copy()
+    selected = histogram_bins.loc[histogram_bins["histogram"].eq(histogram_name)].copy()
     if image_ids is not None:
         selected_ids = {int(image_id) for image_id in image_ids}
         selected = selected.loc[selected["IMG_ID"].astype(int).isin(selected_ids)]
@@ -575,9 +573,7 @@ def compute_intensity_histogram_analysis(
         if progress_every and (
             position % progress_every == 0 or position == len(unique_image_ids)
         ):
-            print(
-                f"Histogramas processados: {position}/{len(unique_image_ids)}"
-            )
+            print(f"Histogramas processados: {position}/{len(unique_image_ids)}")
 
     histogram_df = (
         pd.concat(histogram_frames, ignore_index=True)
@@ -629,9 +625,7 @@ def summarize_top_threshold_cases(top_cases: pd.DataFrame) -> pd.DataFrame:
     if missing:
         raise ValueError(f"Colunas da análise de threshold ausentes: {sorted(missing)}")
 
-    summary = top_cases.groupby(
-        ["variant", "upper_percentile"], as_index=False
-    ).agg(
+    summary = top_cases.groupby(["variant", "upper_percentile"], as_index=False).agg(
         selected_images=("IMG_ID", "nunique"),
         mean_dice=("dice_artery", "mean"),
         min_dice=("dice_artery", "min"),
@@ -641,13 +635,19 @@ def summarize_top_threshold_cases(top_cases: pd.DataFrame) -> pd.DataFrame:
         min_threshold_hu=("max_threshold_hu", "min"),
         max_threshold_hu=("max_threshold_hu", "max"),
     )
-    quartiles = top_cases.groupby(["variant", "upper_percentile"])[
-        "max_threshold_hu"
-    ].quantile([0.25, 0.75]).unstack()
+    quartiles = (
+        top_cases.groupby(["variant", "upper_percentile"])["max_threshold_hu"]
+        .quantile([0.25, 0.75])
+        .unstack()
+    )
     quartiles.columns = ["threshold_hu_q1", "threshold_hu_q3"]
-    return summary.merge(
-        quartiles.reset_index(), on=["variant", "upper_percentile"], how="left"
-    ).sort_values("upper_percentile", ascending=False).reset_index(drop=True)
+    return (
+        summary.merge(
+            quartiles.reset_index(), on=["variant", "upper_percentile"], how="left"
+        )
+        .sort_values("upper_percentile", ascending=False)
+        .reset_index(drop=True)
+    )
 
 
 def parameter_validation_variants() -> list[dict[str, Any]]:
@@ -836,9 +836,7 @@ def resolution_scaling_variants() -> list[dict[str, Any]]:
             "neighbor_distance_mid",
             "circle_tracking_refinement",
             "Mantém somente a distância de vizinhança no valor mid-res 5.",
-            post_scale_overrides={
-                "CIRCLE_DETECTION.neighbor_distance_threshold": 5.0
-            },
+            post_scale_overrides={"CIRCLE_DETECTION.neighbor_distance_threshold": 5.0},
         ),
         variant(
             "local_roi_padding_mid",
@@ -980,9 +978,13 @@ def select_parameter_validation_cases(
     )
     # O exemplo intermediário deve representar a segmentação, sem ser
     # confundido por uma localização inválida dos óstios.
-    near_mean = valid_dice.loc[valid_dice["ostia_success"]].assign(
-        target_distance=lambda values: (values["dice_artery"] - target_dice).abs()
-    ).sort_values("target_distance")
+    near_mean = (
+        valid_dice.loc[valid_dice["ostia_success"]]
+        .assign(
+            target_distance=lambda values: (values["dice_artery"] - target_dice).abs()
+        )
+        .sort_values("target_distance")
+    )
     add_case(
         "near_target_mean",
         near_mean,

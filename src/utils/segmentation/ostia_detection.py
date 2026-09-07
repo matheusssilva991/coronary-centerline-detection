@@ -14,7 +14,7 @@ from skimage.morphology import ball
 from typing import Any, Optional, Sequence, Tuple, cast
 from numpy.typing import ArrayLike, NDArray
 
-from ..processing.binary_operations import binary_erosion
+from ..processing.binary_operations import binary_dilation, binary_erosion
 
 
 def _validate_coordinates(coords: ArrayLike, volume_shape: Sequence[int]) -> bool:
@@ -48,6 +48,8 @@ def _extract_lower_region(
     z_min, z_max = z_indices.min(), z_indices.max()
     z_stop = z_min + int((z_max - z_min) * lower_fraction)
     z_stop = min(z_max + 1, max(z_min + 1, z_stop))
+    if lower_fraction == 1.0:
+        z_stop = z_max + 1  # O limite superior do slice Python e exclusivo.
 
     lower_region_mask = np.zeros_like(surface_mask)
     lower_region_mask[:, :, z_min:z_stop] = surface_mask[:, :, z_min:z_stop]
@@ -144,9 +146,25 @@ def _classify_left_right(
 def find_aorta_surface(
     aorta_mask: NDArray[Any],
     erosion_radius: int = 2,
+    surface_padding_radius: int = 0,
 ) -> NDArray[Any]:
-    """Extrai a casca interna da aorta por erosão morfológica."""
+    """Extrai a casca da mascara dilatada, sem modificar a aorta original.
+
+    Calcula D_p(M) menos E_e(D_p(M)), com raios em voxels e elementos
+    esfericos 3D. O padding desloca a casca para fora; nao preserva toda
+    a superficie interna original. Em volumes anisotropicos, o alcance
+    fisico difere entre eixos. Padding zero reproduz a superficie original.
+    """
+    if surface_padding_radius < 0 or int(surface_padding_radius) != surface_padding_radius:
+        raise ValueError("surface_padding_radius deve ser um inteiro nao negativo")
+
     mask = aorta_mask.astype(bool)
+    if surface_padding_radius:
+        mask = binary_dilation(
+            mask,
+            structure=np.asarray(ball(surface_padding_radius)),
+            gpu=False,
+        ).astype(bool)
     struct_elem = np.asarray(ball(erosion_radius))
     eroded = binary_erosion(
         mask,
@@ -155,7 +173,7 @@ def find_aorta_surface(
         # Mantê-la na CPU reduz diferenças discretas entre execuções CPU/GPU.
         gpu=False,
     )
-    surface = mask & (~eroded)  # pyright: ignore[reportOperatorIssue]
+    surface = mask & (~eroded.astype(bool))
     return surface.astype(np.uint8)
 
 
@@ -259,6 +277,7 @@ def find_ostia(
     min_center_distance_factor: float = 0.8,
     min_lateral_factor: float = 0.5,
     erosion_radius: int = 2,
+    surface_padding_radius: int = 0,
     pair_distance_mode: str = "voxel_xyz",
     verbose: bool = True,
 ) -> Tuple[NDArray[Any], Optional[NDArray[Any]]]:
@@ -278,6 +297,7 @@ def find_ostia(
     aorta_surface = find_aorta_surface(
         aorta_mask,
         erosion_radius=erosion_radius,
+        surface_padding_radius=surface_padding_radius,
     )
     lower_region_mask, _, _ = _extract_lower_region(aorta_surface, lower_fraction)
     # Ordena diretamente pelo valor pontual do mapa de vesselness.

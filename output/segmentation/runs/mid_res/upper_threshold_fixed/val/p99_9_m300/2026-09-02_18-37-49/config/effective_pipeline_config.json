@@ -1,0 +1,302 @@
+{
+  "USE_GPU": true,
+  "DOWNSCALE_METHOD": "opencv",
+  "OPENCV_INTERPOLATION": "linear",
+  "DOWNSCALE_FACTORS": [
+    2,
+    2,
+    1
+  ],
+  "MIN_THRESHOLD": -300,
+  "MAX_THRESHOLD_PERCENTILE": 99.9,
+  "UPPER_THRESHOLD_SELECTION": {
+    "method": "fixed",
+    "dense_min_hu": 300.0,
+    "valid_min_hu": -300.0,
+    "min_predicted_gain": 0.005,
+    "feature_names": [
+      "dense_mean_hu",
+      "dense_median_hu",
+      "dense_std_hu",
+      "dense_iqr_hu",
+      "dense_p95_hu",
+      "dense_voxel_fraction",
+      "above_500_fraction",
+      "above_700_fraction",
+      "above_1000_fraction"
+    ],
+    "models": {
+      "99.5": {
+        "alpha": 1.0,
+        "loocv_mse": 0.019743240918911442,
+        "intercept": -0.029350854574759406,
+        "coefficients": [
+          -0.08537892974090786,
+          -0.06464724916493912,
+          -0.014012068375655,
+          0.045504676851677694,
+          0.0549561158204815,
+          0.0430056191587687,
+          0.06035759227482395,
+          -0.035009182436886895,
+          -0.029697050636762538
+        ],
+        "impute_values": [
+          492.7759704589844,
+          488.875,
+          128.7454719543457,
+          131.125,
+          677.75,
+          0.15557385641514238,
+          0.06712723356728714,
+          0.006864151360590263,
+          0.0010178474366944208
+        ],
+        "feature_means": [
+          509.1934102376302,
+          514.35,
+          130.2981379191081,
+          134.20833333333334,
+          692.9583333333334,
+          0.16052256789015798,
+          0.07749774895518402,
+          0.017442229916249663,
+          0.0014197549244758109
+        ],
+        "feature_scales": [
+          74.47087364792307,
+          95.79484589475572,
+          26.97010140153037,
+          47.27768515789335,
+          96.53762399822268,
+          0.03187892102480846,
+          0.04875078864983539,
+          0.030914644468540094,
+          0.0014922923001298518
+        ]
+      },
+      "99.7": {
+        "alpha": 1.0,
+        "loocv_mse": 0.005188684115282274,
+        "intercept": -0.004320601455460883,
+        "coefficients": [
+          -0.022594159030052914,
+          -0.01796124672580681,
+          -0.016388844389538488,
+          0.005406881475721651,
+          0.031208643421759667,
+          0.011668253593752346,
+          0.03393761716966797,
+          -0.023566185783594682,
+          -0.04387656824348167
+        ],
+        "impute_values": [
+          492.7759704589844,
+          488.875,
+          128.7454719543457,
+          131.125,
+          677.75,
+          0.15557385641514238,
+          0.06712723356728714,
+          0.006864151360590263,
+          0.0010178474366944208
+        ],
+        "feature_means": [
+          509.1934102376302,
+          514.35,
+          130.2981379191081,
+          134.20833333333334,
+          692.9583333333334,
+          0.16052256789015798,
+          0.07749774895518402,
+          0.017442229916249663,
+          0.0014197549244758109
+        ],
+        "feature_scales": [
+          74.47087364792307,
+          95.79484589475572,
+          26.97010140153037,
+          47.27768515789335,
+          96.53762399822268,
+          0.03187892102480846,
+          0.04875078864983539,
+          0.030914644468540094,
+          0.0014922923001298518
+        ]
+      }
+    },
+    "training_images": 30
+  },
+  "LOWER_THRESHOLD": {
+    "method": "fixed",
+    "fixed_hu": -300,
+    "percentile": 10.75,
+    "clip_min_hu": -700.0,
+    "clip_max_hu": 500.0
+  },
+  "THRESHOLDING": {
+    "method": "normal",
+    "fuzzy": {
+      "lower_percentile": 10.5,
+      "soft_margin_hu": 100,
+      "object_percentile": 99.8,
+      "dense_percentile": 99.96,
+      "smooth_radius": 0,
+      "smooth_mode": "mean"
+    }
+  },
+  "VESSELNESS_AORTA": {
+    "method": "normal",
+    "sigmas": [
+      2.5,
+      3.0
+    ],
+    "black_ridges": false,
+    "alpha": 0.5,
+    "beta": 1.0,
+    "gamma": 30,
+    "normalization": "none",
+    "smooth_sigma": 0.0
+  },
+  "VESSELNESS_ARTERY": {
+    "method": "normal",
+    "sigmas": [
+      1.5,
+      2.0,
+      2.5,
+      3.0
+    ],
+    "black_ridges": false,
+    "alpha": 0.5,
+    "beta": 0.5,
+    "gamma": 55,
+    "normalization": "none",
+    "smooth_sigma": 0.0
+  },
+  "CIRCLE_DETECTION": {
+    "radii_start_px": 18,
+    "radii_end_px": 30,
+    "radius_step_px": 1,
+    "tol_radius_mm": 9.0,
+    "tol_distance_mm": 20.0,
+    "quadrant_offset": [
+      30,
+      30
+    ],
+    "max_slice_miss_threshold": 5,
+    "neighbor_distance_threshold": 5,
+    "total_num_peaks_initial": 15,
+    "total_num_peaks": 15,
+    "canny_sigma": 3,
+    "use_local_roi": true,
+    "local_roi_padding": 30,
+    "interpolate_missed_circles": true,
+    "trajectory_filter": {
+      "method": "none",
+      "max_radius_step_mm": 4.8,
+      "max_center_step_mm": 8.0,
+      "severe_radius_step_mm": 7.0,
+      "severe_center_step_mm": 12.0,
+      "min_hough_accumulator": 0.408,
+      "reference_window": 5,
+      "persistence_window": 5,
+      "persistence_required": 4,
+      "min_tail_circles": 8,
+      "min_remaining_circles": 30,
+      "tail_search_start_fraction": 0.35,
+      "min_tail_coverage": 0.8,
+      "max_tail_trim_fraction": 1.0,
+      "synthetic_tail_slices": 0,
+      "mask_guided_fallback": {
+        "enabled": false,
+        "tail_search_start_fraction": 0.35,
+        "persistence_window": 5,
+        "persistence_required": 4,
+        "min_tail_circles": 8,
+        "min_remaining_circles": 30,
+        "max_tail_trim_fraction": 0.4,
+        "slice_area_ratio_threshold": 2.5,
+        "min_area_ratio_p90": 2.5,
+        "min_ratio_improvement": 0.1,
+        "max_fill_loss": 0.015,
+        "synthetic_tail_slices": 5,
+        "reference_window": 5
+      }
+    }
+  },
+  "LEVEL_SET": {
+    "radius_reduction_factor": 0.15,
+    "num_iter": 31,
+    "balloon": 0.8,
+    "smoothing": 2,
+    "threshold": "auto",
+    "roi_margin": 10,
+    "use_roi": true,
+    "alpha": 1000,
+    "sigma": 2,
+    "leak_removal_radius": 2,
+    "trajectory_axial_margin_slices": 0,
+    "quality_feedback": {
+      "oversegmentation_area_ratio_p90": 3.0,
+      "oversegmentation_volume_fraction": 0.019,
+      "oversegmentation_paired_area_ratio_p90": 2.8,
+      "undersegmentation_circle_fill_q25": 0.8,
+      "undersegmentation_area_ratio_p90": 1.3,
+      "undersegmentation_volume_fraction": 0.008,
+      "undersegmentation_required_signals": 2
+    }
+  },
+  "OSTIA_DETECTION": {
+    "top_n": 2000,
+    "max_z_diff_mm": 40.0,
+    "lower_fraction": 0.85,
+    "min_center_distance_factor": 0.85,
+    "min_lateral_factor": 0.4,
+    "erosion_radius": 4
+  },
+  "OSTIA_VALIDATION": {
+    "distance_threshold_mm": 7.0
+  },
+  "ARTERY_SEGMENTATION": {
+    "method": "region_growing"
+  },
+  "REGION_GROWING": {
+    "max_volume": 100000,
+    "switch_at_voxels": 2000,
+    "min_vesselness_fraction": 0.078,
+    "threshold_divisor": 7,
+    "relaxed_floor_factor": 0.98,
+    "comparison_window": 1,
+    "smooth_relaxation": true,
+    "use_seed_refinement": true,
+    "use_multi_seed": true,
+    "grow_each_ostium_separately": true,
+    "seed_search_radius": 2,
+    "seed_candidate_radius": 1,
+    "max_seed_candidates": 6,
+    "seed_min_vesselness_fraction": 0.02,
+    "verbose": false
+  },
+  "FUZZY_CONNECTEDNESS": {
+    "alpha": 0.16,
+    "sigma_hu": 100,
+    "neighborhood": 26,
+    "candidate_min_vesselness": 0.018,
+    "max_candidate_voxels": 500000,
+    "max_processed_voxels": 500000,
+    "seed_search_radius": 2,
+    "max_seeds_per_ostium": 4,
+    "seed_min_vesselness": 0.018,
+    "min_seed_distance_voxels": 1.0,
+    "vesselness_floor": 0.018,
+    "vesselness_weight": 0.9,
+    "grow_each_ostium_separately": false
+  },
+  "POSTPROCESSING": {
+    "closing_radius": 3,
+    "dilation_radius": 2
+  },
+  "NUM_BATCHES": 5,
+  "SAVE_SEGMENTATION_VISUALS": false,
+  "VISUAL_OUTPUT_DIR": null
+}

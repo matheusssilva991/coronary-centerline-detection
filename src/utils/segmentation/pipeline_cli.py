@@ -266,44 +266,6 @@ def build_parser(default_base_path, default_output_dir):
             "depois que uma cauda incompatível é removida."
         ),
     )
-    mask_guided_group = parser.add_mutually_exclusive_group()
-    mask_guided_group.add_argument(
-        "--aorta-circle-filter-mask-guided",
-        dest="aorta_circle_filter_mask_guided",
-        action="store_true",
-        default=None,
-        help=(
-            "Ativa o fallback experimental que usa R_z da máscara nominal "
-            "para detectar e substituir uma cauda circular com vazamento."
-        ),
-    )
-    mask_guided_group.add_argument(
-        "--no-aorta-circle-filter-mask-guided",
-        dest="aorta_circle_filter_mask_guided",
-        action="store_false",
-        help="Desativa o fallback guiado pela máscara nominal.",
-    )
-    parser.add_argument(
-        "--aorta-mask-guided-area-ratio-p90",
-        type=float,
-        default=None,
-        help=(
-            "Limiar de R_P90 que permite tentar e aceitar o fallback guiado "
-            "pela máscara."
-        ),
-    )
-    parser.add_argument(
-        "--aorta-mask-guided-max-fill-loss",
-        type=float,
-        default=None,
-        help="Perda máxima permitida em circle_fill_q25 no fallback guiado.",
-    )
-    parser.add_argument(
-        "--aorta-mask-guided-min-ratio-improvement",
-        type=float,
-        default=None,
-        help="Redução relativa mínima exigida em R_P90 para aceitar o fallback.",
-    )
     parser.add_argument(
         "--rg-comparison-window",
         type=_parse_rg_comparison_window,
@@ -499,20 +461,6 @@ def parse_pipeline_args(default_base_path, default_output_dir):
         and args.aorta_trajectory_axial_margin_slices < 0
     ):
         parser.error("--aorta-trajectory-axial-margin-slices deve ser zero ou maior")
-    if (
-        args.aorta_mask_guided_area_ratio_p90 is not None
-        and args.aorta_mask_guided_area_ratio_p90 <= 0
-    ):
-        parser.error("--aorta-mask-guided-area-ratio-p90 deve ser maior que 0")
-    for option, value in (
-        ("--aorta-mask-guided-max-fill-loss", args.aorta_mask_guided_max_fill_loss),
-        (
-            "--aorta-mask-guided-min-ratio-improvement",
-            args.aorta_mask_guided_min_ratio_improvement,
-        ),
-    ):
-        if value is not None and not 0 <= value <= 1:
-            parser.error(f"{option} deve estar entre 0 e 1")
     if args.image_ids:
         try:
             args.image_ids = [

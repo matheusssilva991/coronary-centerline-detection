@@ -9,6 +9,19 @@ Este arquivo documenta todos os parametros de `config/pipeline_config.json`, com
 
 ## Visao Geral
 
+Desde 07/09/2026, o padrao operacional e **filtro + envelope + lower100/pad2**:
+threshold normal fixo -300 HU/P99.9, Hough 18-29 (fim exclusivo 30), filtro
+robusto 4.8/8 mm, cobertura/corte 0.4, cinco circulos sinteticos, envelope
+2.25r com margem axial 10, level set b0.6/r0.10/i26 e superficie dos ostios
+com lower_fraction=1.0 e padding=2. RG e pos-processamento arterial nao mudaram;
+FC e threshold fuzzy continuam disponiveis. Evidencia quantitativa em mid;
+a promocao nao implica validacao equivalente em high resolution.
+
+O artigo permanece reproduzivel com `article_cbeb_sensitivity.json`, que
+desativa explicitamente filtro, envelope e padding ao mesclar com o padrao.
+Os runs em `current_baseline_p99_9` continuam sendo o **P99.9 puro historico**;
+seu nome nao indica mais a configuracao operacional atual.
+
 O `pipeline_config.json` organiza os parametros por etapas do pipeline:
 
 1. Configuracoes globais de execucao (GPU e downscale)
@@ -344,18 +357,9 @@ Trade-off:
 - `synthetic_tail_slices`: depois de remover uma cauda incompatível, prolonga a
   última trajetória estável pelo número informado de fatias. Centro e raio são
   extrapolados por tendências medianas e limitados pelas tolerâncias físicas.
-  O padrão `0` mantém esse recurso desativado.
-- `mask_guided_fallback`: segunda tentativa opcional quando o filtro geométrico
-  não remove a cauda. Ela usa o perfil `R_z` da máscara nominal, exige excesso
-  persistente de área, substitui a cauda por círculos sintéticos e só aceita a
-  nova máscara se `R_P90` diminuir sem perda relevante de preenchimento. O
-  padrão permanece `enabled: false`.
+  O padrão atual usa cinco círculos sintéticos.
 Quando a divergência persiste até o final do rastreamento, o filtro remove
-somente essa cauda. O padrão permanece `method: none`.
-
-O fallback simples por baixa cobertura continua apenas nos CSVs históricos. O
-fallback guiado pela máscara foi preservado como experimento por ter corrigido
-o exame 603 sem alterar os demais casos do treino na configuração avaliada.
+somente essa cauda. O padrão atual é `method: robust`.
 
 ### Rastreamento validado
 
@@ -372,12 +376,12 @@ Controla evolucao da fronteira de segmentacao a partir de sementes/candidatos.
 
 ### `radius_reduction_factor` (float)
 
-- Valor atual: `0.15`
+- Valor atual: `0.10`
 - Reduz raio inicial para evitar vazamento na inicializacao do contorno.
 
 ### `num_iter` (int)
 
-- Valor atual: `31`
+- Valor atual: `26`
 - Numero de iteracoes de evolucao.
 
 Impacto:
@@ -386,7 +390,7 @@ Impacto:
 
 ### `balloon` (float)
 
-- Valor atual: `0.8`
+- Valor atual: `0.6`
 - Termo de forca de expansao/contracao do contorno.
 
 Interpretacao comum:
@@ -412,14 +416,13 @@ Efeito:
   regiao dos ostios. Pode ser sobrescrito por `--aorta-opening-radius`; o valor
   `0` desativa a abertura sem alterar as demais etapas.
 
-### Envelope experimental da trajetória
+### Envelope da trajetória
 
 - `trajectory_radius_factor`: quando definido, preserva somente a interseção
   entre a máscara pós-level set e um tubo de raio `k*r_z` ao redor dos círculos.
-  O baseline não define esse parâmetro.
+  O padrão operacional usa `2.25`; a referência pura do artigo usa `null`.
 - `trajectory_axial_margin_slices`: prolonga o tubo antes do primeiro e depois
-  do último círculo, repetindo o centro e o raio extremos. O padrão é `0`; nos
-  testes do envelope corrigido é usada uma margem de `5` fatias.
+  do último círculo, repetindo o centro e o raio extremos. O padrão é `10`.
 
 ### Feedback automático de qualidade
 
@@ -479,7 +482,7 @@ são ordenados diretamente pelo vesselness de cada voxel.
 
 ### `min_center_distance_factor` (float)
 
-- Valor atual: `0.85`
+- Valor atual: `1.0`
 - Fator minimo de separacao em relacao ao centro/referencia para rejeitar candidatos muito proximos.
 
 ### `min_lateral_factor` (float)

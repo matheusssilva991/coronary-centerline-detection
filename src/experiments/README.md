@@ -227,14 +227,11 @@ O runner `run_aorta_filter_envelope_generalization.sh` mantém fixos o threshold
 de 40%, cinco círculos sintéticos e o level set fixo. A configuração de
 referência usa `balloon=0.6`, semente de 10% do raio e 26 iterações, combinação
 que obteve `30/30` aortas adequadas no treino e `56/60` na validação visual.
-Quando a cobertura impede o filtro geométrico de agir, o fallback guiado pela máscara procura uma cauda
-com `R_z > 2.5` persistente e só aceita a nova segmentação se reduzir `R_P90`
-sem perder mais de 1,5% de preenchimento.
 
 As quatro variantes alteram somente o raio e a margem axial do envelope:
 
 | Variante | Raio | Margem axial | Objetivo |
-|---|---:|---:|---|
+| --- | ---: | ---: | --- |
 | `reference` | `2.25r` | 10 | Reproduzir a referência atual |
 | `balanced` | `2.35r` | 10 | Pequena proteção contra subsegmentação |
 | `conservative` | `2.40r` | 12 | Preservar mais as extremidades da aorta |
@@ -263,3 +260,111 @@ Seus runners foram removidos para evitar novas execuções acidentais.
 O sweep de raios e o override de vazamento foram encerrados e removidos. A
 comparação completa de 90 imagens selecionou `18-29 px`; as demais faixas e o
 override não apresentaram ganho robusto e permanecem apenas no histórico.
+
+## Sensibilidade da localização dos óstios com filtro e envelope
+
+O runner `run_ostia_localization_filter_envelope.sh` mantém fixos o filtro
+robusto da trajetória e o envelope `2.25r` com
+margem axial 10. Ele varia somente os parâmetros de localização dos óstios e o
+padding externo da superfície morfológica. Por padrão, executa as 30 imagens de
+treino e as 60 de validação:
+
+```bash
+bash src/experiments/runners/run_ostia_localization_filter_envelope.sh
+```
+
+O padrao executa duas variantes: `baseline_pad0` (controle) e
+`lower100_pad2` (combinacao selecionada). O padding usa raio em
+voxels, deslocando a casca para fora sem alterar a mascara da aorta.
+
+Para rodar somente a combinacao principal:
+
+```bash
+VARIANTS=lower100_pad2 \
+  bash src/experiments/runners/run_ostia_localization_filter_envelope.sh
+```
+
+Para executar somente a validação ou usar GPU:
+
+```bash
+SPLITS=val USE_GPU=1 \
+  bash src/experiments/runners/run_ostia_localization_filter_envelope.sh
+```
+
+Os resultados ficam em `output/segmentation/runs/mid_res/aorta_segmentation_experiments/{split}/ostia_localization/`, separados por variante.
+
+Uma quarta variante opcional, `lower100_pad3`, amplia o padding para 3 voxels.
+Use `DRY_RUN=1` para conferir as configuracoes sem processar imagens e
+`SAVE_VISUALS=1` para gerar os HTMLs. Os runs historicos com lower_fraction=1
+excluiam a ultima fatia; os novos incluem toda a superficie.
+
+### Mapa de vasos e seleção com pad3
+
+Para confirmar na validacao completa (270 exames), use
+`VAL_SPLIT_CONFIG=config/imagecas_splits.json`. Sem essa variavel, o runner
+continua selecionando as 60 imagens de validacao.
+
+```bash
+SPLITS=val VAL_SPLIT_CONFIG=config/imagecas_splits.json \
+VARIANTS_FILE= VARIANTS=baseline_pad0,lower100_pad2,lower100_pad3 \
+RUN_FAMILY=ostia_validation270 USE_GPU=1 SAVE_VISUALS=0 \
+bash src/experiments/runners/run_ostia_localization_filter_envelope.sh
+```
+
+O comando executa tres runs sequenciais com a mesma aorta (filtro + envelope),
+variando a superficie de busca dos ostios. Selecione apenas um nome em
+`VARIANTS` para executar cada run separadamente.
+
+`ostia_pad3_sensitivity.json` define 14 configurações: as 11 da triagem inicial
+e três refinamentos de suavização (0.2, 0.3 e 0.4). Contém
+variações individuais de sigmas, beta, suavização, distância mínima entre
+candidatos e distância axial máxima. Todas usam lower_fraction=1, padding=3,
+geometria 4.8/8 e a configuração de aorta do filtro com envelope.
+
+```bash
+SPLITS=train,val USE_GPU=1 SAVE_VISUALS=0 \
+VARIANTS=pad3_smooth_0_2,pad3_smooth_0_3,pad3_smooth_0_4 \
+VARIANTS_FILE=src/experiments/ostia_pad3_sensitivity.json \
+RUN_FAMILY=ostia_pad3_sensitivity \
+bash src/experiments/runners/run_ostia_localization_filter_envelope.sh
+```
+
+O comando seleciona apenas os três refinamentos: 30 imagens de treino e 60 de
+validação por configuração, em seis runs sequenciais (270 execuções por imagem).
+Compare com a referência e smooth=0.5 já salvos. Suavização é aplicada antes
+do Frangi. A rodada de 0.5 melhorou Dice, mas perdeu sucessos dos óstios;
+inspecione especialmente 854 no treino e 187, 227, 307 e 907 na validação.
+Sem `VARIANTS`, todas as 14 configurações são executadas.
+Os CSVs e configurações efetivas ficam
+em `output/segmentation/runs/mid_res/aorta_segmentation_experiments/{split}/ostia_pad3_sensitivity/`.
+`VARIANTS` permite selecionar nomes do JSON; `DRY_RUN=1` verifica as configurações.
+`SAVE_VISUALS=1` salva HTMLs no disco externo, configurável por `VISUAL_OUTPUT_DIR`.
+
+### Confirmacao final nos 700 exames de teste
+
+O runner de ostios aceita `SPLITS=test`, usando os 700 IDs de
+`config/imagecas_splits.json`. Para referencia com filtro + envelope:
+
+```bash
+SPLITS=test VARIANTS_FILE= VARIANTS=baseline_pad0 \
+RUN_FAMILY=ostia_comparison USE_GPU=1 SAVE_VISUALS=0 \
+bash src/experiments/runners/run_ostia_localization_filter_envelope.sh
+```
+
+Para o candidato, substituir por `VARIANTS=lower100_pad2`. O pad0 nesta
+comparacao tambem usa filtro + envelope; nao e o P99.9 puro.
+Os resultados ficam em `aorta_segmentation_experiments/test/ostia_comparison/`.
+`SAVE_VISUALS=1` espelha a mesma estrutura no disco externo.
+
+### Sensibilidade da trajetória (historico)
+
+`runners/run_aorta_trajectory_geometry_sweep.sh` compara quatro pares de
+limites físicos de mudança de raio/centro e isola o efeito do filtro robusto.
+
+```bash
+SPLIT=train bash src/experiments/runners/run_aorta_trajectory_geometry_sweep.sh
+```
+
+`VARIANTS` aceita uma lista separada por vírgulas para executar apenas parte
+do sweep. Os visuais ficam desativados por padrão; use `SAVE_VISUALS=1` para
+salvá-los no disco externo configurado por `VISUAL_OUTPUT_DIR`.

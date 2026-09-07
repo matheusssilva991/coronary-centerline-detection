@@ -21,12 +21,6 @@ from ..project.results import (
     summarize_batch_timing_records,
 )
 from .pipeline_arteries import segment_arteries_from_ostia
-from .aorta_correction import (
-    calculate_aorta_candidate_metrics,
-    evaluate_mask_guided_tail_candidate,
-    find_mask_guided_tail_start,
-)
-from .aorta_localization import extrapolate_stable_circle_tail
 from .aorta_segmentation import classify_aorta_segmentation_feedback
 from .pipeline_detection import (
     detect_and_evaluate_ostia,
@@ -68,6 +62,7 @@ IMAGE_RESULT_DEFAULTS = {
     "fuzzy_mask_strategy": None,
     "min_threshold": None,
     "max_threshold": None,
+    "effective_upper_threshold_hu": None,
     "lower_threshold_method": None,
     "lower_threshold_percentile": None,
     "threshold_voxels": None,
@@ -115,16 +110,6 @@ IMAGE_RESULT_DEFAULTS = {
     "aorta_circle_filter_used_coverage": None,
     "aorta_circle_filter_reason": None,
     "aorta_circle_filter_candidate_mask_voxel_count": None,
-    "aorta_circle_filter_mask_guided_fallback_enabled": False,
-    "aorta_circle_filter_mask_guided_fallback_attempted": False,
-    "aorta_circle_filter_mask_guided_fallback_accepted": False,
-    "aorta_circle_filter_mask_guided_fallback_rejection_reason": None,
-    "aorta_circle_filter_mask_guided_trim_start_slice": None,
-    "aorta_circle_filter_mask_guided_trimmed_tail_count": 0,
-    "aorta_circle_filter_mask_guided_candidate_area_ratio_p90": None,
-    "aorta_circle_filter_mask_guided_retry_area_ratio_p90": None,
-    "aorta_circle_filter_mask_guided_candidate_fill_q25": None,
-    "aorta_circle_filter_mask_guided_retry_fill_q25": None,
     "aorta_mask_voxels": None,
     "aorta_segmented_slice_count": None,
     "aorta_voxels_per_segmented_slice": None,
@@ -157,6 +142,7 @@ def _preprocessing_result_fields(
         "fuzzy_mask_strategy",
         "min_threshold",
         "max_threshold",
+        "effective_upper_threshold_hu",
         "lower_threshold_method",
         "lower_threshold_percentile",
         "threshold_voxels",
@@ -348,158 +334,20 @@ def summarize_aorta_volume(aorta_mask, image_voxel_count):
     }
 
 
-def _segment_aorta_with_circle_filter_fallback(
+def _segment_aorta_from_filtered_circles(
     lcc_image,
-    original_circles,
     filtered_circles,
     filter_diagnostics,
-    image_slice_count,
-    scaled_spacing,
     config,
 ):
-    """Segmenta a aorta e aplica o fallback ativo guiado pela máscara."""
-    circle_config = config["CIRCLE_DETECTION"]
+    """Segmenta a aorta uma vez usando a trajetória filtrada."""
     level_set_config = config["LEVEL_SET"]
-    trajectory_filter = circle_config.get("trajectory_filter", {})
-    # Primeiro avalia normalmente a trajetória resultante do filtro robusto.
     candidate = segment_aorta_with_diagnostics(
         lcc_image,
         filtered_circles,
         level_set_config,
         use_gpu=config.get("USE_GPU", False),
     )
-
-    # Quando a cobertura impede o filtro geométrico de agir, a própria máscara
-    # nominal pode revelar uma cauda com R_z persistentemente elevado.
-    mask_guided = trajectory_filter.get("mask_guided_fallback", {})
-    mask_guided_enabled = bool(mask_guided.get("enabled", False))
-    mask_guided_diagnostics = {
-        "aorta_circle_filter_mask_guided_fallback_enabled": mask_guided_enabled,
-        "aorta_circle_filter_mask_guided_fallback_attempted": False,
-        "aorta_circle_filter_mask_guided_fallback_accepted": False,
-        "aorta_circle_filter_mask_guided_fallback_rejection_reason": None,
-        "aorta_circle_filter_mask_guided_trim_start_slice": None,
-        "aorta_circle_filter_mask_guided_trimmed_tail_count": 0,
-        "aorta_circle_filter_mask_guided_candidate_area_ratio_p90": None,
-        "aorta_circle_filter_mask_guided_retry_area_ratio_p90": None,
-        "aorta_circle_filter_mask_guided_candidate_fill_q25": None,
-        "aorta_circle_filter_mask_guided_retry_fill_q25": None,
-    }
-    filter_applied = bool(filter_diagnostics.get("aorta_circle_filter_applied"))
-    baseline_metrics = None
-    baseline_ratio = None
-    if mask_guided_enabled and not filter_applied:
-        baseline_metrics = calculate_aorta_candidate_metrics(
-            candidate.mask,
-            original_circles,
-        )
-        baseline_ratio = baseline_metrics["circle_area_ratio_p90"]
-    should_try_mask_guided = (
-        baseline_metrics is not None
-        and baseline_ratio is not None
-        and baseline_ratio >= float(mask_guided.get("min_area_ratio_p90", 2.5))
-    )
-    if should_try_mask_guided:
-        assert baseline_metrics is not None
-        mask_guided_diagnostics.update(
-            {
-                "aorta_circle_filter_mask_guided_fallback_attempted": True,
-                "aorta_circle_filter_mask_guided_candidate_area_ratio_p90": baseline_ratio,
-                "aorta_circle_filter_mask_guided_candidate_fill_q25": baseline_metrics[
-                    "circle_fill_q25"
-                ],
-            }
-        )
-        ordered_circles = sorted(
-            (dict(circle) for circle in original_circles),
-            key=lambda circle: int(circle["slice_index"]),
-            reverse=True,
-        )
-        tail_start = find_mask_guided_tail_start(
-            candidate.mask,
-            ordered_circles,
-            mask_guided,
-        )
-        if tail_start is None:
-            mask_guided_diagnostics[
-                "aorta_circle_filter_mask_guided_fallback_rejection_reason"
-            ] = "persistent_mask_tail_not_found"
-        else:
-            stable_circles = ordered_circles[:tail_start]
-            dx, dy, _ = scaled_spacing
-            pixel_spacing = (float(dx) + float(dy)) / 2.0
-            synthetic = extrapolate_stable_circle_tail(
-                stable_circles,
-                synthetic_slices=int(mask_guided.get("synthetic_tail_slices", 5)),
-                pixel_spacing=pixel_spacing,
-                reference_window=int(mask_guided.get("reference_window", 5)),
-                max_radius_step_mm=float(
-                    trajectory_filter.get("max_radius_step_mm", 4.8)
-                ),
-                max_center_step_mm=float(
-                    trajectory_filter.get("max_center_step_mm", 8.0)
-                ),
-            )
-            retry_circles = stable_circles + synthetic
-            retry = segment_aorta_with_diagnostics(
-                lcc_image,
-                retry_circles,
-                level_set_config,
-                use_gpu=config.get("USE_GPU", False),
-            )
-            retry_metrics = calculate_aorta_candidate_metrics(
-                retry.mask,
-                original_circles,
-            )
-            rejection_reasons = evaluate_mask_guided_tail_candidate(
-                baseline_metrics,
-                retry_metrics,
-                mask_guided,
-            )
-            trimmed_count = len(ordered_circles) - tail_start
-            trim_start_slice = int(ordered_circles[tail_start]["slice_index"])
-            mask_guided_diagnostics.update(
-                {
-                    "aorta_circle_filter_mask_guided_trim_start_slice": trim_start_slice,
-                    "aorta_circle_filter_mask_guided_trimmed_tail_count": trimmed_count,
-                    "aorta_circle_filter_mask_guided_retry_area_ratio_p90": retry_metrics[
-                        "circle_area_ratio_p90"
-                    ],
-                    "aorta_circle_filter_mask_guided_retry_fill_q25": retry_metrics[
-                        "circle_fill_q25"
-                    ],
-                }
-            )
-            if rejection_reasons:
-                mask_guided_diagnostics[
-                    "aorta_circle_filter_mask_guided_fallback_rejection_reason"
-                ] = "+".join(rejection_reasons)
-            else:
-                candidate = retry
-                filtered_circles = retry_circles
-                filter_applied = True
-                mask_guided_diagnostics[
-                    "aorta_circle_filter_mask_guided_fallback_accepted"
-                ] = True
-                filter_diagnostics.update(
-                    {
-                        "aorta_circle_filter_applied": True,
-                        "aorta_circle_used_count": len(retry_circles),
-                        "aorta_circle_filter_synthetic_tail_count": len(synthetic),
-                        "aorta_circle_filter_trimmed_tail_count": trimmed_count,
-                        "aorta_circle_filter_trim_start_slice": trim_start_slice,
-                        "aorta_circle_filter_used_coverage": (
-                            len(retry_circles) / image_slice_count
-                            if image_slice_count
-                            else None
-                        ),
-                        "aorta_circle_filter_reason": (
-                            "mask_ratio_tail_trimmed"
-                            + ("+stable_tail_extrapolated" if synthetic else "")
-                        ),
-                    }
-                )
-    filter_diagnostics.update(mask_guided_diagnostics)
 
     filter_diagnostics.update(
         {
@@ -605,7 +453,6 @@ def process_image(img_id, config, base_path, visual_output_dir=None):
             scaled_spacing,
             config["CIRCLE_DETECTION"],
         )
-        original_detected_circles = [dict(circle) for circle in detected_circles]
         circle_summary = summarize_aorta_circles(
             detected_circles,
             result["image_slice_count"],
@@ -622,15 +469,12 @@ def process_image(img_id, config, base_path, visual_output_dir=None):
             result["image_slice_count"],
             config["CIRCLE_DETECTION"],
         )
-        # Segmenta a aorta e, quando habilitado, testa o fallback guiado pela máscara.
+        # Segmenta a aorta uma vez com a trajetória selecionada pelo filtro.
         detected_circles, aorta_segmentation, circle_filter_diagnostics = (
-            _segment_aorta_with_circle_filter_fallback(
+            _segment_aorta_from_filtered_circles(
                 lcc_image,
-                original_detected_circles,
                 detected_circles,
                 circle_filter_diagnostics,
-                result["image_slice_count"],
-                scaled_spacing,
                 config,
             )
         )
@@ -645,13 +489,11 @@ def process_image(img_id, config, base_path, visual_output_dir=None):
             )
         )
         # Gera apenas um alerta de qualidade; a classificação não modifica a máscara.
-        result["aorta_segmentation_feedback"] = (
-            classify_aorta_segmentation_feedback(
-                result.get("aorta_level_set_circle_fill_q25"),
-                result.get("aorta_level_set_circle_area_ratio_p90"),
-                result.get("aorta_volume_fraction"),
-                config.get("LEVEL_SET", {}).get("quality_feedback"),
-            )
+        result["aorta_segmentation_feedback"] = classify_aorta_segmentation_feedback(
+            result.get("aorta_level_set_circle_fill_q25"),
+            result.get("aorta_level_set_circle_area_ratio_p90"),
+            result.get("aorta_volume_fraction"),
+            config.get("LEVEL_SET", {}).get("quality_feedback"),
         )
 
         try:

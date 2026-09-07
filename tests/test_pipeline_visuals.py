@@ -36,7 +36,7 @@ class PipelineVisualTests(unittest.TestCase):
             "aorta_segmentation_experiments/val/circle_filter_conservative",
         )
 
-    def test_cli_overrides_fixed_level_set_and_mask_guided_parameters(self):
+    def test_cli_overrides_fixed_level_set_parameters(self):
         parser = build_parser(Path("/dataset"), Path("/output"))
         args = parser.parse_args(
             [
@@ -50,12 +50,6 @@ class PipelineVisualTests(unittest.TestCase):
                 "1250",
                 "--aorta-opening-radius",
                 "1",
-                "--aorta-mask-guided-area-ratio-p90",
-                "2.3",
-                "--aorta-mask-guided-max-fill-loss",
-                "0.025",
-                "--aorta-mask-guided-min-ratio-improvement",
-                "0.05",
             ]
         )
         config = {}
@@ -67,18 +61,16 @@ class PipelineVisualTests(unittest.TestCase):
         self.assertEqual(config["LEVEL_SET"]["balloon"], 0.7)
         self.assertEqual(config["LEVEL_SET"]["alpha"], 1250.0)
         self.assertEqual(config["LEVEL_SET"]["leak_removal_radius"], 1)
-        mask_guided = config["CIRCLE_DETECTION"]["trajectory_filter"][
-            "mask_guided_fallback"
-        ]
-        self.assertEqual(mask_guided["min_area_ratio_p90"], 2.3)
-        self.assertEqual(mask_guided["slice_area_ratio_threshold"], 2.3)
-        self.assertEqual(mask_guided["max_fill_loss"], 0.025)
-        self.assertEqual(mask_guided["min_ratio_improvement"], 0.05)
 
     def test_cli_rejects_removed_recovery_flags(self):
         parser = build_parser(Path("/dataset"), Path("/output"))
         with self.assertRaises(SystemExit):
             parser.parse_args(["--aorta-recovery-max-extra-slices", "15"])
+
+    def test_cli_rejects_removed_mask_guided_fallback(self):
+        parser = build_parser(Path("/dataset"), Path("/output"))
+        with self.assertRaises(SystemExit):
+            parser.parse_args(["--aorta-circle-filter-mask-guided"])
 
     def test_cli_rejects_removed_adaptive_level_set_flags(self):
         parser = build_parser(Path("/dataset"), Path("/output"))

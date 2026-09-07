@@ -1,0 +1,771 @@
+{
+  "execution_info": {
+    "timestamp": "2026-09-02T16:44:41.390829",
+    "split_name": "train",
+    "num_images": 30,
+    "image_ids": [
+      28,
+      380,
+      854,
+      937,
+      315,
+      428,
+      752,
+      13,
+      538,
+      965,
+      447,
+      836,
+      603,
+      676,
+      44,
+      129,
+      518,
+      793,
+      550,
+      631,
+      330,
+      90,
+      608,
+      887,
+      175,
+      760,
+      696,
+      194,
+      305,
+      344
+    ],
+    "execution_time_seconds": 1172.0791864395142,
+    "execution_time_minutes": 19.534653107325237,
+    "execution_time_hours": 0.3255775517887539,
+    "current_run_execution_time_seconds": 1172.0888628959656,
+    "current_run_execution_time_minutes": 19.534814381599425,
+    "current_run_execution_time_hours": 0.3255802396933238,
+    "batch_timing_summary": {
+      "total_known_batches": 5,
+      "known_batches": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "total_known_duration_seconds": 1172.0791864395142,
+      "total_known_duration_minutes": 19.534653107325237,
+      "total_known_duration_hours": 0.3255775517887539,
+      "missing_timing_batches": []
+    },
+    "batch_timings": [
+      {
+        "split_name": "train",
+        "batch_number": 1,
+        "total_batches": 5,
+        "num_images": 6,
+        "first_img_id": 28,
+        "last_img_id": 428,
+        "result_file": "ostios_train_lote_1_summary.csv",
+        "started_at": "2026-09-02T16:25:09",
+        "finished_at": "2026-09-02T16:29:52",
+        "duration_seconds": 283.3075339794159,
+        "duration_minutes": 4.721792232990265,
+        "duration_hours": 0.0786965372165044
+      },
+      {
+        "split_name": "train",
+        "batch_number": 2,
+        "total_batches": 5,
+        "num_images": 6,
+        "first_img_id": 752,
+        "last_img_id": 836,
+        "result_file": "ostios_train_lote_2_summary.csv",
+        "started_at": "2026-09-02T16:29:52",
+        "finished_at": "2026-09-02T16:33:24",
+        "duration_seconds": 212.37503385543823,
+        "duration_minutes": 3.5395838975906373,
+        "duration_hours": 0.0589930649598439
+      },
+      {
+        "split_name": "train",
+        "batch_number": 3,
+        "total_batches": 5,
+        "num_images": 6,
+        "first_img_id": 603,
+        "last_img_id": 793,
+        "result_file": "ostios_train_lote_3_summary.csv",
+        "started_at": "2026-09-02T16:33:24",
+        "finished_at": "2026-09-02T16:36:54",
+        "duration_seconds": 210.0225574970245,
+        "duration_minutes": 3.500375958283742,
+        "duration_hours": 0.058339599304729
+      },
+      {
+        "split_name": "train",
+        "batch_number": 4,
+        "total_batches": 5,
+        "num_images": 6,
+        "first_img_id": 550,
+        "last_img_id": 887,
+        "result_file": "ostios_train_lote_4_summary.csv",
+        "started_at": "2026-09-02T16:36:54",
+        "finished_at": "2026-09-02T16:40:59",
+        "duration_seconds": 244.2911787033081,
+        "duration_minutes": 4.071519645055135,
+        "duration_hours": 0.0678586607509189
+      },
+      {
+        "split_name": "train",
+        "batch_number": 5,
+        "total_batches": 5,
+        "num_images": 6,
+        "first_img_id": 175,
+        "last_img_id": 344,
+        "result_file": "ostios_train_lote_5_summary.csv",
+        "started_at": "2026-09-02T16:40:59",
+        "finished_at": "2026-09-02T16:44:41",
+        "duration_seconds": 222.0828824043274,
+        "duration_minutes": 3.701381373405456,
+        "duration_hours": 0.0616896895567576
+      }
+    ],
+    "python_version": "3.13.11",
+    "platform": "Linux-6.14.0-37-generic-x86_64-with-glibc2.39",
+    "state_counters": {
+      "ostia_found": 30,
+      "ostia_status_not_found": 0,
+      "segmentation_attempted": 30,
+      "proceeded_with_bad_ostia": 3,
+      "error_not_null": 0
+    }
+  },
+  "preprocessing_config": {
+    "downscale_method": "opencv",
+    "opencv_interpolation": "linear",
+    "downscale_factors": [
+      2,
+      2,
+      1
+    ],
+    "min_threshold": -300,
+    "max_threshold_percentile": 99.9,
+    "upper_threshold_selection": {
+      "method": "fixed",
+      "dense_min_hu": 300.0,
+      "valid_min_hu": -300.0,
+      "min_predicted_gain": 0.005,
+      "feature_names": [
+        "dense_mean_hu",
+        "dense_median_hu",
+        "dense_std_hu",
+        "dense_iqr_hu",
+        "dense_p95_hu",
+        "dense_voxel_fraction",
+        "above_500_fraction",
+        "above_700_fraction",
+        "above_1000_fraction"
+      ],
+      "models": {
+        "99.5": {
+          "alpha": 1.0,
+          "loocv_mse": 0.019743240918911442,
+          "intercept": -0.029350854574759406,
+          "coefficients": [
+            -0.08537892974090786,
+            -0.06464724916493912,
+            -0.014012068375655,
+            0.045504676851677694,
+            0.0549561158204815,
+            0.0430056191587687,
+            0.06035759227482395,
+            -0.035009182436886895,
+            -0.029697050636762538
+          ],
+          "impute_values": [
+            492.7759704589844,
+            488.875,
+            128.7454719543457,
+            131.125,
+            677.75,
+            0.15557385641514238,
+            0.06712723356728714,
+            0.006864151360590263,
+            0.0010178474366944208
+          ],
+          "feature_means": [
+            509.1934102376302,
+            514.35,
+            130.2981379191081,
+            134.20833333333334,
+            692.9583333333334,
+            0.16052256789015798,
+            0.07749774895518402,
+            0.017442229916249663,
+            0.0014197549244758109
+          ],
+          "feature_scales": [
+            74.47087364792307,
+            95.79484589475572,
+            26.97010140153037,
+            47.27768515789335,
+            96.53762399822268,
+            0.03187892102480846,
+            0.04875078864983539,
+            0.030914644468540094,
+            0.0014922923001298518
+          ]
+        },
+        "99.7": {
+          "alpha": 1.0,
+          "loocv_mse": 0.005188684115282274,
+          "intercept": -0.004320601455460883,
+          "coefficients": [
+            -0.022594159030052914,
+            -0.01796124672580681,
+            -0.016388844389538488,
+            0.005406881475721651,
+            0.031208643421759667,
+            0.011668253593752346,
+            0.03393761716966797,
+            -0.023566185783594682,
+            -0.04387656824348167
+          ],
+          "impute_values": [
+            492.7759704589844,
+            488.875,
+            128.7454719543457,
+            131.125,
+            677.75,
+            0.15557385641514238,
+            0.06712723356728714,
+            0.006864151360590263,
+            0.0010178474366944208
+          ],
+          "feature_means": [
+            509.1934102376302,
+            514.35,
+            130.2981379191081,
+            134.20833333333334,
+            692.9583333333334,
+            0.16052256789015798,
+            0.07749774895518402,
+            0.017442229916249663,
+            0.0014197549244758109
+          ],
+          "feature_scales": [
+            74.47087364792307,
+            95.79484589475572,
+            26.97010140153037,
+            47.27768515789335,
+            96.53762399822268,
+            0.03187892102480846,
+            0.04875078864983539,
+            0.030914644468540094,
+            0.0014922923001298518
+          ]
+        }
+      },
+      "training_images": 30
+    },
+    "thresholding": {
+      "method": "normal",
+      "fuzzy": {
+        "lower_percentile": 10.5,
+        "soft_margin_hu": 100,
+        "object_percentile": 99.8,
+        "dense_percentile": 99.96,
+        "smooth_radius": 0,
+        "smooth_mode": "mean"
+      }
+    },
+    "lcc_per_slice": true,
+    "lcc_mode": "per_slice"
+  },
+  "runtime_config": {
+    "use_gpu": true,
+    "save_segmentation_visuals": false,
+    "visual_output_dir": null,
+    "downscale_method": "opencv",
+    "opencv_interpolation": "linear",
+    "downscale_factors": [
+      2,
+      2,
+      1
+    ],
+    "min_threshold": -300,
+    "max_threshold_percentile": 99.9,
+    "upper_threshold_selection": {
+      "method": "fixed",
+      "dense_min_hu": 300.0,
+      "valid_min_hu": -300.0,
+      "min_predicted_gain": 0.005,
+      "feature_names": [
+        "dense_mean_hu",
+        "dense_median_hu",
+        "dense_std_hu",
+        "dense_iqr_hu",
+        "dense_p95_hu",
+        "dense_voxel_fraction",
+        "above_500_fraction",
+        "above_700_fraction",
+        "above_1000_fraction"
+      ],
+      "models": {
+        "99.5": {
+          "alpha": 1.0,
+          "loocv_mse": 0.019743240918911442,
+          "intercept": -0.029350854574759406,
+          "coefficients": [
+            -0.08537892974090786,
+            -0.06464724916493912,
+            -0.014012068375655,
+            0.045504676851677694,
+            0.0549561158204815,
+            0.0430056191587687,
+            0.06035759227482395,
+            -0.035009182436886895,
+            -0.029697050636762538
+          ],
+          "impute_values": [
+            492.7759704589844,
+            488.875,
+            128.7454719543457,
+            131.125,
+            677.75,
+            0.15557385641514238,
+            0.06712723356728714,
+            0.006864151360590263,
+            0.0010178474366944208
+          ],
+          "feature_means": [
+            509.1934102376302,
+            514.35,
+            130.2981379191081,
+            134.20833333333334,
+            692.9583333333334,
+            0.16052256789015798,
+            0.07749774895518402,
+            0.017442229916249663,
+            0.0014197549244758109
+          ],
+          "feature_scales": [
+            74.47087364792307,
+            95.79484589475572,
+            26.97010140153037,
+            47.27768515789335,
+            96.53762399822268,
+            0.03187892102480846,
+            0.04875078864983539,
+            0.030914644468540094,
+            0.0014922923001298518
+          ]
+        },
+        "99.7": {
+          "alpha": 1.0,
+          "loocv_mse": 0.005188684115282274,
+          "intercept": -0.004320601455460883,
+          "coefficients": [
+            -0.022594159030052914,
+            -0.01796124672580681,
+            -0.016388844389538488,
+            0.005406881475721651,
+            0.031208643421759667,
+            0.011668253593752346,
+            0.03393761716966797,
+            -0.023566185783594682,
+            -0.04387656824348167
+          ],
+          "impute_values": [
+            492.7759704589844,
+            488.875,
+            128.7454719543457,
+            131.125,
+            677.75,
+            0.15557385641514238,
+            0.06712723356728714,
+            0.006864151360590263,
+            0.0010178474366944208
+          ],
+          "feature_means": [
+            509.1934102376302,
+            514.35,
+            130.2981379191081,
+            134.20833333333334,
+            692.9583333333334,
+            0.16052256789015798,
+            0.07749774895518402,
+            0.017442229916249663,
+            0.0014197549244758109
+          ],
+          "feature_scales": [
+            74.47087364792307,
+            95.79484589475572,
+            26.97010140153037,
+            47.27768515789335,
+            96.53762399822268,
+            0.03187892102480846,
+            0.04875078864983539,
+            0.030914644468540094,
+            0.0014922923001298518
+          ]
+        }
+      },
+      "training_images": 30
+    },
+    "thresholding": {
+      "method": "normal",
+      "fuzzy": {
+        "lower_percentile": 10.5,
+        "soft_margin_hu": 100,
+        "object_percentile": 99.8,
+        "dense_percentile": 99.96,
+        "smooth_radius": 0,
+        "smooth_mode": "mean"
+      }
+    },
+    "lcc_per_slice": true,
+    "lcc_mode": "per_slice",
+    "aorta_miss_count": 5,
+    "aorta_interpolate_missed_circles": true,
+    "artery_segmentation_method": "region_growing",
+    "aorta_trajectory_radius_factor": null,
+    "aorta_trajectory_axial_margin_slices": 0,
+    "aorta_opening_radius": 2
+  },
+  "vesselness_config": {
+    "ostios": {
+      "method": "normal",
+      "sigmas": [
+        2.5,
+        3.0
+      ],
+      "black_ridges": false,
+      "alpha": 0.5,
+      "beta": 1.0,
+      "gamma": 30,
+      "normalization": "none",
+      "smooth_sigma": 0.0
+    },
+    "artery": {
+      "method": "normal",
+      "sigmas": [
+        1.5,
+        2.0,
+        2.5,
+        3.0
+      ],
+      "black_ridges": false,
+      "alpha": 0.5,
+      "beta": 0.5,
+      "gamma": 55,
+      "normalization": "none",
+      "smooth_sigma": 0.0
+    }
+  },
+  "circle_detection_config": {
+    "radii_start_px": 18,
+    "radii_end_px": 30,
+    "radius_step_px": 1,
+    "tol_radius_mm": 9.0,
+    "tol_distance_mm": 20.0,
+    "quadrant_offset": [
+      30,
+      30
+    ],
+    "max_slice_miss_threshold": 5,
+    "neighbor_distance_threshold": 5,
+    "total_num_peaks_initial": 15,
+    "total_num_peaks": 15,
+    "canny_sigma": 3,
+    "use_local_roi": true,
+    "local_roi_padding": 30,
+    "interpolate_missed_circles": true,
+    "trajectory_filter": {
+      "method": "none",
+      "max_radius_step_mm": 4.8,
+      "max_center_step_mm": 8.0,
+      "severe_radius_step_mm": 7.0,
+      "severe_center_step_mm": 12.0,
+      "min_hough_accumulator": 0.408,
+      "reference_window": 5,
+      "persistence_window": 5,
+      "persistence_required": 4,
+      "min_tail_circles": 8,
+      "min_remaining_circles": 30,
+      "tail_search_start_fraction": 0.35,
+      "min_tail_coverage": 0.8,
+      "max_tail_trim_fraction": 1.0,
+      "synthetic_tail_slices": 0,
+      "mask_guided_fallback": {
+        "enabled": false,
+        "tail_search_start_fraction": 0.35,
+        "persistence_window": 5,
+        "persistence_required": 4,
+        "min_tail_circles": 8,
+        "min_remaining_circles": 30,
+        "max_tail_trim_fraction": 0.4,
+        "slice_area_ratio_threshold": 2.5,
+        "min_area_ratio_p90": 2.5,
+        "min_ratio_improvement": 0.1,
+        "max_fill_loss": 0.015,
+        "synthetic_tail_slices": 5,
+        "reference_window": 5
+      }
+    }
+  },
+  "level_set_config": {
+    "radius_reduction_factor": 0.15,
+    "num_iter": 31,
+    "balloon": 0.8,
+    "smoothing": 2,
+    "threshold": "auto",
+    "roi_margin": 10,
+    "use_roi": true,
+    "alpha": 1000,
+    "sigma": 2,
+    "leak_removal_radius": 2,
+    "trajectory_axial_margin_slices": 0,
+    "quality_feedback": {
+      "oversegmentation_area_ratio_p90": 3.0,
+      "oversegmentation_volume_fraction": 0.019,
+      "oversegmentation_paired_area_ratio_p90": 2.8,
+      "undersegmentation_circle_fill_q25": 0.8,
+      "undersegmentation_area_ratio_p90": 1.3,
+      "undersegmentation_volume_fraction": 0.008,
+      "undersegmentation_required_signals": 2
+    }
+  },
+  "ostia_detection_config": {
+    "top_n": 2000,
+    "max_z_diff_mm": 40.0,
+    "lower_fraction": 0.85,
+    "min_center_distance_factor": 0.85,
+    "min_lateral_factor": 0.4,
+    "erosion_radius": 4
+  },
+  "artery_segmentation_config": {
+    "method": "region_growing"
+  },
+  "thresholding_config": {
+    "method": "normal",
+    "fuzzy": {
+      "lower_percentile": 10.5,
+      "soft_margin_hu": 100,
+      "object_percentile": 99.8,
+      "dense_percentile": 99.96,
+      "smooth_radius": 0,
+      "smooth_mode": "mean"
+    }
+  },
+  "region_growing_config": {
+    "max_volume": 100000,
+    "switch_at_voxels": 2000,
+    "min_vesselness_fraction": 0.078,
+    "threshold_divisor": 7,
+    "relaxed_floor_factor": 0.98,
+    "comparison_window": 1,
+    "smooth_relaxation": true,
+    "use_seed_refinement": true,
+    "use_multi_seed": true,
+    "grow_each_ostium_separately": true,
+    "seed_search_radius": 2,
+    "seed_candidate_radius": 1,
+    "max_seed_candidates": 6,
+    "seed_min_vesselness_fraction": 0.02,
+    "verbose": false
+  },
+  "fuzzy_connectedness_config": {
+    "alpha": 0.16,
+    "sigma_hu": 100,
+    "neighborhood": 26,
+    "candidate_min_vesselness": 0.018,
+    "max_candidate_voxels": 500000,
+    "max_processed_voxels": 500000,
+    "seed_search_radius": 2,
+    "max_seeds_per_ostium": 4,
+    "seed_min_vesselness": 0.018,
+    "min_seed_distance_voxels": 1.0,
+    "vesselness_floor": 0.018,
+    "vesselness_weight": 0.9,
+    "grow_each_ostium_separately": false
+  },
+  "postprocessing_config": {
+    "closing_radius": 3,
+    "dilation_radius": 2
+  },
+  "evaluation_config": {
+    "tolerable_distance_mm": 7.0
+  },
+  "results_summary": {
+    "total_processed": 30,
+    "ostia_found": 30,
+    "ostia_found_percent": 100.0,
+    "ostia_status_not_found": 0,
+    "ostia_status_not_found_percent": 0.0,
+    "both_correct": 1,
+    "both_correct_percent": 3.3333333333333335,
+    "both_tolerable": 26,
+    "both_tolerable_percent": 86.66666666666667,
+    "segmentation_attempted": 30,
+    "segmentation_attempted_percent": 100.0,
+    "proceeded_with_bad_ostia": 3,
+    "proceeded_with_bad_ostia_percent": 10.0,
+    "total_success": 27,
+    "total_success_percent": 90.0,
+    "left_correct": 10,
+    "right_correct": 5,
+    "error_not_null": 0,
+    "aorta_segmentation_feedback_counts": {
+      "adequate": 22,
+      "suspected_oversegmentation": 6,
+      "suspected_undersegmentation": 2
+    },
+    "dice_artery_mean": 0.6147842966503606,
+    "dice_artery_std": 0.10396060063758436,
+    "dice_artery_median": 0.6310892401207193,
+    "dice_artery_before_morphology_mean": 0.3240137513462948,
+    "dice_artery_after_morphology_mean": 0.6147842966503606,
+    "dice_artery_morphology_delta_mean": 0.2907705453040658
+  },
+  "aorta_segmentation_feedback": {
+    "role": "diagnostic_only",
+    "thresholds": {
+      "oversegmentation_area_ratio_p90": 3.0,
+      "oversegmentation_volume_fraction": 0.019,
+      "oversegmentation_paired_area_ratio_p90": 2.8,
+      "undersegmentation_circle_fill_q25": 0.8,
+      "undersegmentation_area_ratio_p90": 1.3,
+      "undersegmentation_volume_fraction": 0.008,
+      "undersegmentation_required_signals": 2
+    },
+    "counts": {
+      "adequate": 22,
+      "suspected_oversegmentation": 6,
+      "suspected_undersegmentation": 2
+    },
+    "by_image": [
+      {
+        "IMG_ID": 28,
+        "feedback": "adequate"
+      },
+      {
+        "IMG_ID": 380,
+        "feedback": "adequate"
+      },
+      {
+        "IMG_ID": 854,
+        "feedback": "adequate"
+      },
+      {
+        "IMG_ID": 937,
+        "feedback": "suspected_undersegmentation"
+      },
+      {
+        "IMG_ID": 315,
+        "feedback": "adequate"
+      },
+      {
+        "IMG_ID": 428,
+        "feedback": "suspected_oversegmentation"
+      },
+      {
+        "IMG_ID": 752,
+        "feedback": "adequate"
+      },
+      {
+        "IMG_ID": 13,
+        "feedback": "adequate"
+      },
+      {
+        "IMG_ID": 538,
+        "feedback": "adequate"
+      },
+      {
+        "IMG_ID": 965,
+        "feedback": "adequate"
+      },
+      {
+        "IMG_ID": 447,
+        "feedback": "adequate"
+      },
+      {
+        "IMG_ID": 836,
+        "feedback": "adequate"
+      },
+      {
+        "IMG_ID": 603,
+        "feedback": "suspected_oversegmentation"
+      },
+      {
+        "IMG_ID": 676,
+        "feedback": "adequate"
+      },
+      {
+        "IMG_ID": 44,
+        "feedback": "suspected_oversegmentation"
+      },
+      {
+        "IMG_ID": 129,
+        "feedback": "adequate"
+      },
+      {
+        "IMG_ID": 518,
+        "feedback": "adequate"
+      },
+      {
+        "IMG_ID": 793,
+        "feedback": "adequate"
+      },
+      {
+        "IMG_ID": 550,
+        "feedback": "suspected_undersegmentation"
+      },
+      {
+        "IMG_ID": 631,
+        "feedback": "adequate"
+      },
+      {
+        "IMG_ID": 330,
+        "feedback": "suspected_oversegmentation"
+      },
+      {
+        "IMG_ID": 90,
+        "feedback": "adequate"
+      },
+      {
+        "IMG_ID": 608,
+        "feedback": "adequate"
+      },
+      {
+        "IMG_ID": 887,
+        "feedback": "adequate"
+      },
+      {
+        "IMG_ID": 175,
+        "feedback": "suspected_oversegmentation"
+      },
+      {
+        "IMG_ID": 760,
+        "feedback": "suspected_oversegmentation"
+      },
+      {
+        "IMG_ID": 696,
+        "feedback": "adequate"
+      },
+      {
+        "IMG_ID": 194,
+        "feedback": "adequate"
+      },
+      {
+        "IMG_ID": 305,
+        "feedback": "adequate"
+      },
+      {
+        "IMG_ID": 344,
+        "feedback": "adequate"
+      }
+    ]
+  },
+  "paths": {
+    "base_path": "/media/matheus/HD/DatasetsCCTA/ImageCAS/1-1000",
+    "output_dir": "/home/matheus/workspace/coronary-centerline-detection/output"
+  }
+}

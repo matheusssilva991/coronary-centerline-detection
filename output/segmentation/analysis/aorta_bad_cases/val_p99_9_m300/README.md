@@ -34,3 +34,19 @@ As metricas usadas nessa comparacao estao em
 [`leak_indicator_summary.csv`](leak_indicator_summary.csv). A linha
 `good_cohort_p90` representa o percentil 90 calculado somente sobre as 56 aortas
 visualmente boas, e nao um novo limiar adotado pelo pipeline.
+
+## Novo padrao lower100/pad2
+
+Run `2026-09-06_08-47-17`, geometria 4.8/8 e mesmo level set b0.6/r0.10/i26.
+Os visuais abaixo sao do novo run; os rotulos da tabela anterior continuam
+pertencendo a revisao historica. Nao representam uma nova revisao automatica.
+
+- Exame 11: [abrir pad2](by_image/img_11/new_default_pad2.html).
+- Exame 134: [abrir pad2](by_image/img_134/new_default_pad2.html).
+- Exame 444: [abrir pad2](by_image/img_444/new_default_pad2.html).
+- Exame 464: [abrir pad2](by_image/img_464/new_default_pad2.html).
+- Exame 513: [abrir pad2](by_image/img_513/new_default_pad2.html).
+- Exame 597: [abrir pad2](by_image/img_597/new_default_pad2.html).
+- Exame 602: [abrir pad2](by_image/img_602/new_default_pad2.html).
+- Exame 790: [abrir pad2](by_image/img_790/new_default_pad2.html).
+- Exame 792: [abrir pad2](by_image/img_792/new_default_pad2.html).

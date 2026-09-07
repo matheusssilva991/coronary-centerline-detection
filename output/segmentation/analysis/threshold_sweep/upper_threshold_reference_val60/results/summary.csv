@@ -1,0 +1,4 @@
+variant,threshold_method,lower_threshold_method,lower_threshold_percentile,max_threshold_percentile,fuzzy_object_percentile,fuzzy_dense_percentile,fuzzy_soft_margin_hu,fuzzy_smooth_radius,fuzzy_smooth_mode,run_dir,return_code,duration_seconds,duration_minutes,n_images,mean_min_threshold_hu,mean_max_threshold_hu,std_min_threshold_hu,mean_dice,median_dice,ostia_success_rate,both_correct_n,both_tolerable_n,found_wrong_n,not_found_n
+fixed_m300_maxp99p9,normal,fixed,,99.9,,,,,,,0,2259.377637726,37.6562939621,60,-300.0,939.0966756184896,0.0,0.5605950904971763,0.627177190482354,0.8,2,46,12,0
+fixed_m300_maxp99p7,normal,fixed,,99.7,,,,,,,0,2328.156924278999,38.802615404649984,60,-300.0,754.4166666666666,0.0,0.5536073225811468,0.6222832178211608,0.8,2,46,12,0
+fixed_m300_maxp99p5,normal,fixed,,99.5,,,,,,,0,2497.047637343996,41.61746062239993,60,-300.0,680.0625,0.0,0.5162789768393575,0.5671874334821257,0.75,1,44,15,0

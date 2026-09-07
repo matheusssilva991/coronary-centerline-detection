@@ -146,10 +146,14 @@ def build_variants(
     variants: list[dict[str, Any]] = []
     if "fixed" in methods:
         for threshold_method in threshold_methods:
-            method_fuzzy_configs = fuzzy_configs if threshold_method == "fuzzy" else [None]
+            method_fuzzy_configs = (
+                fuzzy_configs if threshold_method == "fuzzy" else [None]
+            )
             for fuzzy_config in method_fuzzy_configs:
                 method_max_threshold_percentiles = (
-                    max_threshold_percentiles if threshold_method == "normal" else [99.7]
+                    max_threshold_percentiles
+                    if threshold_method == "normal"
+                    else [99.7]
                 )
                 for max_threshold_percentile in method_max_threshold_percentiles:
                     thresholding = {"method": threshold_method}
@@ -183,7 +187,9 @@ def build_variants(
         if method == "fixed":
             continue
         for threshold_method in threshold_methods:
-            method_fuzzy_configs = fuzzy_configs if threshold_method == "fuzzy" else [None]
+            method_fuzzy_configs = (
+                fuzzy_configs if threshold_method == "fuzzy" else [None]
+            )
             for fuzzy_config in method_fuzzy_configs:
                 for percentile in percentiles:
                     method_max_threshold_percentiles = (
@@ -223,6 +229,7 @@ def build_variants(
                             }
                         )
     return variants
+
 
 def base_pipeline_overrides(use_gpu: bool | None) -> dict[str, Any]:
     """Força o experimento para region growing, deixando o threshold por variante."""
@@ -386,12 +393,16 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--run-name", default=None)
     parser.add_argument("--config-path", type=Path, default=DEFAULT_CONFIG_PATH)
     parser.add_argument(
+        "--split-config",
+        type=Path,
+        default=None,
+        help="Arquivo opcional com os IDs fixos de train, val e test.",
+    )
+    parser.add_argument(
         "--methods",
         type=parse_csv_methods,
         default=parse_csv_methods("percentile"),
-        help=(
-            "Métodos separados por vírgula. Opções: fixed, percentile."
-        ),
+        help=("Métodos separados por vírgula. Opções: fixed, percentile."),
     )
     parser.add_argument(
         "--threshold-methods",
@@ -406,9 +417,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--percentiles",
         type=parse_csv_floats,
         default=parse_csv_floats("10.5,10.75"),
-        help=(
-            "Percentis baixos próximos aos melhores resultados validados."
-        ),
+        help=("Percentis baixos próximos aos melhores resultados validados."),
     )
     parser.add_argument(
         "--max-threshold-percentiles",
@@ -510,6 +519,8 @@ def pipeline_command(
         command.append("--no-gpu")
     if args.base_path is not None:
         command.extend(["--base-path", str(args.base_path)])
+    if args.split_config is not None:
+        command.extend(["--split-config", str(args.split_config)])
     if args.downscale_method is not None:
         command.extend(["--downscale-method", args.downscale_method])
     if args.opencv_interpolation is not None:
@@ -607,9 +618,7 @@ def main() -> None:
                 "threshold_method": variant.get("threshold_method", "normal"),
                 "lower_threshold_method": variant["method"],
                 "lower_threshold_percentile": variant["percentile"],
-                "max_threshold_percentile": variant.get(
-                    "max_threshold_percentile"
-                ),
+                "max_threshold_percentile": variant.get("max_threshold_percentile"),
                 "fuzzy_config": variant.get("fuzzy_config"),
                 "config_file": display_path(config_file),
                 "command": command_text,

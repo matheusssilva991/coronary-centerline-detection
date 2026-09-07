@@ -44,7 +44,6 @@ run_selected_configuration() {
     --aorta-circle-filter-min-coverage 0.40 \
     --aorta-circle-filter-max-trim-fraction 0.40 \
     --aorta-circle-filter-synthetic-tail-slices 5 \
-    --aorta-circle-filter-mask-guided \
     --aorta-trajectory-radius-factor 2.25 \
     --aorta-trajectory-axial-margin-slices 10 \
     --run-group \

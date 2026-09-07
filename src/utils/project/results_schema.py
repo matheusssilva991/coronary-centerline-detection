@@ -133,6 +133,13 @@ def classify_result_status(result: dict[str, Any]) -> str:
 
 def build_result_row(result: dict[str, Any]) -> dict[str, Any]:
     """Converte um resultado bruto do pipeline em uma linha CSV padronizada."""
+    effective_upper_threshold_hu = _get_result_value(
+        result, "effective_upper_threshold_hu"
+    )
+    if effective_upper_threshold_hu is None:
+        # Permite retomar runs normais antigos que salvavam apenas max_threshold_hu.
+        effective_upper_threshold_hu = _get_result_value(result, "max_threshold")
+
     row = {
         # Métricas e diagnósticos da segmentação arterial.
         "IMG_ID": result.get("IMG_ID"),
@@ -167,6 +174,7 @@ def build_result_row(result: dict[str, Any]) -> dict[str, Any]:
         "fuzzy_mask_strategy": _get_result_value(result, "fuzzy_mask_strategy"),
         "min_threshold": _get_result_value(result, "min_threshold"),
         "max_threshold": _get_result_value(result, "max_threshold"),
+        "effective_upper_threshold_hu": effective_upper_threshold_hu,
         "lower_threshold_method": _get_result_value(result, "lower_threshold_method"),
         "lower_threshold_percentile": _get_result_value(
             result, "lower_threshold_percentile"
@@ -289,62 +297,6 @@ def build_result_row(result: dict[str, Any]) -> dict[str, Any]:
         ),
         "aorta_circle_filter_candidate_mask_voxel_count": _get_result_value(
             result, "aorta_circle_filter_candidate_mask_voxel_count"
-        ),
-        "aorta_circle_filter_mask_guided_fallback_enabled": _as_bool_value(
-            _get_result_value(
-                result,
-                "aorta_circle_filter_mask_guided_fallback_enabled",
-                False,
-            )
-        ),
-        "aorta_circle_filter_mask_guided_fallback_attempted": _as_bool_value(
-            _get_result_value(
-                result,
-                "aorta_circle_filter_mask_guided_fallback_attempted",
-                False,
-            )
-        ),
-        "aorta_circle_filter_mask_guided_fallback_accepted": _as_bool_value(
-            _get_result_value(
-                result,
-                "aorta_circle_filter_mask_guided_fallback_accepted",
-                False,
-            )
-        ),
-        "aorta_circle_filter_mask_guided_fallback_rejection_reason": (
-            _get_result_value(
-                result,
-                "aorta_circle_filter_mask_guided_fallback_rejection_reason",
-            )
-        ),
-        "aorta_circle_filter_mask_guided_trim_start_slice": _get_result_value(
-            result,
-            "aorta_circle_filter_mask_guided_trim_start_slice",
-        ),
-        "aorta_circle_filter_mask_guided_trimmed_tail_count": _get_result_value(
-            result,
-            "aorta_circle_filter_mask_guided_trimmed_tail_count",
-            0,
-        ),
-        "aorta_circle_filter_mask_guided_candidate_area_ratio_p90": (
-            _get_result_value(
-                result,
-                "aorta_circle_filter_mask_guided_candidate_area_ratio_p90",
-            )
-        ),
-        "aorta_circle_filter_mask_guided_retry_area_ratio_p90": (
-            _get_result_value(
-                result,
-                "aorta_circle_filter_mask_guided_retry_area_ratio_p90",
-            )
-        ),
-        "aorta_circle_filter_mask_guided_candidate_fill_q25": _get_result_value(
-            result,
-            "aorta_circle_filter_mask_guided_candidate_fill_q25",
-        ),
-        "aorta_circle_filter_mask_guided_retry_fill_q25": _get_result_value(
-            result,
-            "aorta_circle_filter_mask_guided_retry_fill_q25",
         ),
         "aorta_mask_voxels": _get_result_value(result, "aorta_mask_voxels"),
         "aorta_segmented_slice_count": _get_result_value(
@@ -497,6 +449,11 @@ def summarize_results_df(df: pd.DataFrame) -> dict[str, Any]:
     dice_series = _numeric_series(df, "dice_artery")
     dice_before_series = _numeric_series(df, "dice_artery_before_morphology")
     dice_delta_series = _numeric_series(df, "dice_artery_morphology_delta")
+    effective_upper_threshold_series = _numeric_series(
+        df, "effective_upper_threshold_hu"
+    )
+    if not effective_upper_threshold_series.notna().any():
+        effective_upper_threshold_series = _numeric_series(df, "max_threshold")
 
     # Correto e tolerável são considerados sucesso na avaliação dos óstios.
     total_success_series = both_correct_series | both_tolerable_series
@@ -532,6 +489,19 @@ def summarize_results_df(df: pd.DataFrame) -> dict[str, Any]:
     summary["aorta_segmentation_feedback_counts"] = {
         label: int(count) for label, count in feedback_counts.items()
     }
+
+    # Resume os thresholds efetivos sem inventar um valor escalar para o fuzzy.
+    valid_upper_thresholds = effective_upper_threshold_series.dropna()
+    summary["effective_upper_threshold_hu_count"] = int(len(valid_upper_thresholds))
+    summary["effective_upper_threshold_hu_mean"] = (
+        float(valid_upper_thresholds.mean()) if not valid_upper_thresholds.empty else None
+    )
+    summary["effective_upper_threshold_hu_min"] = (
+        float(valid_upper_thresholds.min()) if not valid_upper_thresholds.empty else None
+    )
+    summary["effective_upper_threshold_hu_max"] = (
+        float(valid_upper_thresholds.max()) if not valid_upper_thresholds.empty else None
+    )
 
     # Métricas de Dice permanecem nulas quando nenhuma artéria foi segmentada.
     if dice_series.notna().any():

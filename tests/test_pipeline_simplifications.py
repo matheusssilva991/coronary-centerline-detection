@@ -21,7 +21,6 @@ from utils.segmentation.pipeline_orchestration import (
     _ostia_result_fields,
     _preprocessing_result_fields,
     _resolve_batch_plan,
-    _segment_aorta_with_circle_filter_fallback,
     run_pipeline,
     summarize_aorta_circles,
     summarize_aorta_volume,
@@ -138,77 +137,6 @@ class PipelineSimplificationTests(TestCase):
         self.assertEqual(_parse_rg_comparison_window("-1"), -1)
         self.assertEqual(_parse_rg_comparison_window("5"), 5)
 
-    @patch("utils.segmentation.pipeline_orchestration.extrapolate_stable_circle_tail")
-    @patch("utils.segmentation.pipeline_orchestration.find_mask_guided_tail_start")
-    @patch("utils.segmentation.pipeline_orchestration.segment_aorta_with_diagnostics")
-    def test_mask_guided_fallback_resegments_persistent_mask_tail(
-        self,
-        segment_aorta,
-        find_tail_start,
-        extrapolate_tail,
-    ):
-        shape = (32, 32, 6)
-        candidate_mask = np.ones(shape, dtype=np.uint8)
-        retry_mask = np.zeros(shape, dtype=np.uint8)
-        yy, xx = np.ogrid[:32, :32]
-        disk_mask = (yy - 16) ** 2 + (xx - 16) ** 2 <= 4**2
-        retry_mask[disk_mask, :] = 1
-        candidate = SimpleNamespace(mask=candidate_mask, diagnostics={})
-        retry = SimpleNamespace(mask=retry_mask, diagnostics={})
-        segment_aorta.side_effect = [candidate, retry]
-        find_tail_start.return_value = 3
-
-        original = [
-            {
-                "slice_index": z,
-                "center_x": 16.0,
-                "center_y": 16.0,
-                "radius": 4.0,
-            }
-            for z in range(5, 0, -1)
-        ]
-        extrapolate_tail.return_value = [dict(original[3])]
-        config = {
-            "USE_GPU": False,
-            "CIRCLE_DETECTION": {
-                "radii_start_px": 2,
-                "radii_end_px": 8,
-                "radius_step_px": 1,
-                "trajectory_filter": {
-                    "mask_guided_fallback": {
-                        "enabled": True,
-                        "min_area_ratio_p90": 2.5,
-                        "slice_area_ratio_threshold": 2.5,
-                        "min_ratio_improvement": 0.1,
-                        "max_fill_loss": 0.015,
-                        "synthetic_tail_slices": 1,
-                    },
-                },
-            },
-            "LEVEL_SET": {},
-        }
-
-        circles, result, diagnostics = _segment_aorta_with_circle_filter_fallback(
-            np.ones(shape, dtype=np.float32),
-            original,
-            original,
-            {"aorta_circle_filter_applied": False},
-            shape[2],
-            (1.0, 1.0, 1.0),
-            config,
-        )
-
-        self.assertIs(result, retry)
-        self.assertEqual(len(circles), 4)
-        self.assertEqual(segment_aorta.call_count, 2)
-        self.assertTrue(
-            diagnostics["aorta_circle_filter_mask_guided_fallback_accepted"]
-        )
-        self.assertEqual(
-            diagnostics["aorta_circle_filter_reason"],
-            "mask_ratio_tail_trimmed+stable_tail_extrapolated",
-        )
-
     @patch("utils.segmentation.pipeline_preprocessing.downscale_image_ndi")
     @patch("utils.segmentation.pipeline_preprocessing.largest_connected_component")
     @patch("utils.segmentation.pipeline_preprocessing.threshold_image_with_offset")
@@ -245,6 +173,11 @@ class PipelineSimplificationTests(TestCase):
         self.assertEqual(downscale_opencv.call_count, 1)
         self.assertEqual(downscale_ndi.call_count, 1)
         np.testing.assert_array_equal(result["lcc_image"], image)
+        expected_upper_hu = float(np.percentile(image, 99.8))
+        self.assertEqual(
+            result["preprocessing_details"]["effective_upper_threshold_hu"],
+            expected_upper_hu,
+        )
 
     @patch("utils.segmentation.pipeline_preprocessing.downscale_image_ndi")
     @patch("utils.segmentation.pipeline_preprocessing.build_lcc_image_from_mask")
@@ -280,14 +213,22 @@ class PipelineSimplificationTests(TestCase):
         self.assertEqual(downscale_opencv.call_count, 1)
         self.assertEqual(downscale_ndi.call_count, 1)
         np.testing.assert_array_equal(result["lcc_image"], image)
+        self.assertIsNone(
+            result["preprocessing_details"]["effective_upper_threshold_hu"]
+        )
 
     def test_result_field_helpers_preserve_pipeline_schema(self):
         preprocessing = _preprocessing_result_fields(
-            {"threshold_mode": "fuzzy", "min_threshold": -280.0},
+            {
+                "threshold_mode": "normal",
+                "min_threshold": -280.0,
+                "effective_upper_threshold_hu": 845.5,
+            },
             120,
             256 * 256 * 120,
         )
-        self.assertEqual(preprocessing["threshold_mode"], "fuzzy")
+        self.assertEqual(preprocessing["threshold_mode"], "normal")
+        self.assertEqual(preprocessing["effective_upper_threshold_hu"], 845.5)
         self.assertEqual(preprocessing["image_slice_count"], 120)
         self.assertEqual(preprocessing["image_voxels"], 256 * 256 * 120)
 

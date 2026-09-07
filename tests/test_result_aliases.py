@@ -7,6 +7,7 @@ from utils.project.results import (
     add_internal_result_aliases,
     make_readable_results_dataframe,
     make_result_dataframe,
+    summarize_results_df,
 )
 
 
@@ -45,6 +46,7 @@ class ResultAliasTests(unittest.TestCase):
             [
                 {
                     "IMG_ID": 1,
+                    "effective_upper_threshold_hu": 845.5,
                     "image_voxels": 1_000,
                     "aorta_mask_voxels": 125,
                     "aorta_segmented_slice_count": 5,
@@ -68,6 +70,7 @@ class ResultAliasTests(unittest.TestCase):
 
         readable = make_readable_results_dataframe(internal)
 
+        self.assertEqual(readable.loc[0, "effective_upper_threshold_hu"], 845.5)
         self.assertEqual(readable.loc[0, "image_voxel_count"], 1_000)
         self.assertEqual(readable.loc[0, "aorta_mask_voxel_count"], 125)
         self.assertEqual(readable.loc[0, "aorta_segmented_slice_count"], 5)
@@ -114,6 +117,27 @@ class ResultAliasTests(unittest.TestCase):
         self.assertNotIn("aorta_level_set_checkpoint_count", internal.columns)
         self.assertNotIn("aorta_level_set_controller_state", internal.columns)
         self.assertNotIn("aorta_level_set_refinement_applied", internal.columns)
+
+    def test_summarizes_effective_upper_threshold_values(self):
+        internal = make_result_dataframe(
+            [
+                {"IMG_ID": 1, "effective_upper_threshold_hu": 800.0},
+                {"IMG_ID": 2, "effective_upper_threshold_hu": 900.0},
+                {"IMG_ID": 3, "effective_upper_threshold_hu": None},
+            ]
+        )
+
+        summary = summarize_results_df(internal)
+
+        self.assertEqual(summary["effective_upper_threshold_hu_count"], 2)
+        self.assertEqual(summary["effective_upper_threshold_hu_mean"], 850.0)
+        self.assertEqual(summary["effective_upper_threshold_hu_min"], 800.0)
+        self.assertEqual(summary["effective_upper_threshold_hu_max"], 900.0)
+
+    def test_uses_legacy_max_threshold_as_effective_upper_threshold(self):
+        internal = make_result_dataframe([{"IMG_ID": 1, "max_threshold": 875.0}])
+
+        self.assertEqual(internal.loc[0, "effective_upper_threshold_hu"], 875.0)
 
 
 if __name__ == "__main__":

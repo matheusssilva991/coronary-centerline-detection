@@ -115,6 +115,7 @@ def load_and_preprocess_image(
                 **lower_threshold_details,
                 "min_threshold": float(thresh_vals[0]),
                 "max_threshold": float(thresh_vals[1]),
+                "effective_upper_threshold_hu": float(thresh_vals[1]),
                 "threshold_voxels": int(np.sum(thresh_mask)),
                 "lcc_voxels": int(np.sum(lcc_mask)),
             }
@@ -151,6 +152,7 @@ def load_and_preprocess_image(
                 **lower_threshold_details,
                 "min_threshold": float(min_threshold),
                 "max_threshold": None,
+                "effective_upper_threshold_hu": None,
                 "threshold_voxels": int(np.sum(fuzzy_mask)),
                 "lcc_voxels": int(np.sum(lcc_mask)),
                 **fuzzy_details,

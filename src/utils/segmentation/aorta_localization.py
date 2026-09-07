@@ -7,13 +7,8 @@ usando Canny + transformada de Hough com restrições de continuidade geométric
 import numpy as np
 from skimage import feature
 from skimage.transform import hough_circle, hough_circle_peaks
-from typing import Any, Optional, Sequence, Tuple, cast
+from typing import Any, Optional, Sequence, Tuple
 from numpy.typing import ArrayLike, NDArray
-
-# Utilitários de GPU usados apenas no pré-processamento da fatia.
-# A transformada de Hough continua na CPU para manter o mesmo backend do skimage.
-from ..processing.gpu_utils import GPU_AVAILABLE, to_gpu, to_cpu, cu_ndi, cp
-
 
 OUT_OF_TOLERANCE = "out_of_tolerance"
 
@@ -94,8 +89,6 @@ def _find_incompatible_tail_start(
 
     max_radius_step = float(config.get("max_radius_step_mm", 4.8))
     max_center_step = float(config.get("max_center_step_mm", 8.0))
-    severe_radius_step = float(config.get("severe_radius_step_mm", 7.0))
-    severe_center_step = float(config.get("severe_center_step_mm", 12.0))
     min_accumulator = float(config.get("min_hough_accumulator", 0.408))
 
     for index in range(search_start, search_stop):
@@ -107,10 +100,7 @@ def _find_incompatible_tail_start(
             pixel_spacing,
         )
         transition_is_abrupt = (
-            radius_step > max_radius_step
-            or center_step > max_center_step
-            or radius_step > severe_radius_step
-            or center_step > severe_center_step
+            radius_step > max_radius_step or center_step > max_center_step
         )
         if not transition_is_abrupt:
             continue
@@ -143,7 +133,7 @@ def _find_incompatible_tail_start(
     return None
 
 
-def _extrapolate_stable_circle_tail(
+def extrapolate_stable_circle_tail(
     stable_circles: Sequence[dict[str, Any]],
     *,
     synthetic_slices: int,
@@ -239,33 +229,13 @@ def _extrapolate_stable_circle_tail(
     return synthetic
 
 
-def extrapolate_stable_circle_tail(
-    stable_circles: Sequence[dict[str, Any]],
-    *,
-    synthetic_slices: int,
-    pixel_spacing: float,
-    reference_window: int = 5,
-    max_radius_step_mm: float = 4.8,
-    max_center_step_mm: float = 8.0,
-) -> list[dict[str, Any]]:
-    """Expõe a continuação curta usada após uma trajetória confiável."""
-    return _extrapolate_stable_circle_tail(
-        stable_circles,
-        synthetic_slices=synthetic_slices,
-        pixel_spacing=pixel_spacing,
-        reference_window=reference_window,
-        max_radius_step_mm=max_radius_step_mm,
-        max_center_step_mm=max_center_step_mm,
-    )
-
-
 def filter_aorta_circle_trajectory(
     detected_circles: Sequence[dict[str, Any]],
     pixel_spacing: float,
     image_slice_count: int,
     filter_config: dict[str, Any] | None = None,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
-    """Filtra outliers e caudas incompatíveis da trajetória da aorta.
+    """Filtra caudas incompatíveis da trajetória da aorta.
 
     O detector percorre o volume das fatias finais para as iniciais. Portanto,
     uma cauda removida corresponde ao trecho final do rastreamento, depois que
@@ -308,9 +278,6 @@ def filter_aorta_circle_trajectory(
     max_tail_trim_fraction = float(config.get("max_tail_trim_fraction", 1.0))
     if not 0.0 < max_tail_trim_fraction <= 1.0:
         raise ValueError("max_tail_trim_fraction deve estar no intervalo (0, 1]")
-    search_start_fraction = float(config.get("tail_search_start_fraction", 0.35))
-    if not 0.0 <= search_start_fraction < 1.0:
-        raise ValueError("tail_search_start_fraction deve estar no intervalo [0, 1)")
     detected_tail_start = None
     if original_coverage >= min_tail_coverage:
         detected_tail_start = _find_incompatible_tail_start(
@@ -341,7 +308,7 @@ def filter_aorta_circle_trajectory(
             trimmed_count = candidate_trimmed_count
             trim_start_slice = int(original[tail_start]["slice_index"])
             trim_rejected = False
-            synthetic_tail = _extrapolate_stable_circle_tail(
+            synthetic_tail = extrapolate_stable_circle_tail(
                 trimmed,
                 synthetic_slices=max(0, int(config.get("synthetic_tail_slices", 0))),
                 pixel_spacing=pixel_spacing,
@@ -443,29 +410,9 @@ def _detect_circles_in_slice(
     hough_radii: Sequence[float],
     total_num_peaks: int,
     canny_sigma: float,
-    use_gpu: bool = False,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """Detecta círculos em uma fatia usando Canny (ou GPU-preproc) + Hough.
-
-    Quando `use_gpu=True`, suavização e magnitude do gradiente são calculadas
-    na GPU. O mapa binário de bordas volta para CPU porque `hough_circle` é do
-    scikit-image.
-    """
-    if use_gpu and GPU_AVAILABLE and cu_ndi is not None and cp is not None:
-        # Calcula bordas por blur + Sobel na GPU antes da etapa Hough.
-        img_gpu = to_gpu(img_slice.astype(np.float32))
-        blurred = cu_ndi.gaussian_filter(img_gpu, sigma=canny_sigma)
-        gx = cast(Any, cu_ndi.sobel(blurred, axis=1))
-        gy = cast(Any, cu_ndi.sobel(blurred, axis=0))
-        gmag = cp.sqrt(gx**2 + gy**2)
-        try:
-            thr = float(cp.percentile(gmag, 75))
-        except Exception:
-            thr = float(gmag.mean())
-        edges = to_cpu(gmag > thr)
-    else:
-        # Caminho CPU padrão: Canny do scikit-image.
-        edges = feature.canny(img_slice.astype(float), sigma=canny_sigma)
+    """Detecta círculos em uma fatia usando Canny e Hough na CPU."""
+    edges = feature.canny(img_slice.astype(float), sigma=canny_sigma)
 
     # A Hough recebe o mapa binário de bordas e devolve os melhores círculos.
     hough_res = hough_circle(edges, hough_radii)
@@ -568,12 +515,11 @@ def _process_initial_circle(
     neighbor_distance_threshold: float,
     total_num_peaks: int,
     canny_sigma: float,
-    use_gpu: bool = False,
 ) -> dict:
     """Refina o círculo inicial com base em vizinhos próximos."""
     # Reexecuta a detecção na fatia inicial para agregar candidatos próximos.
     accums, cx, cy, radii = _detect_circles_in_slice(
-        img_slice, hough_radii, total_num_peaks, canny_sigma, use_gpu=use_gpu
+        img_slice, hough_radii, total_num_peaks, canny_sigma
     )
 
     ref_x, ref_y, ref_radius = refine_circle_with_neighbors(
@@ -607,7 +553,6 @@ def _process_slice(
     canny_sigma: float,
     use_local_roi: bool = True,
     local_roi_padding: int = 20,
-    use_gpu: bool = False,
     verbose: bool = True,
 ) -> dict[str, Any] | str | None:
     """Processa uma fatia e retorna o melhor círculo rastreado (evita detecção duplicada)."""
@@ -631,7 +576,7 @@ def _process_slice(
 
         roi_slice = img_slice[y_min:y_max, x_min:x_max]
         accums, cx, cy, radii = _detect_circles_in_slice(
-            roi_slice, hough_radii, total_num_peaks, canny_sigma, use_gpu=use_gpu
+            roi_slice, hough_radii, total_num_peaks, canny_sigma
         )
 
         if len(radii) > 0:
@@ -654,14 +599,14 @@ def _process_slice(
             )
             roi_slice = img_slice[y_min:y_max, x_min:x_max]
             accums, cx, cy, radii = _detect_circles_in_slice(
-                roi_slice, hough_radii, total_num_peaks, canny_sigma, use_gpu=use_gpu
+                roi_slice, hough_radii, total_num_peaks, canny_sigma
             )
             if len(radii) > 0:
                 cx = cx + x_min
                 cy = cy + y_min
     else:
         accums, cx, cy, radii = _detect_circles_in_slice(
-            img_slice, hough_radii, total_num_peaks, canny_sigma, use_gpu=use_gpu
+            img_slice, hough_radii, total_num_peaks, canny_sigma
         )
 
     if len(radii) == 0:
@@ -682,7 +627,7 @@ def _process_slice(
     if not _is_circle_within_tolerance(
         radii[min_idx], min_dist, ref_radius, radius_tolerance, distance_tolerance
     ):
-        # Candidato fora da tolerância pode parar o rastreamento ou contar como miss.
+        # Candidato fora da tolerância encerra o rastreamento.
         slice_idx = int(reference_circle.get("slice_index", -1))
         if verbose:
             print(
@@ -717,11 +662,10 @@ def detect_initial_circle(
     quadrant_offset: Sequence[int] = (30, 30),
     total_num_peaks: int = 10,
     canny_sigma: float = 3,
-    use_gpu: bool = False,
 ) -> Optional[dict]:
     """Detecta o círculo inicial da aorta em uma fatia de referência."""
     accums, cx, cy, radii = _detect_circles_in_slice(
-        img_slice, hough_radii, total_num_peaks, canny_sigma, use_gpu=use_gpu
+        img_slice, hough_radii, total_num_peaks, canny_sigma
     )
 
     if len(accums) == 0:
@@ -751,11 +695,10 @@ def get_initial_circle_diagnostics(
     total_num_peaks_initial: int = 10,
     canny_sigma: float = 3,
     neighbor_distance_threshold: float = 5,
-    use_gpu: bool = False,
 ) -> dict:
     """Retorna o círculo inicial, os candidatos da fatia e o círculo refinado."""
     accums, cx, cy, radii = _detect_circles_in_slice(
-        img_slice, hough_radii, total_num_peaks_initial, canny_sigma, use_gpu=use_gpu
+        img_slice, hough_radii, total_num_peaks_initial, canny_sigma
     )
 
     if len(accums) == 0:
@@ -767,16 +710,8 @@ def get_initial_circle_diagnostics(
         }
 
     # Encontra o círculo inicial no quadrante sem repetir a Hough.
-    height, width = img_slice.shape
-    center_x = (width // 2) - quadrant_offset[0]
-    center_y = (height // 2) + quadrant_offset[1]
-
-    cx_arr = np.asarray(cx)
-    cy_arr = np.asarray(cy)
-    mask = (cx_arr > center_x) & (cy_arr < center_y)
-    first_quad_indices = np.where(mask)[0]
-
-    if len(first_quad_indices) == 0:
+    idx = _select_initial_circle_candidate(cx, cy, img_slice.shape, quadrant_offset)
+    if idx is None:
         return {
             "initial_circle": None,
             "refined_circle": None,
@@ -784,7 +719,7 @@ def get_initial_circle_diagnostics(
             "refinement_candidates": [],
         }
 
-    idx = int(first_quad_indices[0])
+    idx = int(idx)
     initial_circle = {
         "center_x": float(cx[idx]),
         "center_y": float(cy[idx]),
@@ -885,7 +820,6 @@ def detect_aorta_circles(
     use_local_roi: bool = True,
     local_roi_padding: int = 20,
     interpolate_missed_circles: bool = True,
-    use_gpu: bool = False,
     verbose: bool = True,
 ) -> list:
     """Detecta círculos da aorta ao longo do volume 3D fatia a fatia.
@@ -915,7 +849,6 @@ def detect_aorta_circles(
         quadrant_offset,
         total_num_peaks_initial,
         canny_sigma,
-        use_gpu=use_gpu,
     )
 
     if initial_circle is None:
@@ -931,7 +864,6 @@ def detect_aorta_circles(
         neighbor_distance_threshold,
         total_num_peaks_initial,
         canny_sigma,
-        use_gpu=use_gpu,
     )
 
     detected_circles = [{"slice_index": first_slice_idx, **refined_initial}]
@@ -952,7 +884,6 @@ def detect_aorta_circles(
             canny_sigma,
             use_local_roi,
             local_roi_padding,
-            use_gpu=use_gpu,
             verbose=verbose,
         )
 

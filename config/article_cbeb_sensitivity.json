@@ -61,7 +61,8 @@
         "canny_sigma": 3,
         "use_local_roi": true,
         "local_roi_padding": 30,
-        "interpolate_missed_circles": true
+        "interpolate_missed_circles": true,
+        "trajectory_filter": {"method": "none"}
     },
     "LEVEL_SET": {
         "radius_reduction_factor": 0.15,
@@ -73,7 +74,9 @@
         "use_roi": true,
         "alpha": 1000,
         "sigma": 2,
-        "leak_removal_radius": 2
+        "leak_removal_radius": 2,
+        "trajectory_radius_factor": null,
+        "trajectory_axial_margin_slices": 0
     },
     "OSTIA_DETECTION": {
         "top_n": 2000,
@@ -81,7 +84,8 @@
         "lower_fraction": 0.85,
         "min_center_distance_factor": 0.85,
         "min_lateral_factor": 0.4,
-        "erosion_radius": 4
+        "erosion_radius": 4,
+        "surface_padding_radius": 0
     },
     "OSTIA_VALIDATION": {
         "distance_threshold_mm": 7.0

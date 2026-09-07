@@ -4,9 +4,6 @@ import unittest
 from pathlib import Path
 
 import numpy as np
-from skimage.draw import disk
-
-from utils.segmentation.aorta_correction import find_mask_guided_tail_start
 from utils.segmentation.aorta_localization import (
     filter_aorta_circle_trajectory,
 )
@@ -243,41 +240,6 @@ class AortaCircleTrajectoryFilterTests(unittest.TestCase):
 
         with self.assertRaises(SystemExit):
             parser.parse_args(["--aorta-correction", "conditional"])
-
-    def test_mask_guided_fallback_finds_persistent_high_area_tail(self):
-        circles = [
-            _circle(z, center_x=24.0, center_y=24.0, radius=5.0)
-            for z in range(39, -1, -1)
-        ]
-        mask = np.zeros((48, 48, 40), dtype=np.uint8)
-        for circle in circles:
-            z = int(circle["slice_index"])
-            radius = 11.0 if z <= 9 else 5.0
-            rr, cc = disk((24.0, 24.0), radius, shape=mask.shape[:2])
-            mask[rr, cc, z] = 1
-
-        tail_start = find_mask_guided_tail_start(
-            mask,
-            circles,
-            {
-                "tail_search_start_fraction": 0.35,
-                "persistence_window": 5,
-                "persistence_required": 4,
-                "min_tail_circles": 8,
-                "min_remaining_circles": 30,
-                "max_tail_trim_fraction": 0.4,
-                "slice_area_ratio_threshold": 2.5,
-            },
-        )
-
-        self.assertEqual(tail_start, 30)
-
-    def test_cli_accepts_mask_guided_circle_filter(self):
-        parser = build_parser(Path("/dataset"), Path("/output"))
-
-        args = parser.parse_args(["--aorta-circle-filter-mask-guided"])
-
-        self.assertTrue(args.aorta_circle_filter_mask_guided)
 
 
 if __name__ == "__main__":

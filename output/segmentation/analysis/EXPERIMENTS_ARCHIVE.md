@@ -173,9 +173,15 @@ Foram removidos do runtime a correção condicional da aorta, o modo
 `recovery_only`, a repetição da Hough para trajetórias curtas, a interpolação de
 outliers geométricos isolados e a rejeição posterior de máscaras ainda
 sobresegmentadas. Permaneceram o filtro robusto, o corte de cauda, os círculos
-sintéticos, o envelope e o fallback guiado pela máscara. O controlador
+sintéticos e o envelope. O controlador
 adaptativo e o override de vazamento por localização foram removidos depois de
 não alterarem as falhas visuais relevantes.
+
+O fallback guiado pela máscara também foi removido do runtime. Nas três
+ablações regionais e nas oito variações de detecção executadas nas 30 imagens
+de treino, nenhuma tentativa foi aceita e nenhuma máscara, Dice ou resultado
+dos óstios foi alterado. Seus runners e resultados dedicados foram apagados;
+os snapshots de runs históricos mais amplos permanecem como registro.
 
 Também foram removidas as estratégias de óstios sem ganho comprovado (superfície
 por distância física, scores locais, NMS e seleção joint), o pós-processamento
@@ -209,3 +215,112 @@ O override de vazamento por localização comparou perfis com balloon entre 0,50
 e 0,20. Todos mantiveram os mesmos casos ruins (`11`, `464`, `790` e `792`),
 sem ganho visual ou quantitativo suficiente; seu código e runner foram
 removidos junto com os checkpoints adaptativos.
+
+## Seleção dinâmica do threshold superior
+
+Os seletores por centróides, regressão Ridge e interpolação linear da média dos
+voxels acima de 300 HU foram removidos. Nenhum apresentou ganho reprodutível em
+relação ao P99.9 fixo.
+
+- O centroide sem fallback obteve Dice `0,52363` e 43/60 sucessos dos óstios na
+  validação, contra `0,56060` e 48/60 do P99.9. Com fallback, apenas reproduziu
+  o resultado fixo.
+- A seleção Ridge foi instável entre divisões de validação cruzada e não
+  sustentou ganho fora das amostras usadas para ajuste.
+- A interpolação linear obteve Dice `0,60232` no treino e `0,53094` na
+  validação, abaixo de `0,61478` e `0,56060` do P99.9.
+- O P99.8 fixo também foi descartado: obteve Dice agregado `0,57420`, contra
+  `0,57866` do P99.9, com a mesma taxa global de sucesso dos óstios (75/90).
+
+O pipeline voltou a usar diretamente `MAX_THRESHOLD_PERCENTILE=99.9`. Os
+resultados fixos de P99.5, P99.7 e P99.9 usados na análise de sensibilidade
+foram preservados.
+
+## Localizacao dos ostios: triagem de setembro de 2026
+
+Foram removidos os runs abaixo (30 treino + 60 validacao), preservando
+baseline_pad0, baseline_pad1, baseline_pad2 e lower100_pad1. Todos usaram
+threshold -300/P99.9, RG e a mesma aorta com filtro, fallback e envelope.
+
+| Variante removida | Dice em 90 imagens | Sucesso dos ostios |
+|---|---:|---:|
+| center065_pad1 | 0.596270 | 77/90 |
+| center105_pad1 | 0.571825 | 67/90 |
+| lateral025_pad1 | 0.596337 | 78/90 |
+| lateral055_pad1 | 0.596355 | 78/90 |
+| lower070_pad1 | 0.575967 | 72/90 |
+| z30_pad1 | 0.596331 | 78/90 |
+| z50_pad1 | 0.596331 | 78/90 |
+
+A referencia pad1 obteve 0.596331 e 78/90. As variacoes laterais tiveram
+ganhos despreziveis, z30/z50 reproduziram o Dice, e as demais perderam acertos.
+Pad2 obteve 0.611197 e 79/90; lower100_pad1, 0.602730 e 80/90.
+
+A revisao identificou que lower_fraction=1.0 excluia a ultima fatia ocupada.
+Os resultados acima precedem a correcao desse limite. A repeticao
+lower100_pad1_inclusive usa o limite corrigido e deve servir de controle para
+as novas combinacoes. O padding continua calculando a casca da mascara
+dilatada, sem modificar a mascara da aorta.
+
+## Limpeza de ostios e geometria em 2026-09-06
+
+O resumo abaixo substitui o inventario CSV de limpeza, removido por nao
+acrescentar informacao util a consulta dos resultados.
+Foram removidos 13 runs: baseline_pad1, baseline_pad2, lower100_pad1,
+lower100_pad1_inclusive, lower095_pad2 (treino e validacao), geometria 4.2/7
+e 5.5/9 no treino e a primeira execucao duplicada de 3.5/6 no treino.
+As triagens de padding foram superadas por pad2/pad3; lower095_pad2 repetiu
+os resultados de lower100_pad2. As geometrias removidas mantiveram Dice
+0.590650 e 26/30 sucessos, sem ganho agregado.
+
+Foram arquivados, sem apagar seus dados numericos:
+
+- Quatro runs antigos de pad2/pad3 em `archive/ostia_with_removed_fallback/`.
+  Preservam evidencia do efeito do fallback no exame 597: sua remocao reduziu
+  o Dice de 0.599526 para 0.001077 em pad2 e de 0.375715 para zero em pad3.
+- Os runs visuais de geometria 3.5/6 em `archive/trajectory_geometry_3_5_6/`.
+  No treino: 0.590650, 26/30; na validacao: 0.572742, 52/60. O exame 790
+  perdeu o inicio da aorta e apresentou sobresegmentacao na revisao visual.
+
+Os HTMLs dos runs arquivados permanecem em seus caminhos originais no disco
+externo. Nao havia diretorios externos correspondentes aos 13 runs removidos.
+Baseline pad0, geometria de referencia 4.8/8, pad2/pad3 de 6 de setembro e
+o sweep ostia_pad3_sensitivity foram preservados.
+
+
+## Sensibilidade dos ostios encerrada em 2026-09-07
+
+Referencia e smooth=0.5 preservados em `{split}/archive/ostia_pad3_sensitivity/`.
+As outras 12 variantes foram removidas: inferiores em Dice/sucesso ou equivalentes sem beneficio.
+A suavizacao 0.5 ganhou Dice, mas perdeu dois sucessos nas 90 imagens; nao foi promovida.
+
+| Variante | Split | Imagens | Dice | Sucesso |
+|---|---|---:|---:|---:|
+| pad3_beta_0_5 | train | 30 | 0.639021 | 29/30 |
+| pad3_beta_0_5 | val | 60 | 0.593518 | 51/60 |
+| pad3_beta_0_75 | train | 30 | 0.640534 | 30/30 |
+| pad3_beta_0_75 | val | 60 | 0.593520 | 51/60 |
+| pad3_center_0_70 | train | 30 | 0.638594 | 29/30 |
+| pad3_center_0_70 | val | 60 | 0.603242 | 53/60 |
+| pad3_center_1_0 | train | 30 | 0.624759 | 28/30 |
+| pad3_center_1_0 | val | 60 | 0.592302 | 49/60 |
+| pad3_reference | train | 30 | 0.640534 | 30/30 |
+| pad3_reference | val | 60 | 0.603242 | 53/60 |
+| pad3_sigmas_2_0_2_5 | train | 30 | 0.591580 | 26/30 |
+| pad3_sigmas_2_0_2_5 | val | 60 | 0.586206 | 51/60 |
+| pad3_sigmas_2_0_2_5_3_0 | train | 30 | 0.591580 | 26/30 |
+| pad3_sigmas_2_0_2_5_3_0 | val | 60 | 0.586206 | 51/60 |
+| pad3_sigmas_2_5_3_0_3_5 | train | 30 | 0.640534 | 30/30 |
+| pad3_sigmas_2_5_3_0_3_5 | val | 60 | 0.603242 | 53/60 |
+| pad3_smooth_0_2 | train | 30 | 0.640534 | 30/30 |
+| pad3_smooth_0_2 | val | 60 | 0.603242 | 53/60 |
+| pad3_smooth_0_3 | train | 30 | 0.627067 | 29/30 |
+| pad3_smooth_0_3 | val | 60 | 0.590482 | 49/60 |
+| pad3_smooth_0_4 | train | 30 | 0.628325 | 28/30 |
+| pad3_smooth_0_4 | val | 60 | 0.604722 | 50/60 |
+| pad3_smooth_0_5 | train | 30 | 0.638530 | 29/30 |
+| pad3_smooth_0_5 | val | 60 | 0.613483 | 52/60 |
+| pad3_z30 | train | 30 | 0.615119 | 28/30 |
+| pad3_z30 | val | 60 | 0.603242 | 53/60 |
+| pad3_z50 | train | 30 | 0.640534 | 30/30 |
+| pad3_z50 | val | 60 | 0.603242 | 53/60 |
