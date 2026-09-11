@@ -5,10 +5,30 @@ from unittest.mock import patch
 
 import pandas as pd
 
-from utils.comparison_utils.metadata import build_split_resolution_summary
+from utils.comparison_utils.metadata import (
+    build_split_resolution_summary,
+    get_execution_time_seconds,
+    get_num_images,
+    get_total_success_percent,
+)
 
 
 class SplitResolutionSummaryTest(TestCase):
+    def test_metadata_helpers_read_schema_v3(self):
+        metadata = {
+            "results": {
+                "execution_time": {"seconds": 90},
+                "ostia": {
+                    "processed_exam_count": 4,
+                    "success": {"count": 2, "percent": 50.0},
+                },
+            }
+        }
+
+        self.assertEqual(get_execution_time_seconds(metadata), 90)
+        self.assertEqual(get_num_images(metadata), 4)
+        self.assertEqual(get_total_success_percent(metadata), 50.0)
+
     def test_supports_status_schemas_and_marks_missing_results(self):
         summaries = {
             "train": pd.DataFrame(

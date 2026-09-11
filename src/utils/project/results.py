@@ -13,7 +13,12 @@ from .results_io import (
     merge_batch_results,
     save_results,
 )
-from .results_metadata import build_metadata, make_json_safe, save_metadata
+from .results_metadata import (
+    build_metadata,
+    build_metadata_results,
+    make_json_safe,
+    save_metadata,
+)
 from .results_columns import (
     CANONICAL_COLUMN_NAMES,
     OSTIA_STATUS_INTERNAL_LABELS,
@@ -71,6 +76,7 @@ __all__ = [
     "batch_result_number",
     "batch_timing_manifest_path",
     "build_metadata",
+    "build_metadata_results",
     "build_result_row",
     "build_run_summary_row",
     "classify_result_status",

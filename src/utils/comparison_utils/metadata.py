@@ -4,6 +4,9 @@ import pandas as pd
 
 def get_total_success_percent(metadata, default=np.nan):
     """Read total success percent with backward-compatible fallback."""
+    current = metadata.get("results", {}).get("ostia", {}).get("success", {})
+    if "percent" in current:
+        return current["percent"]
     # Lê a metrica principal de sucesso dos metadados.
     results_summary = metadata.get("results_summary", {})
     success_total_percent = results_summary.get("total_success_percent", default)
@@ -17,6 +20,9 @@ def get_total_success_percent(metadata, default=np.nan):
 
 def get_execution_time_seconds(metadata, default=np.nan):
     """Read execution time from metadata."""
+    current = metadata.get("results", {}).get("execution_time", {})
+    if "seconds" in current:
+        return current["seconds"]
     # Extrai tempo total de execucao (segundos).
     execution_info = metadata.get("execution_info", {})
     return execution_info.get("execution_time_seconds", default)
@@ -24,6 +30,9 @@ def get_execution_time_seconds(metadata, default=np.nan):
 
 def get_num_images(metadata, default=np.nan):
     """Read number of images from metadata."""
+    current = metadata.get("results", {}).get("ostia", {})
+    if "processed_exam_count" in current:
+        return current["processed_exam_count"]
     # Extrai quantidade de imagens processadas.
     execution_info = metadata.get("execution_info", {})
     return execution_info.get("num_images", default)

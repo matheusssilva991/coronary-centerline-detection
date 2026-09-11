@@ -160,6 +160,9 @@ def _metadata_payload(
     run_dir: Path,
     split: str,
     legacy_config: dict[str, Any],
+    results: pd.DataFrame,
+    batch_timings: list[dict[str, Any]],
+    expected_batches: list[int],
 ) -> dict[str, Any]:
     effective_config = _load_json(run_dir / "config/effective_pipeline_config.json")
     identity = _configuration_identity(run_dir, source)
@@ -172,6 +175,9 @@ def _metadata_payload(
         config_source=identity["source"],
         config_sha256=identity["sha256"],
         legacy_result_config=legacy_values,
+        results=results,
+        batch_timings=batch_timings,
+        expected_batches=expected_batches,
     )
 
 
@@ -289,6 +295,7 @@ def migrate_run(path: Path, *, apply: bool) -> str:
     projected = select_per_image_result_columns(original)
     validate_result_integrity(projected, expected_ids)
     batch_sources = _batch_sources(numeric_dir, split)
+    timing, timing_source = _timing_dataframe(numeric_dir, split)
     legacy_config = _legacy_config_values(original)
     metadata_source_path = _metadata_path(numeric_dir, split)
     metadata_source = _load_json(metadata_source_path) if metadata_source_path else {}
@@ -297,8 +304,10 @@ def migrate_run(path: Path, *, apply: bool) -> str:
         run_dir=run_dir,
         split=split,
         legacy_config=legacy_config,
+        results=projected,
+        batch_timings=[] if timing is None else timing.to_dict("records"),
+        expected_batches=[number for number, _ in batch_sources],
     )
-    timing, timing_source = _timing_dataframe(numeric_dir, split)
 
     target_results = numeric_dir / results_filename(split)
     already_current = source_results == target_results
@@ -316,12 +325,10 @@ def migrate_run(path: Path, *, apply: bool) -> str:
         return "ready_cleanup" if needs_cleanup else "already_migrated"
 
     staged: list[tuple[Path, Path]] = [
-        (_write_csv_temp(target_results, projected), target_results),
-        (
-            _write_json_temp(target_metadata, metadata_payload),
-            target_metadata,
-        ),
+        (_write_json_temp(target_metadata, metadata_payload), target_metadata),
     ]
+    if not already_current:
+        staged.insert(0, (_write_csv_temp(target_results, projected), target_results))
     if not target_split_ids.is_file():
         target_split_ids.parent.mkdir(parents=True, exist_ok=True)
         split_payload = {
@@ -334,11 +341,13 @@ def migrate_run(path: Path, *, apply: bool) -> str:
     migrated_batch_sources: list[Path] = []
     for batch_number, batch_source in batch_sources:
         target = numeric_dir / batch_results_filename(split, batch_number)
-        batch_projected = select_per_image_result_columns(pd.read_csv(batch_source))
-        staged.append((_write_csv_temp(target, batch_projected), target))
         if batch_source != target:
+            batch_projected = select_per_image_result_columns(pd.read_csv(batch_source))
+            staged.append((_write_csv_temp(target, batch_projected), target))
             migrated_batch_sources.append(batch_source)
-    if timing is not None:
+    if timing is not None and timing_source != numeric_dir / batch_timings_filename(
+        split
+    ):
         target = numeric_dir / batch_timings_filename(split)
         staged.append((_write_csv_temp(target, timing), target))
 

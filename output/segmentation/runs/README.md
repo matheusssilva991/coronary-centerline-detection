@@ -50,17 +50,19 @@ o snapshot da configuracao.
 contendo somente métricas e diagnósticos científicos do exame. Entre eles estão
 Dice, volumes, fatias, círculos e máscara da aorta, óstios, distâncias,
 coordenadas, estados e erros. O metadata contém somente o split, a resolução,
-o hash e os rótulos principais usados para identificar a variante. A
-configuração completa fica exclusivamente em `config/effective_pipeline_config.json`.
+o hash, os rótulos principais usados para identificar a variante e os
+resultados essenciais do run: tempo total, Dice médio antes/depois da
+morfologia e acertos dos óstios. A configuração completa fica exclusivamente
+em `config/effective_pipeline_config.json`.
 
-Não há um `summary_<split>.csv`: Dice, quartis, contagens e demais agregados são
+Não há um `summary_<split>.csv`: quartis, desvios e agregados exploratórios são
 calculados sob demanda a partir de `results_<split>.csv` com
-`summarize_split_results`. IDs completos permanecem em `config/split_ids.json`,
-e durações permanecem em `batch_timings_<split>.csv`; nenhum desses dados é
-repetido no metadata.
+`summarize_split_results`. IDs completos permanecem em `config/split_ids.json`.
+O metadata guarda somente a soma das durações válidas; os tempos individuais
+permanecem em `batch_timings_<split>.csv`.
 
-Antes de publicar o resumo, o pipeline exige igualdade exata entre os IDs do
-consolidado e os IDs esperados. Se houver IDs ausentes, inesperados ou
+Antes de publicar o metadata final, o pipeline exige igualdade exata entre os
+IDs do consolidado e os IDs esperados. Se houver IDs ausentes, inesperados ou
 duplicados, `results_<split>.csv` é preservado para diagnóstico, mas o metadata
 de execução completa não é gerado; a divergência fica em
 `integrity_<split>.json`.

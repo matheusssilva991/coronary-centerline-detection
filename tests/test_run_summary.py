@@ -13,6 +13,7 @@ from utils.project.results import (
     READABLE_COLUMN_NAMES,
     RESULT_COLUMNS,
     build_metadata,
+    build_metadata_results,
     merge_batch_results,
     select_per_image_result_columns,
 )
@@ -181,20 +182,122 @@ class RunSummaryTests(unittest.TestCase):
         self.assertNotIn("artery_segmentation_method", projected.columns)
         self.assertNotIn("lcc_per_slice", projected.columns)
 
-        metadata = build_metadata("train", _config(), resolution="mid")
+        timings = [
+            {"batch_number": 1, "total_batches": 2, "duration_seconds": 6},
+            {"batch_number": 2, "total_batches": 2, "duration_seconds": 9},
+        ]
+        metadata = build_metadata(
+            "train",
+            _config(),
+            resolution="mid",
+            results=_results(),
+            batch_timings=timings,
+            expected_batches=[1, 2],
+        )
         self.assertEqual(metadata["configuration"]["artery_segmentation_method"], "rg")
         self.assertEqual(
             metadata["configuration"]["sha256"],
             effective_config_sha256(_config()),
         )
         self.assertEqual(
-            set(metadata), {"metadata_schema_version", "run", "configuration"}
+            set(metadata),
+            {"metadata_schema_version", "run", "configuration", "results"},
         )
+        self.assertEqual(metadata["metadata_schema_version"], 3)
+        self.assertEqual(metadata["results"]["execution_time"]["seconds"], 15)
+        self.assertAlmostEqual(
+            metadata["results"]["dice"]["before_morphology"]["mean"], 0.45
+        )
+        self.assertAlmostEqual(
+            metadata["results"]["dice"]["after_morphology"]["mean"], 0.55
+        )
+        self.assertEqual(metadata["results"]["ostia"]["success"]["count"], 2)
+        self.assertEqual(metadata["results"]["ostia"]["success"]["percent"], 50)
         serialized = json.dumps(metadata)
         self.assertNotIn("IMG_ID", serialized)
         self.assertNotIn("batch_timing", serialized)
         self.assertNotIn("dice_artery_q1", serialized)
         self.assertNotIn("circle_detection", serialized)
+
+    def test_metadata_result_types_are_exclusive_and_sides_independent(self) -> None:
+        results = _results().assign(
+            ostia_detection_status=[
+                "both correct",
+                "both tolerable",
+                "found but incorrect",
+                "not evaluated",
+            ],
+            left_ostium_correct=["yes", "no", "yes", "no"],
+            right_ostium_correct=["yes", "yes", "no", "no"],
+        )
+        aggregate = build_metadata_results(results, [], expected_batches=[1])
+        ostia = aggregate["ostia"]
+
+        self.assertEqual(ostia["processed_exam_count"], 4)
+        self.assertEqual(
+            {name: entry["count"] for name, entry in ostia["types"].items()},
+            {
+                "both_correct": 1,
+                "both_tolerable": 1,
+                "found_but_incorrect": 1,
+                "not_found": 0,
+                "not_evaluated_or_error": 1,
+            },
+        )
+        self.assertEqual(sum(item["count"] for item in ostia["types"].values()), 4)
+        self.assertEqual(ostia["sides"]["left_correct"]["count"], 2)
+        self.assertEqual(ostia["sides"]["right_correct"]["count"], 2)
+        self.assertIsNone(aggregate["execution_time"]["seconds"])
+
+    def test_metadata_results_handle_zero_denominator_and_legacy_dice(self) -> None:
+        empty = build_metadata_results(pd.DataFrame(), [], expected_batches=[])
+        self.assertIsNone(empty["ostia"]["success"]["percent"])
+        self.assertIsNone(empty["dice"]["before_morphology"]["mean"])
+        self.assertEqual(empty["dice"]["before_morphology"]["valid_exam_count"], 0)
+
+        legacy = pd.DataFrame(
+            {
+                "IMG_ID": [1, 2],
+                "artery_dice": [0.25, 0.75],
+                "ostia_detection_status": ["not found", "found but incorrect"],
+            }
+        )
+        aggregate = build_metadata_results(legacy, [], expected_batches=[1])
+        self.assertIsNone(aggregate["dice"]["before_morphology"]["mean"])
+        self.assertEqual(
+            aggregate["dice"]["after_morphology"],
+            {"mean": 0.5, "valid_exam_count": 2},
+        )
+
+    def test_metadata_execution_time_requires_every_valid_batch(self) -> None:
+        valid = [
+            {"batch_number": 1, "duration_seconds": 30},
+            {"batch_number": 2, "duration_seconds": 90},
+        ]
+        complete = build_metadata_results(_results(), valid, expected_batches=[1, 2])[
+            "execution_time"
+        ]
+        self.assertEqual(complete, {"seconds": 120, "minutes": 2, "hours": 1 / 30})
+
+        missing = build_metadata_results(
+            _results(), valid[:1], expected_batches=[1, 2]
+        )["execution_time"]
+        invalid = build_metadata_results(
+            _results(),
+            [valid[0], {"batch_number": 2, "duration_seconds": "invalid"}],
+            expected_batches=[1, 2],
+        )["execution_time"]
+        missing_declared_batch = build_metadata_results(
+            _results(),
+            [
+                {"batch_number": 1, "total_batches": 3, "duration_seconds": 30},
+                {"batch_number": 3, "total_batches": 3, "duration_seconds": 90},
+            ],
+            expected_batches=[1, 3],
+        )["execution_time"]
+        self.assertEqual(missing, {"seconds": None, "minutes": None, "hours": None})
+        self.assertEqual(invalid, missing)
+        self.assertEqual(missing_declared_batch, missing)
 
     def test_integrity_rejects_missing_unexpected_and_duplicate_ids(self) -> None:
         with self.assertRaises(ResultIntegrityError) as context:
@@ -251,6 +354,19 @@ class RunSummaryTests(unittest.TestCase):
                 threshold_mode="normal", downscale_method="opencv"
             )
             legacy_results.to_csv(old_summary, index=False)
+            legacy_results.iloc[:2].to_csv(
+                complete_numeric / "ostios_train_lote_1_summary.csv", index=False
+            )
+            legacy_results.iloc[2:].to_csv(
+                complete_numeric / "ostios_train_lote_2_summary.csv", index=False
+            )
+            pd.DataFrame(
+                {
+                    "batch_number": [1, 2],
+                    "total_batches": [2, 2],
+                    "duration_seconds": [6, 9],
+                }
+            ).to_csv(complete_numeric / "ostios_train_batch_timings.csv", index=False)
             expected_scientific = select_per_image_result_columns(legacy_results)
             (complete_run / "config").mkdir()
             (complete_run / "config/split_ids.json").write_text(
@@ -275,6 +391,17 @@ class RunSummaryTests(unittest.TestCase):
             )
             self.assertEqual(metadata["configuration"]["threshold_method"], "normal")
             self.assertNotIn("results_summary", metadata)
+            self.assertEqual(metadata["results"]["execution_time"]["seconds"], 15)
+            self.assertEqual(metadata["results"]["ostia"]["processed_exam_count"], 4)
+
+            consolidated_path = complete_numeric / "results_train.csv"
+            consolidated_bytes = consolidated_path.read_bytes()
+            metadata["metadata_schema_version"] = 2
+            (complete_numeric / "metadata_train.json").write_text(
+                json.dumps(metadata), encoding="utf-8"
+            )
+            self.assertEqual(migrate_run(consolidated_path, apply=True), "refreshed")
+            self.assertEqual(consolidated_path.read_bytes(), consolidated_bytes)
 
             partial_run = root / "high_res/group/train/partial"
             partial_numeric = partial_run / "numeric"

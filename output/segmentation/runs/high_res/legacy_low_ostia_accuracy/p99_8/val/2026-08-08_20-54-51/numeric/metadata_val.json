@@ -1,5 +1,5 @@
 {
-  "metadata_schema_version": 2,
+  "metadata_schema_version": 3,
   "run": {
     "split": "val",
     "resolution": "high"
@@ -19,5 +19,61 @@
     "max_threshold_percentile": 99.8,
     "threshold_method": "normal",
     "artery_segmentation_method": "region_growing"
+  },
+  "results": {
+    "execution_time": {
+      "seconds": 50032.668563365936,
+      "minutes": 833.8778093894323,
+      "hours": 13.897963489823871
+    },
+    "dice": {
+      "before_morphology": {
+        "mean": 0.22704658501637381,
+        "valid_exam_count": 270
+      },
+      "after_morphology": {
+        "mean": 0.441872003793056,
+        "valid_exam_count": 270
+      }
+    },
+    "ostia": {
+      "processed_exam_count": 270,
+      "success": {
+        "count": 149,
+        "percent": 55.18518518518518
+      },
+      "types": {
+        "both_correct": {
+          "count": 54,
+          "percent": 20.0
+        },
+        "both_tolerable": {
+          "count": 95,
+          "percent": 35.18518518518518
+        },
+        "found_but_incorrect": {
+          "count": 121,
+          "percent": 44.81481481481481
+        },
+        "not_found": {
+          "count": 0,
+          "percent": 0.0
+        },
+        "not_evaluated_or_error": {
+          "count": 0,
+          "percent": 0.0
+        }
+      },
+      "sides": {
+        "left_correct": {
+          "count": 106,
+          "percent": 39.25925925925926
+        },
+        "right_correct": {
+          "count": 110,
+          "percent": 40.74074074074074
+        }
+      }
+    }
   }
 }

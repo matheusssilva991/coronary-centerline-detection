@@ -20,7 +20,9 @@ from utils.project.config import (
 from utils.project.dataset import get_data_splits, list_dataset_image_ids
 from utils.project.results import (
     ResultIntegrityError,
+    batch_result_number,
     create_timestamped_output_dir,
+    list_batch_result_files,
     load_batch_timing_records,
     make_json_safe,
     merge_batch_results,
@@ -540,14 +542,20 @@ def save_split_metadata(
     split_name,
     output_dir,
     config,
+    results,
+    batch_timings,
+    expected_batches,
     resolution=None,
 ):
-    """Salva apenas identidade e configuração compacta do run."""
+    """Salva identidade, configuração e resultados essenciais do run."""
     metadata_path = save_metadata(
         split_name,
         output_dir,
         config,
         resolution=resolution,
+        results=results,
+        batch_timings=batch_timings,
+        expected_batches=expected_batches,
     )
     logger.info("Metadados salvos em: %s", metadata_path)
     return metadata_path
@@ -593,12 +601,19 @@ def run_merge_only_split(
         raise
     (Path(output_dir) / integrity_filename(split_name)).unlink(missing_ok=True)
     batch_timings = load_batch_timing_records(output_dir, split_name)
+    expected_batches = [
+        batch_result_number(path, split_name)
+        for path in list_batch_result_files(split_name, output_dir)
+    ]
     batch_timing_summary = summarize_batch_timing_records(batch_timings)
     execution_time = batch_timing_summary.get("total_known_duration_seconds")
     save_split_metadata(
         split_name,
         output_dir,
         config,
+        df,
+        batch_timings,
+        expected_batches,
         resolution=resolution,
     )
     print_split_summary(
@@ -652,10 +667,18 @@ def run_processing_split(
         _record_incomplete_integrity(output_dir, split_name, error)
         raise
     (Path(output_dir) / integrity_filename(split_name)).unlink(missing_ok=True)
+    batch_timings = load_batch_timing_records(output_dir, split_name)
+    expected_batches = [
+        batch_result_number(path, split_name)
+        for path in list_batch_result_files(split_name, output_dir)
+    ]
     save_split_metadata(
         split_name,
         output_dir,
         config,
+        df,
+        batch_timings,
+        expected_batches,
         resolution=args.resolution,
     )
     print_split_summary(
