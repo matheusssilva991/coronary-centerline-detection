@@ -1,16 +1,34 @@
-bash -c '
-uv run python src/segmentation_pipeline.py --split test --resolution high --config-file config/article_cbeb_sensitivity.json --upper-threshold-percentile 99.7 --num-batches 5 --gpu &&
-uv run python src/segmentation_pipeline.py --split test --resolution high --config-file config/pipeline_config.json --num-batches 5 --gpu &&
-uv run python src/segmentation_pipeline.py --split test --resolution high --config-file config/article_cbeb_sensitivity.json --upper-threshold-percentile 99.9 --num-batches 5 --gpu
-'
+train
 
-uv run python src/experiments/pipeline_parameter_validation.py \
-  --split val \
-  --study resolution_scaling \
-  --sample-size 270 \
+uv run python src/segmentation_pipeline.py \
+  --split train \
   --resolution high \
-  --config-path config/article_cbeb_sensitivity.json \
-  --run-name high_res_canny3_ls50_full_val270 \
-  --variants canny_sigma_3_level_set_50 \
+  --config-file config/pipeline_config.json \
+  --upper-threshold-percentile 99.9 \
+  --num-batches 5 \
   --gpu \
-  --append
+  --run-group canonical_candidate_p99_9/train
+
+
+val
+
+uv run python src/segmentation_pipeline.py \
+  --split val \
+  --resolution high \
+  --config-file config/pipeline_config.json \
+  --upper-threshold-percentile 99.9 \
+  --num-batches 5 \
+  --gpu \
+  --run-group canonical_candidate_p99_9/val
+
+
+test
+
+uv run python src/segmentation_pipeline.py \
+  --split test \
+  --resolution high \
+  --config-file config/pipeline_config.json \
+  --upper-threshold-percentile 99.9 \
+  --num-batches 5 \
+  --gpu \
+  --run-group canonical_candidate_p99_9/test

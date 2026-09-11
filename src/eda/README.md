@@ -44,30 +44,18 @@ export IMAGECAS_BASE_PATH=/caminho/para/ImageCAS/1-1000
 | [pipeline_sensitivity_analysis.ipynb](pipeline_sensitivity_analysis.ipynb) | Análise OFAT: Dice, sucesso dos óstios, efeitos relativos e amplitude por parâmetro no split `val` | Runs de `pipeline_parameter_validation.py` | Tabelas e gráficos exibidos no notebook | Baixo |
 | [upper_threshold_analysis.ipynb](upper_threshold_analysis.ipynb) | Comparar P99.9, P99.7 e P99.5; investigar thresholds HU e histogramas de quatro casos representativos | Mesmos runs de validação e, opcionalmente, volumes ImageCAS | Tabelas e gráficos exibidos no notebook | Baixo; moderado ao carregar intensidades |
 
-### Análises qualitativas
-
-| Notebook | Objetivo | Entrada principal | Saída | Custo |
-|---|---|---|---|---|
-| [bad_cases_qualitative_analysis.ipynb](bad_cases_qualitative_analysis.ipynb) | Rerodar casos ruins e gerar comparação 3D | ImageCAS, bad cases e config | `analysis/cases_analysis/` | Alto |
-
 ### Figuras metodológicas
 
 | Notebook | Objetivo | Entrada principal | Saída | Custo |
 |---|---|---|---|---|
-| [fuzzy_membership_functions.ipynb](fuzzy_membership_functions.ipynb) | Gerar funções de pertinência fuzzy | 60 imagens de teste por padrão | Figura e centros exibidos no notebook | Médio |
-| [morphological_operations_example.ipynb](morphological_operations_example.ipynb) | Ilustrar operações morfológicas | Imagem sintética | Figuras exibidas | Baixo |
 
 Os caminhos de saída da tabela são relativos a
 `output/segmentation/analysis/`.
 
 ## Casos ruins
 
-Os dois notebooks de casos ruins têm responsabilidades diferentes:
-
-- `bad_cases_results_analysis.ipynb` é quantitativo e compara frequências,
-  Dice e casos compartilhados entre resoluções.
-- `bad_cases_qualitative_analysis.ipynb` seleciona exemplos e executa o
-  pipeline para gerar visualizações 3D da aorta, dos óstios e das artérias.
+`bad_cases_results_analysis.ipynb` compara quantitativamente as frequências,
+o Dice e os casos ruins compartilhados entre resoluções.
 
 ## Convenções
 

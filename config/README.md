@@ -554,10 +554,11 @@ Expansao adaptativa da segmentacao com controle por intensidade/vesselness e lim
 - Valor atual: `0.98`
 - Piso relaxado do limiar para permitir continuidade em trechos mais dificeis.
 
-### `comparison_window` (int)
+### `comparison_window` (int/string)
 
 - Valor atual: `1`
-- Janela local usada para comparacoes estatisticas/adaptativas.
+- `1` compara o candidato com o voxel pai; um inteiro maior usa a média dos
+  últimos N voxels aceitos; `ALL` usa toda a região.
 
 ### `smooth_relaxation` (bool)
 

@@ -20,6 +20,10 @@ class PairedStatisticsTests(unittest.TestCase):
         self.assertEqual(result["paired_images"], 2)
         self.assertEqual(result["excluded_pairs"], 2)
         self.assertAlmostEqual(result["mean_delta_dice"], 0.05)
+        self.assertAlmostEqual(result["baseline_median_dice"], 0.15)
+        self.assertAlmostEqual(result["candidate_median_dice"], 0.2)
+        self.assertLessEqual(result["mean_delta_ci_95_low"], 0.05)
+        self.assertGreaterEqual(result["mean_delta_ci_95_high"], 0.05)
         self.assertEqual(result["unchanged_images"], 1)
         self.assertEqual(result["rank_biserial_effect"], 1)
 
@@ -29,6 +33,30 @@ class PairedStatisticsTests(unittest.TestCase):
         )
         self.assertEqual(result["p_value"], 1)
         self.assertEqual(result["unchanged_images"], 2)
+        self.assertAlmostEqual(result["mean_delta_ci_95_low"], 0)
+        self.assertAlmostEqual(result["mean_delta_ci_95_high"], 0)
+
+    def test_bootstrap_is_reproducible(self):
+        baseline = frame([1, 2, 3, 4], [0.1, 0.2, 0.4, 0.8])
+        candidate = frame([1, 2, 3, 4], [0.2, 0.15, 0.6, 0.7])
+        first = compare_paired_dice(
+            baseline,
+            candidate,
+            bootstrap_samples=500,
+            random_state=7,
+        )
+        second = compare_paired_dice(
+            baseline,
+            candidate,
+            bootstrap_samples=500,
+            random_state=7,
+        )
+        self.assertEqual(
+            first["mean_delta_ci_95_low"], second["mean_delta_ci_95_low"]
+        )
+        self.assertEqual(
+            first["mean_delta_ci_95_high"], second["mean_delta_ci_95_high"]
+        )
 
     def test_invalid_inputs(self):
         baseline = frame([1], [0.5])

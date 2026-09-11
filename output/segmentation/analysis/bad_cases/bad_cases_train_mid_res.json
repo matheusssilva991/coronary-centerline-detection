@@ -1,0 +1,20 @@
+[
+  {
+    "image_id": 752,
+    "bad_case_status": "no ostium correct",
+    "subset": "train",
+    "resolution": "mid_res"
+  },
+  {
+    "image_id": 447,
+    "bad_case_status": "one ostium correct",
+    "subset": "train",
+    "resolution": "mid_res"
+  },
+  {
+    "image_id": 603,
+    "bad_case_status": "one ostium correct",
+    "subset": "train",
+    "resolution": "mid_res"
+  }
+]

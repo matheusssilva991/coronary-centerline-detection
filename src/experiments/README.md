@@ -22,6 +22,10 @@ ficam em `output/segmentation/analysis/`.
   CBEB. Seus resultados alimentam a análise OFAT em
   `src/eda/pipeline_sensitivity_analysis.ipynb` e a investigação específica
   dos percentis em `src/eda/upper_threshold_analysis.ipynb`.
+- O estudo `artery_region_growing` de `pipeline_parameter_validation.py`
+  mantém disponível somente a grade dos parâmetros ativos do primeiro RG.
+  Estratégias descartadas estão registradas em
+  `output/segmentation/docs/experiments/artery_region_growing.md`.
 
 Helpers reutilizáveis ficam em `src/utils/experiments/`.
 
@@ -218,7 +222,7 @@ por imagem. Para preservar excepcionalmente os runs internos completos, use
 `--keep-pipeline-runs`.
 
 Experimentos encerrados e as razões para descarte estão documentados em
-[`output/segmentation/analysis/EXPERIMENTS_ARCHIVE.md`](../../output/segmentation/analysis/EXPERIMENTS_ARCHIVE.md).
+[`output/segmentation/docs/experiments/README.md`](../../output/segmentation/docs/experiments/README.md).
 
 ## Filtro e envelope da trajetória da aorta
 

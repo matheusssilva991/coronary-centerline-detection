@@ -16,7 +16,7 @@ canonical/
 ## Referencia atual
 
 O canonical `mid_res` aponta para a configuracao
-[`current_baseline_p99_9`](../runs/mid_res/current_baseline_p99_9/README.md):
+[`current_baseline_p99_9`](../docs/baselines/current_p99_9.md):
 
 | Split | Destino |
 |---|---|

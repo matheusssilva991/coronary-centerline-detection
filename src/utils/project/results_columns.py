@@ -2,6 +2,11 @@
 
 from __future__ import annotations
 
+ARTERY_BRANCH_COLUMNS = [
+    "artery_left_raw_voxels",
+    "artery_right_raw_voxels",
+]
+
 RESULT_COLUMNS: list[str] = [
     "IMG_ID",
     "dice_artery",
@@ -12,6 +17,7 @@ RESULT_COLUMNS: list[str] = [
     "artery_voxels_before_morphology",
     "artery_voxels_after_morphology",
     "artery_segmentation_method",
+    *ARTERY_BRANCH_COLUMNS,
     "fc_processed_voxels",
     "fc_effective_alpha",
     "fc_object_seed_count",
@@ -67,7 +73,6 @@ RESULT_COLUMNS: list[str] = [
     "aorta_circle_filter_original_coverage",
     "aorta_circle_filter_used_coverage",
     "aorta_circle_filter_reason",
-    "aorta_circle_filter_candidate_mask_voxel_count",
     "aorta_mask_voxels",
     "aorta_segmented_slice_count",
     "aorta_voxels_per_segmented_slice",
@@ -162,7 +167,6 @@ READABLE_COLUMN_NAMES: dict[str, str] = {
     "aorta_circle_filter_original_coverage": "aorta_circle_filter_original_coverage",
     "aorta_circle_filter_used_coverage": "aorta_circle_filter_used_coverage",
     "aorta_circle_filter_reason": "aorta_circle_filter_reason",
-    "aorta_circle_filter_candidate_mask_voxel_count": "aorta_circle_filter_candidate_mask_voxel_count",
     "aorta_mask_voxels": "aorta_mask_voxel_count",
     "aorta_segmented_slice_count": "aorta_segmented_slice_count",
     "aorta_voxels_per_segmented_slice": "aorta_voxels_per_segmented_slice",
@@ -197,7 +201,6 @@ READABLE_COLUMN_NAMES: dict[str, str] = {
     "max_threshold_percentile": "max_threshold_percentile",
     "lcc_per_slice": "lcc_per_slice",
     "lcc_mode": "lcc_mode",
-    "configured_artery_segmentation_method": "configured_artery_segmentation_method",
     "aorta_miss_count": "aorta_miss_count",
     "aorta_interpolate_missed_circles": "aorta_interpolate_missed_circles",
 }
@@ -238,6 +241,7 @@ STATUS_LABELS: dict[str, str] = {
 }
 
 __all__ = [
+    "ARTERY_BRANCH_COLUMNS",
     "CANONICAL_COLUMN_NAMES",
     "OSTIA_STATUS_INTERNAL_LABELS",
     "OSTIA_STATUS_READABLE_LABELS",

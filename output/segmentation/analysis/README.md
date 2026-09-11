@@ -9,7 +9,8 @@ O catálogo dos notebooks que produzem estas análises está em
 
 ## Organizacao atual
 
-- `EXPERIMENTS_ARCHIVE.md`: decisões e métricas resumidas dos sweeps encerrados.
+- [`../docs/experiments/`](../docs/experiments/README.md): decisões e métricas
+  resumidas dos sweeps encerrados.
 - `aorta_circle_slices/`: métricas entre número de fatias e círculos da aorta.
 - `aorta_bad_cases/`: atalhos leves para comparar rapidamente máscaras 3D da
   aorta classificadas visualmente como ruins entre variantes. Há catálogos separados
@@ -39,10 +40,10 @@ duplicados aqui.
 
 ## Regra pratica
 
-Consulte `EXPERIMENTS_ARCHIVE.md` para entender por que parâmetros e abordagens
-antigas foram retirados. Grades sem ganho, execuções inválidas e diagnósticos
-temporários são resumidos no histórico e removidos para não serem confundidos
-com confirmações positivas.
+Consulte o [catálogo de experimentos](../docs/experiments/README.md) para
+entender por que parâmetros e abordagens antigas foram retirados. Grades sem
+ganho, execuções inválidas e diagnósticos temporários são resumidos no
+histórico e removidos para não serem confundidos com confirmações positivas.
 
 ## Política de armazenamento
 
@@ -66,5 +67,5 @@ somente quando precisar investigar uma falha.
 
 O runner de correções pode criar temporariamente `pipeline_failure_improvement/`.
 Depois da interpretação, seus resultados devem ser resumidos em
-`EXPERIMENTS_ARCHIVE.md` e removidos; apenas a coorte de entrada em
+`docs/experiments/README.md` e removidos; apenas a coorte de entrada em
 `pipeline_failure_analysis/` é persistente.

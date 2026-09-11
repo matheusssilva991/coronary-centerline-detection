@@ -1,10 +1,7 @@
 """Crescimento de região para segmentação de artérias coronárias.
 
-Entradas públicas:
-
-- ``normal_region_growing_from_ostia``: segmentação usada pelo pipeline;
-- ``expand_region_from_mask_mean``: segunda expansão experimental iniciada por
-  uma máscara já segmentada.
+Entrada pública: ``normal_region_growing_from_ostia``, segmentação usada pelo
+pipeline.
 
 No crescimento padrão, ``comparison_window`` define a referência de vesselness:
 ``1`` usa o voxel atual, ``ALL``/``-1`` usa a média de toda a região aceita e um
@@ -202,6 +199,25 @@ def _vesselness_reference(
     return float(np.percentile(positive, percentile))
 
 
+def _region_growing_parameters(
+    rg_config: dict[str, Any],
+    reference: float,
+    map_minimum: float,
+) -> dict[str, Any]:
+    """Converte a referencia de vesselness nos parametros absolutos do RG."""
+    return {
+        "threshold": (reference - map_minimum) / float(rg_config["threshold_divisor"]),
+        "max_volume": int(rg_config["max_volume"]),
+        "min_vesselness": reference * float(rg_config["min_vesselness_fraction"]),
+        "relaxed_floor_factor": float(rg_config["relaxed_floor_factor"]),
+        "switch_at_voxels": int(rg_config["switch_at_voxels"]),
+        "comparison_window": rg_config["comparison_window"],
+        "smooth_relaxation": bool(rg_config["smooth_relaxation"]),
+        "neighborhood": int(rg_config.get("neighborhood", 26)),
+        "verbose": bool(rg_config.get("verbose", False)),
+    }
+
+
 def _region_growing_from_seeds(
     vesselness_map: NDArray[Any],
     seeds: Iterable[Sequence[int]],
@@ -247,6 +263,7 @@ def _region_growing_from_seeds(
     queue: deque[tuple[int, int, int]] = deque()
     running_sum = 0.0
     running_count = 0
+    neighbor_offsets = _neighbor_offsets(int(neighborhood))
 
     # Inicializa a fila com as sementes válidas e acima do piso mínimo.
     for seed in seeds:
@@ -265,7 +282,6 @@ def _region_growing_from_seeds(
         running_count += 1
         if value_history is not None:
             value_history.append(seed_val)
-
     if running_count == 0:
         if verbose:
             print("Nenhuma semente válida acima do piso de vesselness.")
@@ -273,7 +289,6 @@ def _region_growing_from_seeds(
 
     count = running_count
     dims = vesselness_map.shape
-    neighbor_offsets = _neighbor_offsets(int(neighborhood))
     while queue:
         if count >= int(max_volume):
             if verbose:
@@ -315,7 +330,6 @@ def _region_growing_from_seeds(
                 float(threshold),
             ):
                 continue
-
             visited[ny, nx, nz] = True
             mask[ny, nx, nz] = 1
             queue.append((ny, nx, nz))
@@ -326,99 +340,9 @@ def _region_growing_from_seeds(
                 running_count += 1
             elif value_history is not None:
                 value_history.append(neighbor_value)
-
     if verbose:
         print(f"Voxels segmentados: {count}")
     return mask
-
-
-def expand_region_from_mask_mean(
-    vesselness_map: NDArray[Any],
-    initial_mask: NDArray[Any],
-    *,
-    tolerance: float,
-    min_vesselness: float,
-    max_new_voxels: int,
-    neighborhood: int = 26,
-    update_reference: bool = True,
-) -> tuple[NDArray[np.uint8], dict[str, float | int]]:
-    """Expande uma máscara usando sua vesselness média como referência.
-
-    A máscara inicial é preservada integralmente, inclusive nos voxels inseridos
-    pela morfologia. A expansão parte de sua fronteira e aceita cada candidato
-    quando ele supera o piso de vesselness e permanece dentro da tolerância em
-    relação à média da região. Quando ``update_reference`` está ativo, a média é
-    atualizada incrementalmente após cada novo voxel aceito.
-    """
-    score_map = np.asarray(vesselness_map, dtype=float)
-    region = np.asarray(initial_mask) > 0
-    if score_map.ndim != 3 or region.ndim != 3:
-        raise ValueError("vesselness_map e initial_mask devem ser volumes 3D.")
-    if score_map.shape != region.shape:
-        raise ValueError("vesselness_map e initial_mask devem possuir o mesmo shape.")
-    if tolerance < 0:
-        raise ValueError("tolerance deve ser maior ou igual a zero.")
-    if max_new_voxels < 0:
-        raise ValueError("max_new_voxels deve ser maior ou igual a zero.")
-
-    initial_values = score_map[region & np.isfinite(score_map)]
-    if initial_values.size == 0:
-        raise ValueError("A máscara inicial não possui vesselness finita.")
-
-    initial_voxels = int(region.sum())
-    running_sum = float(initial_values.sum())
-    running_count = int(initial_values.size)
-    initial_mean = running_sum / running_count
-    reference = initial_mean
-
-    # Todos os voxels iniciais entram na fila, mas cada candidato externo é
-    # avaliado apenas uma vez para manter custo e resultado determinísticos.
-    queue: deque[tuple[int, int, int]] = deque(
-        tuple(map(int, coord)) for coord in np.argwhere(region)
-    )
-    evaluated = region.copy()
-    offsets = _neighbor_offsets(int(neighborhood))
-    dims = score_map.shape
-    added_voxels = 0
-
-    while queue and added_voxels < int(max_new_voxels):
-        cy, cx, cz = queue.popleft()
-        for dy, dx, dz in offsets:
-            ny, nx, nz = cy + dy, cx + dx, cz + dz
-            if not (0 <= ny < dims[0] and 0 <= nx < dims[1] and 0 <= nz < dims[2]):
-                continue
-            if evaluated[ny, nx, nz]:
-                continue
-            evaluated[ny, nx, nz] = True
-
-            neighbor_value = float(score_map[ny, nx, nz])
-            if not np.isfinite(neighbor_value) or not _neighbor_is_acceptable(
-                neighbor_value,
-                reference,
-                float(min_vesselness),
-                float(tolerance),
-            ):
-                continue
-
-            region[ny, nx, nz] = True
-            queue.append((ny, nx, nz))
-            added_voxels += 1
-            if update_reference:
-                running_sum += neighbor_value
-                running_count += 1
-                reference = running_sum / running_count
-            if added_voxels >= int(max_new_voxels):
-                break
-
-    return region.astype(np.uint8), {
-        "initial_voxels": initial_voxels,
-        "added_voxels": added_voxels,
-        "final_voxels": int(region.sum()),
-        "initial_mean_vesselness": initial_mean,
-        "final_mean_vesselness": reference,
-        "tolerance": float(tolerance),
-        "min_vesselness": float(min_vesselness),
-    }
 
 
 def normal_region_growing_from_ostia(
@@ -426,11 +350,14 @@ def normal_region_growing_from_ostia(
     ostia_left: Sequence[int] | None,
     ostia_right: Sequence[int] | None,
     config: dict[str, Any],
+    *,
+    branch_diagnostics: dict[str, Any] | None = None,
 ) -> NDArray[np.uint8]:
     """Segmenta artérias coronárias a partir dos óstios detectados.
 
     O método usa o crescimento de região padrão do pipeline, com refinamento de
     semente e multiseed local quando esses parâmetros estão ligados na config.
+    O retorno continua sendo apenas a uniao binaria das duas arvores.
     """
     if vesselness_artery.ndim != 3:
         raise ValueError(
@@ -439,10 +366,16 @@ def normal_region_growing_from_ostia(
 
     rg_config = config["REGION_GROWING"]
     ostia = [ostia_left, ostia_right]
+    reference_scope = str(rg_config.get("reference_scope", "global"))
+    shared_reference_scope = (
+        "ostia_local"
+        if reference_scope == "ostium_local_per_branch"
+        else reference_scope
+    )
     max_vesselness = _vesselness_reference(
         vesselness_artery,
         ostia,
-        scope=str(rg_config.get("reference_scope", "global")),
+        scope=shared_reference_scope,
         radius=int(rg_config.get("reference_radius", 3)),
         percentile=float(rg_config.get("reference_percentile", 95.0)),
     )
@@ -451,32 +384,21 @@ def normal_region_growing_from_ostia(
         return np.zeros_like(vesselness_artery, dtype=np.uint8)
 
     # Converte as frações configuradas em limiares absolutos deste exame.
-    params = {
-        "threshold": (max_vesselness - min_vesselness_map)
-        / float(rg_config["threshold_divisor"]),
-        "max_volume": int(rg_config["max_volume"]),
-        "min_vesselness": max_vesselness * float(rg_config["min_vesselness_fraction"]),
-        "relaxed_floor_factor": float(rg_config["relaxed_floor_factor"]),
-        "switch_at_voxels": int(rg_config["switch_at_voxels"]),
-        "comparison_window": rg_config["comparison_window"],
-        "smooth_relaxation": bool(rg_config["smooth_relaxation"]),
-        "neighborhood": int(rg_config.get("neighborhood", 26)),
-        "verbose": bool(rg_config.get("verbose", False)),
-    }
+    params = _region_growing_parameters(rg_config, max_vesselness, min_vesselness_map)
 
     use_seed_refinement = bool(rg_config.get("use_seed_refinement", False))
     use_multi_seed = bool(rg_config.get("use_multi_seed", False))
     grow_each_ostium_separately = bool(
         rg_config.get("grow_each_ostium_separately", True)
     )
-    seed_min_score = max_vesselness * float(
-        rg_config.get("seed_min_vesselness_fraction", 0.02)
-    )
     seed_search_radius = int(rg_config.get("seed_search_radius", 2))
     seed_candidate_radius = int(rg_config.get("seed_candidate_radius", 1))
     max_seed_candidates = int(rg_config.get("max_seed_candidates", 1))
 
-    def seeds_for_ostium(ostium: Sequence[int] | None) -> list[tuple[int, int, int]]:
+    def seeds_for_ostium(
+        ostium: Sequence[int] | None,
+        branch_reference: float,
+    ) -> list[tuple[int, int, int]]:
         if ostium is None:
             return []
         if not (use_seed_refinement or use_multi_seed):
@@ -489,28 +411,50 @@ def normal_region_growing_from_ostia(
             ostium,
             vesselness_artery,
             radius,
-            seed_min_score,
+            branch_reference
+            * float(rg_config.get("seed_min_vesselness_fraction", 0.02)),
             candidate_count,
         )
 
+    branch_references = [max_vesselness, max_vesselness]
+    if reference_scope == "ostium_local_per_branch":
+        branch_references = [
+            _vesselness_reference(
+                vesselness_artery,
+                [ostium],
+                scope="ostia_local",
+                radius=int(rg_config.get("reference_radius", 3)),
+                percentile=float(rg_config.get("reference_percentile", 95.0)),
+            )
+            for ostium in ostia
+        ]
+
     # Mantém as sementes de cada coronária separadas até escolher a estratégia de RG.
     seed_groups = [
-        seeds_for_ostium(ostia_left),
-        seeds_for_ostium(ostia_right),
+        seeds_for_ostium(ostia_left, branch_references[0]),
+        seeds_for_ostium(ostia_right, branch_references[1]),
     ]
-    seed_groups = [group for group in seed_groups if group]
-    if not seed_groups:
+    if not any(seed_groups):
         return np.zeros_like(vesselness_artery, dtype=np.uint8)
 
     if grow_each_ostium_separately:
         # Evita que um ramo mais forte domine a expansão iniciada no outro óstio.
         combined = np.zeros_like(vesselness_artery, dtype=np.uint8)
-        for seed_group in seed_groups:
-            combined |= _region_growing_from_seeds(
+        for side, seed_group, branch_reference in zip(
+            ("left", "right"), seed_groups, branch_references
+        ):
+            branch_params = _region_growing_parameters(
+                rg_config, branch_reference, min_vesselness_map
+            )
+            branch = _region_growing_from_seeds(
                 vesselness_artery,
                 seed_group,
-                **params,
+                **branch_params,
             )
+            if branch_diagnostics is not None:
+                branch_diagnostics[f"artery_{side}_raw_voxels"] = int(branch.sum())
+
+            combined |= branch
         return combined.astype(np.uint8)
 
     all_seeds = [seed for seed_group in seed_groups for seed in seed_group]
@@ -523,6 +467,5 @@ def normal_region_growing_from_ostia(
 
 __all__ = [
     "NEIGHBORS_26",
-    "expand_region_from_mask_mean",
     "normal_region_growing_from_ostia",
 ]

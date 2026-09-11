@@ -11,7 +11,6 @@ def _parse_rg_comparison_window(value: str) -> int:
     normalized = value.strip().upper()
     if normalized == "ALL":
         return -1
-
     try:
         window = int(normalized)
     except ValueError as exc:
@@ -20,7 +19,9 @@ def _parse_rg_comparison_window(value: str) -> int:
         ) from exc
 
     if window == 0 or window < -1:
-        raise argparse.ArgumentTypeError("use ALL, -1 ou um número inteiro positivo")
+        raise argparse.ArgumentTypeError(
+            "use ALL, -1 ou um número inteiro positivo"
+        )
     return window
 
 
@@ -272,8 +273,8 @@ def build_parser(default_base_path, default_output_dir):
         default=None,
         help=(
             "Referência de comparação do region growing: 1 compara com o voxel "
-            "atual; ALL (ou -1) compara com a média acumulada de todos os voxels "
-            "aceitos; valores >1 comparam com a média dos últimos N voxels."
+            "atual; ALL (ou -1) usa a média acumulada; valores >1 usam a média dos "
+            "últimos N voxels aceitos."
         ),
     )
     parser.add_argument(

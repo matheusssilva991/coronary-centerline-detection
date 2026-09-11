@@ -46,8 +46,9 @@ class DiagnosticsTest(TestCase):
 
 
 class RunImageTest(TestCase):
-    @patch("utils.experiments.fuzzy_pipeline_comparison.postprocess_artery_mask")
-    @patch("utils.experiments.fuzzy_pipeline_comparison.normal_region_growing_from_ostia")
+    @patch(
+        "utils.experiments.fuzzy_pipeline_comparison.segment_arteries_from_vesselness"
+    )
     @patch("utils.experiments.fuzzy_pipeline_comparison.detect_and_evaluate_ostia")
     @patch("utils.experiments.fuzzy_pipeline_comparison.segment_aorta")
     @patch("utils.experiments.fuzzy_pipeline_comparison.locate_aorta_circles")
@@ -62,8 +63,7 @@ class RunImageTest(TestCase):
         detect_circles,
         segment_aorta,
         detect_ostia,
-        region_growing,
-        postprocess,
+        segment_arteries,
     ):
         volume = np.ones((2, 2, 2), dtype=np.float32)
         label = np.ones_like(volume, dtype=np.uint8)
@@ -87,8 +87,10 @@ class RunImageTest(TestCase):
             "ostia_left": (1, 1, 1),
             "ostia_right": (1, 1, 1),
         }
-        region_growing.return_value = label
-        postprocess.return_value = label
+        segment_arteries.return_value = {
+            "artery_mask": label,
+            "raw_artery_mask": label,
+        }
         config = {
             "USE_GPU": False,
             "VESSELNESS_AORTA": {},
@@ -109,8 +111,9 @@ class RunImageTest(TestCase):
         self.assertIsNone(result["error"])
         self.assertNotIn("detected_circles", detect_ostia.call_args.kwargs)
 
-    @patch("utils.experiments.fuzzy_pipeline_comparison.postprocess_artery_mask")
-    @patch("utils.experiments.fuzzy_pipeline_comparison.normal_region_growing_from_ostia")
+    @patch(
+        "utils.experiments.fuzzy_pipeline_comparison.segment_arteries_from_vesselness"
+    )
     @patch("utils.experiments.fuzzy_pipeline_comparison.detect_and_evaluate_ostia")
     @patch("utils.experiments.fuzzy_pipeline_comparison.segment_aorta")
     @patch("utils.experiments.fuzzy_pipeline_comparison.locate_aorta_circles")
@@ -125,8 +128,7 @@ class RunImageTest(TestCase):
         detect_circles,
         segment_aorta,
         detect_ostia,
-        region_growing,
-        postprocess,
+        segment_arteries,
     ):
         volume = np.ones((2, 2, 2), dtype=np.float32)
         label = np.ones_like(volume, dtype=np.uint8)
@@ -170,5 +172,4 @@ class RunImageTest(TestCase):
         self.assertTrue(result["ostia_success"])
         self.assertFalse(result["segmentation_attempted"])
         self.assertEqual(compute_vesselness.call_count, 1)
-        region_growing.assert_not_called()
-        postprocess.assert_not_called()
+        segment_arteries.assert_not_called()

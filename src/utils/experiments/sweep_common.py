@@ -63,8 +63,7 @@ def load_json_file(path: Path) -> Any:
 def sanitize_name(name: str) -> str:
     """Make a name safe for folders and CSV fields."""
     safe = "".join(
-        char if char.isalnum() or char in {"_", "-", "."} else "_"
-        for char in str(name)
+        char if char.isalnum() or char in {"_", "-", "."} else "_" for char in str(name)
     )
     return safe.strip("_") or "variant"
 
@@ -99,7 +98,9 @@ def deep_update(base: dict[str, Any], updates: dict[str, Any]) -> dict[str, Any]
     return merged
 
 
-def apply_overrides(config: dict[str, Any], overrides: dict[str, Any]) -> dict[str, Any]:
+def apply_overrides(
+    config: dict[str, Any], overrides: dict[str, Any]
+) -> dict[str, Any]:
     """Apply dotted-key or nested-dict overrides to a copied config."""
     updated = copy.deepcopy(config)
     for key, value in overrides.items():
@@ -119,7 +120,9 @@ def make_grid_variants(grid: dict[str, Any]) -> list[dict[str, Any]]:
     variants = []
     for index, combination in enumerate(itertools.product(*values), start=1):
         overrides = dict(zip(keys, combination))
-        name_parts = [f"{key.split('.')[-1]}={value}" for key, value in overrides.items()]
+        name_parts = [
+            f"{key.split('.')[-1]}={value}" for key, value in overrides.items()
+        ]
         variant_name = sanitize_name(f"grid_{index:03d}_{'_'.join(name_parts)}")
         variants.append({"name": variant_name, "overrides": overrides})
     return variants
@@ -131,6 +134,7 @@ def select_ids(
     start_index: int,
     ids_arg: str | None,
     base_path: Path,
+    split_config_path: str | Path | None = None,
 ) -> list[int]:
     """Select image IDs from a fixed split or an explicit comma-separated list."""
     if ids_arg:
@@ -140,7 +144,10 @@ def select_ids(
     if sample_size <= 0:
         raise ValueError("--sample-size must be > 0")
 
-    train_ids, val_ids, test_ids, _ = get_data_splits(str(base_path))
+    train_ids, val_ids, test_ids, _ = get_data_splits(
+        str(base_path),
+        split_config_path=split_config_path,
+    )
     split_ids = {"train": train_ids, "val": val_ids, "test": test_ids}[split]
     return split_ids[start_index : start_index + sample_size]
 
@@ -152,9 +159,11 @@ def csv_safe(df: pd.DataFrame) -> pd.DataFrame:
         if out[column].dtype != "object":
             continue
         out[column] = out[column].map(
-            lambda value: json.dumps(make_json_safe(value), ensure_ascii=False)
-            if isinstance(value, (dict, list, tuple)) or hasattr(value, "tolist")
-            else value
+            lambda value: (
+                json.dumps(make_json_safe(value), ensure_ascii=False)
+                if isinstance(value, (dict, list, tuple)) or hasattr(value, "tolist")
+                else value
+            )
         )
     return out
 

@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 
 from utils.experiments.parameter_validation import (
+    artery_region_growing_variants,
     build_mean_intensity_histogram,
     build_mean_normalized_intensity_histogram,
     build_normalized_intensity_histograms,
@@ -31,6 +32,26 @@ from utils.project.config import (
 
 
 class ParameterValidationTests(unittest.TestCase):
+    def test_region_growing_grid_contains_only_active_parameters(self) -> None:
+        variants = artery_region_growing_variants()
+
+        self.assertEqual(len(variants), 36)
+        self.assertEqual(
+            {
+                item["overrides"]["REGION_GROWING.min_vesselness_fraction"]
+                for item in variants
+            },
+            {0.05, 0.065, 0.078, 0.09},
+        )
+        self.assertEqual(
+            {
+                item["overrides"]["REGION_GROWING.comparison_window"]
+                for item in variants
+            },
+            {1},
+        )
+        self.assertIn("baseline", {item["name"] for item in variants})
+
     def test_builds_mean_histogram_on_common_probability_grid(self) -> None:
         histogram_bins = pd.DataFrame(
             {
@@ -59,7 +80,9 @@ class ParameterValidationTests(unittest.TestCase):
             bins=4,
         )
         probability_by_image = profiles.groupby("IMG_ID")["probability"].sum()
-        self.assertEqual(profiles.groupby("IMG_ID")["bin_center_hu"].nunique().nunique(), 1)
+        self.assertEqual(
+            profiles.groupby("IMG_ID")["bin_center_hu"].nunique().nunique(), 1
+        )
         self.assertTrue(np.allclose(probability_by_image, 1.0))
 
         selected_mean = build_mean_normalized_intensity_histogram(
@@ -70,9 +93,7 @@ class ParameterValidationTests(unittest.TestCase):
         self.assertAlmostEqual(selected_mean["mean_probability"].sum(), 1.0)
 
     def test_summarizes_full_and_dense_intensity_histograms(self) -> None:
-        values = np.array(
-            [-1000.0, -500.0, 0.0, 300.0, 301.0, 500.0, 1000.0, np.nan]
-        )
+        values = np.array([-1000.0, -500.0, 0.0, 300.0, 301.0, 500.0, 1000.0, np.nan])
 
         summary, histogram = summarize_intensity_histograms(
             values,
@@ -86,16 +107,12 @@ class ParameterValidationTests(unittest.TestCase):
         self.assertAlmostEqual(summary["full_median_hu"], 300.0)
         self.assertAlmostEqual(summary["full_max_hu"], 1000.0)
         self.assertEqual(summary["dense_voxel_count"], 4)
-        self.assertAlmostEqual(
-            summary["dense_mean_hu"], 2101.0 / 4.0, places=4
-        )
+        self.assertAlmostEqual(summary["dense_mean_hu"], 2101.0 / 4.0, places=4)
         self.assertAlmostEqual(summary["dense_median_hu"], 400.5)
         self.assertAlmostEqual(summary["dense_max_hu"], 1000.0)
         self.assertAlmostEqual(summary["dense_voxel_percent"], 400.0 / 7.0)
         self.assertEqual(histogram.groupby("histogram")["count"].sum()["full"], 7)
-        self.assertEqual(
-            histogram.groupby("histogram")["count"].sum()["dense_hu"], 4
-        )
+        self.assertEqual(histogram.groupby("histogram")["count"].sum()["dense_hu"], 4)
 
     def test_rejects_invalid_histogram_progress_interval(self) -> None:
         with self.assertRaisesRegex(ValueError, "progress_every"):
@@ -309,15 +326,11 @@ class ParameterValidationTests(unittest.TestCase):
         fully_scaled = scale_config_to_resolution(config)
         without_surface = scale_config_to_resolution(
             config,
-            enabled_groups=RESOLUTION_SCALING_GROUPS.difference(
-                {"ostia_surface"}
-            ),
+            enabled_groups=RESOLUTION_SCALING_GROUPS.difference({"ostia_surface"}),
         )
         without_candidates = scale_config_to_resolution(
             config,
-            enabled_groups=RESOLUTION_SCALING_GROUPS.difference(
-                {"ostia_candidates"}
-            ),
+            enabled_groups=RESOLUTION_SCALING_GROUPS.difference({"ostia_candidates"}),
         )
 
         self.assertEqual(fully_scaled["OSTIA_DETECTION"]["erosion_radius"], 8)
@@ -361,9 +374,7 @@ class ParameterValidationTests(unittest.TestCase):
         self.assertEqual(len(names), len(set(names)))
         self.assertIn("circle_geometry_unscaled", names)
         self.assertIn("morphology_radii_unscaled", names)
-        self.assertTrue(
-            all("disabled_scaling_groups" in item for item in variants)
-        )
+        self.assertTrue(all("disabled_scaling_groups" in item for item in variants))
         canny_variant = next(
             item for item in variants if item["name"] == "canny_sigma_mid"
         )
@@ -379,9 +390,7 @@ class ParameterValidationTests(unittest.TestCase):
             {"LEVEL_SET.num_iter": 50},
         )
         combined_variant = next(
-            item
-            for item in variants
-            if item["name"] == "canny_sigma_4_level_set_50"
+            item for item in variants if item["name"] == "canny_sigma_4_level_set_50"
         )
         self.assertEqual(
             combined_variant["post_scale_overrides"],
@@ -419,14 +428,10 @@ class ParameterValidationTests(unittest.TestCase):
                 "segmentation_failure",
             },
         )
-        near_mean = selected.loc[
-            selected["case_type"].eq("near_target_mean")
-        ].iloc[0]
+        near_mean = selected.loc[selected["case_type"].eq("near_target_mean")].iloc[0]
         self.assertTrue(bool(near_mean["ostia_success"]))
 
-        ostia_failure = selected.loc[
-            selected["case_type"].eq("ostia_failure")
-        ].iloc[0]
+        ostia_failure = selected.loc[selected["case_type"].eq("ostia_failure")].iloc[0]
         self.assertGreater(float(ostia_failure["dice_artery"]), 0.0)
 
     def test_prefers_visible_segmentation_failure_with_accepted_ostia(
@@ -454,9 +459,7 @@ class ParameterValidationTests(unittest.TestCase):
         )
 
         selected = select_parameter_validation_cases(frame, "baseline")
-        failure = selected.loc[
-            selected["case_type"].eq("segmentation_failure")
-        ].iloc[0]
+        failure = selected.loc[selected["case_type"].eq("segmentation_failure")].iloc[0]
 
         self.assertEqual(int(failure["IMG_ID"]), 5)
         self.assertEqual(failure["ostia_status"], "both_correct")

@@ -1,25 +1,7 @@
 [
   {
-    "image_id": 943,
-    "bad_case_status": "no ostium correct",
-    "subset": "test",
-    "resolution": "mid_res"
-  },
-  {
-    "image_id": 784,
-    "bad_case_status": "no ostium correct",
-    "subset": "test",
-    "resolution": "mid_res"
-  },
-  {
     "image_id": 593,
     "bad_case_status": "no ostium correct",
-    "subset": "test",
-    "resolution": "mid_res"
-  },
-  {
-    "image_id": 19,
-    "bad_case_status": "one ostium correct",
     "subset": "test",
     "resolution": "mid_res"
   },
@@ -36,44 +18,14 @@
     "resolution": "mid_res"
   },
   {
-    "image_id": 976,
-    "bad_case_status": "one ostium correct",
-    "subset": "test",
-    "resolution": "mid_res"
-  },
-  {
-    "image_id": 348,
-    "bad_case_status": "no ostium correct",
-    "subset": "test",
-    "resolution": "mid_res"
-  },
-  {
     "image_id": 494,
     "bad_case_status": "one ostium correct",
     "subset": "test",
     "resolution": "mid_res"
   },
   {
-    "image_id": 837,
+    "image_id": 587,
     "bad_case_status": "one ostium correct",
-    "subset": "test",
-    "resolution": "mid_res"
-  },
-  {
-    "image_id": 147,
-    "bad_case_status": "one ostium correct",
-    "subset": "test",
-    "resolution": "mid_res"
-  },
-  {
-    "image_id": 287,
-    "bad_case_status": "one ostium correct",
-    "subset": "test",
-    "resolution": "mid_res"
-  },
-  {
-    "image_id": 642,
-    "bad_case_status": "low_dice",
     "subset": "test",
     "resolution": "mid_res"
   },
@@ -86,12 +38,6 @@
   {
     "image_id": 195,
     "bad_case_status": "no ostium correct",
-    "subset": "test",
-    "resolution": "mid_res"
-  },
-  {
-    "image_id": 766,
-    "bad_case_status": "low_dice",
     "subset": "test",
     "resolution": "mid_res"
   },
@@ -120,12 +66,6 @@
     "resolution": "mid_res"
   },
   {
-    "image_id": 375,
-    "bad_case_status": "low_dice",
-    "subset": "test",
-    "resolution": "mid_res"
-  },
-  {
     "image_id": 592,
     "bad_case_status": "no ostium correct",
     "subset": "test",
@@ -150,19 +90,7 @@
     "resolution": "mid_res"
   },
   {
-    "image_id": 574,
-    "bad_case_status": "no ostium correct",
-    "subset": "test",
-    "resolution": "mid_res"
-  },
-  {
     "image_id": 740,
-    "bad_case_status": "no ostium correct",
-    "subset": "test",
-    "resolution": "mid_res"
-  },
-  {
-    "image_id": 601,
     "bad_case_status": "no ostium correct",
     "subset": "test",
     "resolution": "mid_res"
@@ -170,18 +98,6 @@
   {
     "image_id": 995,
     "bad_case_status": "no ostium correct",
-    "subset": "test",
-    "resolution": "mid_res"
-  },
-  {
-    "image_id": 163,
-    "bad_case_status": "low_dice",
-    "subset": "test",
-    "resolution": "mid_res"
-  },
-  {
-    "image_id": 320,
-    "bad_case_status": "one ostium correct",
     "subset": "test",
     "resolution": "mid_res"
   },
@@ -198,31 +114,7 @@
     "resolution": "mid_res"
   },
   {
-    "image_id": 634,
-    "bad_case_status": "low_dice",
-    "subset": "test",
-    "resolution": "mid_res"
-  },
-  {
     "image_id": 683,
-    "bad_case_status": "no ostium correct",
-    "subset": "test",
-    "resolution": "mid_res"
-  },
-  {
-    "image_id": 327,
-    "bad_case_status": "one ostium correct",
-    "subset": "test",
-    "resolution": "mid_res"
-  },
-  {
-    "image_id": 331,
-    "bad_case_status": "no ostium correct",
-    "subset": "test",
-    "resolution": "mid_res"
-  },
-  {
-    "image_id": 701,
     "bad_case_status": "no ostium correct",
     "subset": "test",
     "resolution": "mid_res"
@@ -264,26 +156,14 @@
     "resolution": "mid_res"
   },
   {
-    "image_id": 169,
-    "bad_case_status": "low_dice",
+    "image_id": 580,
+    "bad_case_status": "no ostium correct",
     "subset": "test",
     "resolution": "mid_res"
   },
   {
     "image_id": 724,
     "bad_case_status": "no ostium correct",
-    "subset": "test",
-    "resolution": "mid_res"
-  },
-  {
-    "image_id": 635,
-    "bad_case_status": "no ostium correct",
-    "subset": "test",
-    "resolution": "mid_res"
-  },
-  {
-    "image_id": 247,
-    "bad_case_status": "one ostium correct",
     "subset": "test",
     "resolution": "mid_res"
   },
@@ -295,7 +175,7 @@
   },
   {
     "image_id": 157,
-    "bad_case_status": "one ostium correct",
+    "bad_case_status": "no ostium correct",
     "subset": "test",
     "resolution": "mid_res"
   },
@@ -306,13 +186,19 @@
     "resolution": "mid_res"
   },
   {
+    "image_id": 397,
+    "bad_case_status": "no ostium correct",
+    "subset": "test",
+    "resolution": "mid_res"
+  },
+  {
     "image_id": 915,
     "bad_case_status": "one ostium correct",
     "subset": "test",
     "resolution": "mid_res"
   },
   {
-    "image_id": 736,
+    "image_id": 373,
     "bad_case_status": "no ostium correct",
     "subset": "test",
     "resolution": "mid_res"
@@ -330,14 +216,32 @@
     "resolution": "mid_res"
   },
   {
-    "image_id": 818,
-    "bad_case_status": "low_dice",
+    "image_id": 374,
+    "bad_case_status": "no ostium correct",
+    "subset": "test",
+    "resolution": "mid_res"
+  },
+  {
+    "image_id": 486,
+    "bad_case_status": "one ostium correct",
     "subset": "test",
     "resolution": "mid_res"
   },
   {
     "image_id": 174,
     "bad_case_status": "no ostium correct",
+    "subset": "test",
+    "resolution": "mid_res"
+  },
+  {
+    "image_id": 809,
+    "bad_case_status": "no ostium correct",
+    "subset": "test",
+    "resolution": "mid_res"
+  },
+  {
+    "image_id": 566,
+    "bad_case_status": "ostia not found",
     "subset": "test",
     "resolution": "mid_res"
   },
@@ -391,19 +295,13 @@
   },
   {
     "image_id": 8,
-    "bad_case_status": "low_dice",
+    "bad_case_status": "no ostium correct",
     "subset": "test",
     "resolution": "mid_res"
   },
   {
     "image_id": 576,
     "bad_case_status": "no ostium correct",
-    "subset": "test",
-    "resolution": "mid_res"
-  },
-  {
-    "image_id": 621,
-    "bad_case_status": "low_dice",
     "subset": "test",
     "resolution": "mid_res"
   },
@@ -420,13 +318,19 @@
     "resolution": "mid_res"
   },
   {
-    "image_id": 554,
+    "image_id": 17,
     "bad_case_status": "no ostium correct",
     "subset": "test",
     "resolution": "mid_res"
   },
   {
-    "image_id": 406,
+    "image_id": 664,
+    "bad_case_status": "no ostium correct",
+    "subset": "test",
+    "resolution": "mid_res"
+  },
+  {
+    "image_id": 554,
     "bad_case_status": "no ostium correct",
     "subset": "test",
     "resolution": "mid_res"
@@ -444,31 +348,13 @@
     "resolution": "mid_res"
   },
   {
-    "image_id": 383,
-    "bad_case_status": "no ostium correct",
-    "subset": "test",
-    "resolution": "mid_res"
-  },
-  {
     "image_id": 904,
     "bad_case_status": "no ostium correct",
     "subset": "test",
     "resolution": "mid_res"
   },
   {
-    "image_id": 216,
-    "bad_case_status": "low_dice",
-    "subset": "test",
-    "resolution": "mid_res"
-  },
-  {
     "image_id": 503,
-    "bad_case_status": "no ostium correct",
-    "subset": "test",
-    "resolution": "mid_res"
-  },
-  {
-    "image_id": 246,
     "bad_case_status": "no ostium correct",
     "subset": "test",
     "resolution": "mid_res"
@@ -482,6 +368,12 @@
   {
     "image_id": 103,
     "bad_case_status": "no ostium correct",
+    "subset": "test",
+    "resolution": "mid_res"
+  },
+  {
+    "image_id": 529,
+    "bad_case_status": "one ostium correct",
     "subset": "test",
     "resolution": "mid_res"
   },
@@ -504,32 +396,14 @@
     "resolution": "mid_res"
   },
   {
-    "image_id": 990,
-    "bad_case_status": "no ostium correct",
-    "subset": "test",
-    "resolution": "mid_res"
-  },
-  {
-    "image_id": 196,
-    "bad_case_status": "one ostium correct",
-    "subset": "test",
-    "resolution": "mid_res"
-  },
-  {
     "image_id": 149,
     "bad_case_status": "no ostium correct",
     "subset": "test",
     "resolution": "mid_res"
   },
   {
-    "image_id": 463,
-    "bad_case_status": "no ostium correct",
-    "subset": "test",
-    "resolution": "mid_res"
-  },
-  {
     "image_id": 519,
-    "bad_case_status": "one ostium correct",
+    "bad_case_status": "no ostium correct",
     "subset": "test",
     "resolution": "mid_res"
   },
@@ -546,24 +420,6 @@
     "resolution": "mid_res"
   },
   {
-    "image_id": 932,
-    "bad_case_status": "low_dice",
-    "subset": "test",
-    "resolution": "mid_res"
-  },
-  {
-    "image_id": 555,
-    "bad_case_status": "low_dice",
-    "subset": "test",
-    "resolution": "mid_res"
-  },
-  {
-    "image_id": 563,
-    "bad_case_status": "low_dice",
-    "subset": "test",
-    "resolution": "mid_res"
-  },
-  {
     "image_id": 834,
     "bad_case_status": "ostia not found",
     "subset": "test",
@@ -572,18 +428,6 @@
   {
     "image_id": 738,
     "bad_case_status": "no ostium correct",
-    "subset": "test",
-    "resolution": "mid_res"
-  },
-  {
-    "image_id": 712,
-    "bad_case_status": "one ostium correct",
-    "subset": "test",
-    "resolution": "mid_res"
-  },
-  {
-    "image_id": 500,
-    "bad_case_status": "low_dice",
     "subset": "test",
     "resolution": "mid_res"
   },
@@ -612,7 +456,7 @@
     "resolution": "mid_res"
   },
   {
-    "image_id": 622,
+    "image_id": 452,
     "bad_case_status": "no ostium correct",
     "subset": "test",
     "resolution": "mid_res"
@@ -630,12 +474,6 @@
     "resolution": "mid_res"
   },
   {
-    "image_id": 165,
-    "bad_case_status": "low_dice",
-    "subset": "test",
-    "resolution": "mid_res"
-  },
-  {
     "image_id": 964,
     "bad_case_status": "one ostium correct",
     "subset": "test",
@@ -643,12 +481,6 @@
   },
   {
     "image_id": 45,
-    "bad_case_status": "no ostium correct",
-    "subset": "test",
-    "resolution": "mid_res"
-  },
-  {
-    "image_id": 200,
     "bad_case_status": "no ostium correct",
     "subset": "test",
     "resolution": "mid_res"
@@ -666,8 +498,8 @@
     "resolution": "mid_res"
   },
   {
-    "image_id": 632,
-    "bad_case_status": "low_dice",
+    "image_id": 467,
+    "bad_case_status": "one ostium correct",
     "subset": "test",
     "resolution": "mid_res"
   },
@@ -678,20 +510,14 @@
     "resolution": "mid_res"
   },
   {
-    "image_id": 189,
-    "bad_case_status": "one ostium correct",
-    "subset": "test",
-    "resolution": "mid_res"
-  },
-  {
     "image_id": 482,
     "bad_case_status": "no ostium correct",
     "subset": "test",
     "resolution": "mid_res"
   },
   {
-    "image_id": 963,
-    "bad_case_status": "low_dice",
+    "image_id": 259,
+    "bad_case_status": "no ostium correct",
     "subset": "test",
     "resolution": "mid_res"
   },
@@ -714,12 +540,6 @@
     "resolution": "mid_res"
   },
   {
-    "image_id": 595,
-    "bad_case_status": "low_dice",
-    "subset": "test",
-    "resolution": "mid_res"
-  },
-  {
     "image_id": 182,
     "bad_case_status": "no ostium correct",
     "subset": "test",
@@ -738,12 +558,6 @@
     "resolution": "mid_res"
   },
   {
-    "image_id": 630,
-    "bad_case_status": "no ostium correct",
-    "subset": "test",
-    "resolution": "mid_res"
-  },
-  {
     "image_id": 202,
     "bad_case_status": "no ostium correct",
     "subset": "test",
@@ -756,14 +570,14 @@
     "resolution": "mid_res"
   },
   {
-    "image_id": 34,
-    "bad_case_status": "low_dice",
+    "image_id": 412,
+    "bad_case_status": "no ostium correct",
     "subset": "test",
     "resolution": "mid_res"
   },
   {
-    "image_id": 412,
-    "bad_case_status": "no ostium correct",
+    "image_id": 999,
+    "bad_case_status": "one ostium correct",
     "subset": "test",
     "resolution": "mid_res"
   },
@@ -787,13 +601,7 @@
   },
   {
     "image_id": 827,
-    "bad_case_status": "no ostium correct",
-    "subset": "test",
-    "resolution": "mid_res"
-  },
-  {
-    "image_id": 826,
-    "bad_case_status": "no ostium correct",
+    "bad_case_status": "low_dice",
     "subset": "test",
     "resolution": "mid_res"
   },
@@ -811,7 +619,7 @@
   },
   {
     "image_id": 132,
-    "bad_case_status": "no ostium correct",
+    "bad_case_status": "ostia not found",
     "subset": "test",
     "resolution": "mid_res"
   },
@@ -828,12 +636,6 @@
     "resolution": "mid_res"
   },
   {
-    "image_id": 74,
-    "bad_case_status": "low_dice",
-    "subset": "test",
-    "resolution": "mid_res"
-  },
-  {
     "image_id": 75,
     "bad_case_status": "one ostium correct",
     "subset": "test",
@@ -846,14 +648,14 @@
     "resolution": "mid_res"
   },
   {
-    "image_id": 865,
-    "bad_case_status": "low_dice",
+    "image_id": 139,
+    "bad_case_status": "no ostium correct",
     "subset": "test",
     "resolution": "mid_res"
   },
   {
-    "image_id": 141,
-    "bad_case_status": "one ostium correct",
+    "image_id": 865,
+    "bad_case_status": "low_dice",
     "subset": "test",
     "resolution": "mid_res"
   },
@@ -884,6 +686,12 @@
   {
     "image_id": 97,
     "bad_case_status": "no ostium correct",
+    "subset": "test",
+    "resolution": "mid_res"
+  },
+  {
+    "image_id": 864,
+    "bad_case_status": "one ostium correct",
     "subset": "test",
     "resolution": "mid_res"
   },

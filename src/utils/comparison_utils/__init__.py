@@ -25,7 +25,6 @@ _SYMBOL_TO_MODULE = {
     "filter_correct_ostia_cases": "bad_cases",
     "get_bad_cases": "bad_cases",
     "prepare_bad_cases_for_subset": "bad_cases",
-    "prepare_bad_case_qualitative_comparison": "bad_cases",
     "save_bad_cases_artifacts": "bad_cases",
     "summarize_bad_dice_with_threshold": "bad_cases",
     # failure_analysis

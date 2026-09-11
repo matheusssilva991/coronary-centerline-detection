@@ -7,6 +7,7 @@ from typing import Any, cast
 import pandas as pd
 
 from .results_columns import (
+    ARTERY_BRANCH_COLUMNS,
     CANONICAL_COLUMN_NAMES,
     OSTIA_STATUS_INTERNAL_LABELS,
     OSTIA_STATUS_READABLE_LABELS,
@@ -59,11 +60,6 @@ def _as_optional_float(value: Any) -> float | None:
 
 def _format_bool_readable(value: Any) -> str:
     return "yes" if _as_bool_value(value) else "no"
-
-
-def _configured_artery_segmentation_method(config: dict[str, Any]) -> str:
-    """Retorna o método arterial selecionado na configuração efetiva."""
-    return str(config.get("ARTERY_SEGMENTATION", {}).get("method", "region_growing"))
 
 
 def make_readable_results_dataframe(df: pd.DataFrame) -> pd.DataFrame:
@@ -163,6 +159,10 @@ def build_result_row(result: dict[str, Any]) -> dict[str, Any]:
         "artery_segmentation_method": _get_result_value(
             result, "artery_segmentation_method", "region_growing"
         ),
+        **{
+            column: _get_result_value(result, column)
+            for column in ARTERY_BRANCH_COLUMNS
+        },
         "fc_processed_voxels": _get_result_value(result, "fc_processed_voxels"),
         "fc_effective_alpha": _get_result_value(result, "fc_effective_alpha"),
         "fc_object_seed_count": _get_result_value(result, "fc_object_seed_count"),
@@ -295,9 +295,6 @@ def build_result_row(result: dict[str, Any]) -> dict[str, Any]:
         "aorta_circle_filter_reason": _get_result_value(
             result, "aorta_circle_filter_reason"
         ),
-        "aorta_circle_filter_candidate_mask_voxel_count": _get_result_value(
-            result, "aorta_circle_filter_candidate_mask_voxel_count"
-        ),
         "aorta_mask_voxels": _get_result_value(result, "aorta_mask_voxels"),
         "aorta_segmented_slice_count": _get_result_value(
             result, "aorta_segmented_slice_count"
@@ -389,16 +386,9 @@ def add_config_columns(df: pd.DataFrame, config: dict[str, Any]) -> pd.DataFrame
     df["downscale_factors"] = str(config.get("DOWNSCALE_FACTORS", "N/A"))
     df["max_threshold_percentile"] = config.get("MAX_THRESHOLD_PERCENTILE", "N/A")
     thresholding_config = config.get("THRESHOLDING", {})
-    lower_threshold_config = config.get("LOWER_THRESHOLD", {})
     df["threshold_mode"] = thresholding_config.get("method", "normal")
-    df["configured_lower_threshold_method"] = lower_threshold_config.get(
-        "method", "fixed"
-    )
     df["lcc_per_slice"] = True
     df["lcc_mode"] = "per_slice"
-    df["configured_artery_segmentation_method"] = (
-        _configured_artery_segmentation_method(config)
-    )
     df["aorta_miss_count"] = circle_config.get("max_slice_miss_threshold", "N/A")
     df["configured_aorta_hough_radii_start_px"] = circle_config.get(
         "radii_start_px",
@@ -494,13 +484,19 @@ def summarize_results_df(df: pd.DataFrame) -> dict[str, Any]:
     valid_upper_thresholds = effective_upper_threshold_series.dropna()
     summary["effective_upper_threshold_hu_count"] = int(len(valid_upper_thresholds))
     summary["effective_upper_threshold_hu_mean"] = (
-        float(valid_upper_thresholds.mean()) if not valid_upper_thresholds.empty else None
+        float(valid_upper_thresholds.mean())
+        if not valid_upper_thresholds.empty
+        else None
     )
     summary["effective_upper_threshold_hu_min"] = (
-        float(valid_upper_thresholds.min()) if not valid_upper_thresholds.empty else None
+        float(valid_upper_thresholds.min())
+        if not valid_upper_thresholds.empty
+        else None
     )
     summary["effective_upper_threshold_hu_max"] = (
-        float(valid_upper_thresholds.max()) if not valid_upper_thresholds.empty else None
+        float(valid_upper_thresholds.max())
+        if not valid_upper_thresholds.empty
+        else None
     )
 
     # Métricas de Dice permanecem nulas quando nenhuma artéria foi segmentada.

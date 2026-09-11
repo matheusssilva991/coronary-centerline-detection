@@ -11,6 +11,7 @@ import numpy as np
 from skimage.morphology import ball
 
 from ..processing.binary_operations import binary_closing, binary_dilation
+from ..project.results_columns import ARTERY_BRANCH_COLUMNS
 from ..utils.metrics import dice_score
 from .artery_segmentation import normal_region_growing_from_ostia
 from .pipeline_preprocessing import compute_vesselness
@@ -101,15 +102,24 @@ def _segment_with_region_growing(
 ) -> tuple[np.ndarray, np.ndarray, Dict[str, Any]]:
     """Executa o region growing padrão e retorna máscara + metadados."""
     # Segmenta as artérias a partir dos óstios esquerdo e direito.
+    details: Dict[str, Any] = {}
     raw_mask = normal_region_growing_from_ostia(
         vesselness_artery,
         ostia_left,
         ostia_right,
         config,
+        branch_diagnostics=details,
     )
-    # Fecha pequenas falhas e dilata a máscara final conforme o pipeline.
+    # Fecha pequenas falhas e dilata a máscara uma única vez.
     artery_mask = postprocess_artery_mask(raw_mask, config)
-    return artery_mask, raw_mask, {"raw_artery_voxels": int(np.sum(raw_mask))}
+    return (
+        artery_mask,
+        raw_mask,
+        {
+            **details,
+            "raw_artery_voxels": int(np.sum(raw_mask)),
+        },
+    )
 
 
 def _segment_with_fuzzy_connectedness(
@@ -217,6 +227,7 @@ def segment_arteries_from_vesselness(
 
     return {
         # As máscaras são removidas pela orquestração antes da persistência.
+        **{column: details.get(column) for column in ARTERY_BRANCH_COLUMNS},
         "artery_mask": artery_mask,
         "raw_artery_mask": raw_artery_mask,
         "artery_voxels_before_morphology": raw_artery_voxels,

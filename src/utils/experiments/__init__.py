@@ -7,11 +7,8 @@ from .aorta_visual_review import (
     load_aorta_visual_reviews,
     resolve_aorta_review_summary_path,
 )
-from .qualitative_pipeline import (
-    display_qualitative_pipeline_case,
-    run_qualitative_pipeline_case,
-)
 from .parameter_validation import (
+    artery_region_growing_variants,
     build_parameter_pairwise_summary,
     build_parameter_sensitivity_summary,
     build_mean_intensity_histogram,
@@ -36,6 +33,7 @@ from .parameter_validation import (
 
 __all__ = [
     "add_aorta_extent_metrics",
+    "artery_region_growing_variants",
     "build_parameter_pairwise_summary",
     "build_parameter_sensitivity_summary",
     "build_mean_intensity_histogram",
@@ -50,12 +48,10 @@ __all__ = [
     "load_aorta_visual_reviews",
     "load_aorta_review_cohort",
     "load_parameter_validation_run",
-    "display_qualitative_pipeline_case",
     "parameter_validation_variants",
     "resolution_scaling_variants",
     "prepared_context_cache_key",
     "resolve_aorta_review_summary_path",
-    "run_qualitative_pipeline_case",
     "select_parameter_validation_cases",
     "select_top_threshold_cases",
     "summarize_top_threshold_cases",

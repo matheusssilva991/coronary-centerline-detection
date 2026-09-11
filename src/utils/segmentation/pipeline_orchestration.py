@@ -109,7 +109,6 @@ IMAGE_RESULT_DEFAULTS = {
     "aorta_circle_filter_original_coverage": None,
     "aorta_circle_filter_used_coverage": None,
     "aorta_circle_filter_reason": None,
-    "aorta_circle_filter_candidate_mask_voxel_count": None,
     "aorta_mask_voxels": None,
     "aorta_segmented_slice_count": None,
     "aorta_voxels_per_segmented_slice": None,
@@ -349,13 +348,6 @@ def _segment_aorta_from_filtered_circles(
         use_gpu=config.get("USE_GPU", False),
     )
 
-    filter_diagnostics.update(
-        {
-            "aorta_circle_filter_candidate_mask_voxel_count": int(
-                np.asarray(candidate.mask).sum()
-            ),
-        }
-    )
     return filtered_circles, candidate, filter_diagnostics
 
 

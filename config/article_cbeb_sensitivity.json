@@ -108,7 +108,7 @@
         "seed_candidate_radius": 1,
         "max_seed_candidates": 6,
         "seed_min_vesselness_fraction": 0.02,
-        "verbose": false
+    "verbose": false
     },
     "POSTPROCESSING": {
         "closing_radius": 3,

@@ -194,7 +194,7 @@ def load_variant_run(
         "threshold_mode": first_existing_value(df, ["threshold_mode"], "normal"),
         "artery_method": first_existing_value(
             df,
-            ["configured_artery_segmentation_method", "artery_segmentation_method"],
+            ["artery_segmentation_method"],
             "",
         ),
         "ostia_detected_rate": df["ostia_detected_bool"].mean(),

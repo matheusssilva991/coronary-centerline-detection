@@ -26,8 +26,8 @@ As contagens de voxels da aorta sao iguais entre os pads.
 Cada timestamp contem `config/`, `numeric/` e `logs/`. O split esta no nome
 dos CSVs. Os HTMLs seguem o mesmo caminho relativo sob
 `/media/matheus/HD/ImageCAS_pipeline_results/segmentation/runs/mid_res/`.
-Os runs antigos com fallback estao em
-[`archive/ostia_with_removed_fallback/`](archive/ostia_with_removed_fallback/).
+Os runs antigos com fallback foram removidos depois que seus resultados foram
+registrados em `output/segmentation/docs/experiments/README.md`.
 
 ## Validacao completa: 270 imagens
 

@@ -23,6 +23,7 @@ if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
 from utils.experiments import (  # noqa: E402
+    artery_region_growing_variants,
     image_load_cache_key,
     parameter_validation_variants,
     prepared_context_cache_key,
@@ -53,6 +54,7 @@ from utils.project.config import (  # noqa: E402
     scale_config_to_resolution,
 )
 from utils.project.notebook_env import resolve_imagecas_base_path  # noqa: E402
+from utils.segmentation.pipeline_preprocessing import compute_vesselness  # noqa: E402
 
 
 DEFAULT_CONFIG_PATH = REPO_ROOT / "config/article_cbeb_sensitivity.json"
@@ -67,11 +69,24 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--split", choices=["train", "val"], default="val")
     parser.add_argument(
         "--study",
-        choices=["article_sensitivity", "resolution_scaling"],
+        choices=[
+            "article_sensitivity",
+            "resolution_scaling",
+            "artery_region_growing",
+        ],
         default="article_sensitivity",
         help="Família de variantes executada pelo experimento.",
     )
     parser.add_argument("--sample-size", type=int, default=30)
+    parser.add_argument(
+        "--ostia-surface-padding-radius",
+        type=int,
+        default=None,
+        help=(
+            "Sobrescreve o padding da superfície dos óstios para todo o run. "
+            "Use 3 para reproduzir o perfil que obteve 30/30 no treino."
+        ),
+    )
     parser.add_argument("--start-index", type=int, default=0)
     parser.add_argument(
         "--ids",
@@ -80,6 +95,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--resolution", choices=["mid", "high"], default="mid")
     parser.add_argument("--config-path", type=Path, default=DEFAULT_CONFIG_PATH)
+    parser.add_argument(
+        "--split-config",
+        type=Path,
+        default=None,
+        help="Arquivo de splits fixos; útil para reproduzir a validação de 60 casos.",
+    )
     parser.add_argument("--output-root", type=Path, default=DEFAULT_OUTPUT_ROOT)
     parser.add_argument("--run-name", default=None)
     parser.add_argument(
@@ -103,17 +124,35 @@ def build_parser() -> argparse.ArgumentParser:
     gpu_group = parser.add_mutually_exclusive_group()
     gpu_group.add_argument("--gpu", dest="use_gpu", action="store_true", default=None)
     gpu_group.add_argument("--no-gpu", dest="use_gpu", action="store_false")
+    parser.add_argument(
+        "--save-segmentation-visuals",
+        action="store_true",
+        help="Salva um HTML 3D por imagem e variante.",
+    )
+    parser.add_argument(
+        "--visual-output-dir",
+        type=Path,
+        default=None,
+        help=(
+            "Diretório raiz dos HTMLs. Por padrão usa visual/ dentro do run; "
+            "recomenda-se um disco externo para execuções grandes."
+        ),
+    )
     parser.add_argument("--dry-run", action="store_true")
     return parser
 
 
-def select_variants(names: str | None, study: str) -> list[dict]:
+def select_variants(
+    names: str | None,
+    study: str,
+) -> list[dict]:
     """Seleciona variantes mantendo a ordem declarada."""
-    variants = (
-        resolution_scaling_variants()
-        if study == "resolution_scaling"
-        else parameter_validation_variants()
-    )
+    if study == "resolution_scaling":
+        variants = resolution_scaling_variants()
+    elif study == "artery_region_growing":
+        variants = artery_region_growing_variants()
+    else:
+        variants = parameter_validation_variants()
     if not names:
         return variants
     requested = [item.strip() for item in names.split(",") if item.strip()]
@@ -186,6 +225,7 @@ def _prepare_variant_specs(
                 "post_scale_overrides": post_scale_overrides,
                 "load_key": image_load_cache_key(config),
                 "context_key": prepared_context_cache_key(config, experiment),
+                "compute_artery_map_in_context": True,
             }
         )
     return specs, parameter_rows
@@ -241,24 +281,43 @@ def main() -> None:
         use_gpu=args.use_gpu,
     )
     base_config = build_base_config(base_args)
+    if args.ostia_surface_padding_radius is not None:
+        if args.ostia_surface_padding_radius < 0:
+            raise ValueError("--ostia-surface-padding-radius deve ser >= 0.")
+        base_config["OSTIA_DETECTION"]["surface_padding_radius"] = (
+            args.ostia_surface_padding_radius
+        )
     image_ids = select_ids(
         args.split,
         args.sample_size,
         args.start_index,
         args.ids,
         base_path,
+        args.split_config,
     )
     if len(image_ids) != len(set(image_ids)):
         raise ValueError("--ids não pode conter IMG_IDs repetidos.")
     if args.ids:
-        split_ids = set(select_ids(args.split, 10_000, 0, None, base_path))
+        split_ids = set(
+            select_ids(
+                args.split,
+                10_000,
+                0,
+                None,
+                base_path,
+                args.split_config,
+            )
+        )
         invalid_ids = sorted(set(image_ids).difference(split_ids))
         if invalid_ids:
             raise ValueError(
                 f"IDs fora do split {args.split!r}: {invalid_ids}. "
                 "A seleção de parâmetros deve permanecer no split solicitado."
             )
-    requested_variants = select_variants(args.variants, args.study)
+    requested_variants = select_variants(
+        args.variants,
+        args.study,
+    )
 
     summaries: list[dict] = []
     image_rows: list[dict] = []
@@ -272,6 +331,10 @@ def main() -> None:
             raise ValueError("--append requer o mesmo --study do run existente.")
         if bool(existing_config.get("ostia_only", False)) != args.ostia_only:
             raise ValueError("--append requer o mesmo modo --ostia-only.")
+        if existing_config.get("ostia_surface_padding_radius") != (
+            args.ostia_surface_padding_radius
+        ):
+            raise ValueError("--append requer o mesmo --ostia-surface-padding-radius.")
         validate_parameter_validation_append(
             existing_config,
             split=args.split,
@@ -279,6 +342,7 @@ def main() -> None:
             resolution=args.resolution,
             config_path=args.config_path,
             use_gpu=bool(base_config.get("USE_GPU")),
+            split_config_path=args.split_config,
         )
         summary_path = run_dir / "summary/sensitivity_summary.csv"
         if not summary_path.exists():
@@ -327,13 +391,21 @@ def main() -> None:
             "ostia_only": args.ostia_only,
             "split": args.split,
             "sample_size": args.sample_size,
+            "ostia_surface_padding_radius": args.ostia_surface_padding_radius,
             "start_index": args.start_index,
             "ids_argument": args.ids,
             "ids": image_ids,
             "resolution": args.resolution,
             "config_path": str(args.config_path),
+            "split_config_path": (
+                str(args.split_config) if args.split_config is not None else None
+            ),
             "base_path": str(base_path),
             "use_gpu": base_config.get("USE_GPU"),
+            "save_segmentation_visuals": args.save_segmentation_visuals,
+            "visual_output_dir": (
+                str(args.visual_output_dir) if args.visual_output_dir else None
+            ),
             "execution_order": "image_first",
             "reuse_shared_stages": True,
             "variants": combined_variants,
@@ -443,6 +515,7 @@ def main() -> None:
                             case_cache[load_key],
                             config,
                             experiment,
+                            compute_artery_map=spec["compute_artery_map_in_context"],
                         )
                     except Exception as exc:
                         context_errors[context_key] = exc
@@ -456,11 +529,33 @@ def main() -> None:
                 else:
                     started = time.perf_counter()
                     try:
+                        evaluation_context = context_cache[context_key]
+                        if evaluation_context.get(
+                            "vesselness_artery"
+                        ) is None and not experiment.get("ostia_only", False):
+                            evaluation_context = {
+                                **evaluation_context,
+                                "vesselness_artery": compute_vesselness(
+                                    evaluation_context["lcc_image"],
+                                    vesselness_config=config["VESSELNESS_ARTERY"],
+                                    use_gpu=config.get("USE_GPU", False),
+                                ),
+                            }
                         evaluate_prepared_image(
-                            context_cache[context_key],
+                            evaluation_context,
                             row,
                             config,
                             experiment,
+                            visual_output_dir=(
+                                (
+                                    args.visual_output_dir
+                                    if args.visual_output_dir is not None
+                                    else run_dir / "visual"
+                                )
+                                / name
+                                if args.save_segmentation_visuals
+                                else None
+                            ),
                         )
                     except Exception as exc:
                         set_row_error(row, exc)

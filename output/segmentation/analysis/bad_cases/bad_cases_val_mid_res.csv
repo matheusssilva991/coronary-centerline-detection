@@ -1,0 +1,47 @@
+image_id,bad_case_status,subset,resolution
+362,no ostium correct,val,mid_res
+23,no ostium correct,val,mid_res
+11,one ostium correct,val,mid_res
+134,no ostium correct,val,mid_res
+822,ostia not found,val,mid_res
+248,one ostium correct,val,mid_res
+750,one ostium correct,val,mid_res
+798,no ostium correct,val,mid_res
+606,ostia not found,val,mid_res
+705,no ostium correct,val,mid_res
+982,one ostium correct,val,mid_res
+116,no ostium correct,val,mid_res
+597,no ostium correct,val,mid_res
+759,no ostium correct,val,mid_res
+791,one ostium correct,val,mid_res
+861,low_dice,val,mid_res
+187,one ostium correct,val,mid_res
+314,ostia not found,val,mid_res
+838,one ostium correct,val,mid_res
+347,no ostium correct,val,mid_res
+556,low_dice,val,mid_res
+30,one ostium correct,val,mid_res
+280,no ostium correct,val,mid_res
+713,one ostium correct,val,mid_res
+792,no ostium correct,val,mid_res
+534,one ostium correct,val,mid_res
+728,no ostium correct,val,mid_res
+68,one ostium correct,val,mid_res
+897,no ostium correct,val,mid_res
+938,one ostium correct,val,mid_res
+177,no ostium correct,val,mid_res
+307,no ostium correct,val,mid_res
+790,no ostium correct,val,mid_res
+207,no ostium correct,val,mid_res
+694,one ostium correct,val,mid_res
+602,one ostium correct,val,mid_res
+668,no ostium correct,val,mid_res
+594,one ostium correct,val,mid_res
+316,no ostium correct,val,mid_res
+162,one ostium correct,val,mid_res
+101,no ostium correct,val,mid_res
+835,no ostium correct,val,mid_res
+853,no ostium correct,val,mid_res
+522,no ostium correct,val,mid_res
+496,no ostium correct,val,mid_res
+407,no ostium correct,val,mid_res

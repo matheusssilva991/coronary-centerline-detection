@@ -23,18 +23,20 @@ from utils.experiments.sweep_common import (
     set_nested,
 )
 from utils.project.config import load_config_json
+from utils.project.results_columns import ARTERY_BRANCH_COLUMNS
 from utils.processing.preprocessing import build_lcc_image_from_mask, downscale_image
-from utils.segmentation.artery_segmentation import normal_region_growing_from_ostia
 from utils.segmentation.fuzzy_connectedness import segment_artery_fuzzy_connectedness
 from utils.segmentation.fuzzy_threshold import fuzzy_threshold_outputs
 from utils.segmentation.lower_threshold import resolve_lower_threshold
-from utils.segmentation.pipeline_arteries import postprocess_artery_mask
+from utils.segmentation.pipeline_arteries import segment_arteries_from_vesselness
 from utils.segmentation.pipeline_detection import (
     detect_and_evaluate_ostia,
+    filter_located_aorta_circles,
     locate_aorta_circles,
     segment_aorta,
 )
 from utils.segmentation.pipeline_preprocessing import compute_vesselness
+from utils.segmentation.pipeline_visuals import save_segmentation_visual
 from utils.utils.metrics import dice_score
 from utils.utils.nifti_io import load_raw_img_and_label
 
@@ -54,6 +56,7 @@ IMAGE_COLUMNS = [
     "artery_voxels",
     "artery_voxels_before_morphology",
     "artery_voxels_after_morphology",
+    *ARTERY_BRANCH_COLUMNS,
     "ostia_success",
     "ostia_found",
     "ostia_status",
@@ -107,6 +110,16 @@ PARAMETER_COLUMNS = [
     "REGION_GROWING.threshold_divisor",
     "REGION_GROWING.seed_candidate_radius",
     "REGION_GROWING.max_seed_candidates",
+    "REGION_GROWING.reference_scope",
+    "REGION_GROWING.reference_radius",
+    "REGION_GROWING.reference_percentile",
+    "REGION_GROWING.comparison_window",
+    "VESSELNESS_ARTERY.sigmas",
+    "VESSELNESS_ARTERY.alpha",
+    "VESSELNESS_ARTERY.beta",
+    "VESSELNESS_ARTERY.gamma",
+    "VESSELNESS_ARTERY.normalization",
+    "VESSELNESS_ARTERY.smooth_sigma",
 ]
 
 EXPERIMENT_KEYS = {
@@ -284,6 +297,8 @@ def prepare_image_context(
     case: dict[str, Any],
     config: dict[str, Any],
     experiment: dict[str, Any],
+    *,
+    compute_artery_map: bool = True,
 ) -> dict[str, Any]:
     """Calcula intermediários que podem ser compartilhados entre variantes.
 
@@ -310,6 +325,13 @@ def prepare_image_context(
         spacing,
         config["CIRCLE_DETECTION"],
     )
+    original_circle_count = len(detected_circles)
+    detected_circles, _ = filter_located_aorta_circles(
+        detected_circles,
+        spacing,
+        int(case["down_image"].shape[2]),
+        config["CIRCLE_DETECTION"],
+    )
     aorta_mask = segment_aorta(
         lcc_image,
         detected_circles,
@@ -319,7 +341,7 @@ def prepare_image_context(
 
     # Em sweeps exclusivos de óstios, evita o mapa arterial e toda a etapa RG/FC.
     vesselness_artery = None
-    if not experiment.get("ostia_only", False):
+    if compute_artery_map and not experiment.get("ostia_only", False):
         vesselness_artery = compute_vesselness(
             lcc_image,
             vesselness_config=config["VESSELNESS_ARTERY"],
@@ -336,6 +358,7 @@ def prepare_image_context(
         "vesselness_ostios": vesselness_ostios,
         "vesselness_artery": vesselness_artery,
         "detected_circles": detected_circles,
+        "original_circle_count": original_circle_count,
         "aorta_mask": aorta_mask,
         "volume_voxels": volume_voxels,
         "volume_slices": int(case["down_image"].shape[2]),
@@ -351,8 +374,13 @@ def evaluate_prepared_image(
     row: dict[str, Any],
     config: dict[str, Any],
     experiment: dict[str, Any],
+    *,
+    visual_output_dir: str | Path | None = None,
 ) -> dict[str, Any]:
-    """Executa óstios e artérias usando um contexto previamente preparado."""
+    """Executa óstios e artérias usando um contexto previamente preparado.
+
+    A visualização 3D é opcional e não participa do cálculo das métricas.
+    """
     prep_details = context["prep_details"]
     row.update(
         {
@@ -360,7 +388,9 @@ def evaluate_prepared_image(
             "lcc_voxels": prep_details.get("lcc_voxels", 0),
             "volume_voxels": context["volume_voxels"],
             "volume_slices": context["volume_slices"],
-            "detected_circle_count": len(context["detected_circles"]),
+            "detected_circle_count": context.get(
+                "original_circle_count", len(context["detected_circles"])
+            ),
             "aorta_voxels": context["aorta_voxels"],
             "aorta_volume_fraction": context["aorta_volume_fraction"],
         }
@@ -424,13 +454,22 @@ def evaluate_prepared_image(
         row["fc_processed_voxels"] = fc_result["details"].get("processed_voxels")
         row["fc_effective_alpha"] = fc_result["details"].get("effective_alpha")
     else:
-        raw_mask = normal_region_growing_from_ostia(
+        artery_result = segment_arteries_from_vesselness(
+            context["lcc_image"],
+            label_artery,
             context["vesselness_artery"],
             ostia_eval["ostia_left"],
             ostia_eval["ostia_right"],
             config,
         )
-        artery_mask = postprocess_artery_mask(raw_mask, config)
+        raw_mask = artery_result["raw_artery_mask"]
+        artery_mask = artery_result["artery_mask"]
+        row.update(
+            {
+                column: artery_result.get(column)
+                for column in ARTERY_BRANCH_COLUMNS
+            }
+        )
 
     dice_before = float(dice_score(raw_mask, label_artery))
     dice_after = float(dice_score(artery_mask, label_artery))
@@ -450,6 +489,17 @@ def evaluate_prepared_image(
             ),
         }
     )
+    if visual_output_dir is not None:
+        save_segmentation_visual(
+            visual_output_dir,
+            row["IMG_ID"],
+            aorta_mask=context["aorta_mask"],
+            ostia_left=ostia_eval["ostia_left"],
+            ostia_right=ostia_eval["ostia_right"],
+            artery_mask=artery_mask,
+            label_artery=label_artery,
+            spacing=context["spacing"],
+        )
     return row
 
 

@@ -1,15 +1,15 @@
 # Resultados de segmentacao
 
 Esta pasta concentra as execucoes e as analises produzidas pelo pipeline. Este
-README funciona apenas como mapa da estrutura; os detalhes de configuracao e os
-testes realizados ficam nos READMEs de cada subpasta.
+README funciona apenas como mapa da estrutura; a interpretação dos resultados
+e o histórico dos experimentos ficam no catálogo em `docs/`.
 
 ```text
 output/segmentation/
   runs/                # execucoes completas do pipeline
   canonical/           # referencias oficiais escolhidas
   analysis/            # tabelas e artefatos derivados de analises
-  backend_comparison/  # diagnosticos comparando CPU e GPU
+  docs/                # catalogo de resultados e decisoes experimentais
 ```
 
 ## Pastas
@@ -19,7 +19,7 @@ output/segmentation/
 | `runs/` | Resultados completos, separados por resolucao, estudo, split e data | [`runs/README.md`](runs/README.md) |
 | `canonical/` | Links para os resultados adotados como referencia atual | [`canonical/README.md`](canonical/README.md) |
 | `analysis/` | Dados compactos usados por notebooks e experimentos | [`analysis/README.md`](analysis/README.md) |
-| `backend_comparison/` | Comparacoes numericas e de tempo entre CPU e GPU | [`backend_comparison/README.md`](backend_comparison/README.md) |
+| `docs/` | Catálogo central de baselines, métodos e experimentos | [`docs/README.md`](docs/README.md) |
 
 ## Convencoes
 
@@ -37,4 +37,4 @@ output/segmentation/
   o nome do split dentro dessa pasta, e a hierarquia do run é espelhada na raiz
   externa.
 
-Consulte primeiro o README da pasta de interesse antes de reutilizar um run.
+Consulte primeiro o [catálogo](docs/README.md) antes de reutilizar um run.

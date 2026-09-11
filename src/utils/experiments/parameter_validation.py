@@ -80,7 +80,7 @@ def prepared_context_cache_key(
     config: dict[str, Any],
     experiment: dict[str, Any],
 ) -> tuple[Any, ...]:
-    """Identifica variantes com threshold, aorta e vesselness idênticos."""
+    """Identifica variantes que podem compartilhar o contexto preparado."""
     upstream_config = {
         key: value
         for key, value in config.items()
@@ -736,6 +736,61 @@ def parameter_validation_variants() -> list[dict[str, Any]]:
     ]
 
 
+def artery_region_growing_variants() -> list[dict[str, Any]]:
+    """Monta a grade de parâmetros ativos do Region Growing arterial."""
+    reference = {
+        "threshold_mode": "normal",
+        "artery_method": "region_growing",
+        "MAX_THRESHOLD_PERCENTILE": 99.9,
+        "REGION_GROWING.reference_scope": "global",
+        "REGION_GROWING.comparison_window": 1,
+    }
+
+    def variant(
+        name: str,
+        description: str,
+        overrides: dict[str, Any],
+    ) -> dict[str, Any]:
+        return {
+            "name": name,
+            "parameter_group": "artery_region_growing",
+            "description": description,
+            "overrides": {**reference, **overrides},
+        }
+
+    variants = []
+    for min_fraction in (0.05, 0.065, 0.078, 0.09):
+        for divisor in (5.0, 7.0, 9.0):
+            for relaxation in (0.90, 0.98, 1.00):
+                is_baseline = (
+                    min_fraction == 0.078 and divisor == 7.0 and relaxation == 0.98
+                )
+                name = (
+                    "baseline"
+                    if is_baseline
+                    else (
+                        f"rg_v{int(min_fraction * 1000):03d}"
+                        f"_d{int(divisor)}_r{int(relaxation * 100):03d}"
+                    )
+                )
+                variants.append(
+                    variant(
+                        name,
+                        (
+                            f"RG padrão; piso inicial "
+                            f"{min_fraction:.1%}, D={divisor:.0f} e piso final "
+                            f"x{relaxation:.2f}."
+                        ),
+                        {
+                            "REGION_GROWING.min_vesselness_fraction": min_fraction,
+                            "REGION_GROWING.threshold_divisor": divisor,
+                            "REGION_GROWING.relaxed_floor_factor": relaxation,
+                        },
+                    )
+                )
+    return variants
+
+
 def resolution_scaling_variants() -> list[dict[str, Any]]:
     """Retorna variantes que isolam os grupos de escala usados em high-res.
 
@@ -903,6 +958,7 @@ def validate_parameter_validation_append(
     resolution: str,
     config_path: Path,
     use_gpu: bool,
+    split_config_path: Path | None = None,
 ) -> None:
     """Impede combinar partes produzidas com configurações incompatíveis."""
     expected = {
@@ -911,6 +967,9 @@ def validate_parameter_validation_append(
         "resolution": resolution,
         "config_path": str(config_path),
         "use_gpu": use_gpu,
+        "split_config_path": (
+            str(split_config_path) if split_config_path is not None else None
+        ),
     }
     mismatches = [key for key, value in expected.items() if existing.get(key) != value]
     if mismatches:

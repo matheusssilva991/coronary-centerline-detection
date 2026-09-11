@@ -127,6 +127,9 @@
     "seed_candidate_radius": 1,
     "max_seed_candidates": 6,
     "seed_min_vesselness_fraction": 0.02,
+    "reference_scope": "global",
+    "reference_radius": 3,
+    "reference_percentile": 95.0,
     "verbose": false
   },
   "FUZZY_CONNECTEDNESS": {

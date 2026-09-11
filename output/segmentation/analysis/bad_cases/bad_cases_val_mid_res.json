@@ -1,0 +1,278 @@
+[
+  {
+    "image_id": 362,
+    "bad_case_status": "no ostium correct",
+    "subset": "val",
+    "resolution": "mid_res"
+  },
+  {
+    "image_id": 23,
+    "bad_case_status": "no ostium correct",
+    "subset": "val",
+    "resolution": "mid_res"
+  },
+  {
+    "image_id": 11,
+    "bad_case_status": "one ostium correct",
+    "subset": "val",
+    "resolution": "mid_res"
+  },
+  {
+    "image_id": 134,
+    "bad_case_status": "no ostium correct",
+    "subset": "val",
+    "resolution": "mid_res"
+  },
+  {
+    "image_id": 822,
+    "bad_case_status": "ostia not found",
+    "subset": "val",
+    "resolution": "mid_res"
+  },
+  {
+    "image_id": 248,
+    "bad_case_status": "one ostium correct",
+    "subset": "val",
+    "resolution": "mid_res"
+  },
+  {
+    "image_id": 750,
+    "bad_case_status": "one ostium correct",
+    "subset": "val",
+    "resolution": "mid_res"
+  },
+  {
+    "image_id": 798,
+    "bad_case_status": "no ostium correct",
+    "subset": "val",
+    "resolution": "mid_res"
+  },
+  {
+    "image_id": 606,
+    "bad_case_status": "ostia not found",
+    "subset": "val",
+    "resolution": "mid_res"
+  },
+  {
+    "image_id": 705,
+    "bad_case_status": "no ostium correct",
+    "subset": "val",
+    "resolution": "mid_res"
+  },
+  {
+    "image_id": 982,
+    "bad_case_status": "one ostium correct",
+    "subset": "val",
+    "resolution": "mid_res"
+  },
+  {
+    "image_id": 116,
+    "bad_case_status": "no ostium correct",
+    "subset": "val",
+    "resolution": "mid_res"
+  },
+  {
+    "image_id": 597,
+    "bad_case_status": "no ostium correct",
+    "subset": "val",
+    "resolution": "mid_res"
+  },
+  {
+    "image_id": 759,
+    "bad_case_status": "no ostium correct",
+    "subset": "val",
+    "resolution": "mid_res"
+  },
+  {
+    "image_id": 791,
+    "bad_case_status": "one ostium correct",
+    "subset": "val",
+    "resolution": "mid_res"
+  },
+  {
+    "image_id": 861,
+    "bad_case_status": "low_dice",
+    "subset": "val",
+    "resolution": "mid_res"
+  },
+  {
+    "image_id": 187,
+    "bad_case_status": "one ostium correct",
+    "subset": "val",
+    "resolution": "mid_res"
+  },
+  {
+    "image_id": 314,
+    "bad_case_status": "ostia not found",
+    "subset": "val",
+    "resolution": "mid_res"
+  },
+  {
+    "image_id": 838,
+    "bad_case_status": "one ostium correct",
+    "subset": "val",
+    "resolution": "mid_res"
+  },
+  {
+    "image_id": 347,
+    "bad_case_status": "no ostium correct",
+    "subset": "val",
+    "resolution": "mid_res"
+  },
+  {
+    "image_id": 556,
+    "bad_case_status": "low_dice",
+    "subset": "val",
+    "resolution": "mid_res"
+  },
+  {
+    "image_id": 30,
+    "bad_case_status": "one ostium correct",
+    "subset": "val",
+    "resolution": "mid_res"
+  },
+  {
+    "image_id": 280,
+    "bad_case_status": "no ostium correct",
+    "subset": "val",
+    "resolution": "mid_res"
+  },
+  {
+    "image_id": 713,
+    "bad_case_status": "one ostium correct",
+    "subset": "val",
+    "resolution": "mid_res"
+  },
+  {
+    "image_id": 792,
+    "bad_case_status": "no ostium correct",
+    "subset": "val",
+    "resolution": "mid_res"
+  },
+  {
+    "image_id": 534,
+    "bad_case_status": "one ostium correct",
+    "subset": "val",
+    "resolution": "mid_res"
+  },
+  {
+    "image_id": 728,
+    "bad_case_status": "no ostium correct",
+    "subset": "val",
+    "resolution": "mid_res"
+  },
+  {
+    "image_id": 68,
+    "bad_case_status": "one ostium correct",
+    "subset": "val",
+    "resolution": "mid_res"
+  },
+  {
+    "image_id": 897,
+    "bad_case_status": "no ostium correct",
+    "subset": "val",
+    "resolution": "mid_res"
+  },
+  {
+    "image_id": 938,
+    "bad_case_status": "one ostium correct",
+    "subset": "val",
+    "resolution": "mid_res"
+  },
+  {
+    "image_id": 177,
+    "bad_case_status": "no ostium correct",
+    "subset": "val",
+    "resolution": "mid_res"
+  },
+  {
+    "image_id": 307,
+    "bad_case_status": "no ostium correct",
+    "subset": "val",
+    "resolution": "mid_res"
+  },
+  {
+    "image_id": 790,
+    "bad_case_status": "no ostium correct",
+    "subset": "val",
+    "resolution": "mid_res"
+  },
+  {
+    "image_id": 207,
+    "bad_case_status": "no ostium correct",
+    "subset": "val",
+    "resolution": "mid_res"
+  },
+  {
+    "image_id": 694,
+    "bad_case_status": "one ostium correct",
+    "subset": "val",
+    "resolution": "mid_res"
+  },
+  {
+    "image_id": 602,
+    "bad_case_status": "one ostium correct",
+    "subset": "val",
+    "resolution": "mid_res"
+  },
+  {
+    "image_id": 668,
+    "bad_case_status": "no ostium correct",
+    "subset": "val",
+    "resolution": "mid_res"
+  },
+  {
+    "image_id": 594,
+    "bad_case_status": "one ostium correct",
+    "subset": "val",
+    "resolution": "mid_res"
+  },
+  {
+    "image_id": 316,
+    "bad_case_status": "no ostium correct",
+    "subset": "val",
+    "resolution": "mid_res"
+  },
+  {
+    "image_id": 162,
+    "bad_case_status": "one ostium correct",
+    "subset": "val",
+    "resolution": "mid_res"
+  },
+  {
+    "image_id": 101,
+    "bad_case_status": "no ostium correct",
+    "subset": "val",
+    "resolution": "mid_res"
+  },
+  {
+    "image_id": 835,
+    "bad_case_status": "no ostium correct",
+    "subset": "val",
+    "resolution": "mid_res"
+  },
+  {
+    "image_id": 853,
+    "bad_case_status": "no ostium correct",
+    "subset": "val",
+    "resolution": "mid_res"
+  },
+  {
+    "image_id": 522,
+    "bad_case_status": "no ostium correct",
+    "subset": "val",
+    "resolution": "mid_res"
+  },
+  {
+    "image_id": 496,
+    "bad_case_status": "no ostium correct",
+    "subset": "val",
+    "resolution": "mid_res"
+  },
+  {
+    "image_id": 407,
+    "bad_case_status": "no ostium correct",
+    "subset": "val",
+    "resolution": "mid_res"
+  }
+]

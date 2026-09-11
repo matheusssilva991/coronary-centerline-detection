@@ -41,13 +41,10 @@ coronary-centerline-detection/
 │   │   ├── split_resolution_analysis.ipynb  # Comparação de splits/resoluções
 │   │   ├── ia_vs_pipeline_analysis.ipynb    # IA versus pipeline matemático
 │   │   ├── bad_cases_results_analysis.ipynb # Casos ruins quantitativos
-│   │   ├── bad_cases_qualitative_analysis.ipynb # Casos ruins em 3D
 │   │   ├── segmentation_method_comparison.ipynb # Threshold normal/fuzzy e RG/FC
 │   │   ├── pipeline_sensitivity_analysis.ipynb # Sensibilidade OFAT
 │   │   ├── upper_threshold_analysis.ipynb # Percentis e thresholds HU
 │   │   ├── aorta_circle_slice_analysis.ipynb # Círculos e extensão axial da máscara
-│   │   ├── fuzzy_membership_functions.ipynb # Funções de pertinência fuzzy
-│   │   └── morphological_operations_example.ipynb # Operações morfológicas
 │   └── utils/                      # Módulos utilitários
 │       ├── preprocessing.py        # Pré-processamento de imagens
 │       ├── frangi.py              # Filtro de Frangi para detecção de vasos
