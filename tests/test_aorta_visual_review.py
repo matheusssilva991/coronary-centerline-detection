@@ -14,7 +14,7 @@ from utils.experiments.aorta_visual_review import (
     get_aorta_visual_review,
     load_aorta_review_cohort,
     load_aorta_visual_reviews,
-    resolve_aorta_review_summary_path,
+    resolve_aorta_review_results_path,
 )
 
 
@@ -54,8 +54,8 @@ class AortaVisualReviewTests(unittest.TestCase):
         self.assertEqual(review["ostia_bad_ids"], {2})
         self.assertEqual(review["notes"], {3: "reviewed"})
         self.assertEqual(
-            resolve_aorta_review_summary_path(self.root, review, "train"),
-            self.root / "output/example/numeric/ostios_train_summary.csv",
+            resolve_aorta_review_results_path(self.root, review, "train"),
+            self.root / "output/example/numeric/results_train.csv",
         )
 
     def test_load_review_rejects_overlapping_labels(self) -> None:
@@ -142,7 +142,7 @@ class AortaVisualReviewTests(unittest.TestCase):
                 "aorta_circle_count": [40, 50],
                 "aorta_segmented_slice_count": [44, 45],
             }
-        ).to_csv(numeric_dir / "ostios_train_summary.csv", index=False)
+        ).to_csv(numeric_dir / "results_train.csv", index=False)
 
         result = load_aorta_review_cohort(
             self.root,

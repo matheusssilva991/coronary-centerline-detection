@@ -16,19 +16,12 @@ RESULT_COLUMNS: list[str] = [
     "artery_voxels",
     "artery_voxels_before_morphology",
     "artery_voxels_after_morphology",
-    "artery_segmentation_method",
     *ARTERY_BRANCH_COLUMNS,
     "fc_processed_voxels",
     "fc_effective_alpha",
     "fc_object_seed_count",
     "fc_candidate_voxels_final",
-    "threshold_mode",
-    "fuzzy_mask_strategy",
-    "min_threshold",
-    "max_threshold",
     "effective_upper_threshold_hu",
-    "lower_threshold_method",
-    "lower_threshold_percentile",
     "threshold_voxels",
     "lcc_voxels",
     "image_slice_count",
@@ -62,7 +55,6 @@ RESULT_COLUMNS: list[str] = [
     "aorta_circle_mean_hough_accumulator",
     "aorta_circle_lower_radius_bound_fraction",
     "aorta_circle_upper_radius_bound_fraction",
-    "aorta_circle_filter_method",
     "aorta_circle_filter_applied",
     "aorta_circle_original_count",
     "aorta_circle_used_count",
@@ -204,6 +196,89 @@ READABLE_COLUMN_NAMES: dict[str, str] = {
     "aorta_miss_count": "aorta_miss_count",
     "aorta_interpolate_missed_circles": "aorta_interpolate_missed_circles",
 }
+
+# Campos antigos que descrevem a configuração do run, não uma medição do exame.
+# A migração os transfere para ``metadata_<split>.json`` antes de projetar o CSV.
+RESULT_CONFIGURATION_COLUMNS: tuple[str, ...] = (
+    "artery_segmentation_method",
+    "threshold_mode",
+    "fuzzy_mask_strategy",
+    "min_threshold_hu",
+    "lower_threshold_method",
+    "lower_threshold_percentile",
+    "aorta_circle_filter_method",
+    "downscale_method",
+    "opencv_interpolation",
+    "downscale_factors",
+    "max_threshold_percentile",
+    "configured_lower_threshold_method",
+    "lcc_per_slice",
+    "lcc_mode",
+    "configured_artery_segmentation_method",
+    "aorta_ostia_method",
+    "aorta_miss_count",
+    "aorta_interpolate_missed_circles",
+    "configured_aorta_hough_radii_start_px",
+    "configured_aorta_hough_radii_end_px",
+    "aorta_trajectory_radius_factor",
+    "aorta_trajectory_axial_margin_slices",
+    "aorta_opening_radius",
+)
+
+# Contratos explícitos dos consumidores de EDA. A união deve continuar sendo
+# subconjunto obrigatório do schema científico persistido.
+EDA_REQUIRED_RESULT_COLUMNS: dict[str, frozenset[str]] = {
+    "aorta_circle_slice_analysis": frozenset(
+        {
+            "IMG_ID",
+            "image_slice_count",
+            "aorta_circle_count",
+            "aorta_detected_circle_count",
+            "aorta_interpolated_circle_count",
+            "aorta_circle_first_slice",
+            "aorta_circle_last_slice",
+            "aorta_circle_radius_mean_mm",
+            "aorta_circle_radius_std_mm",
+            "aorta_segmented_slice_count",
+            "ostia_detection_status",
+            "artery_dice",
+        }
+    ),
+    "aorta_volume_quality_analysis": frozenset(
+        {
+            "IMG_ID",
+            "artery_dice",
+            "ostia_detection_status",
+            "left_ostium_distance_mm",
+            "right_ostium_distance_mm",
+            "image_slice_count",
+            "aorta_circle_count",
+            "aorta_mask_voxel_count",
+            "aorta_segmented_slice_count",
+            "aorta_voxels_per_segmented_slice",
+            "aorta_volume_fraction",
+        }
+    ),
+    "segmentation_comparisons": frozenset(
+        {
+            "IMG_ID",
+            "artery_dice",
+            "artery_voxel_count",
+            "ostia_detected",
+            "ostia_detection_status",
+            "both_ostia_correct",
+            "both_ostia_tolerable",
+            "left_ostium_correct",
+            "right_ostium_correct",
+            "left_ostium",
+            "right_ostium",
+        }
+    ),
+}
+
+EDA_REQUIRED_RESULT_COLUMN_UNION = frozenset().union(
+    *EDA_REQUIRED_RESULT_COLUMNS.values()
+)
 CANONICAL_COLUMN_NAMES: dict[str, str] = {
     value: key for key, value in READABLE_COLUMN_NAMES.items()
 }
@@ -243,10 +318,13 @@ STATUS_LABELS: dict[str, str] = {
 __all__ = [
     "ARTERY_BRANCH_COLUMNS",
     "CANONICAL_COLUMN_NAMES",
+    "EDA_REQUIRED_RESULT_COLUMNS",
+    "EDA_REQUIRED_RESULT_COLUMN_UNION",
     "OSTIA_STATUS_INTERNAL_LABELS",
     "OSTIA_STATUS_READABLE_LABELS",
     "READABLE_BOOL_COLUMNS",
     "READABLE_COLUMN_NAMES",
     "RESULT_COLUMNS",
+    "RESULT_CONFIGURATION_COLUMNS",
     "STATUS_LABELS",
 ]

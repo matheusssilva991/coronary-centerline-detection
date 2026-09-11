@@ -3,7 +3,7 @@
 As funções deste módulo são genéricas para comparações organizadas como:
 
 ```
-<result_root>/<split>/<variant>/<timestamp>/numeric/ostios_<split>_summary.csv
+<result_root>/<split>/<variant>/<timestamp>/numeric/results_<split>.csv
 ```
 
 Elas foram extraídas do notebook de comparação fuzzy para reutilizar o resumo
@@ -12,6 +12,8 @@ de Dice, status dos óstios e deltas entre variantes em outros experimentos.
 
 from __future__ import annotations
 
+import json
+import re
 from itertools import combinations
 from pathlib import Path
 from typing import Any, Iterable, Sequence
@@ -20,6 +22,8 @@ import matplotlib.patheffects as path_effects
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+
+from ..project.result_paths import metadata_candidates
 
 
 SUCCESS_LABELS = {
@@ -147,6 +151,51 @@ def _safe_relative_path(path: Path, root: Path | None) -> str:
         return str(path)
 
 
+def _split_from_result_path(path: Path) -> str | None:
+    patterns = (
+        r"^results_(train|val|test|full)\.csv$",
+        r"^ostios_(train|val|test|full)_(?:results|summary)\.csv$",
+    )
+    for pattern in patterns:
+        match = re.fullmatch(pattern, path.name)
+        if match:
+            return match.group(1)
+    return None
+
+
+def _load_variant_config_labels(path: Path) -> tuple[Any, Any]:
+    split = _split_from_result_path(path)
+    if split is None:
+        return None, None
+    metadata_path = next(
+        (
+            candidate
+            for candidate in metadata_candidates(path.parent, split)
+            if candidate.is_file()
+        ),
+        None,
+    )
+    if metadata_path is None:
+        return None, None
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    compact = metadata.get("configuration") or {}
+    threshold_mode = compact.get("threshold_method")
+    artery_method = compact.get("artery_segmentation_method")
+    thresholding = metadata.get("thresholding_config") or metadata.get(
+        "preprocessing_config", {}
+    ).get("thresholding", {})
+    artery = metadata.get("artery_segmentation_config") or {}
+    if threshold_mode is None and isinstance(thresholding, dict):
+        threshold_mode = thresholding.get("method")
+    if artery_method is None and isinstance(artery, dict):
+        artery_method = artery.get("method")
+    if artery_method is None:
+        artery_method = metadata.get("runtime_config", {}).get(
+            "artery_segmentation_method"
+        )
+    return threshold_mode, artery_method
+
+
 def load_variant_run(
     summary_path: Path,
     *,
@@ -185,18 +234,19 @@ def load_variant_run(
     df["found_wrong"] = status.isin(WRONG_LABELS)
 
     run_dir_value = _safe_relative_path(run_dir, repo_root)
+    metadata_threshold_mode, metadata_artery_method = _load_variant_config_labels(
+        summary_path
+    )
     summary = {
         "folder_variant": variant,
         "variant_label": names.get(variant, variant),
         "run_timestamp": run_dir.name,
         "run_dir": run_dir_value,
         "n_images": len(df),
-        "threshold_mode": first_existing_value(df, ["threshold_mode"], "normal"),
-        "artery_method": first_existing_value(
-            df,
-            ["artery_segmentation_method"],
-            "",
-        ),
+        "threshold_mode": metadata_threshold_mode
+        or first_existing_value(df, ["threshold_mode"], "normal"),
+        "artery_method": metadata_artery_method
+        or first_existing_value(df, ["artery_segmentation_method"], ""),
         "ostia_detected_rate": df["ostia_detected_bool"].mean(),
         "ostia_success_rate": df["ostia_success"].mean(),
         "both_correct_n": int(df["both_correct"].sum()),
@@ -227,16 +277,32 @@ def load_variant_results(
     summary_rows: list[dict[str, Any]] = []
     split_root = result_root / split
     search_root = split_root if split_root.is_dir() else result_root
-    pattern = f"*/*/numeric/ostios_{split}_summary.csv"
+    results_pattern = f"*/*/numeric/results_{split}.csv"
+    previous_pattern = f"*/*/numeric/ostios_{split}_results.csv"
+    legacy_pattern = f"*/*/numeric/ostios_{split}_summary.csv"
+    result_paths = list(search_root.glob(results_pattern))
+    current_numeric_dirs = {path.parent for path in result_paths}
+    for previous_path in search_root.glob(previous_pattern):
+        if previous_path.parent not in current_numeric_dirs:
+            result_paths.append(previous_path)
+    migrated_numeric_dirs = {path.parent for path in result_paths}
+    for legacy_path in search_root.glob(legacy_pattern):
+        if legacy_path.parent in migrated_numeric_dirs:
+            continue
+        try:
+            if "IMG_ID" in pd.read_csv(legacy_path, nrows=0).columns:
+                result_paths.append(legacy_path)
+        except (OSError, pd.errors.ParserError):
+            continue
 
     allowed = set(preferred_order or [])
     # Cada variante pode apontar para uma execução independente do mesmo split.
-    for summary_path in sorted(search_root.glob(pattern)):
-        variant = summary_path.parents[2].name
+    for results_path in sorted(result_paths):
+        variant = results_path.parents[2].name
         if allowed and variant not in allowed:
             continue
         df_variant, summary = load_variant_run(
-            summary_path,
+            results_path,
             result_root=result_root,
             repo_root=repo_root,
             pretty_names=pretty_names,
@@ -246,7 +312,7 @@ def load_variant_results(
 
     if not all_frames:
         raise FileNotFoundError(
-            f"Nenhum ostios_{split}_summary.csv encontrado em {search_root}"
+            f"Nenhum resultado por imagem encontrado para {split!r} em {search_root}"
         )
 
     results_df = pd.concat(all_frames, ignore_index=True)

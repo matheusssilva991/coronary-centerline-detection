@@ -1,0 +1,23 @@
+{
+  "metadata_schema_version": 2,
+  "run": {
+    "split": "val",
+    "resolution": "mid"
+  },
+  "configuration": {
+    "source": "effective_pipeline_config",
+    "sha256": "8cb5bd269bd5046ee4c76fbdadae0441d3be67ce631c36c1b81acbb30cc19c67",
+    "snapshot_file": "../config/effective_pipeline_config.json",
+    "use_gpu": true,
+    "downscale_method": "opencv",
+    "downscale_factors": [
+      2,
+      2,
+      1
+    ],
+    "min_threshold_hu": -300,
+    "max_threshold_percentile": 99.9,
+    "threshold_method": "normal",
+    "artery_segmentation_method": "region_growing"
+  }
+}

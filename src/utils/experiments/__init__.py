@@ -5,6 +5,7 @@ from .aorta_visual_review import (
     get_aorta_visual_review,
     load_aorta_review_cohort,
     load_aorta_visual_reviews,
+    resolve_aorta_review_results_path,
     resolve_aorta_review_summary_path,
 )
 from .parameter_validation import (
@@ -51,6 +52,7 @@ __all__ = [
     "parameter_validation_variants",
     "resolution_scaling_variants",
     "prepared_context_cache_key",
+    "resolve_aorta_review_results_path",
     "resolve_aorta_review_summary_path",
     "select_parameter_validation_cases",
     "select_top_threshold_cases",

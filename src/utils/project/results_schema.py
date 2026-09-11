@@ -80,6 +80,26 @@ def make_readable_results_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     return readable_df
 
 
+def select_per_image_result_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """Mantém somente resultados e diagnósticos que pertencem a cada exame."""
+    readable_df = make_readable_results_dataframe(df)
+    if "effective_upper_threshold_hu" not in readable_df.columns:
+        # Runs antigos registravam o threshold efetivo como ``max_threshold_hu``.
+        if "max_threshold_hu" in readable_df.columns:
+            readable_df["effective_upper_threshold_hu"] = readable_df[
+                "max_threshold_hu"
+            ]
+    elif "max_threshold_hu" in readable_df.columns:
+        readable_df["effective_upper_threshold_hu"] = readable_df[
+            "effective_upper_threshold_hu"
+        ].fillna(readable_df["max_threshold_hu"])
+    result_columns = [_readable_column_name(column) for column in RESULT_COLUMNS]
+    for column in result_columns:
+        if column not in readable_df.columns:
+            readable_df[column] = None
+    return readable_df.loc[:, result_columns]
+
+
 def add_internal_result_aliases(df: pd.DataFrame) -> pd.DataFrame:
     """Adiciona aliases internos sem remover as colunas legíveis persistidas."""
     normalized_df = df.copy()
@@ -422,6 +442,39 @@ def _numeric_series(df: pd.DataFrame, column: str) -> pd.Series:
     return series.map(_as_optional_float)
 
 
+def _numeric_stats(
+    df: pd.DataFrame,
+    column: str,
+    *,
+    include_sum: bool = False,
+) -> dict[str, Any]:
+    """Calcula estatísticas estáveis para uma medição opcional por exame."""
+    values = _numeric_series(df, column).dropna()
+    prefix = _readable_column_name(column)
+    stats: dict[str, Any] = {f"{prefix}_count": int(len(values))}
+    if values.empty:
+        for suffix in ("mean", "std", "median", "q1", "q3", "min", "max"):
+            stats[f"{prefix}_{suffix}"] = None
+        if include_sum:
+            stats[f"{prefix}_sum"] = None
+        return stats
+
+    stats.update(
+        {
+            f"{prefix}_mean": float(values.mean()),
+            f"{prefix}_std": (float(values.std()) if len(values) > 1 else None),
+            f"{prefix}_median": float(values.median()),
+            f"{prefix}_q1": float(values.quantile(0.25)),
+            f"{prefix}_q3": float(values.quantile(0.75)),
+            f"{prefix}_min": float(values.min()),
+            f"{prefix}_max": float(values.max()),
+        }
+    )
+    if include_sum:
+        stats[f"{prefix}_sum"] = float(values.sum())
+    return stats
+
+
 def summarize_results_df(df: pd.DataFrame) -> dict[str, Any]:
     """Calcula contagens e métricas agregadas de um DataFrame de resultados."""
     # Resolve aliases primeiro para aceitar tanto CSVs legíveis quanto internos.
@@ -436,8 +489,12 @@ def summarize_results_df(df: pd.DataFrame) -> dict[str, Any]:
         {"not_found", "not found", "não encontrados", "óstios não encontrados"}
     )
     error_series = _series_from_aliases(df, "error")
+    ostia_error_series = _series_from_aliases(df, "ostia_error")
     dice_series = _numeric_series(df, "dice_artery")
     dice_before_series = _numeric_series(df, "dice_artery_before_morphology")
+    dice_after_series = _numeric_series(df, "dice_artery_after_morphology")
+    if not dice_after_series.notna().any():
+        dice_after_series = dice_series
     dice_delta_series = _numeric_series(df, "dice_artery_morphology_delta")
     effective_upper_threshold_series = _numeric_series(
         df, "effective_upper_threshold_hu"
@@ -470,6 +527,7 @@ def summarize_results_df(df: pd.DataFrame) -> dict[str, Any]:
         "left_correct": int(_bool_series(df, "left_intersects").sum()),
         "right_correct": int(_bool_series(df, "right_intersects").sum()),
         "error_not_null": int(error_series.notna().sum()),
+        "ostia_error_not_null": int(ostia_error_series.notna().sum()),
     }
 
     feedback_series = _series_from_aliases(df, "aorta_segmentation_feedback")
@@ -479,6 +537,26 @@ def summarize_results_df(df: pd.DataFrame) -> dict[str, Any]:
     summary["aorta_segmentation_feedback_counts"] = {
         label: int(count) for label, count in feedback_counts.items()
     }
+
+    # Medições científicas compactas usadas para caracterizar a coorte e a
+    # qualidade da segmentação, sem repetir parâmetros de configuração.
+    for column, include_sum in (
+        ("image_slice_count", True),
+        ("artery_voxels", False),
+        ("artery_voxels_before_morphology", False),
+        ("artery_voxels_after_morphology", False),
+        ("threshold_voxels", False),
+        ("lcc_voxels", False),
+        ("aorta_circle_count", False),
+        ("aorta_detected_circle_count", False),
+        ("aorta_interpolated_circle_count", False),
+        ("aorta_segmented_slice_count", False),
+        ("aorta_circle_coverage", False),
+        ("aorta_mask_voxels", False),
+        ("aorta_voxels_per_segmented_slice", False),
+        ("aorta_volume_fraction", False),
+    ):
+        summary.update(_numeric_stats(df, column, include_sum=include_sum))
 
     # Resume os thresholds efetivos sem inventar um valor escalar para o fuzzy.
     valid_upper_thresholds = effective_upper_threshold_series.dropna()
@@ -501,17 +579,31 @@ def summarize_results_df(df: pd.DataFrame) -> dict[str, Any]:
 
     # Métricas de Dice permanecem nulas quando nenhuma artéria foi segmentada.
     if dice_series.notna().any():
+        valid_ostia_dice = dice_series[total_success_series & dice_series.notna()]
+        invalid_ostia_dice = dice_series[(~total_success_series) & dice_series.notna()]
         summary.update(
             {
                 "dice_artery_mean": float(dice_series.mean()),
                 "dice_artery_std": float(cast(float, dice_series.std())),
                 "dice_artery_median": float(dice_series.median()),
+                "dice_artery_q1": float(dice_series.quantile(0.25)),
+                "dice_artery_q3": float(dice_series.quantile(0.75)),
+                "dice_artery_valid_ostia_mean": (
+                    float(valid_ostia_dice.mean())
+                    if not valid_ostia_dice.empty
+                    else None
+                ),
+                "dice_artery_invalid_ostia_mean": (
+                    float(invalid_ostia_dice.mean())
+                    if not invalid_ostia_dice.empty
+                    else None
+                ),
                 "dice_artery_before_morphology_mean": (
                     float(dice_before_series.mean())
                     if dice_before_series.notna().any()
                     else None
                 ),
-                "dice_artery_after_morphology_mean": float(dice_series.mean()),
+                "dice_artery_after_morphology_mean": float(dice_after_series.mean()),
                 "dice_artery_morphology_delta_mean": (
                     float(dice_delta_series.mean())
                     if dice_delta_series.notna().any()
@@ -525,6 +617,10 @@ def summarize_results_df(df: pd.DataFrame) -> dict[str, Any]:
                 "dice_artery_mean": None,
                 "dice_artery_std": None,
                 "dice_artery_median": None,
+                "dice_artery_q1": None,
+                "dice_artery_q3": None,
+                "dice_artery_valid_ostia_mean": None,
+                "dice_artery_invalid_ostia_mean": None,
                 "dice_artery_before_morphology_mean": None,
                 "dice_artery_after_morphology_mean": None,
                 "dice_artery_morphology_delta_mean": None,

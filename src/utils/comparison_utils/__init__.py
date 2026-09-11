@@ -14,12 +14,15 @@ _SUBMODULES = {
 _SYMBOL_TO_MODULE = {
     # io
     "load_split_metadata": "io",
+    "load_split_batch_timings": "io",
+    "load_split_results": "io",
     "load_split_summary": "io",
     # metadata
     "get_execution_time_seconds": "metadata",
     "get_num_images": "metadata",
     "get_total_success_percent": "metadata",
     "build_split_resolution_summary": "metadata",
+    "summarize_split_results": "metadata",
     # bad_cases
     "build_bad_cases_export_df": "bad_cases",
     "filter_correct_ostia_cases": "bad_cases",

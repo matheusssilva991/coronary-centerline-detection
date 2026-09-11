@@ -9,6 +9,8 @@ from typing import Any
 
 import pandas as pd
 
+from .result_paths import batch_timings_candidates, batch_timings_filename
+
 
 type PathInput = str | PathLike[str]
 
@@ -54,7 +56,7 @@ def duration_breakdown(duration_seconds: Any) -> dict[str, Any]:
 
 def batch_timing_manifest_path(output_dir: PathInput, split_name: str) -> Path:
     """Retorna o caminho do CSV com tempos por lote."""
-    return Path(output_dir) / f"ostios_{split_name}_batch_timings.csv"
+    return Path(output_dir) / batch_timings_filename(split_name)
 
 
 def load_batch_timing_records(
@@ -62,8 +64,15 @@ def load_batch_timing_records(
     split_name: str,
 ) -> list[dict[str, Any]]:
     """Carrega tempos por lote já salvos."""
-    manifest_path = batch_timing_manifest_path(output_dir, split_name)
-    if not manifest_path.exists():
+    manifest_path = next(
+        (
+            path
+            for path in batch_timings_candidates(Path(output_dir), split_name)
+            if path.is_file()
+        ),
+        None,
+    )
+    if manifest_path is None:
         return []
 
     df = pd.read_csv(manifest_path)

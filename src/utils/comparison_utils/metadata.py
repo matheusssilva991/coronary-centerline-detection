@@ -40,23 +40,20 @@ def build_split_resolution_summary(
     loading logic.
     """
     from .bad_cases import filter_correct_ostia_cases
-    from .io import load_split_metadata, load_split_summary
+    from ..project.results_schema import summarize_results_df
+    from ..project.results_timing import summarize_batch_timing_records
+    from .io import load_split_batch_timings, load_split_results
 
     rows = []
     for resolution in split_paths_by_resolution:
         for subset_name in valid_splits:
-            metadata = load_split_metadata(
-                split_paths_by_resolution,
-                resolution,
-                subset_name,
-            )
-            summary_df = load_split_summary(
+            results_df = load_split_results(
                 split_paths_by_resolution,
                 resolution,
                 subset_name,
             )
 
-            if metadata is None or summary_df is None:
+            if results_df is None:
                 rows.append(
                     {
                         "subset": subset_name,
@@ -74,20 +71,27 @@ def build_split_resolution_summary(
                 continue
 
             # Resume Dice para todos os casos e para óstios aceitos.
-            dice_all = pd.to_numeric(summary_df["dice_artery"], errors="coerce")
+            dice_all = pd.to_numeric(results_df["dice_artery"], errors="coerce")
             dice_all = dice_all.dropna()
-            correct_cases = filter_correct_ostia_cases(summary_df)
+            correct_cases = filter_correct_ostia_cases(results_df)
             dice_correct = pd.to_numeric(
                 correct_cases["dice_artery"], errors="coerce"
             ).dropna()
 
-            execution_time_seconds = get_execution_time_seconds(metadata)
-            num_images = get_num_images(metadata)
-            total_success_percent = get_total_success_percent(metadata)
+            result_summary = summarize_results_df(results_df)
+            timings = load_split_batch_timings(
+                split_paths_by_resolution,
+                resolution,
+                subset_name,
+            )
+            timing_records = [] if timings is None else timings.to_dict("records")
+            execution_time_seconds = summarize_batch_timing_records(timing_records).get(
+                "total_known_duration_seconds"
+            )
+            num_images = len(results_df)
+            total_success_percent = result_summary["total_success_percent"]
             if pd.notna(num_images) and pd.notna(total_success_percent):
-                total_ostia_success = (num_images * 2) * (
-                    total_success_percent / 100
-                )
+                total_ostia_success = (num_images * 2) * (total_success_percent / 100)
             else:
                 total_ostia_success = np.nan
 
@@ -139,3 +143,20 @@ def build_split_resolution_summary(
     for alias, source in aliases.items():
         summary[alias] = summary[source]
     return summary
+
+
+def summarize_split_results(
+    split_paths_by_resolution,
+    resolution,
+    subset_name,
+):
+    """Calcula sob demanda os agregados antes persistidos em summary/metadata."""
+    from ..project.results_schema import summarize_results_df
+    from .io import load_split_results
+
+    results = load_split_results(
+        split_paths_by_resolution,
+        resolution,
+        subset_name,
+    )
+    return None if results is None else summarize_results_df(results)

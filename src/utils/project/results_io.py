@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import re
 from datetime import datetime
 from os import PathLike
 from pathlib import Path
@@ -10,10 +9,14 @@ from typing import Any
 
 import pandas as pd
 
+from .result_paths import (
+    batch_result_number as parse_batch_result_number,
+    batch_results_filename,
+    results_filename,
+)
 from .results_schema import (
-    add_config_columns,
-    make_readable_results_dataframe,
     make_result_dataframe,
+    select_per_image_result_columns,
 )
 
 
@@ -37,16 +40,14 @@ def save_results(
     output_dir: PathInput,
     config: dict[str, Any] | None = None,
 ) -> str:
-    """Salva resultados em CSV."""
+    """Salva somente resultados e diagnósticos individuais em CSV."""
     # Padroniza o schema interno antes de expor nomes legíveis no CSV.
     df = make_result_dataframe(results)
-    if config is not None:
-        df = add_config_columns(df, config)
-    df = make_readable_results_dataframe(df)
+    df = select_per_image_result_columns(df)
 
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-    output_path = output_dir / f"ostios_{split_name}_summary.csv"
+    output_path = output_dir / results_filename(split_name)
     df.to_csv(output_path, index=False)
     return str(output_path)
 
@@ -54,11 +55,7 @@ def save_results(
 def batch_result_number(path: PathInput, split_name: str) -> int | None:
     """Extrai o número do lote de um arquivo de resultado."""
     filename = Path(path).name
-    match = re.match(
-        rf"^ostios_{re.escape(split_name)}_lote_(\d+)_summary\.csv$",
-        filename,
-    )
-    return int(match.group(1)) if match else None
+    return parse_batch_result_number(Path(filename), split_name)
 
 
 def list_batch_result_files(split_name: str, output_dir: PathInput) -> list[Path]:
@@ -67,9 +64,24 @@ def list_batch_result_files(split_name: str, output_dir: PathInput) -> list[Path
     # Ignora arquivos parecidos que não seguem o padrão oficial de lote.
     candidates = [
         path
-        for path in output_dir.glob(f"ostios_{split_name}_lote_*_summary.csv")
+        for path in output_dir.glob("*.csv")
         if batch_result_number(path, split_name) is not None
     ]
+
+    by_number: dict[int, list[Path]] = {}
+    for path in candidates:
+        number = batch_result_number(path, split_name)
+        if number is not None:
+            by_number.setdefault(number, []).append(path)
+    duplicates = {
+        number: paths for number, paths in by_number.items() if len(paths) > 1
+    }
+    if duplicates:
+        detail = "; ".join(
+            f"lote {number}: {', '.join(path.name for path in paths)}"
+            for number, paths in sorted(duplicates.items())
+        )
+        raise ValueError(f"Lotes duplicados entre formatos: {detail}")
 
     def batch_sort_key(path: Path) -> int:
         batch_number = batch_result_number(path, split_name)
@@ -84,14 +96,22 @@ def get_batch_result_file(
     batch_number: int,
 ) -> Path | None:
     """Retorna o CSV de um lote quando ele existe."""
-    batch_file = (
-        Path(output_dir) / f"ostios_{split_name}_lote_{batch_number}_summary.csv"
+    output_dir = Path(output_dir)
+    candidates = (
+        output_dir / batch_results_filename(split_name, batch_number),
+        output_dir / f"ostios_{split_name}_lote_{batch_number}_summary.csv",
     )
-    return batch_file if batch_file.exists() else None
+    existing = [path for path in candidates if path.exists()]
+    if len(existing) > 1:
+        raise ValueError(
+            f"Lote {batch_number} duplicado entre formatos: "
+            + ", ".join(path.name for path in existing)
+        )
+    return existing[0] if existing else None
 
 
 def merge_batch_results(split_name: str, output_dir: PathInput) -> str | None:
-    """Mescla todos os CSVs de lotes em um único arquivo final."""
+    """Mescla todos os CSVs de lotes no consolidado por imagem."""
     output_dir = Path(output_dir)
     batch_files = list_batch_result_files(split_name, output_dir)
 
@@ -105,14 +125,18 @@ def merge_batch_results(split_name: str, output_dir: PathInput) -> str | None:
     # Carrega cada lote e uniformiza possíveis aliases antes da consolidação.
     for batch_file in batch_files:
         df = pd.read_csv(batch_file)
-        df = make_readable_results_dataframe(df)
+        # Lotes legados podem conter configurações repetidas em cada linha.
+        # A projeção também limpa esses campos durante um ``--merge-only``.
+        df = select_per_image_result_columns(df)
         dfs.append(df)
         print(f"   ✓ {batch_file.name} ({len(df)} registros)")
 
     # Recria o índice para produzir um CSV final contínuo entre os lotes.
     merged_df = pd.concat(dfs, ignore_index=True)
-    final_path = output_dir / f"ostios_{split_name}_summary.csv"
-    merged_df.to_csv(final_path, index=False)
+    final_path = output_dir / results_filename(split_name)
+    temporary_path = final_path.with_suffix(".csv.tmp")
+    merged_df.to_csv(temporary_path, index=False)
+    temporary_path.replace(final_path)
 
     print(
         f"✅ Arquivo final mesclado: {final_path} ({len(merged_df)} registros totais)\n"

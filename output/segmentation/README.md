@@ -31,6 +31,9 @@ output/segmentation/
 - Grupos nomeados, como `fuzzy_comparison/`, reúnem runs do mesmo experimento.
 - Resultados brutos pertencem a `runs/`; artefatos derivados pertencem a
   `analysis/`.
+- Em cada run, `results_<split>.csv` contém uma linha por imagem. Agregados são
+  calculados sob demanda nas EDAs; o metadata guarda apenas identidade e
+  rótulos principais, e a configuração completa fica no snapshot do run.
 - Os HTMLs 3D podem ser mantidos fora do repositório com
   `--visual-output-dir /caminho/externo`; CSVs, configurações e logs continuam
   dentro do run. Os arquivos são salvos diretamente em `visual/`, sem repetir

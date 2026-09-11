@@ -215,11 +215,11 @@ def prepare_bad_cases_for_subset(
         raise ValueError(f"split_name must be one of {valid_splits}")
 
     # Import tardio evita ciclo de import.
-    from .io import load_split_summary
+    from .io import load_split_results
 
     # Carrega summaries Mid/High desse subset.
-    df_mid = load_split_summary(split_paths_by_resolution, "mid_res", split_name)
-    df_high = load_split_summary(split_paths_by_resolution, "high_res", split_name)
+    df_mid = load_split_results(split_paths_by_resolution, "mid_res", split_name)
+    df_high = load_split_results(split_paths_by_resolution, "high_res", split_name)
 
     # Filtra bad cases para cada resolução.
     df_mid_bad = get_bad_cases(df_mid) if df_mid is not None else pd.DataFrame()

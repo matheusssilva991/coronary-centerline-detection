@@ -9,7 +9,8 @@ from typing import Any, Collection
 import numpy as np
 import pandas as pd
 
-from ..comparison_utils.io import load_split_summary
+from ..comparison_utils.io import load_split_results
+from ..project.result_paths import results_filename
 
 
 AORTA_REVIEW_ID_FIELDS = (
@@ -47,7 +48,9 @@ def get_aorta_visual_review(
     try:
         raw_review = catalog["variants"][variant][split]
     except KeyError as exc:
-        raise KeyError(f"Review not found for variant={variant!r}, split={split!r}.") from exc
+        raise KeyError(
+            f"Review not found for variant={variant!r}, split={split!r}."
+        ) from exc
 
     review = dict(raw_review)
     for field in (*AORTA_REVIEW_ID_FIELDS, *OSTIA_REVIEW_ID_FIELDS):
@@ -59,13 +62,20 @@ def get_aorta_visual_review(
     return review
 
 
-def resolve_aorta_review_summary_path(
+def resolve_aorta_review_results_path(
     repo_root: str | Path,
     review: dict[str, Any],
     split: str,
 ) -> Path:
-    """Resolve the summary CSV associated with a catalog entry."""
-    return Path(repo_root) / review["run_dir"] / "numeric" / f"ostios_{split}_summary.csv"
+    """Resolve the per-image results CSV associated with a catalog entry."""
+    numeric_dir = Path(repo_root) / review["run_dir"] / "numeric"
+    current = numeric_dir / results_filename(split)
+    legacy = numeric_dir / f"ostios_{split}_results.csv"
+    return current if current.is_file() or not legacy.is_file() else legacy
+
+
+# Compatibilidade com notebooks externos anteriores à separação results/summary.
+resolve_aorta_review_summary_path = resolve_aorta_review_results_path
 
 
 def add_aorta_extent_metrics(dataframe: pd.DataFrame) -> pd.DataFrame:
@@ -87,9 +97,7 @@ def add_aorta_extent_metrics(dataframe: pd.DataFrame) -> pd.DataFrame:
 
     image_slices = pd.to_numeric(df["image_slice_count"], errors="coerce")
     circle_slices = pd.to_numeric(df["aorta_circle_count"], errors="coerce")
-    segmented_slices = pd.to_numeric(
-        df["aorta_segmented_slice_count"], errors="coerce"
-    )
+    segmented_slices = pd.to_numeric(df["aorta_segmented_slice_count"], errors="coerce")
     valid_image_slices = image_slices.where(image_slices.gt(0))
     valid_circle_slices = circle_slices.where(circle_slices.gt(0))
 
@@ -126,15 +134,15 @@ def load_aorta_review_cohort(
     use_reviewed_ostia_labels: bool = False,
 ) -> pd.DataFrame:
     """Load a reviewed run and add visual, ostia, and axial-extent labels."""
-    summary_path = resolve_aorta_review_summary_path(repo_root, review, split)
-    numeric_dir = summary_path.parent
-    dataframe = load_split_summary({"mid_res": {split: numeric_dir}}, "mid_res", split)
+    results_path = resolve_aorta_review_results_path(repo_root, review, split)
+    numeric_dir = results_path.parent
+    dataframe = load_split_results({"mid_res": {split: numeric_dir}}, "mid_res", split)
     if dataframe is None:
-        raise RuntimeError(f"Could not load the {split!r} summary.")
+        raise RuntimeError(f"Could not load the {split!r} results.")
 
     missing = set(required_columns).difference(dataframe.columns)
     if missing:
-        raise ValueError(f"Missing summary columns for {split!r}: {sorted(missing)}")
+        raise ValueError(f"Missing result columns for {split!r}: {sorted(missing)}")
 
     df = dataframe.copy()
     df["IMG_ID"] = pd.to_numeric(df["IMG_ID"], errors="raise").astype(int)
@@ -149,9 +157,7 @@ def load_aorta_review_cohort(
             f"unclassified={sorted(observed_ids - expected_ids)}"
         )
 
-    df["visual_aorta_quality"] = np.where(
-        df["IMG_ID"].isin(good_ids), "boa", "ruim"
-    )
+    df["visual_aorta_quality"] = np.where(df["IMG_ID"].isin(good_ids), "boa", "ruim")
     df["visual_review_note"] = df["IMG_ID"].map(review.get("notes", {})).fillna("")
     normalized_status = (
         df["ostia_detection_status"]
@@ -224,5 +230,6 @@ __all__ = [
     "get_aorta_visual_review",
     "load_aorta_review_cohort",
     "load_aorta_visual_reviews",
+    "resolve_aorta_review_results_path",
     "resolve_aorta_review_summary_path",
 ]

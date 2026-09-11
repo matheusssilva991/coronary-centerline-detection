@@ -1,5 +1,6 @@
 """Regression tests for behavior-preserving pipeline simplifications."""
 
+import json
 from contextlib import redirect_stdout
 from io import StringIO
 from pathlib import Path
@@ -130,6 +131,36 @@ class PipelineSimplificationTests(TestCase):
 
         self.assertEqual(split, ("full", [1, 2, 3, 4]))
         get_data_splits.assert_not_called()
+
+    @patch("segmentation_pipeline.get_data_splits")
+    @patch("segmentation_pipeline.list_dataset_image_ids")
+    def test_merge_only_loads_snapshot_without_dataset(
+        self,
+        list_dataset_image_ids,
+        get_data_splits,
+    ):
+        args = SimpleNamespace(split="val", merge_only=True)
+        self.assertEqual(
+            segmentation_pipeline.build_split_to_run(args, Path("/missing/dataset")),
+            ("val", None),
+        )
+        get_data_splits.assert_not_called()
+        list_dataset_image_ids.assert_not_called()
+
+        with TemporaryDirectory() as temporary_dir:
+            run_dir = Path(temporary_dir)
+            config_dir = run_dir / "config"
+            numeric_dir = run_dir / "numeric"
+            config_dir.mkdir()
+            numeric_dir.mkdir()
+            (config_dir / "split_ids.json").write_text(
+                json.dumps({"splits": {"val": [2, 4, 6]}}),
+                encoding="utf-8",
+            )
+            ids = segmentation_pipeline.load_merge_only_image_ids(
+                {"config_dir": config_dir, "numeric_dir": numeric_dir}, "val"
+            )
+        self.assertEqual(ids, [2, 4, 6])
 
     def test_rg_comparison_window_accepts_all_alias(self):
         self.assertEqual(_parse_rg_comparison_window("ALL"), -1)

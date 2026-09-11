@@ -6,7 +6,6 @@ import json
 import logging
 import os
 from pathlib import Path
-from typing import Any, cast
 
 import pandas as pd
 
@@ -20,13 +19,19 @@ from utils.project.config import (
 )
 from utils.project.dataset import get_data_splits, list_dataset_image_ids
 from utils.project.results import (
+    ResultIntegrityError,
     create_timestamped_output_dir,
     load_batch_timing_records,
     make_json_safe,
-    make_result_dataframe,
     merge_batch_results,
     save_metadata,
     summarize_batch_timing_records,
+    validate_result_integrity,
+)
+from utils.project.result_paths import (
+    integrity_filename,
+    metadata_candidates,
+    metadata_filename,
 )
 from utils.segmentation.pipeline_cli import parse_pipeline_args
 from utils.segmentation.pipeline_orchestration import run_pipeline
@@ -508,53 +513,85 @@ def build_split_to_run(args, base_path):
     return args.split, filtered_ids
 
 
+def load_merge_only_image_ids(output_dirs, split_name):
+    """Carrega a coorte persistida sem consultar o dataset ImageCAS."""
+    split_path = Path(output_dirs["config_dir"]) / "split_ids.json"
+    if split_path.is_file():
+        payload = json.loads(split_path.read_text(encoding="utf-8"))
+        split_ids = payload.get("splits", {}).get(split_name)
+        if split_ids is not None:
+            return [int(image_id) for image_id in split_ids]
+
+    numeric_dir = Path(output_dirs["numeric_dir"])
+    for metadata_path in metadata_candidates(numeric_dir, split_name):
+        if not metadata_path.is_file():
+            continue
+        metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+        image_ids = metadata.get("execution_info", {}).get("image_ids")
+        if image_ids is not None:
+            return [int(image_id) for image_id in image_ids]
+    raise FileNotFoundError(
+        "Não foi possível validar o merge-only: split_ids.json e image_ids "
+        "legados não foram encontrados no metadata."
+    )
+
+
 def save_split_metadata(
     split_name,
     output_dir,
     config,
-    ids,
-    details,
-    execution_time,
-    base_path,
-    output_root_dir,
-    current_run_execution_time=None,
-    batch_timings=None,
-    batch_timing_summary=None,
+    resolution=None,
 ):
-    """Salva metadados e registra o caminho no logger."""
+    """Salva apenas identidade e configuração compacta do run."""
     metadata_path = save_metadata(
         split_name,
         output_dir,
         config,
-        ids,
-        details,
-        execution_time,
-        current_run_execution_time=current_run_execution_time,
-        batch_timings=batch_timings,
-        batch_timing_summary=batch_timing_summary,
-        base_path=base_path,
-        root_output_dir=output_root_dir,
+        resolution=resolution,
     )
     logger.info("Metadados salvos em: %s", metadata_path)
     return metadata_path
 
 
+def _record_incomplete_integrity(output_dir, split_name, error):
+    """Remove artefatos finais inválidos e persiste o diagnóstico de integridade."""
+    output_dir = Path(output_dir)
+    for stale_name in (
+        f"summary_{split_name}.csv",
+        metadata_filename(split_name),
+        f"ostios_{split_name}_summary.csv",
+        f"ostios_{split_name}_metadata.json",
+    ):
+        (output_dir / stale_name).unlink(missing_ok=True)
+    marker = output_dir / integrity_filename(split_name)
+    temporary = marker.with_suffix(".json.tmp")
+    temporary.write_text(
+        json.dumps(make_json_safe(error.report), indent=2, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    temporary.replace(marker)
+
+
 def run_merge_only_split(
     split_name,
+    image_ids,
     output_dir,
     config,
-    base_path,
-    output_root_dir,
+    resolution=None,
 ):
-    """Consolida lotes já existentes e recria metadata/summary."""
+    """Consolida lotes já existentes e recria o metadata compacto."""
     final_path = merge_batch_results(split_name, output_dir)
     if final_path is None:
         print(f"❌ Nenhum lote encontrado para o split '{split_name}'")
         raise SystemExit(1)
 
     df = pd.read_csv(final_path)
-    details = cast(list[dict[str, Any]], df.to_dict("records"))
-    metadata_ids = df["IMG_ID"].dropna().tolist() if "IMG_ID" in df.columns else []
+    try:
+        validate_result_integrity(df, image_ids)
+    except ResultIntegrityError as error:
+        _record_incomplete_integrity(output_dir, split_name, error)
+        raise
+    (Path(output_dir) / integrity_filename(split_name)).unlink(missing_ok=True)
     batch_timings = load_batch_timing_records(output_dir, split_name)
     batch_timing_summary = summarize_batch_timing_records(batch_timings)
     execution_time = batch_timing_summary.get("total_known_duration_seconds")
@@ -562,14 +599,7 @@ def run_merge_only_split(
         split_name,
         output_dir,
         config,
-        metadata_ids,
-        details,
-        execution_time=execution_time,
-        current_run_execution_time=None,
-        batch_timings=batch_timings,
-        batch_timing_summary=batch_timing_summary,
-        base_path=base_path,
-        output_root_dir=output_root_dir,
+        resolution=resolution,
     )
     print_split_summary(
         df,
@@ -587,7 +617,6 @@ def run_processing_split(
     config,
     args,
     base_path,
-    output_root_dir,
     visual_dir=None,
 ):
     """Processa um split e salva CSV final + metadata."""
@@ -612,37 +641,22 @@ def run_processing_split(
     )
 
     logger.info("Finalizando processamento em lotes...")
-    merge_batch_results(split_name, output_dir)
-    output_path = Path(output_dir) / f"ostios_{split_name}_summary.csv"
-    logger.info("Resumo final salvo em: %s", output_path)
-
-    summary_details = summary.get("details")
-    if summary_details is None:
-        details = cast(
-            list[dict[str, Any]],
-            pd.read_csv(output_path).to_dict("records"),
-        )
-    else:
-        details = cast(list[dict[str, Any]], summary_details)
-
+    output_path = merge_batch_results(split_name, output_dir)
+    if output_path is None:
+        raise RuntimeError("Nenhum lote foi persistido para consolidação.")
+    logger.info("Resultados por imagem salvos em: %s", output_path)
+    df = pd.read_csv(output_path)
+    try:
+        validate_result_integrity(df, ids)
+    except ResultIntegrityError as error:
+        _record_incomplete_integrity(output_dir, split_name, error)
+        raise
+    (Path(output_dir) / integrity_filename(split_name)).unlink(missing_ok=True)
     save_split_metadata(
         split_name,
         output_dir,
         config,
-        ids,
-        details,
-        execution_time=execution_time,
-        base_path=base_path,
-        output_root_dir=output_root_dir,
-        current_run_execution_time=current_run_execution_time,
-        batch_timings=summary.get("batch_timings"),
-        batch_timing_summary=batch_timing_summary,
-    )
-
-    df = (
-        pd.read_csv(output_path)
-        if summary_details is None
-        else make_result_dataframe(details)
+        resolution=args.resolution,
     )
     print_split_summary(
         df,
@@ -661,7 +675,6 @@ def run_requested_split(
     output_dir,
     config,
     base_path,
-    output_root_dir,
     visual_dir=None,
 ):
     """Executa ou consolida a única coorte solicitada."""
@@ -673,10 +686,10 @@ def run_requested_split(
     if args.merge_only:
         run_merge_only_split(
             split_name,
+            image_ids,
             output_dir,
             config,
-            base_path,
-            output_root_dir,
+            resolution=args.resolution,
         )
     else:
         run_processing_split(
@@ -686,7 +699,6 @@ def run_requested_split(
             config,
             args,
             base_path,
-            output_root_dir,
             visual_dir,
         )
 
@@ -698,7 +710,8 @@ def main():
         logging.getLogger().setLevel(logging.DEBUG)
         logger.debug("Logging verbose habilitado (DEBUG)")
 
-    base_path = resolve_base_path(args.base_path)
+    # Merge-only trabalha apenas com lotes, snapshots e metadata já persistidos.
+    base_path = args.base_path if args.merge_only else resolve_base_path(args.base_path)
     output_root_dir = args.output_dir
     effective_config = build_effective_config(args)
 
@@ -706,6 +719,8 @@ def main():
     output_dirs = resolve_output_dir(args, output_root_dir)
     setup_file_logging(output_dirs["logs_dir"])
     split_name, image_ids = build_split_to_run(args, base_path)
+    if args.merge_only:
+        image_ids = load_merge_only_image_ids(output_dirs, split_name)
     if not (args.resume_requested or args.merge_only):
         save_run_snapshots(
             output_dirs,
@@ -721,7 +736,6 @@ def main():
         output_dirs["numeric_dir"],
         effective_config,
         base_path,
-        output_root_dir,
         output_dirs["visual_dir"],
     )
 

@@ -6,10 +6,13 @@ import os
 import sys
 from pathlib import Path
 
+import pandas as pd
+
 from .config import (
     load_config_json,
     scale_config_to_resolution,
 )
+from .result_paths import results_filename
 
 
 def configure_notebook_environment(chdir_to_src: bool = True) -> Path:
@@ -101,7 +104,7 @@ def _numeric_result_dir(path: Path) -> Path:
 
 def _latest_split_result_dir(parent: Path, split: str) -> Path | None:
     """Find the newest consolidated result below a split/run directory."""
-    summary_name = f"ostios_{split}_summary.csv"
+    results_name = results_filename(split)
     candidates = []
 
     # Supports both ``<split>/numeric`` and ``<split>/<timestamp>/numeric``.
@@ -109,7 +112,19 @@ def _latest_split_result_dir(parent: Path, split: str) -> Path | None:
         if not run_dir.is_dir():
             continue
         numeric_dir = _numeric_result_dir(run_dir)
-        if (numeric_dir / summary_name).is_file():
+        legacy_summary = numeric_dir / f"ostios_{split}_summary.csv"
+        has_results = (numeric_dir / results_name).is_file()
+        if not has_results:
+            has_results = (numeric_dir / f"ostios_{split}_results.csv").is_file()
+        has_legacy_results = False
+        if legacy_summary.is_file() and not has_results:
+            try:
+                has_legacy_results = (
+                    "IMG_ID" in pd.read_csv(legacy_summary, nrows=0).columns
+                )
+            except (OSError, pd.errors.ParserError):
+                has_legacy_results = False
+        if has_results or has_legacy_results:
             candidates.append(numeric_dir)
 
     return max(candidates, key=lambda path: str(path)) if candidates else None

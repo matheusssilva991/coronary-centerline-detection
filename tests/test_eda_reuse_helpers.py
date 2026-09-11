@@ -31,32 +31,24 @@ class SplitResolutionSummaryTest(TestCase):
                 }
             ),
         }
-        metadata = {
-            split: {
-                "execution_info": {
-                    "execution_time_seconds": 120,
-                    "num_images": 2,
-                },
-                "results_summary": {"total_success_percent": 50.0},
-            }
-            for split in summaries
-        }
 
-        def load_summary(_, resolution, subset):
+        def load_results(_, resolution, subset):
             return summaries[subset] if resolution == "mid_res" else None
 
-        def load_metadata(_, resolution, subset):
-            return metadata[subset] if resolution == "mid_res" else None
+        def load_timings(_, resolution, _subset):
+            if resolution != "mid_res":
+                return None
+            return pd.DataFrame({"batch_number": [1], "duration_seconds": [120]})
 
         split_paths = {"mid_res": {}, "high_res": {}}
         with (
             patch(
-                "utils.comparison_utils.io.load_split_summary",
-                side_effect=load_summary,
+                "utils.comparison_utils.io.load_split_results",
+                side_effect=load_results,
             ),
             patch(
-                "utils.comparison_utils.io.load_split_metadata",
-                side_effect=load_metadata,
+                "utils.comparison_utils.io.load_split_batch_timings",
+                side_effect=load_timings,
             ),
         ):
             result = build_split_resolution_summary(split_paths)

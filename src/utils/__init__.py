@@ -90,7 +90,10 @@ _LAZY_EXPORTS = {
     "get_execution_time_seconds": ".comparison_utils.metadata",
     "get_num_images": ".comparison_utils.metadata",
     "get_total_success_percent": ".comparison_utils.metadata",
+    "summarize_split_results": ".comparison_utils.metadata",
+    "load_split_batch_timings": ".comparison_utils.io",
     "load_split_metadata": ".comparison_utils.io",
+    "load_split_results": ".comparison_utils.io",
     "load_split_summary": ".comparison_utils.io",
     # Visualization
     "compare_shared_bad_cases": ".visualization.bad_cases",

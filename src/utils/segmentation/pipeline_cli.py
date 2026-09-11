@@ -19,9 +19,7 @@ def _parse_rg_comparison_window(value: str) -> int:
         ) from exc
 
     if window == 0 or window < -1:
-        raise argparse.ArgumentTypeError(
-            "use ALL, -1 ou um número inteiro positivo"
-        )
+        raise argparse.ArgumentTypeError("use ALL, -1 ou um número inteiro positivo")
     return window
 
 
@@ -94,10 +92,11 @@ Exemplos de uso:
     python segmentation_pipeline.py --split test --base-path /dados/ImageCAS/1-1000
 
 Arquivos de saída:
-  - numeric/ostios_{split}_summary.csv: Resultados consolidados ao final (ou após merge)
-  - numeric/ostios_{split}_lote_1_summary.csv, numeric/ostios_{split}_lote_2_summary.csv, etc: Resultados de cada lote
-  - numeric/ostios_{split}_metadata.json: Metadados completos
-  - config/effective_pipeline_config.json: Config efetiva usada no run
+  - numeric/results_{split}.csv: Resultados consolidados por imagem
+  - numeric/results_{split}_lote_1.csv, numeric/results_{split}_lote_2.csv, etc: Resultados de cada lote
+  - numeric/metadata_{split}.json: Identidade e rótulos principais da configuração
+  - numeric/batch_timings_{split}.csv: Tempos de cada lote
+  - config/effective_pipeline_config.json: Configuração efetiva completa do run
   - config/split_ids.json: IDs processados na coorte selecionada
   - logs/pipeline.log: Log da execução
   - visual/*.html: Visualizações 3D; pode ser redirecionado com --visual-output-dir

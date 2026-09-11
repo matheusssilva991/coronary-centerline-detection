@@ -5,6 +5,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 import numpy as np
+import pandas as pd
 
 from segmentation_pipeline import (
     _apply_execution_overrides,
@@ -139,16 +140,18 @@ class PipelineVisualTests(unittest.TestCase):
         self.assertEqual(visual_dir, run_dir / "visual")
 
     @patch("segmentation_pipeline.print_split_summary")
-    @patch("segmentation_pipeline.make_result_dataframe")
+    @patch("segmentation_pipeline.validate_result_integrity")
+    @patch("segmentation_pipeline.pd.read_csv")
     @patch("segmentation_pipeline.save_split_metadata")
     @patch("segmentation_pipeline.merge_batch_results")
     @patch("segmentation_pipeline.run_pipeline")
     def test_processing_does_not_repeat_split_inside_visual_directory(
         self,
         run_pipeline,
-        _merge_batch_results,
+        merge_batch_results,
         _save_split_metadata,
-        make_result_dataframe,
+        read_csv,
+        _validate_result_integrity,
         _print_split_summary,
     ):
         run_pipeline.return_value = {
@@ -156,7 +159,8 @@ class PipelineVisualTests(unittest.TestCase):
             "execution_time": 1.0,
             "batch_timing_summary": {},
         }
-        make_result_dataframe.return_value = []
+        merge_batch_results.return_value = "/run/numeric/results_train.csv"
+        read_csv.return_value = pd.DataFrame({"IMG_ID": [13]})
         visual_dir = Path("/external/run/visual")
 
         run_processing_split(
@@ -164,9 +168,8 @@ class PipelineVisualTests(unittest.TestCase):
             [13],
             Path("/run/numeric"),
             {"SAVE_SEGMENTATION_VISUALS": True},
-            SimpleNamespace(resume_batch=0),
+            SimpleNamespace(resume_batch=0, resolution="mid"),
             Path("/dataset"),
-            Path("/output"),
             visual_dir,
         )
 

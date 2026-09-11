@@ -290,7 +290,7 @@ def latest_pipeline_run(variant_output_root: Path, resolution: str) -> Path | No
 
 def read_split_summary(run_dir: Path, split: str) -> pd.DataFrame:
     """Carrega o CSV consolidado do split."""
-    path = run_dir / "numeric" / f"ostios_{split}_summary.csv"
+    path = run_dir / "numeric" / f"results_{split}.csv"
     if not path.exists():
         return pd.DataFrame()
     return pd.read_csv(path)

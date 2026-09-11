@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
@@ -7,6 +8,7 @@ import pandas as pd
 
 from utils.visualization.variant_comparison import (
     build_pair_curve_auc,
+    load_variant_run,
     plot_pair_delta_by_image,
     plot_pair_dice_by_image,
 )
@@ -71,6 +73,38 @@ class VariantComparisonCurveTests(unittest.TestCase):
                             "Exames",
                         )
                         plt.close(ax.figure)
+
+    def test_variant_labels_come_from_metadata_not_result_rows(self) -> None:
+        with TemporaryDirectory() as temporary_dir:
+            numeric_dir = Path(temporary_dir) / "test/baseline/2026-01-01/numeric"
+            numeric_dir.mkdir(parents=True)
+            results_path = numeric_dir / "results_test.csv"
+            pd.DataFrame(
+                {
+                    "IMG_ID": [1],
+                    "artery_dice": [0.5],
+                    "ostia_detected": ["yes"],
+                    "ostia_detection_status": ["both correct"],
+                }
+            ).to_csv(results_path, index=False)
+            (numeric_dir / "metadata_test.json").write_text(
+                json.dumps(
+                    {
+                        "configuration": {
+                            "threshold_method": "fuzzy",
+                            "artery_segmentation_method": "fc",
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            results, summary = load_variant_run(results_path)
+
+        self.assertNotIn("threshold_mode", results.columns)
+        self.assertNotIn("artery_segmentation_method", results.columns)
+        self.assertEqual(summary["threshold_mode"], "fuzzy")
+        self.assertEqual(summary["artery_method"], "fc")
 
 
 if __name__ == "__main__":

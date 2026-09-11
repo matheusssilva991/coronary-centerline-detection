@@ -1,20 +1,21 @@
-"""Construção e persistência dos metadados de uma execução."""
+"""Construção e persistência dos metadados compactos de uma execução."""
 
 from __future__ import annotations
 
+import hashlib
 import json
-import platform
-from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from .results_schema import make_result_dataframe, summarize_results_df
-from .results_timing import duration_breakdown
+from .result_paths import metadata_filename
+
+
+METADATA_SCHEMA_VERSION = 2
+EFFECTIVE_CONFIG_RELATIVE_PATH = "../config/effective_pipeline_config.json"
 
 
 def make_json_safe(value: Any) -> Any:
     """Converte valores comuns de pandas/numpy/pathlib para JSON nativo."""
-    # Percorre estruturas aninhadas antes de converter objetos escalares.
     if isinstance(value, dict):
         return {str(key): make_json_safe(item) for key, item in value.items()}
     if isinstance(value, (list, tuple)):
@@ -31,194 +32,130 @@ def make_json_safe(value: Any) -> Any:
     return value
 
 
-def _vesselness_metadata(config: dict[str, Any], key: str) -> dict[str, Any]:
-    vesselness_config = config[key]
-    sigmas = vesselness_config["sigmas"]
-    return {
-        "method": vesselness_config.get("method", "normal"),
-        "sigmas": sigmas.tolist() if hasattr(sigmas, "tolist") else list(sigmas),
-        "black_ridges": vesselness_config.get("black_ridges", False),
-        "alpha": vesselness_config["alpha"],
-        "beta": vesselness_config["beta"],
-        "gamma": vesselness_config["gamma"],
-        "normalization": vesselness_config.get("normalization", "none"),
-        "smooth_sigma": vesselness_config.get("smooth_sigma", 0.0),
-    }
+def effective_config_sha256(config: dict[str, Any]) -> str:
+    """Calcula o hash determinístico do snapshot efetivo da configuração."""
+    payload = json.dumps(
+        make_json_safe(config),
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()
 
 
-def _runtime_config_metadata(config: dict[str, Any]) -> dict[str, Any]:
-    """Resume os parâmetros efetivos que diferenciam runs completos."""
-    circle_config = config.get("CIRCLE_DETECTION", {})
-    level_set_config = config.get("LEVEL_SET", {})
-    artery_method = config.get("ARTERY_SEGMENTATION", {}).get(
-        "method", "region_growing"
-    )
-    return {
-        "use_gpu": config.get("USE_GPU"),
-        "save_segmentation_visuals": config.get("SAVE_SEGMENTATION_VISUALS", False),
-        "visual_output_dir": config.get("VISUAL_OUTPUT_DIR"),
-        "downscale_method": config.get("DOWNSCALE_METHOD"),
-        "opencv_interpolation": config.get("OPENCV_INTERPOLATION")
-        if config.get("DOWNSCALE_METHOD") == "opencv"
-        else None,
-        "downscale_factors": config.get("DOWNSCALE_FACTORS"),
-        "min_threshold": config.get("MIN_THRESHOLD"),
-        "max_threshold_percentile": config.get("MAX_THRESHOLD_PERCENTILE"),
-        "thresholding": config.get("THRESHOLDING"),
-        "lcc_per_slice": True,
-        "lcc_mode": "per_slice",
-        "aorta_miss_count": circle_config.get("max_slice_miss_threshold"),
-        "aorta_interpolate_missed_circles": circle_config.get(
-            "interpolate_missed_circles"
+def _first_present(*values: Any) -> Any:
+    for value in values:
+        if value is not None:
+            return value
+    return None
+
+
+def _compact_configuration(
+    config: dict[str, Any],
+    legacy_result_config: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """Mantém somente rótulos principais; parâmetros completos ficam no snapshot."""
+    legacy = legacy_result_config or {}
+    thresholding = config.get("THRESHOLDING") or {}
+    artery = config.get("ARTERY_SEGMENTATION") or {}
+    compact = {
+        "use_gpu": _first_present(config.get("USE_GPU"), legacy.get("use_gpu")),
+        "downscale_method": _first_present(
+            config.get("DOWNSCALE_METHOD"), legacy.get("downscale_method")
         ),
-        "artery_segmentation_method": str(artery_method),
-        "aorta_trajectory_radius_factor": level_set_config.get(
-            "trajectory_radius_factor"
+        "downscale_factors": _first_present(
+            config.get("DOWNSCALE_FACTORS"), legacy.get("downscale_factors")
         ),
-        "aorta_trajectory_axial_margin_slices": level_set_config.get(
-            "trajectory_axial_margin_slices", 0
+        "min_threshold_hu": _first_present(
+            config.get("MIN_THRESHOLD"), legacy.get("min_threshold_hu")
         ),
-        "aorta_opening_radius": level_set_config.get("leak_removal_radius", 0),
+        "max_threshold_percentile": _first_present(
+            config.get("MAX_THRESHOLD_PERCENTILE"),
+            legacy.get("max_threshold_percentile"),
+        ),
+        "threshold_method": _first_present(
+            thresholding.get("method"),
+            legacy.get("threshold_method"),
+            legacy.get("threshold_mode"),
+        ),
+        "artery_segmentation_method": _first_present(
+            artery.get("method"),
+            legacy.get("artery_segmentation_method"),
+            legacy.get("configured_artery_segmentation_method"),
+        ),
     }
+    return make_json_safe(compact)
 
 
 def build_metadata(
-    split_name,
-    config,
-    ids,
-    results,
-    execution_time=None,
-    current_run_execution_time=None,
-    batch_timings=None,
-    batch_timing_summary=None,
-    base_path=None,
-    root_output_dir=None,
-):
-    """Monta a estrutura JSON de metadados sem gravar arquivo."""
-    # Recalcula os agregados a partir das linhas efetivamente persistidas.
-    df = make_result_dataframe(results)
-    results_summary = summarize_results_df(df)
-    feedback_by_image = [
-        {
-            "IMG_ID": row.IMG_ID,
-            "feedback": row.aorta_segmentation_feedback,
-        }
-        for row in df[["IMG_ID", "aorta_segmentation_feedback"]].itertuples(
-            index=False
-        )
-    ]
-
-    execution_duration = duration_breakdown(execution_time)
-    current_run_duration = duration_breakdown(current_run_execution_time)
-    # Agrupa informações de execução, configuração e desempenho em seções.
-    metadata = {
-        "execution_info": {
-            "timestamp": datetime.now().isoformat(),
-            "split_name": split_name,
-            "num_images": len(ids),
-            "image_ids": ids,
-            "execution_time_seconds": execution_time,
-            "execution_time_minutes": execution_duration["minutes"],
-            "execution_time_hours": execution_duration["hours"],
-            "current_run_execution_time_seconds": current_run_execution_time,
-            "current_run_execution_time_minutes": current_run_duration["minutes"],
-            "current_run_execution_time_hours": current_run_duration["hours"],
-            "batch_timing_summary": batch_timing_summary,
-            "batch_timings": batch_timings or [],
-            "python_version": platform.python_version(),
-            "platform": platform.platform(),
-            "state_counters": {
-                "ostia_found": results_summary["ostia_found"],
-                "ostia_status_not_found": results_summary["ostia_status_not_found"],
-                "segmentation_attempted": results_summary["segmentation_attempted"],
-                "proceeded_with_bad_ostia": results_summary["proceeded_with_bad_ostia"],
-                "error_not_null": results_summary["error_not_null"],
-            },
-        },
-        "preprocessing_config": {
-            "downscale_method": config.get("DOWNSCALE_METHOD"),
-            "opencv_interpolation": config.get("OPENCV_INTERPOLATION")
-            if config.get("DOWNSCALE_METHOD") == "opencv"
-            else None,
-            "downscale_factors": config.get("DOWNSCALE_FACTORS"),
-            "min_threshold": config.get("MIN_THRESHOLD"),
-            "max_threshold_percentile": config.get("MAX_THRESHOLD_PERCENTILE"),
-            "thresholding": config.get("THRESHOLDING"),
-            "lcc_per_slice": True,
-            "lcc_mode": "per_slice",
-        },
-        "runtime_config": _runtime_config_metadata(config),
-        "vesselness_config": {
-            "ostios": _vesselness_metadata(config, "VESSELNESS_AORTA"),
-            "artery": _vesselness_metadata(config, "VESSELNESS_ARTERY"),
-        },
-        "circle_detection_config": config.get("CIRCLE_DETECTION"),
-        "level_set_config": config.get("LEVEL_SET"),
-        "ostia_detection_config": config.get("OSTIA_DETECTION"),
-        "artery_segmentation_config": config.get("ARTERY_SEGMENTATION"),
-        "thresholding_config": config.get("THRESHOLDING"),
-        "region_growing_config": config.get("REGION_GROWING"),
-        "fuzzy_connectedness_config": config.get("FUZZY_CONNECTEDNESS"),
-        "postprocessing_config": config.get("POSTPROCESSING"),
-        "evaluation_config": {
-            "tolerable_distance_mm": config["OSTIA_VALIDATION"][
-                "distance_threshold_mm"
-            ],
-        },
-        "results_summary": results_summary,
-        "aorta_segmentation_feedback": {
-            "role": "diagnostic_only",
-            "thresholds": config.get("LEVEL_SET", {}).get(
-                "quality_feedback",
-                {},
-            ),
-            "counts": results_summary["aorta_segmentation_feedback_counts"],
-            "by_image": feedback_by_image,
-        },
+    split_name: str,
+    config: dict[str, Any],
+    *,
+    resolution: str | None = None,
+    config_source: str = "effective_pipeline_config",
+    config_sha256: str | None = None,
+    legacy_result_config: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Monta metadata portátil, sem IDs, tempos ou estatísticas deriváveis."""
+    configuration = {
+        "source": config_source,
+        "sha256": (
+            effective_config_sha256(config)
+            if config_sha256 is None and config_source == "effective_pipeline_config"
+            else (config_sha256 or "")
+        ),
+        "snapshot_file": (
+            EFFECTIVE_CONFIG_RELATIVE_PATH
+            if config_source == "effective_pipeline_config"
+            else None
+        ),
+        **_compact_configuration(config, legacy_result_config),
     }
-
-    # Caminhos são opcionais para manter o helper útil em testes isolados.
-    if base_path is not None or root_output_dir is not None:
-        metadata["paths"] = {
-            "base_path": base_path,
-            "output_dir": root_output_dir,
-        }
-    return metadata
+    return {
+        "metadata_schema_version": METADATA_SCHEMA_VERSION,
+        "run": {
+            "split": split_name,
+            "resolution": resolution,
+        },
+        "configuration": configuration,
+    }
 
 
 def save_metadata(
-    split_name,
-    output_dir,
-    config,
-    ids,
-    results,
-    execution_time=None,
-    current_run_execution_time=None,
-    batch_timings=None,
-    batch_timing_summary=None,
-    base_path=None,
-    root_output_dir=None,
-):
-    """Salva metadados da execução em arquivo JSON."""
-    # Mantém a construção separada da persistência para facilitar testes.
+    split_name: str,
+    output_dir: str | Path,
+    config: dict[str, Any],
+    *,
+    resolution: str | None = None,
+    config_source: str = "effective_pipeline_config",
+    config_sha256: str | None = None,
+    legacy_result_config: dict[str, Any] | None = None,
+) -> str:
+    """Salva metadata compacto de forma atômica."""
     metadata = build_metadata(
         split_name,
         config,
-        ids,
-        results,
-        execution_time=execution_time,
-        current_run_execution_time=current_run_execution_time,
-        batch_timings=batch_timings,
-        batch_timing_summary=batch_timing_summary,
-        base_path=base_path,
-        root_output_dir=root_output_dir,
+        resolution=resolution,
+        config_source=config_source,
+        config_sha256=config_sha256,
+        legacy_result_config=legacy_result_config,
     )
 
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-    metadata_path = output_dir / f"ostios_{split_name}_metadata.json"
-    # A conversão final trata arrays NumPy e Paths presentes na configuração.
-    with metadata_path.open("w", encoding="utf-8") as file_handle:
-        json.dump(make_json_safe(metadata), file_handle, indent=2, ensure_ascii=False)
-
+    metadata_path = output_dir / metadata_filename(split_name)
+    temporary_path = metadata_path.with_suffix(".json.tmp")
+    with temporary_path.open("w", encoding="utf-8") as file_handle:
+        json.dump(metadata, file_handle, indent=2, ensure_ascii=False)
+    temporary_path.replace(metadata_path)
     return str(metadata_path)
+
+
+__all__ = [
+    "EFFECTIVE_CONFIG_RELATIVE_PATH",
+    "METADATA_SCHEMA_VERSION",
+    "build_metadata",
+    "effective_config_sha256",
+    "make_json_safe",
+    "save_metadata",
+]
