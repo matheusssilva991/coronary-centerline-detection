@@ -4,6 +4,8 @@ import pandas as pd
 import seaborn as sns
 from typing import Any, Optional
 
+from ..project.results_schema import normalize_result_status, result_status_label_pt
+
 
 def compare_shared_bad_cases(
     df_mid: Optional[pd.DataFrame],
@@ -41,10 +43,10 @@ def compare_shared_bad_cases(
     ids_low_both = ids_low_mid & ids_low_high
 
     status_groups = [
-        ("Ostios nao encontrados em ambos", "óstios não encontrados"),
-        ("Um correto em ambos", "um correto"),
-        ("Nenhum correto em ambos", "nenhum correto"),
-        ("Erro em ambos", "erro"),
+        ("Óstios não encontrados em ambos", "not_found"),
+        ("Um correto em ambos", "one_correct"),
+        ("Nenhum correto em ambos", "none_correct"),
+        ("Erro em ambos", "error"),
     ]
 
     status_intersections = {}
@@ -161,12 +163,12 @@ def plot_bad_dice_indicator(
 
 def change_status_label_for_plot(status: Any) -> str:
     """Normaliza rótulos de status para visualização em gráfico."""
-    status = str(status)
-    if "erro" in status.lower():
-        return "ostios nao encontrados"
-    if "ambos toler" in status.lower() or "ambos corret" in status.lower():
-        return "baixo dice score"
-    return status.lower()
+    normalized = normalize_result_status(status)
+    if normalized in {"error", "not_found"}:
+        return "óstios não encontrados"
+    if normalized in {"both_tolerable", "both_correct"}:
+        return "baixo Dice score"
+    return result_status_label_pt(normalized)
 
 
 def plot_bad_cases_by_subset(

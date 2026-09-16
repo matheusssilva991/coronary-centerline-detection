@@ -24,8 +24,9 @@ O canonical `mid_res` aponta para a configuracao
 | Val | `runs/mid_res/current_baseline_p99_9/val/2026-08-06_22-43-14` |
 | Test | `runs/mid_res/current_baseline_p99_9/test/2026-08-06_10-04-22` |
 
-`canonical/high_res/` ainda nao possui uma referencia promovida. Os runs
-high-res existentes sao historicos e estao documentados em
-[`runs/high_res/README.md`](../runs/high_res/README.md).
+`canonical/high_res/` aponta para `runs/high_res/reference`: train e val de
+`2026-04-21_08-42-13`, test de `2026-04-28_14-28-44`. Os splits seguem os IDs
+atuais (train 30, val 270, test 700). A referência histórica tem sucesso dos
+óstios de 71,43% e Dice médio 0,4684 no teste.
 
 Somente resultados completos e validados devem ser promovidos para esta pasta.

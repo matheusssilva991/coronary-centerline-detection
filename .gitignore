@@ -9,6 +9,8 @@ wheels/
 # Virtual environments
 .venv
 .vscode
+.codex/
+.agents/
 /output/cases_analysis_cache
 *.log
 .ruff_cache/

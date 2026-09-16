@@ -4,46 +4,39 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-
-STATUS_MAP_TO_ENGLISH = {
-    "ambos corretos": "both_correct",
-    "ambos toleráveis": "both_tolerable",
-    "ostios não encontrados": "ostia_not_found",
-    "óstios não encontrados": "ostia_not_found",
-    "um correto": "one_correct",
-    "nenhum correto": "none_correct",
-    "erro": "error",
-    "not_found": "ostia_not_found",
-    "both_correct": "both_correct",
-    "both_tolerable": "both_tolerable",
-    "found_but_wrong": "found_but_wrong",
-    "not_evaluated": "not_evaluated",
-}
+from ..project.results_schema import normalize_ostia_status, normalize_result_status
 
 
 def _status_to_english(value):
     """Normalize status values to the canonical English format."""
-    # Normaliza status para as chaves canônicas do módulo.
-    if pd.isna(value):
-        return None
-
-    # Remove variações de caixa e espaços antes do lookup.
-    normalized = str(value).strip().lower()
-    return STATUS_MAP_TO_ENGLISH.get(normalized, normalized)
+    return normalize_result_status(value)
 
 
 def _compute_success_mask(df, success_status):
     """Compute success mask supporting multiple summary schemas."""
     # Produz máscara booleana de sucesso de óstio.
-    if {"both_correct", "both_tolerable"}.issubset(df.columns):
-        # Schema novo: sucesso = correto OU tolerável.
-        return df["both_correct"].fillna(False).astype(bool) | df[
-            "both_tolerable"
-        ].fillna(False).astype(bool)
-
     if "ostia_status" in df.columns:
         # Schema intermediário: status consolidado por linha.
-        return df["ostia_status"].isin(["both_correct", "both_tolerable"])
+        return (
+            df["ostia_status"]
+            .map(normalize_ostia_status)
+            .isin(["both_correct", "both_tolerable"])
+        )
+
+    if {"both_correct", "both_tolerable"}.issubset(df.columns):
+        # Schema novo: sucesso = correto OU tolerável.
+        truthy = {"true", "1", "sim", "s", "yes", "y"}
+        both_correct = df["both_correct"].map(
+            lambda value: (
+                value if isinstance(value, bool) else str(value).lower() in truthy
+            )
+        )
+        both_tolerable = df["both_tolerable"].map(
+            lambda value: (
+                value if isinstance(value, bool) else str(value).lower() in truthy
+            )
+        )
+        return both_correct | both_tolerable
 
     # Schema antigo: converte coluna textual para padrão interno.
     status_series = df.get("status", pd.Series(index=df.index, dtype="object"))
@@ -91,12 +84,7 @@ def get_bad_cases(df, success_status=None, dice_threshold=0.30):
     """Return bad cases by status or Dice threshold with `bad_case_status`."""
     # Seleciona casos ruins por falha de óstio ou Dice baixo.
     if success_status is None:
-        success_status = [
-            "ambos toleráveis",
-            "ambos corretos",
-            "both_tolerable",
-            "both_correct",
-        ]
+        success_status = ["both_tolerable", "both_correct"]
 
     if df is None or df.empty:
         # Retorno vazio mantendo o mesmo contrato.
@@ -126,12 +114,7 @@ def filter_correct_ostia_cases(df, success_status=None):
     """Return only cases where ostia detection is considered successful."""
     # Mantém somente linhas com sucesso de óstio.
     if success_status is None:
-        success_status = [
-            "ambos toleráveis",
-            "ambos corretos",
-            "both_tolerable",
-            "both_correct",
-        ]
+        success_status = ["both_tolerable", "both_correct"]
 
     if df is None or df.empty:
         # Retorno vazio com mesmo schema.
@@ -274,12 +257,7 @@ def summarize_bad_dice_with_threshold(df_bad, dice_threshold=0.3):
     # Identifica linhas com sucesso de óstio.
     success_mask = _compute_success_mask(
         df_bad,
-        [
-            "ambos toleráveis",
-            "ambos corretos",
-            "both_tolerable",
-            "both_correct",
-        ],
+        ["both_tolerable", "both_correct"],
     )
     # Seleciona casos corretos abaixo do limiar de Dice.
     low_dice_correct_mask = valid_dice & success_mask & (dice < dice_threshold)

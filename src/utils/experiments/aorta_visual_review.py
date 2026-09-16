@@ -9,6 +9,8 @@ from typing import Any, Collection
 import numpy as np
 import pandas as pd
 
+from ..project.results_schema import normalize_ostia_status
+
 from ..comparison_utils.io import load_split_results
 from ..project.result_paths import results_filename
 
@@ -159,15 +161,8 @@ def load_aorta_review_cohort(
 
     df["visual_aorta_quality"] = np.where(df["IMG_ID"].isin(good_ids), "boa", "ruim")
     df["visual_review_note"] = df["IMG_ID"].map(review.get("notes", {})).fillna("")
-    normalized_status = (
-        df["ostia_detection_status"]
-        .astype(str)
-        .str.lower()
-        .str.replace("_", " ", regex=False)
-    )
-    csv_success = normalized_status.isin(
-        {"both correct", "both tolerable", "both ostia correct", "both ostia tolerable"}
-    )
+    normalized_status = df["ostia_detection_status"].map(normalize_ostia_status)
+    csv_success = normalized_status.isin({"both_correct", "both_tolerable"})
     if use_reviewed_ostia_labels:
         bad_ostia_ids = {int(img_id) for img_id in review.get("ostia_bad_ids", ())}
         df["ostia_success"] = ~df["IMG_ID"].isin(bad_ostia_ids)

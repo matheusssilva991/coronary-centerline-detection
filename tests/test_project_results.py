@@ -2,14 +2,54 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest import TestCase
 
+import pandas as pd
+
 from utils.project.results import (
     batch_result_number,
     get_batch_result_file,
     list_batch_result_files,
+    merge_batch_results,
+    save_results,
 )
 
 
 class ProjectResultsTests(TestCase):
+    def test_save_results_persists_canonical_english_status_codes(self):
+        with TemporaryDirectory() as temporary_dir:
+            path = save_results(
+                [
+                    {
+                        "IMG_ID": 1,
+                        "ostia_status": "ambos toleráveis",
+                        "both_tolerable": True,
+                    }
+                ],
+                "train",
+                temporary_dir,
+            )
+
+            saved = pd.read_csv(path)
+
+        self.assertEqual(saved.loc[0, "ostia_detection_status"], "both_tolerable")
+        self.assertEqual(saved.loc[0, "status"], "both_tolerable")
+
+    def test_merge_normalizes_legacy_status_values(self):
+        with TemporaryDirectory() as temporary_dir:
+            output_dir = Path(temporary_dir)
+            pd.DataFrame(
+                {
+                    "IMG_ID": [1],
+                    "ostia_detection_status": ["both correct"],
+                    "status": ["ambos corretos"],
+                }
+            ).to_csv(output_dir / "results_val_lote_1.csv", index=False)
+
+            path = merge_batch_results("val", output_dir)
+            merged = pd.read_csv(path)
+
+        self.assertEqual(merged.loc[0, "ostia_detection_status"], "both_correct")
+        self.assertEqual(merged.loc[0, "status"], "both_correct")
+
     def test_batch_helpers_accept_current_and_legacy_names(self):
         with TemporaryDirectory() as temporary_dir:
             output_dir = Path(temporary_dir)

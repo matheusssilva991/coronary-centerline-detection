@@ -306,13 +306,32 @@ OSTIA_STATUS_INTERNAL_LABELS: dict[str, str] = {
     readable: internal for internal, readable in OSTIA_STATUS_READABLE_LABELS.items()
 }
 
+OSTIA_STATUS_PORTUGUESE_LABELS: dict[str, str] = {
+    "not_evaluated": "não avaliado",
+    "not_found": "óstios não encontrados",
+    "both_correct": "ambos corretos",
+    "both_tolerable": "ambos toleráveis",
+    "found_but_wrong": "encontrados, mas incorretos",
+}
+
 STATUS_LABELS: dict[str, str] = {
-    "not_found": "ostia not found",
-    "both_correct": "both ostia correct",
-    "both_tolerable": "both ostia tolerable",
-    "one_correct": "one ostium correct",
-    "error": "pipeline error",
-    "none_correct": "no ostium correct",
+    "not_found": "not_found",
+    "both_correct": "both_correct",
+    "both_tolerable": "both_tolerable",
+    "one_correct": "one_correct",
+    "error": "error",
+    "none_correct": "none_correct",
+}
+
+STATUS_PORTUGUESE_LABELS: dict[str, str] = {
+    "not_found": "óstios não encontrados",
+    "both_correct": "ambos corretos",
+    "both_tolerable": "ambos toleráveis",
+    "one_correct": "um correto",
+    "error": "erro no pipeline",
+    "none_correct": "nenhum correto",
+    "found_but_wrong": "encontrados, mas incorretos",
+    "not_evaluated": "não avaliado",
 }
 
 __all__ = [
@@ -321,10 +340,12 @@ __all__ = [
     "EDA_REQUIRED_RESULT_COLUMNS",
     "EDA_REQUIRED_RESULT_COLUMN_UNION",
     "OSTIA_STATUS_INTERNAL_LABELS",
+    "OSTIA_STATUS_PORTUGUESE_LABELS",
     "OSTIA_STATUS_READABLE_LABELS",
     "READABLE_BOOL_COLUMNS",
     "READABLE_COLUMN_NAMES",
     "RESULT_COLUMNS",
     "RESULT_CONFIGURATION_COLUMNS",
     "STATUS_LABELS",
+    "STATUS_PORTUGUESE_LABELS",
 ]

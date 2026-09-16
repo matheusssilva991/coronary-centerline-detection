@@ -22,6 +22,7 @@ from .results_metadata import (
 from .results_columns import (
     CANONICAL_COLUMN_NAMES,
     OSTIA_STATUS_INTERNAL_LABELS,
+    OSTIA_STATUS_PORTUGUESE_LABELS,
     OSTIA_STATUS_READABLE_LABELS,
     READABLE_BOOL_COLUMNS,
     READABLE_COLUMN_NAMES,
@@ -30,6 +31,7 @@ from .results_columns import (
     RESULT_COLUMNS,
     RESULT_CONFIGURATION_COLUMNS,
     STATUS_LABELS,
+    STATUS_PORTUGUESE_LABELS,
 )
 from .results_schema import (
     add_config_columns,
@@ -38,6 +40,10 @@ from .results_schema import (
     classify_result_status,
     make_readable_results_dataframe,
     make_result_dataframe,
+    normalize_ostia_status,
+    normalize_result_status,
+    ostia_status_label_pt,
+    result_status_label_pt,
     select_per_image_result_columns,
     summarize_results_df,
 )
@@ -64,6 +70,7 @@ __all__ = [
     "EDA_REQUIRED_RESULT_COLUMNS",
     "EDA_REQUIRED_RESULT_COLUMN_UNION",
     "OSTIA_STATUS_INTERNAL_LABELS",
+    "OSTIA_STATUS_PORTUGUESE_LABELS",
     "OSTIA_STATUS_READABLE_LABELS",
     "READABLE_BOOL_COLUMNS",
     "READABLE_COLUMN_NAMES",
@@ -71,6 +78,7 @@ __all__ = [
     "RESULT_CONFIGURATION_COLUMNS",
     "ResultIntegrityError",
     "STATUS_LABELS",
+    "STATUS_PORTUGUESE_LABELS",
     "add_config_columns",
     "add_internal_result_aliases",
     "batch_result_number",
@@ -90,6 +98,10 @@ __all__ = [
     "make_json_safe",
     "make_readable_results_dataframe",
     "make_result_dataframe",
+    "normalize_ostia_status",
+    "normalize_result_status",
+    "ostia_status_label_pt",
+    "result_status_label_pt",
     "merge_batch_results",
     "save_batch_timing_record",
     "save_metadata",

@@ -31,6 +31,8 @@ from typing import Any
 
 import pandas as pd
 
+from utils.project.results_schema import normalize_ostia_status
+
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OUTPUT_ROOT = REPO_ROOT / "output/segmentation/analysis/threshold_sweep"
@@ -355,8 +357,10 @@ def summarize_run(
         if "max_threshold_hu" in df.columns
         else pd.Series([pd.NA] * len(df), dtype="Float64")
     )
-    status = df.get("ostia_detection_status", pd.Series(dtype=str)).astype(str)
-    success = status.isin({"both correct", "both tolerable"})
+    status = df.get("ostia_detection_status", pd.Series(dtype=str)).map(
+        normalize_ostia_status
+    )
+    success = status.isin({"both_correct", "both_tolerable"})
     mean_max_threshold = max_threshold.mean()
 
     row.update(
@@ -370,9 +374,9 @@ def summarize_run(
             "mean_dice": float(dice.mean()),
             "median_dice": float(dice.median()),
             "ostia_success_rate": float(success.mean()),
-            "both_correct_n": int((status == "both correct").sum()),
-            "both_tolerable_n": int((status == "both tolerable").sum()),
-            "found_wrong_n": int((status == "found but incorrect").sum()),
+            "both_correct_n": int((status == "both_correct").sum()),
+            "both_tolerable_n": int((status == "both_tolerable").sum()),
+            "found_wrong_n": int((status == "found_but_wrong").sum()),
             "not_found_n": int((status == "not found").sum()),
         }
     )

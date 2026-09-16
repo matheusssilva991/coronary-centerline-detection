@@ -1,0 +1,2 @@
+split_name,batch_number,total_batches,num_images,first_img_id,last_img_id,result_file,started_at,finished_at,duration_seconds,duration_minutes,duration_hours
+val,5,5,54,772,618,results_val_lote_5.csv,2026-09-16T13:35:44,2026-09-16T16:03:27,8863.387789726257,147.72312982877096,2.4620521638128494

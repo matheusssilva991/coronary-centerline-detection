@@ -1,0 +1,4273 @@
+{
+  "schema_version": 1,
+  "migration": "normalize_run_statuses",
+  "mode": "apply",
+  "root": "output/segmentation/runs",
+  "generated_at_utc": "2026-09-16T23:29:07.955582+00:00",
+  "summary": {
+    "inspected_file_count": 387,
+    "changed_file_count": 387,
+    "unchanged_file_count": 0,
+    "inspected_row_count": 29524,
+    "changed_cell_count": 59048
+  },
+  "changed_files": [
+    {
+      "path": "high_res/aorta_segmentation_experiments/test/filter_envelope_lower100_pad2/2026-09-13_14-06-44/numeric/results_test.csv",
+      "row_count": 700,
+      "changed_cell_count": 1400,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "75d9421844a4795a6fb97aa8c428137c735d9b25cf9296b8f4035059c816fcb9",
+      "sha256_after": "3bdaaf0e28643e33e98e0d092213961c3282329db6e95259e66171b309523862"
+    },
+    {
+      "path": "high_res/aorta_segmentation_experiments/test/filter_envelope_lower100_pad2/2026-09-13_14-06-44/numeric/results_test_lote_1.csv",
+      "row_count": 140,
+      "changed_cell_count": 280,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "f49ab76435c61cc04447d9adaf7dbc7a8f843b7b6094c0eb714ea57f9df7b285",
+      "sha256_after": "267d95ace026cf5d8075deac4a7873c3c9b7b311100e235842d6e4cb7cfeb1e1"
+    },
+    {
+      "path": "high_res/aorta_segmentation_experiments/test/filter_envelope_lower100_pad2/2026-09-13_14-06-44/numeric/results_test_lote_2.csv",
+      "row_count": 140,
+      "changed_cell_count": 280,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "60c77a4d0702b84031c41316aa43251ddf48aa648e93997a800acf14ba7081f1",
+      "sha256_after": "e3ed13afdb56d2d56d610d9384fb394e2e4f13f41beb5a6b5d63fe86be7a924f"
+    },
+    {
+      "path": "high_res/aorta_segmentation_experiments/test/filter_envelope_lower100_pad2/2026-09-13_14-06-44/numeric/results_test_lote_3.csv",
+      "row_count": 140,
+      "changed_cell_count": 280,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "28f71b4dec278f76c39c44756e573e8b7e9895591576527ea82ef4f1f5dfd7d2",
+      "sha256_after": "b17a4032c391103cc52201cdcffd6f0b113bb20b731b7d524bd71e9006f489f2"
+    },
+    {
+      "path": "high_res/aorta_segmentation_experiments/test/filter_envelope_lower100_pad2/2026-09-13_14-06-44/numeric/results_test_lote_4.csv",
+      "row_count": 140,
+      "changed_cell_count": 280,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "83fd620182c3a1f44d606a622568f5b21b933f69be6710dcb70a56e507d69af3",
+      "sha256_after": "cf624bf516b0cb932ff5fc0f4fa4f091f07eca03e942502bb90ac93b088b5a7e"
+    },
+    {
+      "path": "high_res/aorta_segmentation_experiments/test/filter_envelope_lower100_pad2/2026-09-13_14-06-44/numeric/results_test_lote_5.csv",
+      "row_count": 140,
+      "changed_cell_count": 280,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "45efc0fb6a9fc7d7dbef34808a272517b56e4b9b4fc057c38a52e097d1c6ff49",
+      "sha256_after": "fd0ed146ed3511530261c9bc7d6764f401c4d0b975e27711a05b1d6e7407ff9b"
+    },
+    {
+      "path": "high_res/aorta_segmentation_experiments/train/filter_envelope_lower100_pad2/2026-09-15_11-08-42/numeric/results_train.csv",
+      "row_count": 30,
+      "changed_cell_count": 60,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "e3e0d261d04d6ed1ad1ccd1bfcd1bbb78926c4d38e21a4d6592a52cd2b709aa6",
+      "sha256_after": "fb68b8bd1562f656c8bd7b42f2674fd884e2f1aa430e30b5392a45692a4aa411"
+    },
+    {
+      "path": "high_res/aorta_segmentation_experiments/train/filter_envelope_lower100_pad2/2026-09-15_11-08-42/numeric/results_train_lote_1.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "e1ca9a7239565cfc5e51e8f806ac64f5d0c6e3b6195cc148848419d2aec87b4d",
+      "sha256_after": "f3b3b4404fce249c0b7d3e10581ff677873f0ad016c631892519429b9c62ddc9"
+    },
+    {
+      "path": "high_res/aorta_segmentation_experiments/train/filter_envelope_lower100_pad2/2026-09-15_11-08-42/numeric/results_train_lote_2.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "444a77b742b6b615572efae4cb5a7e98e85704bf7ae5f9cda3a7049b1c7c49d4",
+      "sha256_after": "6c4ead7436f097e006fd2a4b1e6a9bb60603f96f72256cf85b3363fc71a1a0a4"
+    },
+    {
+      "path": "high_res/aorta_segmentation_experiments/train/filter_envelope_lower100_pad2/2026-09-15_11-08-42/numeric/results_train_lote_3.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "1d8e234a2cad04c13f8f42b3f9566e80b1f7142eeda9e378ebe7afb03b674d01",
+      "sha256_after": "8d43ebaa237d31c83c4a74aee2311cb07f0cc39f9eefc1acad071f60ccc71e44"
+    },
+    {
+      "path": "high_res/aorta_segmentation_experiments/train/filter_envelope_lower100_pad2/2026-09-15_11-08-42/numeric/results_train_lote_4.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "615523fa4d1d5979cb3c3ba2380a8c6050ed78b4d9a5c609a8fcae22cf953378",
+      "sha256_after": "b7a757c1a19d0c9f310a20d3ba86b4de397072217538332d31deb83cedc6eb83"
+    },
+    {
+      "path": "high_res/aorta_segmentation_experiments/train/filter_envelope_lower100_pad2/2026-09-15_11-08-42/numeric/results_train_lote_5.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "4f09c73c728b2df471f11af6cb1354233bb482292bda669049d754b53ed9bcb1",
+      "sha256_after": "9d45d15dc5c3a0cf0a14a8670833fd91b4442797610dfdba3380572841e5bf40"
+    },
+    {
+      "path": "high_res/aorta_segmentation_experiments/train/filter_envelope_lower100_pad2_opening_radius8/2026-09-15_08-02-18/numeric/results_train.csv",
+      "row_count": 30,
+      "changed_cell_count": 60,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "440cf429279045d47d16f632888f67e335a80f18dbaf5472c3cf7e82b15c5af2",
+      "sha256_after": "b59ff5ef82729ef8c7103395567c693beae6087f179355d504caa9e09fcb1e10"
+    },
+    {
+      "path": "high_res/aorta_segmentation_experiments/train/filter_envelope_lower100_pad2_opening_radius8/2026-09-15_08-02-18/numeric/results_train_lote_1.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "c0ff461536b9cadc7e5856d73a19b2fe4f9ee8295268e48a080538219787a42a",
+      "sha256_after": "afc4b2c148d7f27802f2813f40e1b9845cab0ec4c60e1a06814c113b6edae609"
+    },
+    {
+      "path": "high_res/aorta_segmentation_experiments/train/filter_envelope_lower100_pad2_opening_radius8/2026-09-15_08-02-18/numeric/results_train_lote_2.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "e16b03c93136ba7b914386dc7aa5fed8421f5f306c2832fbdb8cb600e876c786",
+      "sha256_after": "dd878624d422efb30a9fff87e9bfd96f82a30bf1c247a1801ea33f1230cf6859"
+    },
+    {
+      "path": "high_res/aorta_segmentation_experiments/train/filter_envelope_lower100_pad2_opening_radius8/2026-09-15_08-02-18/numeric/results_train_lote_3.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "420571d60342c3728d868e656781f6e7ab50470840f712d8c2d2101a3a8a9f58",
+      "sha256_after": "9b584ea5bc165893958c3143671efdfec831a16811b4e8677d02e5c11f1ef005"
+    },
+    {
+      "path": "high_res/aorta_segmentation_experiments/train/filter_envelope_lower100_pad2_opening_radius8/2026-09-15_08-02-18/numeric/results_train_lote_4.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "c1498585d5315d5272720f7e5b7e2c12bff366debaf9c6d5564a24978250583b",
+      "sha256_after": "7d7ce9945d299a98419905505b81e01cfda8cd9fce189540e53ce33c9bf1b2bf"
+    },
+    {
+      "path": "high_res/aorta_segmentation_experiments/train/filter_envelope_lower100_pad2_opening_radius8/2026-09-15_08-02-18/numeric/results_train_lote_5.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "a4384d117635714a2a943f3fe257ec289bd6aac50b1ab1589d36e508d9a46705",
+      "sha256_after": "84c2c0c9e760cfd49254c914f6056f15b445c3df2bbd74b5761b6b205e33e168"
+    },
+    {
+      "path": "high_res/aorta_segmentation_experiments/train/no_filter_no_envelope_lower100_pad2/2026-09-15_12-42-14/numeric/results_train.csv",
+      "row_count": 30,
+      "changed_cell_count": 60,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "ffcd877bac7f353042488b0d4f8830e9f038080700fc972ecfb4f94319ea7608",
+      "sha256_after": "840b05ce0a7efd9750590c712832e2db323bcbd011dbaf97524bc4d727b52705"
+    },
+    {
+      "path": "high_res/aorta_segmentation_experiments/train/no_filter_no_envelope_lower100_pad2/2026-09-15_12-42-14/numeric/results_train_lote_1.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "23f95f1d4dcbf51586694a65ac0e34e7111fe021994475016b82902b5ee3a41e",
+      "sha256_after": "323943e19d189eabf06979059160c0d7de94f2eba62e48a645a9cb39b8396e55"
+    },
+    {
+      "path": "high_res/aorta_segmentation_experiments/train/no_filter_no_envelope_lower100_pad2/2026-09-15_12-42-14/numeric/results_train_lote_2.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "9f7720d52f1f2d88b6469cd21812310726cacaf30ddc38c20af6eb92618aeef9",
+      "sha256_after": "f7d08cdb3bea50f3a3b8819e1a1ab574555a69228312afbb153c2a8652b9c791"
+    },
+    {
+      "path": "high_res/aorta_segmentation_experiments/train/no_filter_no_envelope_lower100_pad2/2026-09-15_12-42-14/numeric/results_train_lote_3.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "5077f567279386044d1c4a34441969c1300b73dc8d76e46544225a5199d030e0",
+      "sha256_after": "abcc049a42c3cee6c7b8ccde8d458d49d73e4dc3069791a8c7edafab1cffb950"
+    },
+    {
+      "path": "high_res/aorta_segmentation_experiments/train/no_filter_no_envelope_lower100_pad2/2026-09-15_12-42-14/numeric/results_train_lote_4.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "920b0faf3270fb8f3935e6b35e85ce4839e7350a343ffdba47a4fc41de3e6e19",
+      "sha256_after": "4ce8baa1a36d1a18d209b39e961170da5c62dfe3eaedd2f77facb4c24ed53d39"
+    },
+    {
+      "path": "high_res/aorta_segmentation_experiments/train/no_filter_no_envelope_lower100_pad2/2026-09-15_12-42-14/numeric/results_train_lote_5.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "615818368f50587a3bfe01c64897ab3ca122b20efb7ceea2095a0a612ed1a673",
+      "sha256_after": "22b83a4b1cdf89482c09e005b988489a3677c45d02332412020e6800de3868b6"
+    },
+    {
+      "path": "high_res/aorta_segmentation_experiments/val/filter_envelope_lower100_pad2/2026-09-12_07-51-48/numeric/results_val.csv",
+      "row_count": 270,
+      "changed_cell_count": 540,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "05e37fae10a35b97014e2ba84122f490400eab822f80f16dc14ccb6d7567db52",
+      "sha256_after": "3adea4ea1c7c40e5ac8d19232d6ea799ab9b6fdef4ab6b3c08f7c16b66423d02"
+    },
+    {
+      "path": "high_res/aorta_segmentation_experiments/val/filter_envelope_lower100_pad2/2026-09-12_07-51-48/numeric/results_val_lote_1.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "74b2e37545ec060d3c3a5fd2857b2777853b0412ba162602a8b67f6068a7e957",
+      "sha256_after": "6a15a1badfb8a1e5cf8e692f86dd13a2ea5f3d9aff3267bed92fbe1012203289"
+    },
+    {
+      "path": "high_res/aorta_segmentation_experiments/val/filter_envelope_lower100_pad2/2026-09-12_07-51-48/numeric/results_val_lote_2.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "58c024debd5828a20bc9d037d31f9c06514f23d36534143199fb23866302eb92",
+      "sha256_after": "d8e01414c1996d6f45c40108b637bda937627e4f07c5c249a3413d52fd87bbde"
+    },
+    {
+      "path": "high_res/aorta_segmentation_experiments/val/filter_envelope_lower100_pad2/2026-09-12_07-51-48/numeric/results_val_lote_3.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "3cb59ae1bcc0e982badf4d99a0807c31dd36953823c509a614654ffc2ea89851",
+      "sha256_after": "dd2784f201d468aa90b28136d82b5cf5c3d09bd7db7768e4f8a0610e7a0b42ba"
+    },
+    {
+      "path": "high_res/aorta_segmentation_experiments/val/filter_envelope_lower100_pad2/2026-09-12_07-51-48/numeric/results_val_lote_4.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "669d1c2ebce2ad2bfc67fcc29c286446a0fcd151d5e80e90cb5567006f422bc7",
+      "sha256_after": "0d61edaecb49f17fd777aa151d1cc948e88be930f253d09f27af40333b398afe"
+    },
+    {
+      "path": "high_res/aorta_segmentation_experiments/val/filter_envelope_lower100_pad2/2026-09-12_07-51-48/numeric/results_val_lote_5.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "7aa04d5c27965770075e867afc225af2787ea23cee1dfaa6f6befa3981f59407",
+      "sha256_after": "3eb9cf61ad6e6eec88e1076ac78630d8de2b07a860a483405aa2525a0ddf0d88"
+    },
+    {
+      "path": "high_res/aorta_segmentation_experiments/val/no_filter_no_envelope_lower100_pad2/2026-09-15_14-44-49/numeric/results_val_lote_1.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "5b7d177159713af21ea56d7e829f023fd2f02ed96d54625b9198bbe002985c5d",
+      "sha256_after": "e8ab1f43e0ea631e773b67d217092d9b4d6c26680480dfb8427eb58308b043e8"
+    },
+    {
+      "path": "high_res/aorta_segmentation_experiments/val/no_filter_no_envelope_lower100_pad2/2026-09-15_14-44-49/numeric/results_val_lote_2.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "6217db64a028e691ee8f6fdc6fab91657e7c590629fae0704f720b8b4f804120",
+      "sha256_after": "f16e7acfc9c98cddde8cf5b5b3815a9e1280f3f32bb9594ca66c258c1436dc1d"
+    },
+    {
+      "path": "high_res/aorta_segmentation_experiments/val/no_filter_no_envelope_lower100_pad2/2026-09-15_14-44-49/numeric/results_val_lote_3.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "2743fd0671e97e28b806e044517fabaa2471acde4dde2f741b260b5586d3fa35",
+      "sha256_after": "3796f31af41f4cfe975327bc3235c3caa3985d55b17455120dd79f047d72c32e"
+    },
+    {
+      "path": "high_res/aorta_segmentation_experiments/val/no_filter_no_envelope_lower100_pad2/2026-09-15_14-44-49/numeric/results_val_lote_4.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "a4515ed7a690489161b6abe670014dae32c76a0b9baf3f52ab10c73e6c320741",
+      "sha256_after": "588b309f0b6c1fe24590ba37bd97674813460480c536ece7aebae874402a15af"
+    },
+    {
+      "path": "high_res/canonical_candidate_p99_9_ablation/val/no_filter_no_envelope/2026-09-15_14-44-49/numeric/results_val.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "d89ae5534668bb4bd66ae027ff73c12ba7c65bb10437215acc3380db6644ddd1",
+      "sha256_after": "7abd21df493b6702f990829df5a2c7898d7127975cfb4fbb255f95fac7080843"
+    },
+    {
+      "path": "high_res/canonical_candidate_p99_9_ablation/val/no_filter_no_envelope/2026-09-15_14-44-49/numeric/results_val_lote_5.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "f2d0fdd1a9da22f44a00feb7ae453590768684ad18c545130a05b436c7a42676",
+      "sha256_after": "102178f10dec3ac8d5bcf76bb5177b0a361438e391560401ba22d1639d98cd8c"
+    },
+    {
+      "path": "high_res/legacy_low_ostia_accuracy/p99_7/test/2026-08-12_09-52-53/numeric/results_test.csv",
+      "row_count": 700,
+      "changed_cell_count": 1400,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "36a3ef8f1999ab9b499f72b5662f5985249f3cc4a023a8d21023408fb70f0a71",
+      "sha256_after": "46823fff610654906deb710efafa5bcceb36302ba8ca55647c0f70e5b9127bda"
+    },
+    {
+      "path": "high_res/legacy_low_ostia_accuracy/p99_7/test/2026-08-12_09-52-53/numeric/results_test_lote_1.csv",
+      "row_count": 140,
+      "changed_cell_count": 280,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "cb01be4a3184c43d35cdd691b17b9c5a414f1bfe3fb31d4297a5897649fb0327",
+      "sha256_after": "38123a55ba47d662b8de65530927ba3ac2d66ba1372abf3046935d04bbf9ded2"
+    },
+    {
+      "path": "high_res/legacy_low_ostia_accuracy/p99_7/test/2026-08-12_09-52-53/numeric/results_test_lote_2.csv",
+      "row_count": 140,
+      "changed_cell_count": 280,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "8f856671bc21b9f9e551b6f70e55afe69da88bec4321b6b6abb084cfbbdc24fb",
+      "sha256_after": "dca5b6936ae0287d823bf8509ecaa0f4f7a910a332a72d2327d7570a735e8d6b"
+    },
+    {
+      "path": "high_res/legacy_low_ostia_accuracy/p99_7/test/2026-08-12_09-52-53/numeric/results_test_lote_3.csv",
+      "row_count": 140,
+      "changed_cell_count": 280,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "6c125df7872ed8a6d5aa76cfb2b0216c2e3a3ccff0b07688b14d18bbe1a4a262",
+      "sha256_after": "ddaceb9712c4e438eed86684fa39e99c82421f811b8d2292e5f32013c86c1676"
+    },
+    {
+      "path": "high_res/legacy_low_ostia_accuracy/p99_7/test/2026-08-12_09-52-53/numeric/results_test_lote_4.csv",
+      "row_count": 140,
+      "changed_cell_count": 280,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "cef33e5aa8edad73c7b8291bf3535029907fa717eaaeba6cd9ab251dd4901b2d",
+      "sha256_after": "5afb5bf66c6b598591abf4ee6508ede32c55b8262230a293716668e0ae77706b"
+    },
+    {
+      "path": "high_res/legacy_low_ostia_accuracy/p99_7/test/2026-08-12_09-52-53/numeric/results_test_lote_5.csv",
+      "row_count": 140,
+      "changed_cell_count": 280,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "d1a3d0d575e25e73cb8992aaa3c317ba841d7419c9b3c026c8115841f3b3e30b",
+      "sha256_after": "3acb198090ff44f59f0254fbd650c9c839ad8e67d6884a13e6fcb36884eb1a64"
+    },
+    {
+      "path": "high_res/legacy_low_ostia_accuracy/p99_7/train/2026-08-08_01-28-23/numeric/results_train.csv",
+      "row_count": 30,
+      "changed_cell_count": 60,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "1260826e078a70d7a1a3080d9ab175b64a32ed8d29ed5af5eda556f63bee5c04",
+      "sha256_after": "40f12a0407bc7a89c93c25ef64591e46aba769a4f0f8cafbbbdd20e25fea378e"
+    },
+    {
+      "path": "high_res/legacy_low_ostia_accuracy/p99_7/train/2026-08-08_01-28-23/numeric/results_train_lote_1.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "09feb894a1c619ddd0a6e217e4593163ef6f2f621c16c3c26992033c4b2d2fe1",
+      "sha256_after": "921914af719059cedefd32b95741c74ccfec89ceb2c7f8cba8d519a65601c88d"
+    },
+    {
+      "path": "high_res/legacy_low_ostia_accuracy/p99_7/train/2026-08-08_01-28-23/numeric/results_train_lote_2.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "ef4f2d1a469ef23437833194e9c60397bc684dba137cae0f9c1c6c257602a8d2",
+      "sha256_after": "e3a4aae9010f73074e0eb845dd90ef3a50fd1c27a64ac1bbcb8deafcf3e4be67"
+    },
+    {
+      "path": "high_res/legacy_low_ostia_accuracy/p99_7/train/2026-08-08_01-28-23/numeric/results_train_lote_3.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "54571033f9dfb9256c0b4d229071acdf7a12a8d1e0828e1e2d9b7ee86e76cece",
+      "sha256_after": "da0cba48bfec14a6e39037e7ff40f8a13287b9f386d76e0a2f4eac55242bb557"
+    },
+    {
+      "path": "high_res/legacy_low_ostia_accuracy/p99_7/train/2026-08-08_01-28-23/numeric/results_train_lote_4.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "dac4710c6272514a0999b2018da124bc8d5b082a0bd01df83257cd01dcc29b13",
+      "sha256_after": "98009e537df5c10dbddeca6f384df9ab132627f3a34ca2179425f8b27a69d4d1"
+    },
+    {
+      "path": "high_res/legacy_low_ostia_accuracy/p99_7/train/2026-08-08_01-28-23/numeric/results_train_lote_5.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "7c5ca6c75bd1d3249f6dd926482e16fed57d5dcdae8cef67853c742a1da9c928",
+      "sha256_after": "dcfffbfabf946f5fc0d8fb419ec856697a85c948274e2779e3fbac769e58c051"
+    },
+    {
+      "path": "high_res/legacy_low_ostia_accuracy/p99_7/val/2026-08-08_07-40-07/numeric/results_val.csv",
+      "row_count": 270,
+      "changed_cell_count": 540,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "e5e25ad3c3fef9724bed036b7b46118de44c31c97639e00de62ec44c78675452",
+      "sha256_after": "4c50cf781d51167d58d61ec4616e52da1119f6adbf497f9eae17e7faa21dc034"
+    },
+    {
+      "path": "high_res/legacy_low_ostia_accuracy/p99_7/val/2026-08-08_07-40-07/numeric/results_val_lote_1.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "d6ff489ab5542ea01c93cf9a82da3f1719dba217c7bc6c3b53de9eb2b2b96dfb",
+      "sha256_after": "c4fbb226bbdb7249b2466cb3aff697e80367a717bd4a494065a43aee41801bb9"
+    },
+    {
+      "path": "high_res/legacy_low_ostia_accuracy/p99_7/val/2026-08-08_07-40-07/numeric/results_val_lote_2.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "90373767f3c8d12e799d25c894a5372799ceb12c903448e8943460a5dd7ded70",
+      "sha256_after": "c7976c302ed41adec5bb5e59414cfbaa61d352ed8268665bfb9eb8619dc545e2"
+    },
+    {
+      "path": "high_res/legacy_low_ostia_accuracy/p99_7/val/2026-08-08_07-40-07/numeric/results_val_lote_3.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "be26b1b44ca68d44b07d83515443c4eb140739803ee55b8d2948f10e4e5ba828",
+      "sha256_after": "4c81c49ee5bf0737cf1879505cd7b88ffea18c6f5ac7bd309f4450bbee570dda"
+    },
+    {
+      "path": "high_res/legacy_low_ostia_accuracy/p99_7/val/2026-08-08_07-40-07/numeric/results_val_lote_4.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "898645b849be45428088906c325871fa2580bb987b46af3fdf33bac67e51c74a",
+      "sha256_after": "534d2cde50fe9a849144c0e798b155ea47e9d3ff15a3fb41fd510ec0573aa007"
+    },
+    {
+      "path": "high_res/legacy_low_ostia_accuracy/p99_7/val/2026-08-08_07-40-07/numeric/results_val_lote_5.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "7732be8f9057c6c5aca43dc3dcfbf8e78cc3da87b109f9af4cfa238cb7f19d7f",
+      "sha256_after": "921d7270ddaee23b5443acbdbc1cc3eaa1e9ad7b4f694198e69379a360c3fa4f"
+    },
+    {
+      "path": "high_res/legacy_low_ostia_accuracy/p99_8/test/2026-08-17_10-28-49/numeric/results_test.csv",
+      "row_count": 700,
+      "changed_cell_count": 1400,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "9499ba3fbbaba075b2fb1caf9f279c2b49d401cd08e8f0a86b89c7cdff958171",
+      "sha256_after": "df349cd2a1d687512626260898b56e1d75c627c63e5b03f2f3da12745d76eb66"
+    },
+    {
+      "path": "high_res/legacy_low_ostia_accuracy/p99_8/test/2026-08-17_10-28-49/numeric/results_test_lote_1.csv",
+      "row_count": 140,
+      "changed_cell_count": 280,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "3519e631da8c044400d5b30eec00b92cb67a1e61b174ca7901cae43e129dee45",
+      "sha256_after": "751884beca0e1588e5f65d308a810f72ab423d20f4c7ccfb764618df9bfdcc32"
+    },
+    {
+      "path": "high_res/legacy_low_ostia_accuracy/p99_8/test/2026-08-17_10-28-49/numeric/results_test_lote_2.csv",
+      "row_count": 140,
+      "changed_cell_count": 280,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "823baa92db2ffe4b8c19798c39def35b3fbd64b7e3f82bdf17a22fffe035a41f",
+      "sha256_after": "e5b81d436d0449269f540d7a5e5fd4897e84d503b2e19d0c845730b964384ed7"
+    },
+    {
+      "path": "high_res/legacy_low_ostia_accuracy/p99_8/test/2026-08-17_10-28-49/numeric/results_test_lote_3.csv",
+      "row_count": 140,
+      "changed_cell_count": 280,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "3cf1b0a658e7d0585f5fbafc194de2d78f1d8522c865bc1b9b20442342e5638d",
+      "sha256_after": "5a228ec84da8b06812ddf8feee0d8258518382e16e6dffe69d782704276009c7"
+    },
+    {
+      "path": "high_res/legacy_low_ostia_accuracy/p99_8/test/2026-08-17_10-28-49/numeric/results_test_lote_4.csv",
+      "row_count": 140,
+      "changed_cell_count": 280,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "16c13f50086cabc23e8f7113154afeaa59e86f2dace5c83424170ed0c6545905",
+      "sha256_after": "149e94e5634903bd627828d3836fdd9909580a08c537a1e7cf987a3ad7c6287a"
+    },
+    {
+      "path": "high_res/legacy_low_ostia_accuracy/p99_8/test/2026-08-17_10-28-49/numeric/results_test_lote_5.csv",
+      "row_count": 140,
+      "changed_cell_count": 280,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "e312f8637c07292693471b07de91abac35fb0f53d3d6ed10966d4a5224a30ff0",
+      "sha256_after": "3752077c9186db1ac4336016e9d496912a3cfdbee9a9cac92c3a5dbf46ce53f6"
+    },
+    {
+      "path": "high_res/legacy_low_ostia_accuracy/p99_8/train/2026-08-08_02-54-08/numeric/results_train.csv",
+      "row_count": 30,
+      "changed_cell_count": 60,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "472bda7adb4111382a9d7c2d9b7dfdcff4625dae3260a8b40b05b626d97619e1",
+      "sha256_after": "a66efbce083ff137f7ee6241ade9967144a4fa5201b04759e22bfb878557f261"
+    },
+    {
+      "path": "high_res/legacy_low_ostia_accuracy/p99_8/train/2026-08-08_02-54-08/numeric/results_train_lote_1.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "f97292c834abefe8a44c5caae30e6433de6d7b33e1fec8be6cb370e05ccef928",
+      "sha256_after": "49034077b699f844152f79518036a98ca680c660b39de3b036de06deea51da95"
+    },
+    {
+      "path": "high_res/legacy_low_ostia_accuracy/p99_8/train/2026-08-08_02-54-08/numeric/results_train_lote_2.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "6dfaea2fa9d1b57a18c4c138c696e28e3b7a173ec6b2b0e33026f23aada62aa4",
+      "sha256_after": "694158140db95c28dcaacb1ff38e96aba594e3b7289a22b54fa7f52a6b1c3d81"
+    },
+    {
+      "path": "high_res/legacy_low_ostia_accuracy/p99_8/train/2026-08-08_02-54-08/numeric/results_train_lote_3.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "e9e85e550ccc4f4d14c3a40a54e0c569a79a0552eeee86597c875d925d89c5cb",
+      "sha256_after": "547f09616fb32e002e483e43d24e8b05a79d04fc5f9223fb87d45f2491ef38c8"
+    },
+    {
+      "path": "high_res/legacy_low_ostia_accuracy/p99_8/train/2026-08-08_02-54-08/numeric/results_train_lote_4.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "d65d1a31f0c9ace51f0353364d6d1bbbfa71aaa88bcdd182e541d57b599cd388",
+      "sha256_after": "591f0239c12b497c33bdd2494a3af39073b0b69c285a08be737a2a027964b808"
+    },
+    {
+      "path": "high_res/legacy_low_ostia_accuracy/p99_8/train/2026-08-08_02-54-08/numeric/results_train_lote_5.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "1fb6d53b9e4415b91ef6991c3d1cacc6207d4c5f2f5b11be707df0891071f89a",
+      "sha256_after": "e12c3d923a09268aa71cd1dd7687bb86f94d25562d5a1f7e83055c736010d56c"
+    },
+    {
+      "path": "high_res/legacy_low_ostia_accuracy/p99_8/val/2026-08-08_20-54-51/numeric/results_val.csv",
+      "row_count": 270,
+      "changed_cell_count": 540,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "939d1fefe49d22130f3e659f3c59921d57534853fa0b1d988a0d159c48b81da8",
+      "sha256_after": "6d31a49b8934a0ea82f1992ddf394ee1fc2e94b17778b9ffb993b837ffa4cf33"
+    },
+    {
+      "path": "high_res/legacy_low_ostia_accuracy/p99_8/val/2026-08-08_20-54-51/numeric/results_val_lote_1.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "aa5d34c60692e315d3812f4a467f25decf4fd1c27b604cea9e77d78c5b4b70d5",
+      "sha256_after": "9d385cef50b6daa36e3d6db330698e3e819928c7d9ceca6e44d8858c157aa628"
+    },
+    {
+      "path": "high_res/legacy_low_ostia_accuracy/p99_8/val/2026-08-08_20-54-51/numeric/results_val_lote_2.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "40f6d31068fa06a0bc44d232ab31e13a87f18d47ef79a7dc60163863d52744ab",
+      "sha256_after": "ac790c7c2dc4efb07aa76a4f2af3fcbd705b3f46c320baa25f61a2a3157a62b3"
+    },
+    {
+      "path": "high_res/legacy_low_ostia_accuracy/p99_8/val/2026-08-08_20-54-51/numeric/results_val_lote_3.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "0b266a62b0f576028fe73ba196bcdbed30299bd712aba90557279d9b29b2a989",
+      "sha256_after": "3d618eb3bc591d98f2dcd788100a22f6654620d3fbe0db242bfa80f207ce1bc7"
+    },
+    {
+      "path": "high_res/legacy_low_ostia_accuracy/p99_8/val/2026-08-08_20-54-51/numeric/results_val_lote_4.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "bdcf60a7cf7b3c95e422673d3d59f31ccf7a467e9c184831f196af69b19a3110",
+      "sha256_after": "8c28ffd7a14e79c53ccb224fbaa311172b20460cb37018adaa31ed171bf77d4b"
+    },
+    {
+      "path": "high_res/legacy_low_ostia_accuracy/p99_8/val/2026-08-08_20-54-51/numeric/results_val_lote_5.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "1b6d889d4398a7234bf2ba8637c8f74c30c1c43e19928e254b5106feba9399ea",
+      "sha256_after": "0f76269d0ea1d0af5334701186ea999ddb349d016ab6b1dd28a5cb4188772b39"
+    },
+    {
+      "path": "high_res/legacy_low_ostia_accuracy/p99_9/train/2026-08-08_04-19-59/numeric/results_train.csv",
+      "row_count": 30,
+      "changed_cell_count": 60,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "dee77c9ea6a6c846c84fdbc7f0f67bb1ea2e3fa2ea038e1bea8546b7040e6270",
+      "sha256_after": "bf1595f1d1a16b781e07cbfabda846d82c69fe432284132b2cbee9a52d3072b9"
+    },
+    {
+      "path": "high_res/legacy_low_ostia_accuracy/p99_9/train/2026-08-08_04-19-59/numeric/results_train_lote_1.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "a9970791bf31a412fb49ff9cd1a4befd3b85c1b99f542ba4c6dab934f28b959b",
+      "sha256_after": "fc0e415d53731db14773679931f8f83d2b73332ca88a7bb5ef326e45ee02e948"
+    },
+    {
+      "path": "high_res/legacy_low_ostia_accuracy/p99_9/train/2026-08-08_04-19-59/numeric/results_train_lote_2.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "95e7fea823f69c3190c92d4779a83a4e3237727bf24e7a5268ecf305b8dcaec8",
+      "sha256_after": "1405efed7b5acfc587bbe9b94672ea15d1200f115037ed925678e9ca641259a1"
+    },
+    {
+      "path": "high_res/legacy_low_ostia_accuracy/p99_9/train/2026-08-08_04-19-59/numeric/results_train_lote_3.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "d9a755684ad8aaa5309414cc284558f7826415fb34962d14185084008274e8c7",
+      "sha256_after": "b5fb81ec870c44affc8bbef64f35c581792525ef51f3099f70030add78bf48bb"
+    },
+    {
+      "path": "high_res/legacy_low_ostia_accuracy/p99_9/train/2026-08-08_04-19-59/numeric/results_train_lote_4.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "8cf540bc48ba2d1ad78526848a2595fb2937d4e9c1769fef8c4f997cbd7fc0d4",
+      "sha256_after": "6b7eb0d142cc1ce93790fdd3e7ebd7a2d06282721cc6a63127fd6d6db21b0080"
+    },
+    {
+      "path": "high_res/legacy_low_ostia_accuracy/p99_9/train/2026-08-08_04-19-59/numeric/results_train_lote_5.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "26bafe8b67df9625631dd1a39c03c8573fd0980bca646544d4b8252d4856ac62",
+      "sha256_after": "6ce2daaaff99240ae674f54044e735c8e075364846a4c239a036df34c80c9da8"
+    },
+    {
+      "path": "high_res/legacy_low_ostia_accuracy/p99_9/val/2026-08-11_13-31-45/numeric/results_val.csv",
+      "row_count": 270,
+      "changed_cell_count": 540,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "177e7864cc8712bb4cf2b3a8bc76f78b4312f264d7197fd6dee89a6ab9236d88",
+      "sha256_after": "dd1f2d1551f89565cfb13f85538903809e2dec0c009564e9e20c590147f067d4"
+    },
+    {
+      "path": "high_res/legacy_low_ostia_accuracy/p99_9/val/2026-08-11_13-31-45/numeric/results_val_lote_1.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "0513a6abd625d06c87073c4de40901be6f83bbc86d8ab10bf32c61ef2c9537d0",
+      "sha256_after": "245b48e0a863ab831826d5521d38035dc45b20a0cd34be23dc518a7ec3b7de16"
+    },
+    {
+      "path": "high_res/legacy_low_ostia_accuracy/p99_9/val/2026-08-11_13-31-45/numeric/results_val_lote_2.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "727569e8645366841654c7f8df6d967d49ad2ba2b72cce2eb75b02566fba9ce5",
+      "sha256_after": "78a09be896429624a0360ab39da4492bdf1b9b90397486332b64c2cec22652d2"
+    },
+    {
+      "path": "high_res/legacy_low_ostia_accuracy/p99_9/val/2026-08-11_13-31-45/numeric/results_val_lote_3.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "b5ca66cdf403bd19a2c5c8d09550aebbeaf53d6b787b773c216279ccb75ca381",
+      "sha256_after": "08b49089f16f1522a92235d4ef149d2c4503ffbf297a8af84f09fd35f9f1c712"
+    },
+    {
+      "path": "high_res/legacy_low_ostia_accuracy/p99_9/val/2026-08-11_13-31-45/numeric/results_val_lote_4.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "2a5928d4fa31c67652c3482191cb5427132268e1a82157c850707b47fc132f77",
+      "sha256_after": "9cf31efd7ff3530df439efb5ce6249bc1fd4379988a5dddf5b78f23387d57065"
+    },
+    {
+      "path": "high_res/legacy_low_ostia_accuracy/p99_9/val/2026-08-11_13-31-45/numeric/results_val_lote_5.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "fb14d4376a7849417ddec3a6d4c35ac0100d9cad8869513c4796bf2ddc07aad2",
+      "sha256_after": "72dda606718e706f9503890665ba473297c4e4bbd68328dfef6bb7a1ac6e8a97"
+    },
+    {
+      "path": "high_res/reference/test/2026-04-28_14-28-44/numeric/results_test.csv",
+      "row_count": 700,
+      "changed_cell_count": 1400,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "e125cc29b961bead5450ba847d8ca9091fce2deaf9b4724da4ed134187c66650",
+      "sha256_after": "19a5d8df02c107153d8479d93770206d7f648ba0b15e5630010245b86f510e09"
+    },
+    {
+      "path": "high_res/reference/train/2026-04-21_08-42-13/numeric/results_train.csv",
+      "row_count": 30,
+      "changed_cell_count": 60,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "55203c0b07c1aba50a3b658527c4eb2105475ea4544540a3669286099eeaf6ac",
+      "sha256_after": "195f80f1d29131a1a5e33039edb3874fab7ebdbfa6d2197c59f00da55905f22c"
+    },
+    {
+      "path": "high_res/reference/val/2026-04-21_08-42-13/numeric/results_val.csv",
+      "row_count": 270,
+      "changed_cell_count": 540,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "b09da5ae4b72a814dc37baba5ae4f67a4f11216481ecfdff57b2daf4b8439621",
+      "sha256_after": "e671cedc64d83f5c6317a3e0f9891471a99e7e74717e62dc6d2e04f0c9bd881f"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/archive/trajectory_geometry_3_5_6/train/2026-09-05_21-40-54/numeric/results_train.csv",
+      "row_count": 30,
+      "changed_cell_count": 60,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "4ea63c60435cf82490cbe2564316fab7db97212e08643882a78072c10fc4848d",
+      "sha256_after": "ef02e456f7378435ec32ade56b47bc78dac74114179298d4a75482d372ab0a7c"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/archive/trajectory_geometry_3_5_6/train/2026-09-05_21-40-54/numeric/results_train_lote_1.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "75a0c0f6f8735551b212bb91e03baa44b0698019037f662d255db476c33d6073",
+      "sha256_after": "53fdf9599216cbc69ffe2a96f321eee3a4e899ad003cde6d27f05470574764dc"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/archive/trajectory_geometry_3_5_6/train/2026-09-05_21-40-54/numeric/results_train_lote_2.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "68b51fdfd5e545e07c099db94926d6805d9956dbe965be551d70ea9bd5f14303",
+      "sha256_after": "e1f5a7fccf9464f4dba4ad9fcf38467a4ea51b3387bb7bbbca55fa80dfc23196"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/archive/trajectory_geometry_3_5_6/train/2026-09-05_21-40-54/numeric/results_train_lote_3.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "823e5b52770b0645df5dcaad9c4b9ccf5d0904c436df34d9163b3f1411d1974e",
+      "sha256_after": "71b2f4a3cd2833573e0e3b1a468eb3e575504c9786a3ec3b280e14318dc203bb"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/archive/trajectory_geometry_3_5_6/train/2026-09-05_21-40-54/numeric/results_train_lote_4.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "06c0bf38e1ad3a5236e06ffe8521b21209768f020775d9ce226f7db25327d08f",
+      "sha256_after": "eef54bc642c0ca80dcf01f5ae234a24b6a6acc7f600a57f53afd354f6596bc00"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/archive/trajectory_geometry_3_5_6/train/2026-09-05_21-40-54/numeric/results_train_lote_5.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "3e4ae642614ca1cee9f335e7a3c4f519a5c22ac7230a87f3e13dfc73107f5dea",
+      "sha256_after": "55c05d48455b9f7934a056060c2fe3af709d3b8d2f5179d043522e9bf1680624"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/archive/trajectory_geometry_3_5_6/val/2026-09-06_08-08-39/numeric/results_val.csv",
+      "row_count": 60,
+      "changed_cell_count": 120,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "ec17c7248c878aa4355b405a6a82b3d698f09133963e735ce2172cd7379d49fb",
+      "sha256_after": "7571fc38d929b542216dd77564f8e7498f919bb725d28f7ec31f6c2617e11222"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/archive/trajectory_geometry_3_5_6/val/2026-09-06_08-08-39/numeric/results_val_lote_1.csv",
+      "row_count": 12,
+      "changed_cell_count": 24,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "0a1f444937275ea8e99f72f0634177273abde724d0fa6b65c404d6e20a8b2860",
+      "sha256_after": "61c951435c345c6903f93c736cf065b452a99cd45928169fbb61a1cb583c589f"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/archive/trajectory_geometry_3_5_6/val/2026-09-06_08-08-39/numeric/results_val_lote_2.csv",
+      "row_count": 12,
+      "changed_cell_count": 24,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "d15d6db5fdd7008b7e33355d5b979d5d1b48159d34bf6d418d14a8b8456bdc94",
+      "sha256_after": "71f19294e4eb9adfddc38aa89834e7518e085f9480e5f240c4191e28582d1e11"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/archive/trajectory_geometry_3_5_6/val/2026-09-06_08-08-39/numeric/results_val_lote_3.csv",
+      "row_count": 12,
+      "changed_cell_count": 24,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "75d3b149d5976ed3744b2261a74c47dbd055496ab664600a5c40cba970278e5b",
+      "sha256_after": "ae1eade4986b0055923d87b3e303b84cb1aa5ce3941df3bb074d21f22f05c2ba"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/archive/trajectory_geometry_3_5_6/val/2026-09-06_08-08-39/numeric/results_val_lote_4.csv",
+      "row_count": 12,
+      "changed_cell_count": 24,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "49ca662ba7e658ca62c490a7f56512ce68d0ca31d1590b6ac8ba060387fb0694",
+      "sha256_after": "746e0eca3eec850d0ff7107fabae971fb3753f8e9742b9a3cadb88184d4c7225"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/archive/trajectory_geometry_3_5_6/val/2026-09-06_08-08-39/numeric/results_val_lote_5.csv",
+      "row_count": 12,
+      "changed_cell_count": 24,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "745d12c89b67e7637f64c22fc57e28fc60f2f22d14f4b5e07c263e049e88b197",
+      "sha256_after": "89dfa203a75aca70e673070595d91c43b4a86ab27cc06aea5e13db2d4abe76bb"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/test/ostia_comparison/baseline_pad0/2026-09-07_10-37-23/numeric/results_test.csv",
+      "row_count": 700,
+      "changed_cell_count": 1400,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "e07a7dd59139e6fdcf75859eeb702231c1adf0dec982aed8498b1c9ee827140d",
+      "sha256_after": "675907b6903d1fc7985365d1a65100c31bca73c70cf54d58438095702af71092"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/test/ostia_comparison/baseline_pad0/2026-09-07_10-37-23/numeric/results_test_lote_1.csv",
+      "row_count": 140,
+      "changed_cell_count": 280,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "7b12bbfb96a919f62761fb95e7bf53c76e20731cb9976e0a35acc481a4451696",
+      "sha256_after": "983b5afacdf3c4a2faaae9cc7d404a5dc9086797eef239c07f596c495250852f"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/test/ostia_comparison/baseline_pad0/2026-09-07_10-37-23/numeric/results_test_lote_2.csv",
+      "row_count": 140,
+      "changed_cell_count": 280,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "bc5ed20289b50a166cdad5f3b75552d08fcefa3b4c8d0ee1037edd29520814a3",
+      "sha256_after": "f79c82b0a69bfd895e6f804a126a46d8a466981355f355d023b4adf02210a063"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/test/ostia_comparison/baseline_pad0/2026-09-07_10-37-23/numeric/results_test_lote_3.csv",
+      "row_count": 140,
+      "changed_cell_count": 280,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "aa0c0bfd53f9a163b5d7dedeecc75951f4f21c73ddd4405e3d109b8a68853d4a",
+      "sha256_after": "ab0330da73e3102eca8402967618ae296e0e602af5fc004f04b7bf35d3046ddb"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/test/ostia_comparison/baseline_pad0/2026-09-07_10-37-23/numeric/results_test_lote_4.csv",
+      "row_count": 140,
+      "changed_cell_count": 280,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "a4a4b53e0f5be46e8886068248f7af8d0fff11e0b7b9ec03cde460f7d6897f4a",
+      "sha256_after": "eda0b0f01d185cfb82aa8a8e6bb613e4724f5f214719ab83f60c9744295c41be"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/test/ostia_comparison/baseline_pad0/2026-09-07_10-37-23/numeric/results_test_lote_5.csv",
+      "row_count": 140,
+      "changed_cell_count": 280,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "6b58a1de5ad89ebe9c852312c8e2a8ffb7c19faa4325ae4b1e1f1bddada3ea21",
+      "sha256_after": "9b005bfcfd449ebc7fc46ae0d84871fc673871ec73ce6f28344ba6063f2b8c6c"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/test/ostia_comparison/lower100_pad2/2026-09-07_10-37-38/numeric/results_test.csv",
+      "row_count": 700,
+      "changed_cell_count": 1400,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "fd46c861574f6c24e97201a03c971fc32a13ebd57e468678c3bacbb2bbebfbe6",
+      "sha256_after": "c82bd290730d2d9bac05d69a7ea3095eb538a65c8209a1fa19b04565dc976d31"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/test/ostia_comparison/lower100_pad2/2026-09-07_10-37-38/numeric/results_test_lote_1.csv",
+      "row_count": 140,
+      "changed_cell_count": 280,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "b02f2fc4cb42fe6e719b74bee71498406fec36b0c9326d4daf77e02283acd4a9",
+      "sha256_after": "f3d86b0d85c8d3c835b4b7cc6ca2209e764e53aa174cee010a2d1987d2dab700"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/test/ostia_comparison/lower100_pad2/2026-09-07_10-37-38/numeric/results_test_lote_2.csv",
+      "row_count": 140,
+      "changed_cell_count": 280,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "b53d65f04109bd4cf56650ce77adaee9ea6f5f9db0d34fbd06f25949160c216c",
+      "sha256_after": "cf58f4f98b754bdd10f647f6fa0b137acef5864c9abf6c617f00425904d0d098"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/test/ostia_comparison/lower100_pad2/2026-09-07_10-37-38/numeric/results_test_lote_3.csv",
+      "row_count": 140,
+      "changed_cell_count": 280,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "6c6ce619310500390339cc9a54b9e3fc2a904097a0d80771bbc920599240f8ef",
+      "sha256_after": "169ed1f871da97f162a51f51e8eed1121ea05552a5d679b462864c6720220dea"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/test/ostia_comparison/lower100_pad2/2026-09-07_10-37-38/numeric/results_test_lote_4.csv",
+      "row_count": 140,
+      "changed_cell_count": 280,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "8594eca1b7ce3e0828712595d588d66332cf8c1d5a874a4eedf5f8980d8b51f3",
+      "sha256_after": "0d07d21322f7d6ee62270d7464aba669ea199ab055b13983a52f9da1955c0adb"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/test/ostia_comparison/lower100_pad2/2026-09-07_10-37-38/numeric/results_test_lote_5.csv",
+      "row_count": 140,
+      "changed_cell_count": 280,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "89b32a9d35b7dbce7c9141d57f5ec5a256a3b7458207c1cc099ecce0b607ae88",
+      "sha256_after": "c5b5631ed3e149f4307cddfbe15c433d0c0fd11de9f4fb3577cdf34691814c2a"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/archive/ostia_pad3_sensitivity/pad3_reference/2026-09-06_11-10-12/numeric/results_train.csv",
+      "row_count": 30,
+      "changed_cell_count": 60,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "8436bacaaff3c434da45a0c74f55f0c7c12d0fc6e21f1dc7145cffe96eec1377",
+      "sha256_after": "7a8ba5a531e0c92c289bce14e9566328ac590188370b2ddb0e681105cc6b8144"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/archive/ostia_pad3_sensitivity/pad3_reference/2026-09-06_11-10-12/numeric/results_train_lote_1.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "5aaa3b3eca5548b5adbc1753b410d3116e49c6be685833cdd7b2928752e388d5",
+      "sha256_after": "7ee39833f7463b8a8b3085302345de8101be893005a13a821bef533f3eff11ac"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/archive/ostia_pad3_sensitivity/pad3_reference/2026-09-06_11-10-12/numeric/results_train_lote_2.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "46e34d9aab024f69fbdeee9ed9b397f94d13b70c56b7f2596c10f3cef17b5d29",
+      "sha256_after": "106b6391bebc8a853c30006396270ad21c73d92edf7a627ccd4436e0fab4467d"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/archive/ostia_pad3_sensitivity/pad3_reference/2026-09-06_11-10-12/numeric/results_train_lote_3.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "f0c750bdbe1141d74229ac93e8d614cd798455229cfb975569a9ab70fbbd3028",
+      "sha256_after": "a8b13de7603e64dee6e2e3023bfe781d3be731a7f318218275bcb80eadbddf5f"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/archive/ostia_pad3_sensitivity/pad3_reference/2026-09-06_11-10-12/numeric/results_train_lote_4.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "9e13f305833c415ebc4fc56a681d94777beb346b761813008c9054c58e90da26",
+      "sha256_after": "d4e9d0fec113b181f8666b38c4d1cf8c407d4deaa92cf8f91467e763337747d6"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/archive/ostia_pad3_sensitivity/pad3_reference/2026-09-06_11-10-12/numeric/results_train_lote_5.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "1fb0fcb5b0acd10b2827916a9d1cf8e1c707a21c19498803543bbfeb3daed9fa",
+      "sha256_after": "db92d7fd0d014504e9e2e735c9a06fdc9979890793857e397f948e0182259d7f"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/archive/ostia_pad3_sensitivity/pad3_smooth_0_5/2026-09-06_13-01-47/numeric/results_train.csv",
+      "row_count": 30,
+      "changed_cell_count": 60,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "093366a659817c970fd14f29773c46492a8b5dfe0a5c90eeb486136b87e900ec",
+      "sha256_after": "cdba0c51c5c3b78267274894007829d35f314b40714132c6313b21d4b19a7c9d"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/archive/ostia_pad3_sensitivity/pad3_smooth_0_5/2026-09-06_13-01-47/numeric/results_train_lote_1.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "57f8cc08fdcefe152db7764b4ce7262eb3d1c1cb475cd8a39891b6acfce56343",
+      "sha256_after": "fa8bd7657d0817758932186fc8137c60d92f3e48db2a810807b039d829f824da"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/archive/ostia_pad3_sensitivity/pad3_smooth_0_5/2026-09-06_13-01-47/numeric/results_train_lote_2.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "46e34d9aab024f69fbdeee9ed9b397f94d13b70c56b7f2596c10f3cef17b5d29",
+      "sha256_after": "106b6391bebc8a853c30006396270ad21c73d92edf7a627ccd4436e0fab4467d"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/archive/ostia_pad3_sensitivity/pad3_smooth_0_5/2026-09-06_13-01-47/numeric/results_train_lote_3.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "f0c750bdbe1141d74229ac93e8d614cd798455229cfb975569a9ab70fbbd3028",
+      "sha256_after": "a8b13de7603e64dee6e2e3023bfe781d3be731a7f318218275bcb80eadbddf5f"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/archive/ostia_pad3_sensitivity/pad3_smooth_0_5/2026-09-06_13-01-47/numeric/results_train_lote_4.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "9e13f305833c415ebc4fc56a681d94777beb346b761813008c9054c58e90da26",
+      "sha256_after": "d4e9d0fec113b181f8666b38c4d1cf8c407d4deaa92cf8f91467e763337747d6"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/archive/ostia_pad3_sensitivity/pad3_smooth_0_5/2026-09-06_13-01-47/numeric/results_train_lote_5.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "1fb0fcb5b0acd10b2827916a9d1cf8e1c707a21c19498803543bbfeb3daed9fa",
+      "sha256_after": "db92d7fd0d014504e9e2e735c9a06fdc9979890793857e397f948e0182259d7f"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/baseline_fixed_levelset_p99_9_m300/2026-08-24_11-09-38/numeric/results_train.csv",
+      "row_count": 30,
+      "changed_cell_count": 60,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "474c9e55db68f95f5c2817e642b5a7eab4b5be2dc29e15b0b22c8ff34f1ccb6f",
+      "sha256_after": "8179719fcca2765e990204b4332c17acb2fd710f762cfbcabfedf7a816a2d58d"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/baseline_fixed_levelset_p99_9_m300/2026-08-24_11-09-38/numeric/results_train_lote_1.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "1fec964eee6d25a04fcc6ec0c08b698f61842451bd1450213959654c7e81e9ab",
+      "sha256_after": "fb8aab8c3b6a5d98e72f692b89b828b6547d3807416786e3a73d4cdaa61a36b5"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/baseline_fixed_levelset_p99_9_m300/2026-08-24_11-09-38/numeric/results_train_lote_2.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "979c0dadefd216689684b87092064f573d67435f6bb8ab1320120d382c89d740",
+      "sha256_after": "6140890b1f72d1223e730ac876a5e9b4adeb4573623d4629f215d72d2cd01f81"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/baseline_fixed_levelset_p99_9_m300/2026-08-24_11-09-38/numeric/results_train_lote_3.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "3e46d99a2b56b0941a164125bf6020a24c72e8b1d1f6fc70b76f7fe2f7d73f06",
+      "sha256_after": "c217028e27de0b6cd09998561642f8c04d0b0574eb934dfffa7bd12ddf832ac5"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/baseline_fixed_levelset_p99_9_m300/2026-08-24_11-09-38/numeric/results_train_lote_4.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "74ee7a26c195945caeef308874b155b5c97bf000dd5cfedab1367dff0148db7e",
+      "sha256_after": "7550957dcac5109feac08d197253d9ec1db2767fb694c1fe2dda3440dc9918ba"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/baseline_fixed_levelset_p99_9_m300/2026-08-24_11-09-38/numeric/results_train_lote_5.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "560f8f2655212f3fb46f6a8de3b40464ad841702b0c31de585d2d8065ba47bbc",
+      "sha256_after": "0f5b3db3db2798a641bb1dbbfa19c7a7c81cf089965a8a3d23f75934e3ad7c7c"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/filter_envelope_generalization/filter_envelope_no_recovery_reference_k2_25_margin10_p99_9_m300/2026-08-28_10-01-36/numeric/results_train.csv",
+      "row_count": 30,
+      "changed_cell_count": 60,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "52406e580e2a2af5f0b6e829b132f9289fcb5f00ca7a43ae2be7a209c3da5023",
+      "sha256_after": "fe660b281c5c07153e2879cbdc37ebbd1c389a569cf3e072841979cd386dec3e"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/filter_envelope_generalization/filter_envelope_no_recovery_reference_k2_25_margin10_p99_9_m300/2026-08-28_10-01-36/numeric/results_train_lote_1.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "b824277b41719b2e67db5c7f19612b3159dc61bf1e482b77e69d6ede479278d7",
+      "sha256_after": "f98655ec8d1fdd77cd9f82a262cb405bb4aaaaa379e5a6fb40ad17cd44611399"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/filter_envelope_generalization/filter_envelope_no_recovery_reference_k2_25_margin10_p99_9_m300/2026-08-28_10-01-36/numeric/results_train_lote_2.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "2e19326cceeb466ea92c8fc15a1b7658441788c575d78fcee5a7b6a730e57a27",
+      "sha256_after": "70303a86cd9107021ca9454ead6dd716eae7924b36b824787de26b4a5e85fa2f"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/filter_envelope_generalization/filter_envelope_no_recovery_reference_k2_25_margin10_p99_9_m300/2026-08-28_10-01-36/numeric/results_train_lote_3.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "fea0d2f97c511d6a4dba25bb936f191f912e35eb531e65afbfaafe1cdf7b7a7d",
+      "sha256_after": "e37ec3836b4a8a15a4754d0b1b3f0dc829e29f46356837e714fd69c821020d7a"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/filter_envelope_generalization/filter_envelope_no_recovery_reference_k2_25_margin10_p99_9_m300/2026-08-28_10-01-36/numeric/results_train_lote_4.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "9e2ab5deb245ac51e8a5465e927b003a94b94191d0285bdc769025fd40b3e44d",
+      "sha256_after": "43e4d22ba85c7ea78544aeb2fee0f44b72a059d3d8885f295ca9971793ed56ff"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/filter_envelope_generalization/filter_envelope_no_recovery_reference_k2_25_margin10_p99_9_m300/2026-08-28_10-01-36/numeric/results_train_lote_5.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "a1f210374373c8e8a08f9f9f6b63f32d7ae6c6907c2dc5ab01e39f609c49d958",
+      "sha256_after": "c14c005dfa4e88c29f9cf86a2253fe012c13ca31270479a5a04d06869470edf1"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/levelset_b0_6_r0_10_i26_p99_9_m300/2026-08-29_18-03-58/numeric/results_train.csv",
+      "row_count": 30,
+      "changed_cell_count": 60,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "c555ef4f73eb8f294e500ec101385a7181d04564e44d82e8030b3331a7ea91a1",
+      "sha256_after": "f2dcc3ce2b7753d0e9a490e43c550fda640f4b8755b059420c4a493e5ea1e03b"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/levelset_b0_6_r0_10_i26_p99_9_m300/2026-08-29_18-03-58/numeric/results_train_lote_1.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "b7e9e9b13b5b5927fa1edca4a271cec75daa0fc1e66892e6dccb116192367057",
+      "sha256_after": "5f0e383decd003f7b787745bae44123f2de45d4eab71808a2bd15df359e2dc65"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/levelset_b0_6_r0_10_i26_p99_9_m300/2026-08-29_18-03-58/numeric/results_train_lote_2.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "fbe57df6bdd6368bf0d54998cc94f0619084456392a0d60ac986acaf040c2cbb",
+      "sha256_after": "9e0e1617337750e2596ae01bbf664dcfda040743977822cb07b37a070f35c81c"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/levelset_b0_6_r0_10_i26_p99_9_m300/2026-08-29_18-03-58/numeric/results_train_lote_3.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "5edb91744b48cbc2aa36147891ce811f06947a8af63239e3de32487688904fee",
+      "sha256_after": "821730c4fbe843d80dc8b10276f5eb43743a0133132d09c66ea2446139427f86"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/levelset_b0_6_r0_10_i26_p99_9_m300/2026-08-29_18-03-58/numeric/results_train_lote_4.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "90127e32b629a473916878cc419c7de4a4d00c304c6ff2cfdf23fe2f1a3c2a0c",
+      "sha256_after": "b7a26d849e00e74498bf17e09f881add4c6b3a8d2bb4b348d3e07e5b548e06fe"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/levelset_b0_6_r0_10_i26_p99_9_m300/2026-08-29_18-03-58/numeric/results_train_lote_5.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "7f3fad0f32200e3c044be3a3b72df6dde1332493782324cd7b6219b8c9e464e1",
+      "sha256_after": "ce277d79d51219f6b1915bdcab7cace8148621e8451be2e206415b4ac04b1dda"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/ostia_localization/baseline_pad0/2026-09-04_10-06-02/numeric/results_train.csv",
+      "row_count": 30,
+      "changed_cell_count": 60,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "df0ae6668eb72f5a8d8232ce1f9d2657e5813dd2a1a62e1aed3c036d4a434de7",
+      "sha256_after": "0c1d1ab97ad966945f34d68f08c0715e569b438e347cbc59e4075d57be93db6b"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/ostia_localization/baseline_pad0/2026-09-04_10-06-02/numeric/results_train_lote_1.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "75a0c0f6f8735551b212bb91e03baa44b0698019037f662d255db476c33d6073",
+      "sha256_after": "53fdf9599216cbc69ffe2a96f321eee3a4e899ad003cde6d27f05470574764dc"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/ostia_localization/baseline_pad0/2026-09-04_10-06-02/numeric/results_train_lote_2.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "7d17b2326e8e1432e107b123bae016c288c17dfd786ea01d6d3d2dd382a167cc",
+      "sha256_after": "88b3da68a0c3142bb408ffa084957769a02e84b5c58893228ef1a4ec09cee629"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/ostia_localization/baseline_pad0/2026-09-04_10-06-02/numeric/results_train_lote_3.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "823e5b52770b0645df5dcaad9c4b9ccf5d0904c436df34d9163b3f1411d1974e",
+      "sha256_after": "71b2f4a3cd2833573e0e3b1a468eb3e575504c9786a3ec3b280e14318dc203bb"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/ostia_localization/baseline_pad0/2026-09-04_10-06-02/numeric/results_train_lote_4.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "06c0bf38e1ad3a5236e06ffe8521b21209768f020775d9ce226f7db25327d08f",
+      "sha256_after": "eef54bc642c0ca80dcf01f5ae234a24b6a6acc7f600a57f53afd354f6596bc00"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/ostia_localization/baseline_pad0/2026-09-04_10-06-02/numeric/results_train_lote_5.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "3a74d4e2afc285c4bbfe9a5d486578b5da249d878c2d6d534219553e28f95d7e",
+      "sha256_after": "04e71a315c56379a16e544eae89e7c5ffd6999018fc529f4f911ba3e0ee456e2"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/ostia_localization/lower100_pad2/2026-09-06_08-08-25/numeric/results_train.csv",
+      "row_count": 30,
+      "changed_cell_count": 60,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "e931cda79fe1ee510c0db9357f18c108966398b2a606b8019ec4769d2226dae7",
+      "sha256_after": "029fbfc3c3eb186a7f1a1df94a4d7f6f834c6f1692abe75096f5f35e830404b9"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/ostia_localization/lower100_pad2/2026-09-06_08-08-25/numeric/results_train_lote_1.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "86adb9ef1f054ecfc80884b70b9c894484e097406b7196c72c1ec00d6f5a71dc",
+      "sha256_after": "a303bd3f6440b082e8a9681d918d2a368155ff4763e6893e053afbd3fa8e5c86"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/ostia_localization/lower100_pad2/2026-09-06_08-08-25/numeric/results_train_lote_2.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "ca6cd5f3d30eddce649f3fc68dac0723a282c2ad5d3232bc41433327d67c5bad",
+      "sha256_after": "6e2d1d4e6b2d30bdd3ef3a3a4af0cc499945fb087a2db70f5ac97e7f454d7694"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/ostia_localization/lower100_pad2/2026-09-06_08-08-25/numeric/results_train_lote_3.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "fc5f4a988481854b134bed5d25906841b1318b6dfcd68d5c44b7d6d0a1e3d28c",
+      "sha256_after": "06a4b2b80e01e45dd2befbde012036dda9ecaa7100eb8a5b143c2c402d5ebdf9"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/ostia_localization/lower100_pad2/2026-09-06_08-08-25/numeric/results_train_lote_4.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "516d5c7b512fea1d532e7e57baa74c729e1c05b306985958866f7afe9a65a5b5",
+      "sha256_after": "5f2107ece07b2c50df16d8772caac72d1c01c9fa2390ac258756b208b650402d"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/ostia_localization/lower100_pad2/2026-09-06_08-08-25/numeric/results_train_lote_5.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "1b2565a6999c1da6061445f008bf2de93e5a4a1f7d7b1e9b42d674ac02d2ae58",
+      "sha256_after": "603393ab0551c5fbc19f376381a2a05c769248567e9d64fa9a0d89fe07499b42"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/ostia_localization/lower100_pad3/2026-09-06_08-27-47/numeric/results_train.csv",
+      "row_count": 30,
+      "changed_cell_count": 60,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "8436bacaaff3c434da45a0c74f55f0c7c12d0fc6e21f1dc7145cffe96eec1377",
+      "sha256_after": "7a8ba5a531e0c92c289bce14e9566328ac590188370b2ddb0e681105cc6b8144"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/ostia_localization/lower100_pad3/2026-09-06_08-27-47/numeric/results_train_lote_1.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "5aaa3b3eca5548b5adbc1753b410d3116e49c6be685833cdd7b2928752e388d5",
+      "sha256_after": "7ee39833f7463b8a8b3085302345de8101be893005a13a821bef533f3eff11ac"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/ostia_localization/lower100_pad3/2026-09-06_08-27-47/numeric/results_train_lote_2.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "46e34d9aab024f69fbdeee9ed9b397f94d13b70c56b7f2596c10f3cef17b5d29",
+      "sha256_after": "106b6391bebc8a853c30006396270ad21c73d92edf7a627ccd4436e0fab4467d"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/ostia_localization/lower100_pad3/2026-09-06_08-27-47/numeric/results_train_lote_3.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "f0c750bdbe1141d74229ac93e8d614cd798455229cfb975569a9ab70fbbd3028",
+      "sha256_after": "a8b13de7603e64dee6e2e3023bfe781d3be731a7f318218275bcb80eadbddf5f"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/ostia_localization/lower100_pad3/2026-09-06_08-27-47/numeric/results_train_lote_4.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "9e13f305833c415ebc4fc56a681d94777beb346b761813008c9054c58e90da26",
+      "sha256_after": "d4e9d0fec113b181f8666b38c4d1cf8c407d4deaa92cf8f91467e763337747d6"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/ostia_localization/lower100_pad3/2026-09-06_08-27-47/numeric/results_train_lote_5.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "1fb0fcb5b0acd10b2827916a9d1cf8e1c707a21c19498803543bbfeb3daed9fa",
+      "sha256_after": "db92d7fd0d014504e9e2e735c9a06fdc9979890793857e397f948e0182259d7f"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/robust_filter_synthetic5_envelope_k2_25_margin10_p99_9_m300/2026-08-27_08-10-20/numeric/results_train.csv",
+      "row_count": 30,
+      "changed_cell_count": 60,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "e483b99233f77d544e80145b7f1c80ce58d1bf66f7d7cbdaa3fe7dd21d5edd40",
+      "sha256_after": "0e7d95dacff621a8f22e9c9981e7f93730dfdac319c224caa9554cf5e3284778"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/robust_filter_synthetic5_envelope_k2_25_margin10_p99_9_m300/2026-08-27_08-10-20/numeric/results_train_lote_1.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "b824277b41719b2e67db5c7f19612b3159dc61bf1e482b77e69d6ede479278d7",
+      "sha256_after": "f98655ec8d1fdd77cd9f82a262cb405bb4aaaaa379e5a6fb40ad17cd44611399"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/robust_filter_synthetic5_envelope_k2_25_margin10_p99_9_m300/2026-08-27_08-10-20/numeric/results_train_lote_2.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "2e19326cceeb466ea92c8fc15a1b7658441788c575d78fcee5a7b6a730e57a27",
+      "sha256_after": "70303a86cd9107021ca9454ead6dd716eae7924b36b824787de26b4a5e85fa2f"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/robust_filter_synthetic5_envelope_k2_25_margin10_p99_9_m300/2026-08-27_08-10-20/numeric/results_train_lote_3.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "68f0afdf60ec48a70734cde16f4cbb6c0340c51ea405e6464d403adb49f116dc",
+      "sha256_after": "0097723b25104147b862ac6709b449b1467b555fb76be3d4e29ed531f6022a7f"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/robust_filter_synthetic5_envelope_k2_25_margin10_p99_9_m300/2026-08-27_08-10-20/numeric/results_train_lote_4.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "9e2ab5deb245ac51e8a5465e927b003a94b94191d0285bdc769025fd40b3e44d",
+      "sha256_after": "43e4d22ba85c7ea78544aeb2fee0f44b72a059d3d8885f295ca9971793ed56ff"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/robust_filter_synthetic5_envelope_k2_25_margin10_p99_9_m300/2026-08-27_08-10-20/numeric/results_train_lote_5.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "a1f210374373c8e8a08f9f9f6b63f32d7ae6c6907c2dc5ab01e39f609c49d958",
+      "sha256_after": "c14c005dfa4e88c29f9cf86a2253fe012c13ca31270479a5a04d06869470edf1"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/selected_hough18_29_filter_envelope_p99_9_m300/2026-09-01_07-29-22/numeric/results_train.csv",
+      "row_count": 30,
+      "changed_cell_count": 60,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "23fd351536fab32f2ca5cb2a96269b2dd913bff59ea817971929f3d7bd3042bf",
+      "sha256_after": "2381d85adea985d19ac454aff3cfdc19599f60b6da56f88158846a6e1ac960e7"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/selected_hough18_29_filter_envelope_p99_9_m300/2026-09-01_07-29-22/numeric/results_train_lote_1.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "ad677378f5ef7b5e1480005d64d3363eb6375276debcb9c66987a1c13284ef94",
+      "sha256_after": "b38569818f6916081c51189cbfa292184c34437d3edc37b7f98db63d4b406da7"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/selected_hough18_29_filter_envelope_p99_9_m300/2026-09-01_07-29-22/numeric/results_train_lote_2.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "c1a7e4cc539aafd3b6fe3c6209671f22cb525733ba8108c003d8369167f7c819",
+      "sha256_after": "e57996b71ae7b3b534aafbe951e2eb6ecc78a937c1f300596b960580cbc0744a"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/selected_hough18_29_filter_envelope_p99_9_m300/2026-09-01_07-29-22/numeric/results_train_lote_3.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "5f83cf2d59a6f0e169aeb092a72c65119a720d3f03b4feb8f562345dce189705",
+      "sha256_after": "3c537c232ee2161c0c18343776a122a7404cd374ad7da1e47d31aacb64eed221"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/selected_hough18_29_filter_envelope_p99_9_m300/2026-09-01_07-29-22/numeric/results_train_lote_4.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "d1529c33467761f2e379cbec92fbfc469322e5d97fef26caa7bba5061c39d98c",
+      "sha256_after": "e030e71b3781be480f9fb5b72a73853b69029c9b70fd93b714fa3a94e0be5508"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/selected_hough18_29_filter_envelope_p99_9_m300/2026-09-01_07-29-22/numeric/results_train_lote_5.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "6c5c400d83e71e0d26d5de5802812191db04622a53c23ba22e0635c1dc50b35d",
+      "sha256_after": "76d36ed9f284f361a4b4d1eae55ff65debd5a239c93c99435ca2483deab80ef8"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/trajectory_geometry_r4_8_c8_0_p99_9_m300/2026-09-05_19-24-41/numeric/results_train.csv",
+      "row_count": 30,
+      "changed_cell_count": 60,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "df0ae6668eb72f5a8d8232ce1f9d2657e5813dd2a1a62e1aed3c036d4a434de7",
+      "sha256_after": "0c1d1ab97ad966945f34d68f08c0715e569b438e347cbc59e4075d57be93db6b"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/trajectory_geometry_r4_8_c8_0_p99_9_m300/2026-09-05_19-24-41/numeric/results_train_lote_1.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "75a0c0f6f8735551b212bb91e03baa44b0698019037f662d255db476c33d6073",
+      "sha256_after": "53fdf9599216cbc69ffe2a96f321eee3a4e899ad003cde6d27f05470574764dc"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/trajectory_geometry_r4_8_c8_0_p99_9_m300/2026-09-05_19-24-41/numeric/results_train_lote_2.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "7d17b2326e8e1432e107b123bae016c288c17dfd786ea01d6d3d2dd382a167cc",
+      "sha256_after": "88b3da68a0c3142bb408ffa084957769a02e84b5c58893228ef1a4ec09cee629"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/trajectory_geometry_r4_8_c8_0_p99_9_m300/2026-09-05_19-24-41/numeric/results_train_lote_3.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "823e5b52770b0645df5dcaad9c4b9ccf5d0904c436df34d9163b3f1411d1974e",
+      "sha256_after": "71b2f4a3cd2833573e0e3b1a468eb3e575504c9786a3ec3b280e14318dc203bb"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/trajectory_geometry_r4_8_c8_0_p99_9_m300/2026-09-05_19-24-41/numeric/results_train_lote_4.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "06c0bf38e1ad3a5236e06ffe8521b21209768f020775d9ce226f7db25327d08f",
+      "sha256_after": "eef54bc642c0ca80dcf01f5ae234a24b6a6acc7f600a57f53afd354f6596bc00"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/train/trajectory_geometry_r4_8_c8_0_p99_9_m300/2026-09-05_19-24-41/numeric/results_train_lote_5.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "3a74d4e2afc285c4bbfe9a5d486578b5da249d878c2d6d534219553e28f95d7e",
+      "sha256_after": "04e71a315c56379a16e544eae89e7c5ffd6999018fc529f4f911ba3e0ee456e2"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/archive/ostia_pad3_sensitivity/pad3_reference/2026-09-06_14-34-09/numeric/results_val.csv",
+      "row_count": 60,
+      "changed_cell_count": 120,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "23ca8a3df7b3ed8434b6a916fd218470c190454b2f27b18c629f3fcb643ee750",
+      "sha256_after": "43f2b6b48ea15b36b4cfc7bd9801eaf8d25150c4220323cf73a4a39290449a89"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/archive/ostia_pad3_sensitivity/pad3_reference/2026-09-06_14-34-09/numeric/results_val_lote_1.csv",
+      "row_count": 12,
+      "changed_cell_count": 24,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "0e0f76972633eed1256e76b0754a703f0781615444afa8b582fa145025ee9378",
+      "sha256_after": "0f74d667f4479fff405622cde6bfa12b1146df366ca2c67ced79c77fba012c46"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/archive/ostia_pad3_sensitivity/pad3_reference/2026-09-06_14-34-09/numeric/results_val_lote_2.csv",
+      "row_count": 12,
+      "changed_cell_count": 24,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "21cec645685904dd101d6ba419152333c82eba2d1ba130e285019536087cd5b0",
+      "sha256_after": "4943f739ddd281b360b6871999c72e1ccb43a204011d5fc43a87cd5e9d37a0f3"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/archive/ostia_pad3_sensitivity/pad3_reference/2026-09-06_14-34-09/numeric/results_val_lote_3.csv",
+      "row_count": 12,
+      "changed_cell_count": 24,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "bcab191e652f16fd32d2b49bc4068152dbc536b68047485359bfb85492e4b465",
+      "sha256_after": "2d001c664469bc6af361fe9b7244bbf272b80fb29ead476da9be72ef32b4c32a"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/archive/ostia_pad3_sensitivity/pad3_reference/2026-09-06_14-34-09/numeric/results_val_lote_4.csv",
+      "row_count": 12,
+      "changed_cell_count": 24,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "06e80fab7ca112d4adcca97c04a176819abaa8cb661f5bd81054684d7c8d57af",
+      "sha256_after": "5878a1a7b0a781241aaf6005c09636ac3ac7fdb93de870687a123fbf180624ca"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/archive/ostia_pad3_sensitivity/pad3_reference/2026-09-06_14-34-09/numeric/results_val_lote_5.csv",
+      "row_count": 12,
+      "changed_cell_count": 24,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "e54b232f569b339f997c0d5ab64110fc922d7a6340fc69c05aeb6d5f97f3ec31",
+      "sha256_after": "15f6da41a6b39aca21ac912309906b20dfcbe19901a39f49a2a49929fcfcaf59"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/archive/ostia_pad3_sensitivity/pad3_smooth_0_5/2026-09-06_18-13-12/numeric/results_val.csv",
+      "row_count": 60,
+      "changed_cell_count": 120,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "f3c4674376f1dbdb7fc4cdd6e10369843f1e3b6c440c8a99b68b83fd27e9f90d",
+      "sha256_after": "5bfccd3f367c8a2141720bd79de6038f4a602de3836c46b37a73c8e6f08f0b4a"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/archive/ostia_pad3_sensitivity/pad3_smooth_0_5/2026-09-06_18-13-12/numeric/results_val_lote_1.csv",
+      "row_count": 12,
+      "changed_cell_count": 24,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "75df79f6dbb97e7d153c087ccde6cbce6048542c9154bbf6d3f5eade5880a204",
+      "sha256_after": "1c8d5ebe08688d84a34f071f9496d9af6e0e05d601c6ed268b60c8bc9c6e4742"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/archive/ostia_pad3_sensitivity/pad3_smooth_0_5/2026-09-06_18-13-12/numeric/results_val_lote_2.csv",
+      "row_count": 12,
+      "changed_cell_count": 24,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "8c2a73e26023152c2b807687eb6a3d6e016a518bd9394b4f87c571408a15ab28",
+      "sha256_after": "f295a3e25c6a27a7a3860e9fa3c677dc63aff862e3c3fbfca639fc3714131df8"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/archive/ostia_pad3_sensitivity/pad3_smooth_0_5/2026-09-06_18-13-12/numeric/results_val_lote_3.csv",
+      "row_count": 12,
+      "changed_cell_count": 24,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "64c286803a6dd0cf85b11053db0952a2864588c7dd8a18390c3f5e2d596c1b1a",
+      "sha256_after": "7f7718b3a49fa50e78895ed2eab54893a707101081738d5d6c5040f16eeac77d"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/archive/ostia_pad3_sensitivity/pad3_smooth_0_5/2026-09-06_18-13-12/numeric/results_val_lote_4.csv",
+      "row_count": 12,
+      "changed_cell_count": 24,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "721ad41066d9caec67195e7e72ec3295a8a24335267274ff438e13e853f0e105",
+      "sha256_after": "1173df526d24bc3467bb8c1aedb15fa32b4a0062f230a827bb3e630fbfe7d48a"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/archive/ostia_pad3_sensitivity/pad3_smooth_0_5/2026-09-06_18-13-12/numeric/results_val_lote_5.csv",
+      "row_count": 12,
+      "changed_cell_count": 24,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "e54b232f569b339f997c0d5ab64110fc922d7a6340fc69c05aeb6d5f97f3ec31",
+      "sha256_after": "15f6da41a6b39aca21ac912309906b20dfcbe19901a39f49a2a49929fcfcaf59"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/baseline_fixed_levelset_p99_9_m300/2026-08-24_11-14-04/numeric/results_val.csv",
+      "row_count": 60,
+      "changed_cell_count": 120,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "a77d577b008f0b2fb351adb6485410a1c339ad7b5cbadd200fbf440f0002902a",
+      "sha256_after": "76d028e0d01b30d55c87dcc2626b3dd251626b077c0a95740f27f0fb65d1a106"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/baseline_fixed_levelset_p99_9_m300/2026-08-24_11-14-04/numeric/results_val_lote_1.csv",
+      "row_count": 12,
+      "changed_cell_count": 24,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "53722d040266964f9a27ca0aeac0b066c6045cdb7d05997679fb72e8739474e5",
+      "sha256_after": "a1258ebaed0c47cdc99ddbe1265e0293ebc19644e02a96e49e129c951f19d9ea"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/baseline_fixed_levelset_p99_9_m300/2026-08-24_11-14-04/numeric/results_val_lote_2.csv",
+      "row_count": 12,
+      "changed_cell_count": 24,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "3d82e7c339ac487bc62f2fcf9c0f4929db310b30f10806e7ece476ec26283f46",
+      "sha256_after": "e7d67e0f325384e6664f43a63755bf35a6d7cc8b058429f3b06dd89500d16b7a"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/baseline_fixed_levelset_p99_9_m300/2026-08-24_11-14-04/numeric/results_val_lote_3.csv",
+      "row_count": 12,
+      "changed_cell_count": 24,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "63cb746e05dce9b0d32661878a085ff0e561547b20e7f29f9a791eefd62f1954",
+      "sha256_after": "413316227561d5f8014501564e2010c64c2cf4c64187a7606a2d6a028418def9"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/baseline_fixed_levelset_p99_9_m300/2026-08-24_11-14-04/numeric/results_val_lote_4.csv",
+      "row_count": 12,
+      "changed_cell_count": 24,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "42b159a98cd372f92c130f2e96dc962a8d005e09366773f312f9efc3648c1a2f",
+      "sha256_after": "750d90f55611cb5cd182dda7e3acabd92e7c56f84433668ac21a2701ed2cb9f8"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/baseline_fixed_levelset_p99_9_m300/2026-08-24_11-14-04/numeric/results_val_lote_5.csv",
+      "row_count": 12,
+      "changed_cell_count": 24,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "75c62b9e6254736fcefb430a2e858b020703f03a19cff5c18669105323eb8249",
+      "sha256_after": "a90e4af89a9be0c7b054fa1fe3575f8c5ebf383432cb9cb5677317a657e92e1a"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/filter_envelope_generalization/filter_envelope_no_recovery_reference_k2_25_margin10_p99_9_m300/2026-08-28_10-01-49/numeric/results_val.csv",
+      "row_count": 60,
+      "changed_cell_count": 120,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "f20d21d605e48aae37d04c28e36f82b477892498e79383bffb3d0bdf30420fca",
+      "sha256_after": "08344f3eecd12ed2ba7a700db167c0b94ba95d5ebdf0126bb20845d40f373ab1"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/filter_envelope_generalization/filter_envelope_no_recovery_reference_k2_25_margin10_p99_9_m300/2026-08-28_10-01-49/numeric/results_val_lote_1.csv",
+      "row_count": 12,
+      "changed_cell_count": 24,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "a922c24f4652a0f4aeec3c02c5888a07a13b118e690cf6fd5eb0bc5853c05b5e",
+      "sha256_after": "75abd1db8972aef9fcf85cd019cf97d60dee25fe99ae89ebec20b46a8c9fd965"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/filter_envelope_generalization/filter_envelope_no_recovery_reference_k2_25_margin10_p99_9_m300/2026-08-28_10-01-49/numeric/results_val_lote_2.csv",
+      "row_count": 12,
+      "changed_cell_count": 24,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "188adabb4f7ff5de5b55bc93b73818ff39121acd056dbc3a54c3b4176443f030",
+      "sha256_after": "2870c80dbc7ad8dd004cb84aa67d17a003cced9e93630355e9163365ab9cb1ad"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/filter_envelope_generalization/filter_envelope_no_recovery_reference_k2_25_margin10_p99_9_m300/2026-08-28_10-01-49/numeric/results_val_lote_3.csv",
+      "row_count": 12,
+      "changed_cell_count": 24,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "cd4afbda4bbbea2d38b6ac967bfaab500402b5c09981e8a2abd7e944bafc88a7",
+      "sha256_after": "8a2f9210410ce26459553f228019cde35f9c01c01cfbcad10142fd14c2bd0189"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/filter_envelope_generalization/filter_envelope_no_recovery_reference_k2_25_margin10_p99_9_m300/2026-08-28_10-01-49/numeric/results_val_lote_4.csv",
+      "row_count": 12,
+      "changed_cell_count": 24,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "20d2091c8f9d71a8eafa528289f06f1a0b3fa8f864c128609815c65efbeac36c",
+      "sha256_after": "2c9f6bdc72dea446390cb2fbca4757984129778f268a88d425ec900f3267e62c"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/filter_envelope_generalization/filter_envelope_no_recovery_reference_k2_25_margin10_p99_9_m300/2026-08-28_10-01-49/numeric/results_val_lote_5.csv",
+      "row_count": 12,
+      "changed_cell_count": 24,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "cb84dbad00c64571d1d0052847cff4f7c626baf2c4adcfc10e7580d4c73f6fc2",
+      "sha256_after": "4d143c5c33af1ddb74b6c937e29c29a40cdafb9b70bb9b6cebaff13c4a7c667e"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/filter_envelope_generalization/filter_envelope_no_recovery_reference_k2_25_margin10_p99_9_m300/2026-08-28_14-46-11/numeric/results_val.csv",
+      "row_count": 270,
+      "changed_cell_count": 540,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "0fc063a61f26a01c61f3fa70d6d88a2bf04cbf5b588f531458bdded492f8c61f",
+      "sha256_after": "2e031c5cd8b31a2aa684b081e80557f473b93566e8a1c4678e75f86dd1060271"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/filter_envelope_generalization/filter_envelope_no_recovery_reference_k2_25_margin10_p99_9_m300/2026-08-28_14-46-11/numeric/results_val_lote_1.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "e32c41d20bc01d80e9a88a92ebe8b25bafb3700700e24b12cf95a94ed7a97361",
+      "sha256_after": "5afe8be1a598d346a6e7397bdee49e0742655b151324b4b5a46a488f2604639f"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/filter_envelope_generalization/filter_envelope_no_recovery_reference_k2_25_margin10_p99_9_m300/2026-08-28_14-46-11/numeric/results_val_lote_2.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "b4d9e5608c7521c6bae65142fa5e5dbf9aface23c0fdbf34906c61c587432a4d",
+      "sha256_after": "20600ad63a6b1f1ae3e6be834ea435d6499c5b25fff576d3d99dd124e7a4ffa3"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/filter_envelope_generalization/filter_envelope_no_recovery_reference_k2_25_margin10_p99_9_m300/2026-08-28_14-46-11/numeric/results_val_lote_3.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "28080dff7d0f4a427c571103c538ce0d36ee29a644e1c03c1f3b8f5305cdbdbc",
+      "sha256_after": "2f980251fc2dfa07a39616dca5eb3e824c38c86a86214c898acb52a9721e2f5c"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/filter_envelope_generalization/filter_envelope_no_recovery_reference_k2_25_margin10_p99_9_m300/2026-08-28_14-46-11/numeric/results_val_lote_4.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "68342951daded76f25d1d26907d9a8f74672838426f3f5552538bb65729385ed",
+      "sha256_after": "4a08b3c80171521dc7397575a023788096f95328c8c8023eec979bf7f072ff9b"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/filter_envelope_generalization/filter_envelope_no_recovery_reference_k2_25_margin10_p99_9_m300/2026-08-28_14-46-11/numeric/results_val_lote_5.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "35a68df1b20fe6283e30a662402ac1be7c4b95c9cd46b981a38035ed993c3c95",
+      "sha256_after": "f8a4e2ec49f08ec0f76d2ce499c40d711ed4a686acacbbe37a8cf181095c2f55"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/levelset_b0_6_r0_10_i26_p99_9_m300/2026-08-29_18-04-15/numeric/results_val.csv",
+      "row_count": 60,
+      "changed_cell_count": 120,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "b86b4b551ff83b3d76373bfa6b2973bf77a40d7455c0f118160cef90991bcab1",
+      "sha256_after": "49d89ca26a06701ebe177ba9e01c4f3b0a93706c9cf61dfb09b9ebefcd7338c2"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/levelset_b0_6_r0_10_i26_p99_9_m300/2026-08-29_18-04-15/numeric/results_val_lote_1.csv",
+      "row_count": 12,
+      "changed_cell_count": 24,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "b62513d96539afd64f7584a50e5073a24a986afde7217bf4d895fab79849a635",
+      "sha256_after": "99b0ff52c97f0a44b7f4b0d0d784fa3683ce751f9a3f74e188c088fcd7dc3bf1"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/levelset_b0_6_r0_10_i26_p99_9_m300/2026-08-29_18-04-15/numeric/results_val_lote_2.csv",
+      "row_count": 12,
+      "changed_cell_count": 24,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "a3b12d01782b0d3bd42d5ca8cbbfb0759ebe5d3ba0e82f9c1791b23ff7b7546f",
+      "sha256_after": "01c0f866dbd7b8e369b0b3b89ffafffc3d3cbdc11d7747f895a86116519deda6"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/levelset_b0_6_r0_10_i26_p99_9_m300/2026-08-29_18-04-15/numeric/results_val_lote_3.csv",
+      "row_count": 12,
+      "changed_cell_count": 24,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "8a5e9ab57df0492aeda85b0247970ac0a3d74169a8b833661d1e42a5d9787066",
+      "sha256_after": "fe04940b7f31f1cb9534591bfd5056199ea5ffeee8484a4063b52adf396d2214"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/levelset_b0_6_r0_10_i26_p99_9_m300/2026-08-29_18-04-15/numeric/results_val_lote_4.csv",
+      "row_count": 12,
+      "changed_cell_count": 24,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "3e3f95d7ca829ed2cc6899ea7a7c5be946b923edacf1e8926ca5f45d5fa0e0df",
+      "sha256_after": "04bbebb7547f759b9c10f26546abbf880aad32b1748b8e3fa240504b316cb199"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/levelset_b0_6_r0_10_i26_p99_9_m300/2026-08-29_18-04-15/numeric/results_val_lote_5.csv",
+      "row_count": 12,
+      "changed_cell_count": 24,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "02adbab9a1167073dbff39c7c384e5ea70afa8900580b149cd767a4153112d1f",
+      "sha256_after": "88fff897b4ef236fd7545ca6cee887fc8993c8f6a8349f88aff7d4f6062d6ae9"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/ostia_localization/baseline_pad0/2026-09-04_13-23-32/numeric/results_val.csv",
+      "row_count": 60,
+      "changed_cell_count": 120,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "e9c45976acc35d09fabe7e6913b6e9e255f5ba31c4e15766a3347e8196092dc2",
+      "sha256_after": "2f3e2ea38925398ae49ad02db1e86800ca9bd4596932f58ce0af436022d03276"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/ostia_localization/baseline_pad0/2026-09-04_13-23-32/numeric/results_val_lote_1.csv",
+      "row_count": 12,
+      "changed_cell_count": 24,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "c735f78f1d6362aded1f14f34a185550a92d32dda7e42273274e3f12e513aade",
+      "sha256_after": "1a35723d13e06ec3c80964fdf08b8da0be8d456387404811d112b0020a235993"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/ostia_localization/baseline_pad0/2026-09-04_13-23-32/numeric/results_val_lote_2.csv",
+      "row_count": 12,
+      "changed_cell_count": 24,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "edc804f6189de8ef3d4b8eb81732f8848256676de0a366b17ed82a0bb61f5934",
+      "sha256_after": "b222afa7cc57d5341629437584d27d0903cbea00184be409db404948463e84ab"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/ostia_localization/baseline_pad0/2026-09-04_13-23-32/numeric/results_val_lote_3.csv",
+      "row_count": 12,
+      "changed_cell_count": 24,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "75d3b149d5976ed3744b2261a74c47dbd055496ab664600a5c40cba970278e5b",
+      "sha256_after": "ae1eade4986b0055923d87b3e303b84cb1aa5ce3941df3bb074d21f22f05c2ba"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/ostia_localization/baseline_pad0/2026-09-04_13-23-32/numeric/results_val_lote_4.csv",
+      "row_count": 12,
+      "changed_cell_count": 24,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "477cc99af206c69c84f7cddbad851c07bcb9e50685feac54ad9091406f0343a3",
+      "sha256_after": "0384f12f45c6ae8a0b15ef9e47e657b5ea9384a74c4f8aa1807f4c0d0cdbcedf"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/ostia_localization/baseline_pad0/2026-09-04_13-23-32/numeric/results_val_lote_5.csv",
+      "row_count": 12,
+      "changed_cell_count": 24,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "1ac494169d82c1e359df3861804c3b2c8dcab3b64aefbc517fc7b8625250a7c8",
+      "sha256_after": "d1ad870fc34c32e0fcecd140224c56ef41d55edb28710d432a91404e650e4c36"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/ostia_localization/lower100_pad2/2026-09-06_08-47-17/numeric/results_val.csv",
+      "row_count": 60,
+      "changed_cell_count": 120,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "2aac948c280c9d2fd0fe137af032e32796302bbd4fbe094a172cf4035d3c3619",
+      "sha256_after": "c89b1843f5791006f54af1595442930a280734d95d32b9aa8ad90ab960b47a64"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/ostia_localization/lower100_pad2/2026-09-06_08-47-17/numeric/results_val_lote_1.csv",
+      "row_count": 12,
+      "changed_cell_count": 24,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "5ff1df24413b34a6757067518be4dc3c68b47a201caf02f5520966faa553515a",
+      "sha256_after": "44cb5215388ab46685c77b57f574c14ddfa3ac0db146fb9911fa0d29f842ac73"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/ostia_localization/lower100_pad2/2026-09-06_08-47-17/numeric/results_val_lote_2.csv",
+      "row_count": 12,
+      "changed_cell_count": 24,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "8db441c2dab06bd5db942d7dff66c84a8240c349b43247f7928a372b00546a55",
+      "sha256_after": "b92526cc0250c0d5ae23fcaf2d4c231b99188c35266f0bce3410de267eab589f"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/ostia_localization/lower100_pad2/2026-09-06_08-47-17/numeric/results_val_lote_3.csv",
+      "row_count": 12,
+      "changed_cell_count": 24,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "c0579d0c0950ae355e85ccaf4dbeb4b6007031bdbc6785d41a306724643fde26",
+      "sha256_after": "ac90c3cd9e49aefc67973ccffa5264130948f018abb6a7a2b0b425913230baa9"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/ostia_localization/lower100_pad2/2026-09-06_08-47-17/numeric/results_val_lote_4.csv",
+      "row_count": 12,
+      "changed_cell_count": 24,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "555a66d23851456a59b608970c2f6f4cc3658ab8cf240f3f50397dfdf167c22b",
+      "sha256_after": "165de0f61e86d770f6032eb097e64efdd4bf771b1d0de9f85f468a276390025b"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/ostia_localization/lower100_pad2/2026-09-06_08-47-17/numeric/results_val_lote_5.csv",
+      "row_count": 12,
+      "changed_cell_count": 24,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "ccce206be1c4908812b83e505f9f6fc093e2bd9949985c5dd8038aa74ec11f5a",
+      "sha256_after": "b612fc5fd5c47deb1b8302baba1d4c50bbac21d2cafca1ec81524f0e42e62c93"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/ostia_localization/lower100_pad3/2026-09-06_09-24-47/numeric/results_val.csv",
+      "row_count": 60,
+      "changed_cell_count": 120,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "23ca8a3df7b3ed8434b6a916fd218470c190454b2f27b18c629f3fcb643ee750",
+      "sha256_after": "43f2b6b48ea15b36b4cfc7bd9801eaf8d25150c4220323cf73a4a39290449a89"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/ostia_localization/lower100_pad3/2026-09-06_09-24-47/numeric/results_val_lote_1.csv",
+      "row_count": 12,
+      "changed_cell_count": 24,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "0e0f76972633eed1256e76b0754a703f0781615444afa8b582fa145025ee9378",
+      "sha256_after": "0f74d667f4479fff405622cde6bfa12b1146df366ca2c67ced79c77fba012c46"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/ostia_localization/lower100_pad3/2026-09-06_09-24-47/numeric/results_val_lote_2.csv",
+      "row_count": 12,
+      "changed_cell_count": 24,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "21cec645685904dd101d6ba419152333c82eba2d1ba130e285019536087cd5b0",
+      "sha256_after": "4943f739ddd281b360b6871999c72e1ccb43a204011d5fc43a87cd5e9d37a0f3"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/ostia_localization/lower100_pad3/2026-09-06_09-24-47/numeric/results_val_lote_3.csv",
+      "row_count": 12,
+      "changed_cell_count": 24,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "bcab191e652f16fd32d2b49bc4068152dbc536b68047485359bfb85492e4b465",
+      "sha256_after": "2d001c664469bc6af361fe9b7244bbf272b80fb29ead476da9be72ef32b4c32a"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/ostia_localization/lower100_pad3/2026-09-06_09-24-47/numeric/results_val_lote_4.csv",
+      "row_count": 12,
+      "changed_cell_count": 24,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "06e80fab7ca112d4adcca97c04a176819abaa8cb661f5bd81054684d7c8d57af",
+      "sha256_after": "5878a1a7b0a781241aaf6005c09636ac3ac7fdb93de870687a123fbf180624ca"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/ostia_localization/lower100_pad3/2026-09-06_09-24-47/numeric/results_val_lote_5.csv",
+      "row_count": 12,
+      "changed_cell_count": 24,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "e54b232f569b339f997c0d5ab64110fc922d7a6340fc69c05aeb6d5f97f3ec31",
+      "sha256_after": "15f6da41a6b39aca21ac912309906b20dfcbe19901a39f49a2a49929fcfcaf59"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/ostia_validation270/baseline_pad0/2026-09-07_07-15-02/numeric/results_val.csv",
+      "row_count": 270,
+      "changed_cell_count": 540,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "6035b6b6223426560f202f3478ed9aaf6158a728dfc461ac522cb0f73a727331",
+      "sha256_after": "8a082a592b41424dffa10885919b0e52ba7c566973676c8602e75946015ff5d9"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/ostia_validation270/baseline_pad0/2026-09-07_07-15-02/numeric/results_val_lote_1.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "352addb389d7439d940563f813a9a9f73f46c37a15bae745038b4cf140554a09",
+      "sha256_after": "c9f5676b604eb383fbad9e33ce1e0a350b07d3da307492d803cc8c7a202be7f6"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/ostia_validation270/baseline_pad0/2026-09-07_07-15-02/numeric/results_val_lote_2.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "3b739a5dd2a5e0154b494d2c88d808e745e7a9020fb3b7997f4b590390be009e",
+      "sha256_after": "7c67baeabfeae30ca27394ab9143441ae3800abcbc77ba03c55eaafec66cb540"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/ostia_validation270/baseline_pad0/2026-09-07_07-15-02/numeric/results_val_lote_3.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "10500ce25b542c0e9b9b58a46c4a3629594b90b384e482ffda4f585d93f2eea6",
+      "sha256_after": "c9fcc2b5065bac0854c2d56cac757751d9b0fdcacb685c8e64afecdeea96be94"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/ostia_validation270/baseline_pad0/2026-09-07_07-15-02/numeric/results_val_lote_4.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "230447406052af1b2bbd6d5e93c6ba47c1dab5b7d974c2ce0de43a5d72887574",
+      "sha256_after": "b5b350aae5b3ae83e9fcdb555e547adc8ec6e92949b30f1a01b28d72a6018441"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/ostia_validation270/baseline_pad0/2026-09-07_07-15-02/numeric/results_val_lote_5.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "46e446f4408c048bc12dfed3a10b9c560b7386ba4e940ec55dc6fec608a1ccaa",
+      "sha256_after": "4b90469cfd94dbe7ac54610f45f9de894b35ff77b4f6a3bc6d89315646946b1c"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/ostia_validation270/lower100_pad2/2026-09-07_07-15-15/numeric/results_val.csv",
+      "row_count": 270,
+      "changed_cell_count": 540,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "d5126df3b13c174bd5ee2b07d31426cbff9f7361623829ab3794ad16d12b5f0c",
+      "sha256_after": "af45cab73f8bb6a11b654514f73801db1d7df3e043a34425b4059567e221fee1"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/ostia_validation270/lower100_pad2/2026-09-07_07-15-15/numeric/results_val_lote_1.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "b9e0f20e6bf251ea33a46fc2c19336169d0ec3c3a84ec3d27bca2b5a90f11502",
+      "sha256_after": "dfc6d9edad9f84ef8a3f4f0f7f9db0502d82cde08b63d5ff3b21a1ed7cb95964"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/ostia_validation270/lower100_pad2/2026-09-07_07-15-15/numeric/results_val_lote_2.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "f1f33e9b90d0787269f8ba17276bc06e1d96d0f2b09372cd65372925570aa755",
+      "sha256_after": "9d4ce23ecee967e3d8ee039a21135c8098ba1cd32d76b429aebf2fa3add0fc3a"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/ostia_validation270/lower100_pad2/2026-09-07_07-15-15/numeric/results_val_lote_3.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "f3223f93161dff24c1aa7e30f9927b252e5cddbbece366a297a8e64daef0e438",
+      "sha256_after": "8591ffcf7eff86f56e7220e86f22a3a4e7b028a491131861bc1706158c00dfbc"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/ostia_validation270/lower100_pad2/2026-09-07_07-15-15/numeric/results_val_lote_4.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "3f6df91d519a8a06b5130c6333c92543708a7bc011e2f3c43ef90f3ddfeb5d83",
+      "sha256_after": "13fd58fef8267699f19fe7b24e4280afc9227d05480af20e17da9901386e9044"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/ostia_validation270/lower100_pad2/2026-09-07_07-15-15/numeric/results_val_lote_5.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "0c45ebf5b1ecfa28a9847329bf8ab7cd7b6899490af499469e6553bd166bc064",
+      "sha256_after": "229e631a0e7eb1bb1f7faa1e257ef646b9e425a258449f660b7f47bfdcfc3baa"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/ostia_validation270/lower100_pad3/2026-09-07_07-15-29/numeric/results_val.csv",
+      "row_count": 270,
+      "changed_cell_count": 540,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "c8364b6ef2ae72f59ac0579627a0480d3df040b048c65ec99c8a0939ec16a7b7",
+      "sha256_after": "334a140674033f77a16f841f2650eebad5718d9fd90e22f6d5a94cf78dcdd895"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/ostia_validation270/lower100_pad3/2026-09-07_07-15-29/numeric/results_val_lote_1.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "f493832483d47ce4e278639fde9f6148d392d5c9a8a350b53e9857236ee4fe47",
+      "sha256_after": "9d238bb99de69d34996628f8874999e21b0e55f169678189200fda824ab437ad"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/ostia_validation270/lower100_pad3/2026-09-07_07-15-29/numeric/results_val_lote_2.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "412b755d1e95d6595072b9d34bccb895dc8a68f14b53e95ee799ccea5e0ef2a0",
+      "sha256_after": "4dc19fc347667682738a403e9d62f83a2635c7974c41478525e2d71b1cd7e890"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/ostia_validation270/lower100_pad3/2026-09-07_07-15-29/numeric/results_val_lote_3.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "0ac8525e47962f2ef93e6c7dcaa6465a6845aa9dd6cce558f670f8187b9bf0fc",
+      "sha256_after": "d3920fa3ddd5f11d2314a56ee23feab62c2e5c54e2459ddc0c586c8e6a853f02"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/ostia_validation270/lower100_pad3/2026-09-07_07-15-29/numeric/results_val_lote_4.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "8e934d760b821612e01573311566dc2caa335c741d7bb189e2f23e024760bb2e",
+      "sha256_after": "14d5e3f4ba64e5624545f83084c7dfe850fa465f08947cd8fb4e4f84450fafe8"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/ostia_validation270/lower100_pad3/2026-09-07_07-15-29/numeric/results_val_lote_5.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "0535298535c254f3ab2a2fd75cc5f5d2b579402242da2174093669a263fc3b10",
+      "sha256_after": "7b7170e35e082c7e7b20168f5b0dfef239ff272175e3e70d844109f19a7335f9"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/selected_hough18_29_filter_envelope_p99_9_m300/2026-09-01_07-47-25/numeric/results_val.csv",
+      "row_count": 60,
+      "changed_cell_count": 120,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "8d700d25f0024c3bc2eb39f91de3279203d366e0dc487b13d19d182db77e4602",
+      "sha256_after": "ae753ecade83a61bf0e54f30176c22f6b30e9897bcbde6c3039fe9fdb4406879"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/selected_hough18_29_filter_envelope_p99_9_m300/2026-09-01_07-47-25/numeric/results_val_lote_1.csv",
+      "row_count": 12,
+      "changed_cell_count": 24,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "38f631174c11a7450537f4a6d83181b258e54a85acb128aca0e8841a1f272f3f",
+      "sha256_after": "7d08d7a461f28a24fe386112f778d61da079fe70662cee1fe77d0c39778ae19e"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/selected_hough18_29_filter_envelope_p99_9_m300/2026-09-01_07-47-25/numeric/results_val_lote_2.csv",
+      "row_count": 12,
+      "changed_cell_count": 24,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "aaf4447d9f0c87b96697d9657800866eee626dd7348e33bd36d4cd5186c9603d",
+      "sha256_after": "f0ee7fa2ba0f42e7704aaf0fe3060a250da394c78819646c41c72c53d9abd834"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/selected_hough18_29_filter_envelope_p99_9_m300/2026-09-01_07-47-25/numeric/results_val_lote_3.csv",
+      "row_count": 12,
+      "changed_cell_count": 24,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "26bbb843924724f2210f5a030590cc81a5a66b71edd26c3edcca564ab6d438ae",
+      "sha256_after": "5c762375d4899ece18f06f2d519b6d149c7ed00b3b52da14520e0fb4281bebf2"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/selected_hough18_29_filter_envelope_p99_9_m300/2026-09-01_07-47-25/numeric/results_val_lote_4.csv",
+      "row_count": 12,
+      "changed_cell_count": 24,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "f939c7df680411fe2b05fab88570446d53137e517c6423d6ed79731f5b170711",
+      "sha256_after": "f64d7000a15df70a8cf101ddc4eb49b5ae2733e0dad2dbc16b41345938bfc7ce"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/selected_hough18_29_filter_envelope_p99_9_m300/2026-09-01_07-47-25/numeric/results_val_lote_5.csv",
+      "row_count": 12,
+      "changed_cell_count": 24,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "fb9a59d4d0d329af971ecb4f44aff71cd2d593f5ae26389d933c1362b0079d0c",
+      "sha256_after": "7af66b230b079587b16fe8e29c9c5f9c548eeb78bb5ee51448138dd14ab3d8c4"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/selected_hough18_29_filter_envelope_p99_9_m300/2026-09-01_11-04-39/numeric/results_val.csv",
+      "row_count": 270,
+      "changed_cell_count": 540,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "64dd22468ffb3d3eb19be5f542229665c9f156d74e60cdcbeb7425781c2a07dc",
+      "sha256_after": "687e7a10fbfce19e58dbb6a65f524d3d34cffb632481ab3e8899f83bdd0c1ad1"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/selected_hough18_29_filter_envelope_p99_9_m300/2026-09-01_11-04-39/numeric/results_val_lote_1.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "352addb389d7439d940563f813a9a9f73f46c37a15bae745038b4cf140554a09",
+      "sha256_after": "c9f5676b604eb383fbad9e33ce1e0a350b07d3da307492d803cc8c7a202be7f6"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/selected_hough18_29_filter_envelope_p99_9_m300/2026-09-01_11-04-39/numeric/results_val_lote_2.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "1095eb6dc10c31063927a5e00fe5e85156e7b45ae8728c723b4283cb7b8a3591",
+      "sha256_after": "33657a74fb8038a87abe1010d5ca58839e293acda8e46d931b845463625e9213"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/selected_hough18_29_filter_envelope_p99_9_m300/2026-09-01_11-04-39/numeric/results_val_lote_3.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "10500ce25b542c0e9b9b58a46c4a3629594b90b384e482ffda4f585d93f2eea6",
+      "sha256_after": "c9fcc2b5065bac0854c2d56cac757751d9b0fdcacb685c8e64afecdeea96be94"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/selected_hough18_29_filter_envelope_p99_9_m300/2026-09-01_11-04-39/numeric/results_val_lote_4.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "230447406052af1b2bbd6d5e93c6ba47c1dab5b7d974c2ce0de43a5d72887574",
+      "sha256_after": "b5b350aae5b3ae83e9fcdb555e547adc8ec6e92949b30f1a01b28d72a6018441"
+    },
+    {
+      "path": "mid_res/aorta_segmentation_experiments/val/selected_hough18_29_filter_envelope_p99_9_m300/2026-09-01_11-04-39/numeric/results_val_lote_5.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "46e446f4408c048bc12dfed3a10b9c560b7386ba4e940ec55dc6fec608a1ccaa",
+      "sha256_after": "4b90469cfd94dbe7ac54610f45f9de894b35ff77b4f6a3bc6d89315646946b1c"
+    },
+    {
+      "path": "mid_res/bilateral_thin/train/2026-08-11_13-49-22/numeric/results_train.csv",
+      "row_count": 30,
+      "changed_cell_count": 60,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "3ad8afe165128bbf9dbe5f70586e7a29bd27015ceede630e466ff97c7723c128",
+      "sha256_after": "0651c20bcf45a3cd8682e25171b35409e125ab8b49437dca65f19a8e5f1f7271"
+    },
+    {
+      "path": "mid_res/bilateral_thin/train/2026-08-11_13-49-22/numeric/results_train_lote_1.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "17232e0c44f3e8a647005842e964fc8ce214c847070d8f302cc1d2ae135a5247",
+      "sha256_after": "662b5c5f0f52a1cb1806e29bea0deb42a823e3f8e61c7bd783a7406c05f568c5"
+    },
+    {
+      "path": "mid_res/bilateral_thin/train/2026-08-11_13-49-22/numeric/results_train_lote_2.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "52220bbf738ab0d16acf8ff8b03225b400b497b4e6af9b4a911fa6c85b853216",
+      "sha256_after": "294c1271658765647b03687cc010ea10345d9b53bd66fa4798edb268f6f458aa"
+    },
+    {
+      "path": "mid_res/bilateral_thin/train/2026-08-11_13-49-22/numeric/results_train_lote_3.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "d0a30bedd686a189ec6c3f7d9fd1bef80746ba04d1e580e56b741cb907deda02",
+      "sha256_after": "01f94d97353c8bbbfa6ebf3a3f16c43ca5f5cfd20aba50841e3b5c66cd396932"
+    },
+    {
+      "path": "mid_res/bilateral_thin/train/2026-08-11_13-49-22/numeric/results_train_lote_4.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "b33b84f81998f40d2261b5397e2ac89c4b0fe44b158d01e865ed340025b58af3",
+      "sha256_after": "d358c5e0e0dbf1872005a0f196ca1783195969abc9aeb997275f8b2e9b88c11d"
+    },
+    {
+      "path": "mid_res/bilateral_thin/train/2026-08-11_13-49-22/numeric/results_train_lote_5.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "ec173e79e19e6033b05b3085efc47a2cd480ec16504041ed9684dabf02275b5d",
+      "sha256_after": "4584443ff78b9e5a710d4332afe51aea7ae0cce4e3dcf3cfcf3fda0138c558b9"
+    },
+    {
+      "path": "mid_res/current_baseline_p99_9/test/2026-08-06_10-04-22/numeric/results_test.csv",
+      "row_count": 700,
+      "changed_cell_count": 1400,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "2c7537a41b3e284a9a45e9771e84169ea32e45b27bb0099cb090945284af668e",
+      "sha256_after": "638151d0861d373d90a3eae376ee83e57636644fe8933479d28b763989eacdfc"
+    },
+    {
+      "path": "mid_res/current_baseline_p99_9/test/2026-08-06_10-04-22/numeric/results_test_lote_1.csv",
+      "row_count": 140,
+      "changed_cell_count": 280,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "a39635e21f77de423b0c0fd312b20ff892c2235ce5188137a5c07b14a81f4aaf",
+      "sha256_after": "0b3ed74e4ce8e7f403593bce6c77ab1c014a345d72ef1991a9d68278353c65b0"
+    },
+    {
+      "path": "mid_res/current_baseline_p99_9/test/2026-08-06_10-04-22/numeric/results_test_lote_2.csv",
+      "row_count": 140,
+      "changed_cell_count": 280,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "4f94285de9b6a76d93d5ff4666b577d01046dc06f417a46c9cd033a46866f00b",
+      "sha256_after": "e157769919d8078f97d924a10536fd3fd3e9f7cb1ca3fac73a32fb03f5d22639"
+    },
+    {
+      "path": "mid_res/current_baseline_p99_9/test/2026-08-06_10-04-22/numeric/results_test_lote_3.csv",
+      "row_count": 140,
+      "changed_cell_count": 280,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "b0cf232302f4f7075e763191a48e20864f97e2395a5a4a014c3feb71fd94828a",
+      "sha256_after": "7097a295ab29e6fd24a8c5b5cf9b72325b6a2bd37d310c082e73face821e996d"
+    },
+    {
+      "path": "mid_res/current_baseline_p99_9/test/2026-08-06_10-04-22/numeric/results_test_lote_4.csv",
+      "row_count": 140,
+      "changed_cell_count": 280,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "fe861045090fae5ae17f4df73da136ac2419ecda10e3ffe13d0cff999109d623",
+      "sha256_after": "1ddc818c97bb6e278e0b838cf341a1d2e5b9eb9310f9f9c8489f5a43175ba805"
+    },
+    {
+      "path": "mid_res/current_baseline_p99_9/test/2026-08-06_10-04-22/numeric/results_test_lote_5.csv",
+      "row_count": 140,
+      "changed_cell_count": 280,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "00e80503cb83b122fe6553ec56d0fb7b0f92eea36c880cff711f42aebaccbe8d",
+      "sha256_after": "04043dd38b0dd38e68babf72ea537f13a8b661c852e0aa8cb4ab218cf3a0ddad"
+    },
+    {
+      "path": "mid_res/current_baseline_p99_9/train/2026-08-06_18-43-37/numeric/results_train.csv",
+      "row_count": 30,
+      "changed_cell_count": 60,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "ddec0d4c4245ed2e7a59a1b4c069f3e7be1f9558ec91c222fe7dac3c0ef38504",
+      "sha256_after": "f211b0fe90c91307e17321dc070245df6f180cdb0ee4816b6550444a692a4960"
+    },
+    {
+      "path": "mid_res/current_baseline_p99_9/train/2026-08-06_18-43-37/numeric/results_train_lote_1.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "c0654c290ef3dabda726896c1cb8768266c19a00b936d53e1b4eb86adc2070eb",
+      "sha256_after": "2ce6ce61e89e13ea41ffaad140f750f7a84e3a1065c93859cbb91f117d57ca75"
+    },
+    {
+      "path": "mid_res/current_baseline_p99_9/train/2026-08-06_18-43-37/numeric/results_train_lote_2.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "0240bd7e4bf9f3bd2f82fdcddbbb6ba9daf7dd92066a2ca26623aba8fc615410",
+      "sha256_after": "6840b18236a77d0e392968f765d139649fc7565b0092e1ff68e1f3b77c885428"
+    },
+    {
+      "path": "mid_res/current_baseline_p99_9/train/2026-08-06_18-43-37/numeric/results_train_lote_3.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "0ba01913d59b40dc8e0e5ad3b7e81b60c1e87ba65b975ccb8cee9ead7454e80e",
+      "sha256_after": "f0228f2d3a65ace9be232075194ab9ec46927395de8f89547548c8702a5bedf8"
+    },
+    {
+      "path": "mid_res/current_baseline_p99_9/train/2026-08-06_18-43-37/numeric/results_train_lote_4.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "76fd33e7178e7c8ea93d994011943d3e665442d6ae6453bc5b2066d33c7e0b70",
+      "sha256_after": "1ccdc5b2c1ec6bcbc31438bb922e5b199fc886e30e34be60167a4f0f3e6fb2f9"
+    },
+    {
+      "path": "mid_res/current_baseline_p99_9/train/2026-08-06_18-43-37/numeric/results_train_lote_5.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "ec584036ab05cc80b85e6f50e2ae0b50a2009eb974634e54280538951286cecf",
+      "sha256_after": "6995e6bcfa4a3ba026e3d61c770390ef501648d9d4d494c24d919e3f30488ad4"
+    },
+    {
+      "path": "mid_res/current_baseline_p99_9/val/2026-08-06_22-43-14/numeric/results_val.csv",
+      "row_count": 270,
+      "changed_cell_count": 540,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "5a05a194e64289915d9ed64cb02e3f24e5f73fdd80a711aed576cbcaa7277e56",
+      "sha256_after": "ca4c972dbb3d2558f77724a7da27ff378b301fe02b06f5ba0c151202f94f88d9"
+    },
+    {
+      "path": "mid_res/current_baseline_p99_9/val/2026-08-06_22-43-14/numeric/results_val_lote_1.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "c97223c500e7bb19b2ad741275efb6569a5c3e4cf043bcbe91c50dec4d30e667",
+      "sha256_after": "c8e7656494245e37eb45d62e3615155db2cba30af45f678a946c4617b3c6bb7a"
+    },
+    {
+      "path": "mid_res/current_baseline_p99_9/val/2026-08-06_22-43-14/numeric/results_val_lote_2.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "a986eae8e10a0553853ed43ffa05bf7b1be69d73facf653341ec2620d9b126b5",
+      "sha256_after": "e0f07abf5281a0874ebb3f0f27ee118dae66eeeeeade8e67b10652ad96282e55"
+    },
+    {
+      "path": "mid_res/current_baseline_p99_9/val/2026-08-06_22-43-14/numeric/results_val_lote_3.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "239c49b81212633df52c03147bdeb509d170a735c2b0719931b6172e71f38e2a",
+      "sha256_after": "115820c4eeac5fb8bdae51200c2e796b08eff2fa7dcf4df2220613f1154a709b"
+    },
+    {
+      "path": "mid_res/current_baseline_p99_9/val/2026-08-06_22-43-14/numeric/results_val_lote_4.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "d8b68195719c65e3f60e277af1155eda8fbc0fc720c2accfa072f782d0b7e487",
+      "sha256_after": "0dac3ed5e34d920fa5a36815a30772a513b87162b41ff0e470f6eb0e92e9a131"
+    },
+    {
+      "path": "mid_res/current_baseline_p99_9/val/2026-08-06_22-43-14/numeric/results_val_lote_5.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "8fe5d72bc2f44b803c731d711726af72f5ff6987f56fe7a88016b46a18889350",
+      "sha256_after": "6bfa6781e0cef7790c0b54285bd3391c9c54ae530ed3e87e25a683127ee72f7d"
+    },
+    {
+      "path": "mid_res/fuzzy_comparison/test/normal_fc/2026-06-19_09-20-42/numeric/results_test.csv",
+      "row_count": 700,
+      "changed_cell_count": 1400,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "45d37389c66ddafacce0f9d47b344cc92dd6f2b32564d84122d5a7060b85ea0e",
+      "sha256_after": "aa318a857136433e782f63b6eea59ac3845e73412a58a5ad0d43ad8cb81b218a"
+    },
+    {
+      "path": "mid_res/fuzzy_comparison/test/normal_fc/2026-06-19_09-20-42/numeric/results_test_lote_1.csv",
+      "row_count": 140,
+      "changed_cell_count": 280,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "c0d9c3ad81d07a47e14d744e986bfcaa9b2e4c9df423977384939e183b261c5f",
+      "sha256_after": "c967143ec0be5f8fd83923794976519186152806d5ef58b4cbac3b939c787f13"
+    },
+    {
+      "path": "mid_res/fuzzy_comparison/test/normal_fc/2026-06-19_09-20-42/numeric/results_test_lote_2.csv",
+      "row_count": 140,
+      "changed_cell_count": 280,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "b93837404e4436b3bece82119fba4e869e4f115736dcfc6cd4ca17ec61a98a66",
+      "sha256_after": "8347298374fd50cbed0c78beff2a3b58372b8d9e2c2b6467e7e9a17cdd22a0c0"
+    },
+    {
+      "path": "mid_res/fuzzy_comparison/test/normal_fc/2026-06-19_09-20-42/numeric/results_test_lote_3.csv",
+      "row_count": 140,
+      "changed_cell_count": 280,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "397889f58b3e6dec3071825801d79c1519c99cbd547a0379a582574f28cc21b8",
+      "sha256_after": "9d85697031865716ffb2d67c054b3232b3a59fbb346e04628da9b1bf4217a53b"
+    },
+    {
+      "path": "mid_res/fuzzy_comparison/test/normal_fc/2026-06-19_09-20-42/numeric/results_test_lote_4.csv",
+      "row_count": 140,
+      "changed_cell_count": 280,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "e8041c73fb9caf836dfbf0b8cc535156c6051ce576f5ce2e8c6b64037f11c5f7",
+      "sha256_after": "5ee25ba92c85dd2e5ee1e6983d00d74cca158dcdd4cbe79a8c29bcdaa33a1dda"
+    },
+    {
+      "path": "mid_res/fuzzy_comparison/test/normal_fc/2026-06-19_09-20-42/numeric/results_test_lote_5.csv",
+      "row_count": 140,
+      "changed_cell_count": 280,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "000b0f383cad7888c91c26e62cc8e0af103a847419b54686d5976a2fd6ac9336",
+      "sha256_after": "b4fda5f3bf565b514f88a4a5511fb4fec6e7d28a69fb9bab9e9c953d8667ef6e"
+    },
+    {
+      "path": "mid_res/fuzzy_comparison/test/normal_rg/2026-06-22_10-18-31/numeric/results_test.csv",
+      "row_count": 700,
+      "changed_cell_count": 1400,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "99eae6b69911152d7ee082c4a76ee8f2e0690047d5be47181d456459f132eaf4",
+      "sha256_after": "055d4579c13952a4134771883c6077eb66e8156e1d2fead0f97f1d02650d6298"
+    },
+    {
+      "path": "mid_res/fuzzy_comparison/test/normal_rg/2026-06-22_10-18-31/numeric/results_test_lote_1.csv",
+      "row_count": 140,
+      "changed_cell_count": 280,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "887b90781bebd41b6b69c9c78be3d1950c94c08ac92ccbf8679dfdc4747440cf",
+      "sha256_after": "68caf8199a53d6d6277707ee197bd360f72f025b83ff470a45bc2bc90a2098a4"
+    },
+    {
+      "path": "mid_res/fuzzy_comparison/test/normal_rg/2026-06-22_10-18-31/numeric/results_test_lote_2.csv",
+      "row_count": 140,
+      "changed_cell_count": 280,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "b0d1f919fb56c01c0121f8951ca53d2a0aab44d74fb020b8d95155deaadb8614",
+      "sha256_after": "2f243482e5d3e5f8841e934b52f83c2a8d2aa4bd39620edb6daccddfe5fd6808"
+    },
+    {
+      "path": "mid_res/fuzzy_comparison/test/normal_rg/2026-06-22_10-18-31/numeric/results_test_lote_3.csv",
+      "row_count": 140,
+      "changed_cell_count": 280,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "a8afe72590c8c8dd57b8f128f6817cde48cb785076bdfe2fb8df24a07bd5e615",
+      "sha256_after": "7d2ad92d145c3ec25af8c2de7d996979a0212cd514a8016b9905f8e8459df99b"
+    },
+    {
+      "path": "mid_res/fuzzy_comparison/test/normal_rg/2026-06-22_10-18-31/numeric/results_test_lote_4.csv",
+      "row_count": 140,
+      "changed_cell_count": 280,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "b7f2c11076216b37e6b0b50e681cad222454caac9bde22c33a0a45477010b5c7",
+      "sha256_after": "d0666a912774cc6eea94a86a6154b1c639d118e88910390e50e9f22884ad94fd"
+    },
+    {
+      "path": "mid_res/fuzzy_comparison/test/normal_rg/2026-06-22_10-18-31/numeric/results_test_lote_5.csv",
+      "row_count": 140,
+      "changed_cell_count": 280,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "c0a8017428b2b2b92303f6ee6297b0c542d4cd4d94ffaf97998dab744396e201",
+      "sha256_after": "398c624c86465e845df74b5a9279ad0c8c4a9ae4aca042ce5f85a20498afb578"
+    },
+    {
+      "path": "mid_res/fuzzy_comparison/test/th_fuzzy_fc/2026-06-20_23-26-14/numeric/results_test.csv",
+      "row_count": 700,
+      "changed_cell_count": 1400,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "913f43241b71ec30c72105be4b0979ec20dc77b14aadf9fe59bccc8db76b2cd9",
+      "sha256_after": "2f39137cd16f20c3209a4c0276d90a26ebeb679c595fbf4830610ad6b89ed51c"
+    },
+    {
+      "path": "mid_res/fuzzy_comparison/test/th_fuzzy_fc/2026-06-20_23-26-14/numeric/results_test_lote_1.csv",
+      "row_count": 140,
+      "changed_cell_count": 280,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "4fb3a8c6d6bab54a9140d4cb78f1b9606b354438839fffad347db65b3d2f9a68",
+      "sha256_after": "6cd31824bcbaae962e9cc641e8edbb34d3ff927c233238593d41f58bf0cd262c"
+    },
+    {
+      "path": "mid_res/fuzzy_comparison/test/th_fuzzy_fc/2026-06-20_23-26-14/numeric/results_test_lote_2.csv",
+      "row_count": 140,
+      "changed_cell_count": 280,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "a6c09e660b6d88a0965bed6d0ccf4f38b93e14ed4f8fa3a254009f79804405f0",
+      "sha256_after": "2b62a1fb8abf87382a3d98763f80581ae593e088c1409e2809af5d633b967413"
+    },
+    {
+      "path": "mid_res/fuzzy_comparison/test/th_fuzzy_fc/2026-06-20_23-26-14/numeric/results_test_lote_3.csv",
+      "row_count": 140,
+      "changed_cell_count": 280,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "461bac0499439a066d2a06400f6d8ae5e3733b8a88650666fcfa562bda379439",
+      "sha256_after": "91ed3f0cdc65c5916040e92cf99cd7d8243c11b68dc842e4b55b0da40e728fc8"
+    },
+    {
+      "path": "mid_res/fuzzy_comparison/test/th_fuzzy_fc/2026-06-20_23-26-14/numeric/results_test_lote_4.csv",
+      "row_count": 140,
+      "changed_cell_count": 280,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "9576ef1c056599c4a0a90627547d505bf32df2934149bf07a1d6112f320990cc",
+      "sha256_after": "fb570468a149b4f3db0ff9b221745050bdbcdf7511476afc41c4448f0cf0a870"
+    },
+    {
+      "path": "mid_res/fuzzy_comparison/test/th_fuzzy_fc/2026-06-20_23-26-14/numeric/results_test_lote_5.csv",
+      "row_count": 140,
+      "changed_cell_count": 280,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "932289af39803535d8e0b910e6c6dbca2cb86fb2df30ea2e4497c46719b8b6fe",
+      "sha256_after": "bdfff8a85de6e6c9e99b8d5bc932b7c74a24f050805e7622e2d393a11ebff80a"
+    },
+    {
+      "path": "mid_res/fuzzy_comparison/test/th_fuzzy_rg/2026-06-20_08-33-25/numeric/results_test.csv",
+      "row_count": 700,
+      "changed_cell_count": 1400,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "fb4072e5cf829b8e8ec502cc1c7be8e6b5043bbdb938aad70ed8ecc030f7cc97",
+      "sha256_after": "9a8f58ec490ec9cc0a12c6f77a64c306cb69b1a3c445d48c44c1203712e48e97"
+    },
+    {
+      "path": "mid_res/fuzzy_comparison/test/th_fuzzy_rg/2026-06-20_08-33-25/numeric/results_test_lote_1.csv",
+      "row_count": 140,
+      "changed_cell_count": 280,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "6bdbe64b77a6b7c9dfd584cbe596aefbb794f50fac02d2a9bf8f178ebff2d6d1",
+      "sha256_after": "475e29cafc571441aec79006a6161f33d4ab40e03e2ba855b89a07817791e4b2"
+    },
+    {
+      "path": "mid_res/fuzzy_comparison/test/th_fuzzy_rg/2026-06-20_08-33-25/numeric/results_test_lote_2.csv",
+      "row_count": 140,
+      "changed_cell_count": 280,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "8f1e2884d5416ea9a1a78fa7554615ee1a77a719af397824da96a8dddf14f1b3",
+      "sha256_after": "bf51bc0fc8092ea926d0665813745a266433419e7efbc66b0204342323bd7d70"
+    },
+    {
+      "path": "mid_res/fuzzy_comparison/test/th_fuzzy_rg/2026-06-20_08-33-25/numeric/results_test_lote_3.csv",
+      "row_count": 140,
+      "changed_cell_count": 280,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "a5b90a980637a45dfc3c428ff0ee88a27ce13a804779c72c95a5b689fb6a2e7c",
+      "sha256_after": "6e1ce6d8bfa31b62000f2d98c9f7800d57271c9754205c37947f3c366fd2df89"
+    },
+    {
+      "path": "mid_res/fuzzy_comparison/test/th_fuzzy_rg/2026-06-20_08-33-25/numeric/results_test_lote_4.csv",
+      "row_count": 140,
+      "changed_cell_count": 280,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "8d2ab6e1e3d34546f62a48b29a28d7c33d525f1120f7ba86e42d4298b9183c48",
+      "sha256_after": "a8e8088023544a0015dd3f497a7a13f6e6c8dcec67da50f50f9d7a805b9d8398"
+    },
+    {
+      "path": "mid_res/fuzzy_comparison/test/th_fuzzy_rg/2026-06-20_08-33-25/numeric/results_test_lote_5.csv",
+      "row_count": 140,
+      "changed_cell_count": 280,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "4c4d3007315d07968c2e96da3f881aa2eb4ab9d611baf83d4cde9d3749b5377b",
+      "sha256_after": "c2559b149143110cfb5e72d247ac857cda19cef5b90c854c22a18698fc3cc630"
+    },
+    {
+      "path": "mid_res/fuzzy_comparison/train/normal_rg/2026-06-29_09-42-27/numeric/results_train.csv",
+      "row_count": 30,
+      "changed_cell_count": 60,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "1c61ca67473aeafe9d61281731cea8266b4a3ad967d9e92f76ab0a8f94067edf",
+      "sha256_after": "f70025a70df04421599b9b64926e2a9d13b13e775cdf152ef2bf25dc71a47cee"
+    },
+    {
+      "path": "mid_res/fuzzy_comparison/train/normal_rg/2026-06-29_09-42-27/numeric/results_train_lote_1.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "5ad2bd7f419d136ddfabc1953e5412f2d62d5b77244f5058672be243d930fcf0",
+      "sha256_after": "648e7c34b3a3c31e8b5156f8a22fb96cec7257cb94c47db38fbce010f77983e2"
+    },
+    {
+      "path": "mid_res/fuzzy_comparison/train/normal_rg/2026-06-29_09-42-27/numeric/results_train_lote_2.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "d3214798887811b0add4162310fc41b3e53a27c0a416fb74d3a13f5053ce54e0",
+      "sha256_after": "b9b5941fa2f28c5b2d946d20d61038f6bcc24e1bafc4ad73b18c975f7c5bc194"
+    },
+    {
+      "path": "mid_res/fuzzy_comparison/train/normal_rg/2026-06-29_09-42-27/numeric/results_train_lote_3.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "79955c733920501dc262e739d0268b28a3b940a71848ebd5e2bf8c76f5f0e8a4",
+      "sha256_after": "af1107c5b76a7027a9a852ce802b0ddce1569c39d5be9107a3310ba4deba38bc"
+    },
+    {
+      "path": "mid_res/fuzzy_comparison/train/normal_rg/2026-06-29_09-42-27/numeric/results_train_lote_4.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "3de696c85f4192727a42a0cb66cb3d7679cf8d0aa5756b8b8b0a6503e9dd0d45",
+      "sha256_after": "9f0d1199d52cf765fd8aaf394a905fd5155391aea20ae19ca4181e14e9823cb7"
+    },
+    {
+      "path": "mid_res/fuzzy_comparison/train/normal_rg/2026-06-29_09-42-27/numeric/results_train_lote_5.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "a68a4e2af5462b1b9e91deaf29a57e867abeed93ec8846a3e28fbad2267f6d0e",
+      "sha256_after": "e2323181683ca905bc0c5a93f956f42f9a138a67a59339866e0a4c1d85f24476"
+    },
+    {
+      "path": "mid_res/fuzzy_comparison/val/normal_fc/2026-06-23_08-17-16/numeric/results_val.csv",
+      "row_count": 270,
+      "changed_cell_count": 540,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "f933a4fb3592bcbda524b83d75b97b92fc91fa1e9fa9e75140d8b28ac6a59e9f",
+      "sha256_after": "6a842fa975b35e975ec913eb5dcb6c10935d947b7970d8ce45a7a1c028adf86a"
+    },
+    {
+      "path": "mid_res/fuzzy_comparison/val/normal_fc/2026-06-23_08-17-16/numeric/results_val_lote_1.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "b84ffa3652e5eff46393573ce053620c7d9933db964c32dc02cd6a483feb309e",
+      "sha256_after": "e3eedc76da4b336da3829571ee2a35e9dc99a190c2de97bac88484a098953aa7"
+    },
+    {
+      "path": "mid_res/fuzzy_comparison/val/normal_fc/2026-06-23_08-17-16/numeric/results_val_lote_2.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "d657a2502b62152e52806395780cc8f20253c851092c3858d865b2e9231b958b",
+      "sha256_after": "1b7817984c801e93ed2d44f2a32c4e2280cf0cc31d99d5ee748c66a87e95690a"
+    },
+    {
+      "path": "mid_res/fuzzy_comparison/val/normal_fc/2026-06-23_08-17-16/numeric/results_val_lote_3.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "1ff960706d3fb1958cdaec3676093ab60b0b06b295e0623bbade5b2abaf0d257",
+      "sha256_after": "322366fe8e3664574ec35ab70f2f97d09cab2e011de6c4530f1c21870df3b558"
+    },
+    {
+      "path": "mid_res/fuzzy_comparison/val/normal_fc/2026-06-23_08-17-16/numeric/results_val_lote_4.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "0b3ec0a840d8160e975c9c84519c67d2e93a35bb3040d1bc18831fe1ed421141",
+      "sha256_after": "ac3a384a2c400e10a7b9895ea30d1158a326752cce3cd5efba00e470aab49798"
+    },
+    {
+      "path": "mid_res/fuzzy_comparison/val/normal_fc/2026-06-23_08-17-16/numeric/results_val_lote_5.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "ed7092d20c8f22e9e89aec0d8841eb7bfb8ad953f36b558d319fd40e1046fe37",
+      "sha256_after": "a2179a25fc004ab7136de200748eedf6e85c1c3bf8716bd35d71572f8a5d1e1e"
+    },
+    {
+      "path": "mid_res/fuzzy_comparison/val/normal_rg/2026-06-23_14-47-01/numeric/results_val.csv",
+      "row_count": 270,
+      "changed_cell_count": 540,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "b72965d09bee0867315f00d0c8d6dc6474745987a637310d3eab712ce7bdb47c",
+      "sha256_after": "60c193a8b11405059f793ccfa228e11bfd65235c7458c2f6f7c98bb04651767b"
+    },
+    {
+      "path": "mid_res/fuzzy_comparison/val/normal_rg/2026-06-23_14-47-01/numeric/results_val_lote_1.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "cb2eb27ffa9a76c79dea261e1de774dbadefbf841e8c45f4f5bfea31315139ec",
+      "sha256_after": "c6ca0141866a9f0ce122b36c503db354125fe9793d682cb003760ee369109ff6"
+    },
+    {
+      "path": "mid_res/fuzzy_comparison/val/normal_rg/2026-06-23_14-47-01/numeric/results_val_lote_2.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "84d622316b0891636d7038378ecc27215df2a76f4fa4d8e98823063884121453",
+      "sha256_after": "7990e5cc534d333a24c1f13a3ccddc8a30ff6dc4e0bc3fcaeba8bde4cdbe5d77"
+    },
+    {
+      "path": "mid_res/fuzzy_comparison/val/normal_rg/2026-06-23_14-47-01/numeric/results_val_lote_3.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "509a27f8d369c37ff6f2265820fb71d09fddaada77aff71dfdb53e1b32ebe404",
+      "sha256_after": "1238cde6322a96957a81a145a2eb7f712f2d1c5bec9f84f9f36686321657a160"
+    },
+    {
+      "path": "mid_res/fuzzy_comparison/val/normal_rg/2026-06-23_14-47-01/numeric/results_val_lote_4.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "1c913bae2370a4ce7a02cd985046227c9573eefc6dd9f69f06b69783efc62ab7",
+      "sha256_after": "8e4ba645e774b3da633dc9e8f36b0a4936442f98656df57a587554ed37767ed3"
+    },
+    {
+      "path": "mid_res/fuzzy_comparison/val/normal_rg/2026-06-23_14-47-01/numeric/results_val_lote_5.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "3e3e74f9ebca21601b99d5433fb387d5faf7d6bbdaee51b7e6af1ebf21cb9370",
+      "sha256_after": "3235c380e78d731aaeac2af16e4378ccb979c11f050ab67e406155b2be04c861"
+    },
+    {
+      "path": "mid_res/fuzzy_comparison/val/th_fuzzy_fc/2026-06-26_13-22-38/numeric/results_val.csv",
+      "row_count": 270,
+      "changed_cell_count": 540,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "ef8946bcc1b6943babcc0da30ea6796e11feb9321a8e41e10cfbf3866ed0ae27",
+      "sha256_after": "00a28a383bf6eccabf189e81474fe149eeeed8971ef44d38427d66f329bf328a"
+    },
+    {
+      "path": "mid_res/fuzzy_comparison/val/th_fuzzy_fc/2026-06-26_13-22-38/numeric/results_val_lote_1.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "06d322face2913b26475a11cd918937b0fac735306744a2bb199dd4ae1f6d1dd",
+      "sha256_after": "0e812b11c6656bddf3ec7353af9401a54959cdf3fc9f62cd83480a38c9016301"
+    },
+    {
+      "path": "mid_res/fuzzy_comparison/val/th_fuzzy_fc/2026-06-26_13-22-38/numeric/results_val_lote_2.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "487572fdc7ebed2eb599970887d4b7b52f4f37b233505164bd63ed5e067797d7",
+      "sha256_after": "75300deea1c9cf3b2e180026d03f84cf76970ee66b14a337185a3780e0981b40"
+    },
+    {
+      "path": "mid_res/fuzzy_comparison/val/th_fuzzy_fc/2026-06-26_13-22-38/numeric/results_val_lote_3.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "8103cc37eed1de58144d209bf13ac355efcc92160c21d839476217ad39d3d9d3",
+      "sha256_after": "6d5d8dc16b664a3855b4e3dac01d78517d3477bed10bedc3f6f554d4254d50b4"
+    },
+    {
+      "path": "mid_res/fuzzy_comparison/val/th_fuzzy_fc/2026-06-26_13-22-38/numeric/results_val_lote_4.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "f4da54b86f60108b537f030f00e71e1eb3c3eeb4b2b557025a99c9ec1555ebf9",
+      "sha256_after": "d22e7bf5ef8830e7bec1c7e858177b0be34d8c289fd6ee1da10cdedf1734c6e4"
+    },
+    {
+      "path": "mid_res/fuzzy_comparison/val/th_fuzzy_fc/2026-06-26_13-22-38/numeric/results_val_lote_5.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "65576821449949e9dbb21027cd2f6673bb5f5b0b2dcb43d2094cc5c29f1a71a8",
+      "sha256_after": "979d2dfed4482423d6f2b2db7f1e91bba170894083f5864766bde4714066daf6"
+    },
+    {
+      "path": "mid_res/fuzzy_comparison/val/th_fuzzy_rg/2026-06-25_16-16-10/numeric/results_val.csv",
+      "row_count": 270,
+      "changed_cell_count": 540,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "0648f857623c0ca5135e58cfb135715a59109c93b4e0b82f8464f34531406c92",
+      "sha256_after": "ec11ad68dc7e9f0343d30d4291ae02d64bd13e672a28854ac916e1e6b6b7c130"
+    },
+    {
+      "path": "mid_res/fuzzy_comparison/val/th_fuzzy_rg/2026-06-25_16-16-10/numeric/results_val_lote_1.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "1cb737632d3063e7cce582f2b611cb6d2471b2160662aee29cff724e81baa947",
+      "sha256_after": "c083746fd2e4c65cba54646ed31c33510a848abe0dca687eee4c1920ff6d8cc6"
+    },
+    {
+      "path": "mid_res/fuzzy_comparison/val/th_fuzzy_rg/2026-06-25_16-16-10/numeric/results_val_lote_2.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "d249d37249c081f97742b7ca5b0bce990dcbaaf9e4cb8758e495234c96e05da7",
+      "sha256_after": "50e46c1430ad7b7dd15f06dd6364716263bde1bdad106492c3028de8d40085f6"
+    },
+    {
+      "path": "mid_res/fuzzy_comparison/val/th_fuzzy_rg/2026-06-25_16-16-10/numeric/results_val_lote_3.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "8a447cd2773cabbb8a459e91fd4a518c509bcc2a368d686ee9d05dde44133160",
+      "sha256_after": "a1147f489a362ea28dcc798586afaef51596648481ed9b8f7e6380a19fd2cf7c"
+    },
+    {
+      "path": "mid_res/fuzzy_comparison/val/th_fuzzy_rg/2026-06-25_16-16-10/numeric/results_val_lote_4.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "e3f7d38384cb864a12a76cc0f544293362ba81ad785c2413cdccb24c9fba0cba",
+      "sha256_after": "9cdcba43f6721d9e9f462ae06e16181daebe6fe6744bb1f929d188641674a9c6"
+    },
+    {
+      "path": "mid_res/fuzzy_comparison/val/th_fuzzy_rg/2026-06-25_16-16-10/numeric/results_val_lote_5.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "b33850a6a9fdfe0644e512c7def0afd5b55f44549046fd557db17efe9eb17473",
+      "sha256_after": "42376ed5f99ace0650bd75cf3887fb56bc09b9071332dd3c7c323d2c7f48ce57"
+    },
+    {
+      "path": "mid_res/historical_baselines/baseline_development_p10_75_p99_8/test/2026-08-07_01-43-41/numeric/results_test.csv",
+      "row_count": 700,
+      "changed_cell_count": 1400,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "219203d29d454e132770e35a8a8b7c69500ceb9d140ece61847847176df83f49",
+      "sha256_after": "81a941ff65d503518a1ba177ddc61964e7c4886b7a27fdccd9275d5cac1667ec"
+    },
+    {
+      "path": "mid_res/historical_baselines/baseline_development_p10_75_p99_8/test/2026-08-07_01-43-41/numeric/results_test_lote_1.csv",
+      "row_count": 140,
+      "changed_cell_count": 280,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "b564a8421f295d34e6e041ee801479df9f6e19f2f9aedecb308aae7b34485a95",
+      "sha256_after": "49acde129a04ec4a0be10279614cfa396eb1450e4aea446f57c91886c866b223"
+    },
+    {
+      "path": "mid_res/historical_baselines/baseline_development_p10_75_p99_8/test/2026-08-07_01-43-41/numeric/results_test_lote_2.csv",
+      "row_count": 140,
+      "changed_cell_count": 280,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "423a0aa5d17ec1f5b10eb5a756a1854d1dcd53d55c1134e212e2878f43150f9d",
+      "sha256_after": "2f8aaeb98fac6906af86b8e593b47e3c3339c802fcab1c75708fba7d60ba4c6b"
+    },
+    {
+      "path": "mid_res/historical_baselines/baseline_development_p10_75_p99_8/test/2026-08-07_01-43-41/numeric/results_test_lote_3.csv",
+      "row_count": 140,
+      "changed_cell_count": 280,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "cb394f8247514851c045b6f86b211384cf6aaf25c312b09e1cd0f1b8aacb4307",
+      "sha256_after": "0b8ab6ac28883f59d40d581380c3bc78f6cbfc40a5543ce532fe7158c67e1483"
+    },
+    {
+      "path": "mid_res/historical_baselines/baseline_development_p10_75_p99_8/test/2026-08-07_01-43-41/numeric/results_test_lote_4.csv",
+      "row_count": 140,
+      "changed_cell_count": 280,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "39a79719a05c0c5b31381a6f964b37ea6bb12614ec56347f86a4f88470cda4bd",
+      "sha256_after": "54c3a95418a5e4a02c0d32e435f172f6c50d5bd4470d60a839f6e8f90e55b745"
+    },
+    {
+      "path": "mid_res/historical_baselines/baseline_development_p10_75_p99_8/test/2026-08-07_01-43-41/numeric/results_test_lote_5.csv",
+      "row_count": 140,
+      "changed_cell_count": 280,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "0f5ff715102a318de70632682f02d8d475a2eeb2cd9c38ecfb57f065928ee858",
+      "sha256_after": "af11dce1b6cb82268be37e88e5388aea4ac392b9427545951a6549e90c809cf2"
+    },
+    {
+      "path": "mid_res/historical_baselines/baseline_development_p10_75_p99_8/train/2026-08-07_01-43-41/numeric/results_train.csv",
+      "row_count": 30,
+      "changed_cell_count": 60,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "487a3274063b6062d5592070361e2b6daf92708171183bceef27ac5e6fde4e09",
+      "sha256_after": "a159bdcc1cd1bbff065484d853bdedb3f496fddc5960be5f587799e89424735e"
+    },
+    {
+      "path": "mid_res/historical_baselines/baseline_development_p10_75_p99_8/train/2026-08-07_01-43-41/numeric/results_train_lote_1.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "5ba86f3c735ee18ff9c8ecdb12acee4924558c6bee249bc048e23c561e3705fe",
+      "sha256_after": "6a160478201c6e1724b83b8329861d4305214c4919a26d6b6aa91c6210b552ad"
+    },
+    {
+      "path": "mid_res/historical_baselines/baseline_development_p10_75_p99_8/train/2026-08-07_01-43-41/numeric/results_train_lote_2.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "f88ade791bedf140d280fb6acc8001951728ed0824dd051fb78787bd619462dc",
+      "sha256_after": "b6dd98eb941be9d1f5179148d6a4d5145c26f29900fac28c39b6c0e2f882b607"
+    },
+    {
+      "path": "mid_res/historical_baselines/baseline_development_p10_75_p99_8/train/2026-08-07_01-43-41/numeric/results_train_lote_3.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "455f9992dd7d0a62915811d0d63898e976a68d49525ca9979c1ef8042df0c6fc",
+      "sha256_after": "347b4253b73da7c2a23f4d88535d241301d4f54091300f73f4f7af383e5ea17d"
+    },
+    {
+      "path": "mid_res/historical_baselines/baseline_development_p10_75_p99_8/train/2026-08-07_01-43-41/numeric/results_train_lote_4.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "d5027899bb5eccbbcf0a67f1c92d650fe3d3c18ffc1fbc611e65df23fca41cdf",
+      "sha256_after": "897d9005c58baab0f1182f75ed716dda02c65098d4f747a75e16cfb761f2594f"
+    },
+    {
+      "path": "mid_res/historical_baselines/baseline_development_p10_75_p99_8/train/2026-08-07_01-43-41/numeric/results_train_lote_5.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "49efe1a9fdd2010f2d4ad567f841fcccd36bf872888d0397457fd28f0c2f711f",
+      "sha256_after": "d9bb32a1bbf67285642be779822668c461c2cad7a9fb8aa1f26c954869d50105"
+    },
+    {
+      "path": "mid_res/historical_baselines/baseline_development_p10_75_p99_8/val/2026-08-07_01-43-41/numeric/results_val.csv",
+      "row_count": 270,
+      "changed_cell_count": 540,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "8cd18be824fa7c543822088230845aba37d9ddb50a0ce9ca196345923398fcdb",
+      "sha256_after": "11ef2bea4047e78259abfeda859cc41183cca50965103ee9d65bcf078b75ed0e"
+    },
+    {
+      "path": "mid_res/historical_baselines/baseline_development_p10_75_p99_8/val/2026-08-07_01-43-41/numeric/results_val_lote_1.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "bd1f5535ddc52e72461521996a85ece4d1e43f6ad5e60cb3139c0ff300df7feb",
+      "sha256_after": "dbf3750ffb5614d66e05849150ceb6a4880f19c49741e263b2f1007eb38c2299"
+    },
+    {
+      "path": "mid_res/historical_baselines/baseline_development_p10_75_p99_8/val/2026-08-07_01-43-41/numeric/results_val_lote_2.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "aa886da1742bb528d6c3292a5b0f5b1777b48bdd5643c760d48e0145e86953b3",
+      "sha256_after": "2c943ee1d85715afc9885f66dc97cc6b7f10075fcfeb790444e30c14a99f8ede"
+    },
+    {
+      "path": "mid_res/historical_baselines/baseline_development_p10_75_p99_8/val/2026-08-07_01-43-41/numeric/results_val_lote_3.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "9d57bd0ea2f21bc804f1b7cf4b3e50dc031e9cc8a6931e34f7fe069a8ed8bb66",
+      "sha256_after": "3290fa8a64c0026790597452d4712d95b710a1ec9274c180f6e901979146f37a"
+    },
+    {
+      "path": "mid_res/historical_baselines/baseline_development_p10_75_p99_8/val/2026-08-07_01-43-41/numeric/results_val_lote_4.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "f09a1a1d6bb561d1c21e1e72ff52de77e130329ce2e4baf411a97a207d954293",
+      "sha256_after": "5582698653ecb75b7192222ae28d93fea661e93b910064174d91537beac4f5d0"
+    },
+    {
+      "path": "mid_res/historical_baselines/baseline_development_p10_75_p99_8/val/2026-08-07_01-43-41/numeric/results_val_lote_5.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "22c450fec50639fd268f285dd601dfa38df93598609538daa131856d837032ca",
+      "sha256_after": "aeaf0e357dfc5babc2d72387443ef84dd9ec9a55c526e4eb44ca96f2c0eba0cc"
+    },
+    {
+      "path": "mid_res/historical_baselines/baseline_legacy_canonical_p99_7/test/2026-06-05_20-00-43/numeric/results_test.csv",
+      "row_count": 700,
+      "changed_cell_count": 1400,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "216b1e9542958e516827ebf2157ae4cd6915718fec940a07da34710e499cc2ca",
+      "sha256_after": "46c3415c735199ee6c94aa42dd9827fc6825e450e687cf29cfe1ab27164182fd"
+    },
+    {
+      "path": "mid_res/historical_baselines/baseline_legacy_canonical_p99_7/test/2026-06-05_20-00-43/numeric/results_test_lote_1.csv",
+      "row_count": 140,
+      "changed_cell_count": 280,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "31dff679d96fb930208897956433584f934f03d52bf899743c54cea53dee9909",
+      "sha256_after": "b4103517c12ea4057192f209f3f709a33c2b50f86e6c465cd751aa097f6d588a"
+    },
+    {
+      "path": "mid_res/historical_baselines/baseline_legacy_canonical_p99_7/test/2026-06-05_20-00-43/numeric/results_test_lote_2.csv",
+      "row_count": 140,
+      "changed_cell_count": 280,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "9c552a054572feed536175bfa44cff36239e4e43aa5bfe8642feaae630b4077a",
+      "sha256_after": "39f5ee63954bf09515c07958ce10c90d449bdcf9c159ec6baeba8bb931b59e04"
+    },
+    {
+      "path": "mid_res/historical_baselines/baseline_legacy_canonical_p99_7/test/2026-06-05_20-00-43/numeric/results_test_lote_3.csv",
+      "row_count": 140,
+      "changed_cell_count": 280,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "9604dbf9a8d384fd7ff4203ea7d2d3163ef4949f2d49585d9c0e77a441a9857b",
+      "sha256_after": "9859da4cfe2a307750ab167a7d5801577c6d9ef3989048b31da09aca4a73e94f"
+    },
+    {
+      "path": "mid_res/historical_baselines/baseline_legacy_canonical_p99_7/test/2026-06-05_20-00-43/numeric/results_test_lote_4.csv",
+      "row_count": 140,
+      "changed_cell_count": 280,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "db252b78cbdbad9305ebdc2a2c833e26a27f7584ed33731cbd38519954005ada",
+      "sha256_after": "f28ff26f5997a2f49f90f2c0c16802267e92fa10aafff197fcc2b2af3f681c1a"
+    },
+    {
+      "path": "mid_res/historical_baselines/baseline_legacy_canonical_p99_7/test/2026-06-05_20-00-43/numeric/results_test_lote_5.csv",
+      "row_count": 140,
+      "changed_cell_count": 280,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "076d1664dff1b321d90a5aca83ce8281319726b7e3b6303864c26574e5b490f7",
+      "sha256_after": "c782dd018292c1c0b25aa66c98ce6c946f050be5977ae272c8e1f72706706d8c"
+    },
+    {
+      "path": "mid_res/historical_baselines/baseline_legacy_canonical_p99_7/train/2026-06-17_10-40-05/numeric/results_train.csv",
+      "row_count": 30,
+      "changed_cell_count": 60,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "b67ceba8f792f2c43549d5adcf7629487b2dd4ee15f8e8805f5a33501d7b4ec4",
+      "sha256_after": "a3079ba28129fec4d660aacc7d526251fccfa0beaf0b668c8c5d50b75b660e49"
+    },
+    {
+      "path": "mid_res/historical_baselines/baseline_legacy_canonical_p99_7/train/2026-06-17_10-40-05/numeric/results_train_lote_1.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "be07b92c34baeebef399bc47d6d1b2c573ab6e1350e094a50b440558cb73ee77",
+      "sha256_after": "e9f2bb6a3c375fab5f294d22d4af788df0e2d903e075881c1980bbe6c2d46c38"
+    },
+    {
+      "path": "mid_res/historical_baselines/baseline_legacy_canonical_p99_7/train/2026-06-17_10-40-05/numeric/results_train_lote_2.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "129cb77e220d1f95fd73368380b944e0aa6b708ab8a03a8810106b75e1e148d7",
+      "sha256_after": "22decca587ab750895be71539365073e921752de903ff70823569aa2a1505ded"
+    },
+    {
+      "path": "mid_res/historical_baselines/baseline_legacy_canonical_p99_7/train/2026-06-17_10-40-05/numeric/results_train_lote_3.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "defac1767ef9ae47ff0c689d54ea1caa7c7f1b457223809e1fc4b67b87cc493e",
+      "sha256_after": "683dbb31c07ed457aa7cf07c49a0feed7822cceaf4a53d6b712fe926e498944e"
+    },
+    {
+      "path": "mid_res/historical_baselines/baseline_legacy_canonical_p99_7/train/2026-06-17_10-40-05/numeric/results_train_lote_4.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "bbe13f8a71636bc1d45b43715fc65e94eae42c19c94ad2365c3a91c57e1d8856",
+      "sha256_after": "71fe46f483a9d6b79b4924e0d0d615a14f63161e4d169d029bc4b1c3c199fe51"
+    },
+    {
+      "path": "mid_res/historical_baselines/baseline_legacy_canonical_p99_7/train/2026-06-17_10-40-05/numeric/results_train_lote_5.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "aca87ae4846324539bf51cbd8e7c4cf47f094939d5ecae5e62777006e176c65c",
+      "sha256_after": "2617a90b4db4ac589d7db2fe9310bc7d64788dabc51e5a153705230bd118fe77"
+    },
+    {
+      "path": "mid_res/historical_baselines/baseline_legacy_canonical_p99_7/val/2026-06-05_14-46-06/numeric/results_val.csv",
+      "row_count": 270,
+      "changed_cell_count": 540,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "bb1f18e2b47ee2775ce136e1941093153fc3dd8fcf90f6891cd2a27fa111d81b",
+      "sha256_after": "19a959e032911223d86e3dc7aa7bf7516c85e7028bf92e7c69da7fe3753db37f"
+    },
+    {
+      "path": "mid_res/historical_baselines/baseline_legacy_canonical_p99_7/val/2026-06-05_14-46-06/numeric/results_val_lote_1.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "7b48a279a29ac30c370bfc0c5b38fb5b51ec0b383427bfa66cd7388e4904f15a",
+      "sha256_after": "947873da56a4975de8f7997a5e1ab9ff1bbfde6992269d40e26cf11a9e7238e4"
+    },
+    {
+      "path": "mid_res/historical_baselines/baseline_legacy_canonical_p99_7/val/2026-06-05_14-46-06/numeric/results_val_lote_2.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "ecc0420cf7ce13ab92f40376ab4cb3efe8f2c3c9300a7b20141d9b0a7b72f5ff",
+      "sha256_after": "1496a2569a00aeb844e52adde4d9beac16645dab421ba15de61db7369838ba97"
+    },
+    {
+      "path": "mid_res/historical_baselines/baseline_legacy_canonical_p99_7/val/2026-06-05_14-46-06/numeric/results_val_lote_3.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "4e8e993b4a27f508b4b60cfcecdefb332762d328c628376189a45c4d7a890b44",
+      "sha256_after": "f27188bb6d425f832ec251a76e6cb1d9261551af00c1f33776d002a4ae8a485a"
+    },
+    {
+      "path": "mid_res/historical_baselines/baseline_legacy_canonical_p99_7/val/2026-06-05_14-46-06/numeric/results_val_lote_4.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "bdd87b8695a85c03ab90363448e758a1f63af1650959e859a9799d50d9a99219",
+      "sha256_after": "8c22ec4ca93d0aaa27ca5eba4513e9924fa93fec344b98e795610f6c99b9945d"
+    },
+    {
+      "path": "mid_res/historical_baselines/baseline_legacy_canonical_p99_7/val/2026-06-05_14-46-06/numeric/results_val_lote_5.csv",
+      "row_count": 54,
+      "changed_cell_count": 108,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "6f6dc2608edd01e00e5604039793673027b5beba95681b06ff610728dc72c269",
+      "sha256_after": "0f22e9b01b2a3ec05196aa1531a81f712523477dc1c41227bf5675ae4feefcba"
+    },
+    {
+      "path": "mid_res/upper_threshold_fixed/train/p99_9_m300/2026-09-02_16-25-09/numeric/results_train.csv",
+      "row_count": 30,
+      "changed_cell_count": 60,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "0597c5ff7bb8ef6c015c566267df3d7f6e871dcc465a69691040e3d8e60690d7",
+      "sha256_after": "802da9ddd56473e46998b0f82f80b02c4c2d6c8bec15a8cc9bf40c4c9ebd5887"
+    },
+    {
+      "path": "mid_res/upper_threshold_fixed/train/p99_9_m300/2026-09-02_16-25-09/numeric/results_train_lote_1.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "51626a84b7543279a6c76ec586fdc9f283f7e4d4622f3ea5b20d07c8dd9c4f88",
+      "sha256_after": "cfdc7772d823ed04ff33b0a69b96014cde38352447efd5f5c0d1b078c7f94f2e"
+    },
+    {
+      "path": "mid_res/upper_threshold_fixed/train/p99_9_m300/2026-09-02_16-25-09/numeric/results_train_lote_2.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "eec2b959bc407df0ea4ecbd424db138d5c7b26ccdb30fb7e4e3732ba1b153dcd",
+      "sha256_after": "0c2562400c8c314fa4a7295709c5b9531f519e217f76a5502285f20907b3b7b6"
+    },
+    {
+      "path": "mid_res/upper_threshold_fixed/train/p99_9_m300/2026-09-02_16-25-09/numeric/results_train_lote_3.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "027aa8ad48ab048a158d0ecea42d00e07c9bbd1356537afe8ed4b9f08061ebeb",
+      "sha256_after": "a88fd12647fbaf92aa079f557cc608c855aab6f45778d739078682de63309aec"
+    },
+    {
+      "path": "mid_res/upper_threshold_fixed/train/p99_9_m300/2026-09-02_16-25-09/numeric/results_train_lote_4.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "1c5ec6051c0ff91fea37965eed37ef4c4af59782edcc2b68cc540a4e83ac9b09",
+      "sha256_after": "d47176ad4cb4b27fe9415e3744d62191c3787807c2168a6b17447687e2726c58"
+    },
+    {
+      "path": "mid_res/upper_threshold_fixed/train/p99_9_m300/2026-09-02_16-25-09/numeric/results_train_lote_5.csv",
+      "row_count": 6,
+      "changed_cell_count": 12,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "e18937bd0ea4bd02ac9200a24f3c593c9ee6bb8d75b0e372bcc8f125a7eea506",
+      "sha256_after": "da5e78cdf0dc87785a75364f5722d5b9d08e0c8a1d1156dd373834bb51d896be"
+    },
+    {
+      "path": "mid_res/upper_threshold_fixed/val/p99_9_m300/2026-09-02_18-37-49/numeric/results_val.csv",
+      "row_count": 60,
+      "changed_cell_count": 120,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "3634fe172cfafa60b8b711a13ea89d7946a9452f24054766f24efadfc5ea24bb",
+      "sha256_after": "83850a708969ce0ccca8b7cff7d353e0d916c8dd9eeb0c1b3f1f2037892120ae"
+    },
+    {
+      "path": "mid_res/upper_threshold_fixed/val/p99_9_m300/2026-09-02_18-37-49/numeric/results_val_lote_1.csv",
+      "row_count": 12,
+      "changed_cell_count": 24,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "8e7e0af39374534ca1b1668b769128228b3b5c69bb6d271d75fb13825f300084",
+      "sha256_after": "0c9cbcc55d19216762d20dc5793a7816f7ff6bc7a7ac3fb1ed22f5090a5f8b33"
+    },
+    {
+      "path": "mid_res/upper_threshold_fixed/val/p99_9_m300/2026-09-02_18-37-49/numeric/results_val_lote_2.csv",
+      "row_count": 12,
+      "changed_cell_count": 24,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "d961c4494cdb9d1282f036326e7fe80f78b5788e7a327b96925079811ccb9d76",
+      "sha256_after": "28cfce2f3add5ac209307cf82bba5b01a261d983de425cf199a8f6864fe01c6b"
+    },
+    {
+      "path": "mid_res/upper_threshold_fixed/val/p99_9_m300/2026-09-02_18-37-49/numeric/results_val_lote_3.csv",
+      "row_count": 12,
+      "changed_cell_count": 24,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "d055c31e3a69b76622048818b00f1be4cbe631f489da9250d84d51e508c11ed2",
+      "sha256_after": "8e404ee0790b3923c9ac96fe5e9f6f673b7443fec965e3ca5b28381203affa78"
+    },
+    {
+      "path": "mid_res/upper_threshold_fixed/val/p99_9_m300/2026-09-02_18-37-49/numeric/results_val_lote_4.csv",
+      "row_count": 12,
+      "changed_cell_count": 24,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "152b296b945d49acbe3bf1042aa357fb27bfe121988b243de5cd2228ae71ef98",
+      "sha256_after": "158d65f92727320ba88501b65c8aa0c3b09106f897d187aca44fbee5f258ca49"
+    },
+    {
+      "path": "mid_res/upper_threshold_fixed/val/p99_9_m300/2026-09-02_18-37-49/numeric/results_val_lote_5.csv",
+      "row_count": 12,
+      "changed_cell_count": 24,
+      "changed_columns": [
+        "ostia_detection_status",
+        "status"
+      ],
+      "sha256_before": "137c896161ad87cd499bd8147b796d6d55905f8179b71348f0b41979395adb65",
+      "sha256_after": "a008078d4f1e8ef7f1a21ef1403117a38bd51c82734399a319c3b9bed3044d05"
+    }
+  ]
+}

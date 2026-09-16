@@ -7,6 +7,8 @@ from utils.project.results import (
     add_internal_result_aliases,
     make_readable_results_dataframe,
     make_result_dataframe,
+    ostia_status_label_pt,
+    result_status_label_pt,
     summarize_results_df,
 )
 
@@ -39,7 +41,27 @@ class ResultAliasTests(unittest.TestCase):
             result["ostia_status"].tolist(),
             ["both_correct", "not_found"],
         )
+        self.assertEqual(
+            result["ostia_detection_status"].tolist(),
+            ["both_correct", "not_found"],
+        )
         self.assertIn("artery_dice", result.columns)
+
+    def test_persists_status_codes_and_translates_only_for_presentation(self):
+        internal = make_result_dataframe(
+            [
+                {"IMG_ID": 1, "status": "ambos toleráveis"},
+                {"IMG_ID": 2, "status": "no ostium correct"},
+            ]
+        )
+        readable = make_readable_results_dataframe(internal)
+
+        self.assertEqual(
+            readable["status"].tolist(),
+            ["both_tolerable", "none_correct"],
+        )
+        self.assertEqual(result_status_label_pt("both_tolerable"), "ambos toleráveis")
+        self.assertEqual(ostia_status_label_pt("both_correct"), "ambos corretos")
 
     def test_preserves_image_and_aorta_volume_fields_in_readable_schema(self):
         internal = make_result_dataframe(
@@ -77,22 +99,16 @@ class ResultAliasTests(unittest.TestCase):
         self.assertEqual(readable.loc[0, "aorta_voxels_per_segmented_slice"], 25.0)
         self.assertEqual(readable.loc[0, "aorta_volume_fraction"], 0.125)
         self.assertEqual(readable.loc[0, "aorta_circle_radius_median_mm"], 14.2)
-        self.assertEqual(
-            readable.loc[0, "aorta_circle_radius_max_step_change_mm"], 1.3
-        )
+        self.assertEqual(readable.loc[0, "aorta_circle_radius_max_step_change_mm"], 1.3)
         self.assertEqual(
             readable.loc[0, "aorta_circle_upper_radius_bound_fraction"], 0.25
         )
-        self.assertEqual(
-            readable.loc[0, "aorta_level_set_initial_voxel_count"], 40
-        )
+        self.assertEqual(readable.loc[0, "aorta_level_set_initial_voxel_count"], 40)
         self.assertEqual(readable.loc[0, "aorta_level_set_raw_voxel_count"], 180)
         self.assertEqual(
             readable.loc[0, "aorta_level_set_initial_volume_fraction"], 0.04
         )
-        self.assertEqual(
-            readable.loc[0, "aorta_level_set_raw_volume_fraction"], 0.18
-        )
+        self.assertEqual(readable.loc[0, "aorta_level_set_raw_volume_fraction"], 0.18)
         self.assertEqual(readable.loc[0, "aorta_level_set_iterations_used"], 31)
         self.assertEqual(readable.loc[0, "aorta_level_set_circle_fill_q25"], 0.87)
         self.assertEqual(readable.loc[0, "aorta_level_set_circle_area_ratio_p90"], 1.4)

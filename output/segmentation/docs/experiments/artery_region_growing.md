@@ -25,3 +25,4 @@ atingiu ganho mínimo entre 1% e 5%, nenhuma foi incorporada ao pipeline.
 O pipeline mantém somente o RG original, com pós-processamento morfológico
 único. Novos estudos devem partir de uma hipótese diferente, sem reativar essas
 estratégias automaticamente.
+

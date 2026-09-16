@@ -1,0 +1,79 @@
+{
+  "metadata_schema_version": 3,
+  "run": {
+    "split": "test",
+    "resolution": "high"
+  },
+  "configuration": {
+    "source": "legacy_metadata",
+    "sha256": "",
+    "snapshot_file": null,
+    "use_gpu": null,
+    "downscale_method": "scipy",
+    "downscale_factors": [
+      1,
+      1,
+      1
+    ],
+    "min_threshold_hu": null,
+    "max_threshold_percentile": 99.7,
+    "threshold_method": null,
+    "artery_segmentation_method": null
+  },
+  "results": {
+    "execution_time": {
+      "seconds": null,
+      "minutes": null,
+      "hours": null
+    },
+    "dice": {
+      "before_morphology": {
+        "mean": null,
+        "valid_exam_count": 0
+      },
+      "after_morphology": {
+        "mean": 0.4684355232497248,
+        "valid_exam_count": 700
+      }
+    },
+    "ostia": {
+      "processed_exam_count": 700,
+      "success": {
+        "count": 500,
+        "percent": 71.42857142857143
+      },
+      "types": {
+        "both_correct": {
+          "count": 181,
+          "percent": 25.857142857142858
+        },
+        "both_tolerable": {
+          "count": 319,
+          "percent": 45.57142857142858
+        },
+        "found_but_incorrect": {
+          "count": 163,
+          "percent": 23.285714285714285
+        },
+        "not_found": {
+          "count": 37,
+          "percent": 5.285714285714286
+        },
+        "not_evaluated_or_error": {
+          "count": 0,
+          "percent": 0.0
+        }
+      },
+      "sides": {
+        "left_correct": {
+          "count": 267,
+          "percent": 38.142857142857146
+        },
+        "right_correct": {
+          "count": 386,
+          "percent": 55.14285714285714
+        }
+      }
+    }
+  }
+}

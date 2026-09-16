@@ -3,6 +3,41 @@ import numpy as np
 import pandas as pd
 from typing import Any, Dict, Optional, Sequence
 
+from ..project.results_schema import (
+    normalize_ostia_status,
+    normalize_result_status,
+    ostia_status_label_pt,
+    result_status_label_pt,
+)
+
+
+def _normalize_success_status(value: Any) -> str | None:
+    """Normalize legacy and readable success labels to internal status names."""
+    return normalize_ostia_status(value)
+
+
+def _success_status_series(
+    df_split: pd.DataFrame,
+    status_column: str,
+) -> pd.Series:
+    """Return normalized ostia statuses, preferring the canonical alias."""
+    source_column = "ostia_status" if "ostia_status" in df_split else status_column
+    return df_split[source_column].map(_normalize_success_status)
+
+
+def _has_success_status_column(df_split: pd.DataFrame, status_column: str) -> bool:
+    """Check whether a readable or canonical ostia status is available."""
+    return "ostia_status" in df_split or status_column in df_split
+
+
+def _normalized_success_statuses(success_status: Sequence[str]) -> list[str]:
+    """Normalize the requested labels while preserving their display order."""
+    return [
+        normalized
+        for status in success_status
+        if (normalized := _normalize_success_status(status)) is not None
+    ]
+
 
 def _get_split_df(
     data_by_resolution: Optional[Dict[str, Any]], resolution: str, split_name: str
@@ -55,7 +90,12 @@ def plot_status_distribution_by_subset(
             ax.set_yticks([])
             continue
 
-        status_counts = df_split[status_column].value_counts()
+        status_counts = (
+            df_split[status_column]
+            .map(normalize_result_status)
+            .map(result_status_label_pt)
+            .value_counts()
+        )
         status_counts.plot(kind="bar", color=color, edgecolor="black", ax=ax)
         # Ajusta o limite superior para evitar que os rótulos sobreponham o título
         max_count = max(status_counts.values) if len(status_counts.values) > 0 else 0
@@ -100,7 +140,11 @@ def plot_success_error_by_subset(
         df_split = _get_split_df(data_by_resolution, resolution, split_name)
         ax = axes[idx]
 
-        if df_split is None or df_split.empty or status_column not in df_split.columns:
+        if (
+            df_split is None
+            or df_split.empty
+            or not _has_success_status_column(df_split, status_column)
+        ):
             ax.text(
                 0.5,
                 0.5,
@@ -117,7 +161,9 @@ def plot_success_error_by_subset(
             continue
 
         total = len(df_split)
-        successful_count = int(df_split[status_column].isin(success_status).sum())
+        normalized_status = _success_status_series(df_split, status_column)
+        normalized_success = _normalized_success_statuses(success_status)
+        successful_count = int(normalized_status.isin(normalized_success).sum())
         error_count = total - successful_count
 
         success_pct = 100 * successful_count / total if total > 0 else 0
@@ -169,7 +215,11 @@ def build_success_status_summary_by_subset(
 
     for resolution in ["high", "mid"]:
         df_split = _get_split_df(data_by_resolution, resolution, split_name)
-        if df_split is None or df_split.empty or status_column not in df_split.columns:
+        if (
+            df_split is None
+            or df_split.empty
+            or not _has_success_status_column(df_split, status_column)
+        ):
             rows.append(
                 {
                     "split": split_name,
@@ -184,18 +234,23 @@ def build_success_status_summary_by_subset(
             continue
 
         total_images = len(df_split)
-        success_df = df_split[df_split[status_column].isin(success_status)]
-        status_counts = success_df[status_column].value_counts()
+        normalized_status = _success_status_series(df_split, status_column)
+        normalized_success = _normalized_success_statuses(success_status)
+        status_counts = normalized_status[
+            normalized_status.isin(normalized_success)
+        ].value_counts()
         total_success = int(status_counts.sum())
 
-        for status in success_status:
-            count = int(status_counts.get(status, 0))
+        for status, normalized_status_name in zip(
+            success_status, normalized_success, strict=True
+        ):
+            count = int(status_counts.get(normalized_status_name, 0))
             percentage = 100 * count / total_images if total_images > 0 else 0.0
             rows.append(
                 {
                     "split": split_name,
                     "resolution": resolution,
-                    "status": status,
+                    "status": ostia_status_label_pt(normalized_status_name),
                     "quantidade": count,
                     "percentual_do_total": round(percentage, 2),
                     "total_acertos": total_success,

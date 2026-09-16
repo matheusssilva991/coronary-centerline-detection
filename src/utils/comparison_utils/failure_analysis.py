@@ -7,6 +7,7 @@ from collections.abc import Mapping
 import numpy as np
 import pandas as pd
 
+from ..project.results_schema import normalize_ostia_status
 
 DEFAULT_VARIANTS = {
     "normal_rg": "normal_rg",
@@ -16,10 +17,8 @@ DEFAULT_VARIANTS = {
 }
 
 SUCCESS_STATUSES = {
-    "both correct",
-    "both tolerable",
-    "both ostia correct",
-    "both ostia tolerable",
+    "both_correct",
+    "both_tolerable",
 }
 
 _SOURCE_COLUMNS = {
@@ -62,7 +61,7 @@ _FOCUSED_CATEGORY_SPECS = [
 
 def _success_status(series: pd.Series) -> pd.Series:
     """Converte os rótulos de óstios em sucesso binário."""
-    return series.astype(str).str.strip().str.lower().isin(SUCCESS_STATUSES)
+    return series.map(normalize_ostia_status).isin(SUCCESS_STATUSES)
 
 
 def _normalized_coordinate(series: pd.Series) -> pd.Series:

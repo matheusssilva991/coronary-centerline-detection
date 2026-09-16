@@ -24,17 +24,16 @@ import numpy as np
 import pandas as pd
 
 from ..project.result_paths import metadata_candidates
+from ..project.results_schema import normalize_ostia_status
 
 
 SUCCESS_LABELS = {
-    "both correct",
-    "both tolerable",
-    "both ostia correct",
-    "both ostia tolerable",
+    "both_correct",
+    "both_tolerable",
 }
-CORRECT_LABELS = {"both correct", "both ostia correct"}
-TOLERABLE_LABELS = {"both tolerable", "both ostia tolerable"}
-WRONG_LABELS = {"found but incorrect", "found_but_wrong"}
+CORRECT_LABELS = {"both_correct"}
+TOLERABLE_LABELS = {"both_tolerable"}
+WRONG_LABELS = {"found_but_wrong"}
 OSTIA_STATUS_GROUP_LABELS = {
     "success": "success",
     "wrong": "wrong",
@@ -48,10 +47,10 @@ OSTIA_STATUS_COLUMNS = [
     "not_found_or_error_n",
 ]
 OSTIA_STATUS_LABELS = [
-    "Both correct",
-    "Both tolerable",
-    "Found but wrong",
-    "Not found/error",
+    "Ambos corretos",
+    "Ambos toleráveis",
+    "Encontrados, mas incorretos",
+    "Não encontrados/erro",
 ]
 OSTIA_STATUS_COLORS = ["#2ca02c", "#8fd175", "#ff9f1a", "#d62728"]
 
@@ -78,10 +77,10 @@ def first_existing_value(
 def normalize_ostia_status_group(status: object) -> str:
     """Agrupa status de óstios para comparações qualitativas.
 
-    ``both correct`` e ``both tolerable`` são tratados como o mesmo grupo de
+    ``both_correct`` e ``both_tolerable`` são tratados como o mesmo grupo de
     sucesso, porque ambos indicam óstios aceitáveis para a análise.
     """
-    status_text = str(status).strip().lower()
+    status_text = normalize_ostia_status(status)
     if status_text in SUCCESS_LABELS:
         return "success"
     if status_text in WRONG_LABELS:
@@ -227,7 +226,8 @@ def load_variant_run(
         df["ostia_detected_bool"] = False
 
     status = df.get("ostia_detection_status", pd.Series(index=df.index, dtype=str))
-    status = status.astype(str)
+    status = status.map(normalize_ostia_status)
+    df["ostia_detection_status"] = status
     df["ostia_success"] = status.isin(SUCCESS_LABELS)
     df["both_correct"] = status.isin(CORRECT_LABELS)
     df["both_tolerable"] = status.isin(TOLERABLE_LABELS)

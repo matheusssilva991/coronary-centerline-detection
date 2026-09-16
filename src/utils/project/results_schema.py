@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import unicodedata
 from typing import Any, cast
 
 import pandas as pd
@@ -9,13 +10,106 @@ import pandas as pd
 from .results_columns import (
     ARTERY_BRANCH_COLUMNS,
     CANONICAL_COLUMN_NAMES,
-    OSTIA_STATUS_INTERNAL_LABELS,
-    OSTIA_STATUS_READABLE_LABELS,
+    OSTIA_STATUS_PORTUGUESE_LABELS,
     READABLE_BOOL_COLUMNS,
     READABLE_COLUMN_NAMES,
     RESULT_COLUMNS,
     STATUS_LABELS,
+    STATUS_PORTUGUESE_LABELS,
 )
+
+
+OSTIA_STATUS_ALIASES: dict[str, str] = {
+    "not_evaluated": "not_evaluated",
+    "nao_avaliado": "not_evaluated",
+    "not_found": "not_found",
+    "ostia_not_found": "not_found",
+    "nao_encontrados": "not_found",
+    "ostios_nao_encontrados": "not_found",
+    "both_correct": "both_correct",
+    "both_ostia_correct": "both_correct",
+    "ambos_corretos": "both_correct",
+    "both_tolerable": "both_tolerable",
+    "both_ostia_tolerable": "both_tolerable",
+    "ambos_toleraveis": "both_tolerable",
+    "found_but_wrong": "found_but_wrong",
+    "found_but_incorrect": "found_but_wrong",
+    "encontrados_mas_incorretos": "found_but_wrong",
+    "one_correct": "found_but_wrong",
+    "one_ostium_correct": "found_but_wrong",
+    "um_correto": "found_but_wrong",
+    "none_correct": "found_but_wrong",
+    "no_ostium_correct": "found_but_wrong",
+    "nenhum_correto": "found_but_wrong",
+}
+
+RESULT_STATUS_ALIASES: dict[str, str] = {
+    "not_found": "not_found",
+    "ostia_not_found": "not_found",
+    "nao_encontrados": "not_found",
+    "ostios_nao_encontrados": "not_found",
+    "both_correct": "both_correct",
+    "both_ostia_correct": "both_correct",
+    "ambos_corretos": "both_correct",
+    "both_tolerable": "both_tolerable",
+    "both_ostia_tolerable": "both_tolerable",
+    "ambos_toleraveis": "both_tolerable",
+    "one_correct": "one_correct",
+    "one_ostium_correct": "one_correct",
+    "um_correto": "one_correct",
+    "none_correct": "none_correct",
+    "no_ostium_correct": "none_correct",
+    "nenhum_correto": "none_correct",
+    "error": "error",
+    "pipeline_error": "error",
+    "erro": "error",
+    "erro_no_pipeline": "error",
+    "found_but_wrong": "found_but_wrong",
+    "found_but_incorrect": "found_but_wrong",
+    "not_evaluated": "not_evaluated",
+}
+
+
+def _status_key(value: Any) -> str | None:
+    """Convert a status scalar to an accent-free snake-case lookup key."""
+    if value is None or pd.isna(value):
+        return None
+    normalized = unicodedata.normalize("NFKD", str(value).strip().casefold())
+    ascii_value = "".join(
+        char for char in normalized if not unicodedata.combining(char)
+    )
+    key = ascii_value.replace("-", "_").replace(" ", "_")
+    while "__" in key:
+        key = key.replace("__", "_")
+    return key.strip("_")
+
+
+def normalize_ostia_status(value: Any) -> str | None:
+    """Normalize persisted and legacy ostia statuses to English status codes."""
+    key = _status_key(value)
+    return None if key is None else OSTIA_STATUS_ALIASES.get(key, key)
+
+
+def normalize_result_status(value: Any) -> str | None:
+    """Normalize persisted and legacy result statuses to English status codes."""
+    key = _status_key(value)
+    return None if key is None else RESULT_STATUS_ALIASES.get(key, key)
+
+
+def ostia_status_label_pt(value: Any) -> str:
+    """Return the Portuguese presentation label for an ostia status code."""
+    normalized = normalize_ostia_status(value)
+    if normalized is None:
+        return "sem status"
+    return OSTIA_STATUS_PORTUGUESE_LABELS.get(normalized, normalized)
+
+
+def result_status_label_pt(value: Any) -> str:
+    """Return the Portuguese presentation label for a result status code."""
+    normalized = normalize_result_status(value)
+    if normalized is None:
+        return "sem status"
+    return STATUS_PORTUGUESE_LABELS.get(normalized, normalized)
 
 
 def _readable_column_name(column: str) -> str:
@@ -75,7 +169,9 @@ def make_readable_results_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     if "ostia_detection_status" in readable_df.columns:
         readable_df["ostia_detection_status"] = readable_df[
             "ostia_detection_status"
-        ].map(lambda value: OSTIA_STATUS_READABLE_LABELS.get(value, value))
+        ].map(normalize_ostia_status)
+    if "status" in readable_df.columns:
+        readable_df["status"] = readable_df["status"].map(normalize_result_status)
 
     return readable_df
 
@@ -103,6 +199,16 @@ def select_per_image_result_columns(df: pd.DataFrame) -> pd.DataFrame:
 def add_internal_result_aliases(df: pd.DataFrame) -> pd.DataFrame:
     """Adiciona aliases internos sem remover as colunas legíveis persistidas."""
     normalized_df = df.copy()
+    if "ostia_detection_status" in normalized_df.columns:
+        normalized_df["ostia_detection_status"] = normalized_df[
+            "ostia_detection_status"
+        ].map(normalize_ostia_status)
+    if "ostia_status" in normalized_df.columns:
+        normalized_df["ostia_status"] = normalized_df["ostia_status"].map(
+            normalize_ostia_status
+        )
+    if "status" in normalized_df.columns:
+        normalized_df["status"] = normalized_df["status"].map(normalize_result_status)
     # Resultados antigos e novos podem usar lados diferentes do mapa de aliases.
     for readable_column, internal_column in CANONICAL_COLUMN_NAMES.items():
         if (
@@ -113,9 +219,7 @@ def add_internal_result_aliases(df: pd.DataFrame) -> pd.DataFrame:
             if readable_column in READABLE_BOOL_COLUMNS:
                 alias = alias.map(_as_bool_value)
             elif internal_column == "ostia_status":
-                alias = alias.map(
-                    lambda value: OSTIA_STATUS_INTERNAL_LABELS.get(value, value)
-                )
+                alias = alias.map(normalize_ostia_status)
             normalized_df[internal_column] = alias
     return normalized_df
 
@@ -354,7 +458,9 @@ def build_result_row(result: dict[str, Any]) -> dict[str, Any]:
         ),
         # Resultado da localização e validação dos óstios.
         "ostia_found": _as_bool_value(_get_result_value(result, "ostia_found", False)),
-        "ostia_status": _get_result_value(result, "ostia_status"),
+        "ostia_status": normalize_ostia_status(
+            _get_result_value(result, "ostia_status")
+        ),
         "segmentation_attempted": _as_bool_value(
             _get_result_value(result, "segmentation_attempted", False)
         ),
@@ -381,7 +487,9 @@ def build_result_row(result: dict[str, Any]) -> dict[str, Any]:
         "ostia_right": _get_result_value(result, "ostia_right"),
         "error": _get_result_value(result, "error", None),
     }
-    row["status"] = result.get("status") or classify_result_status(row)
+    row["status"] = normalize_result_status(
+        result.get("status") or classify_result_status(row)
+    )
     return row
 
 
@@ -484,10 +592,8 @@ def summarize_results_df(df: pd.DataFrame) -> dict[str, Any]:
     segmentation_attempted_series = _bool_series(df, "segmentation_attempted")
     proceeded_with_bad_ostia_series = _bool_series(df, "proceeded_with_bad_ostia")
     ostia_status_series = _series_from_aliases(df, "ostia_status")
-    ostia_status_normalized = ostia_status_series.fillna("").astype(str).str.lower()
-    ostia_not_found_series = ostia_status_normalized.isin(
-        {"not_found", "not found", "não encontrados", "óstios não encontrados"}
-    )
+    ostia_status_normalized = ostia_status_series.map(normalize_ostia_status)
+    ostia_not_found_series = ostia_status_normalized.eq("not_found")
     error_series = _series_from_aliases(df, "error")
     ostia_error_series = _series_from_aliases(df, "ostia_error")
     dice_series = _numeric_series(df, "dice_artery")

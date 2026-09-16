@@ -1,0 +1,11 @@
+{
+  "CIRCLE_DETECTION": {
+    "trajectory_filter": {
+      "method": "none"
+    }
+  },
+  "LEVEL_SET": {
+    "trajectory_radius_factor": null,
+    "trajectory_axial_margin_slices": 0
+  }
+}

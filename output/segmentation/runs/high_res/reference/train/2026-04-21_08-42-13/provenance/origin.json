@@ -1,0 +1,8 @@
+{
+  "commit": "7afdaef764314d1910e3b4d7fda3140f33992cd3",
+  "original_split": "val",
+  "current_split": "train",
+  "original_run": "2026-04-21_08-42-13",
+  "original_root": "output/segmentation/8.final_results/high_res",
+  "batch_files_available": false
+}
