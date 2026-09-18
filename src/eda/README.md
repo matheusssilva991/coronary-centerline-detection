@@ -26,6 +26,7 @@ export IMAGECAS_BASE_PATH=/caminho/para/ImageCAS/1-1000
 
 | Notebook | Objetivo | Entrada principal | Saída | Custo |
 |---|---|---|---|---|
+| [ccta_dataset_analysis.ipynb](ccta_dataset_analysis.ipynb) | Caracterizar e visualizar volumes CCTA do ImageCAS, OrCaScore e MM-WHS | CCTA dos três bancos e um par CTI/CTAI do OrCaScore | Inventário, orientação, geometria, amostra HU e vistas axiais | Médio ao carregar dez volumes |
 | [image_intensity_eda.ipynb](image_intensity_eda.ipynb) | Distribuição HU e percentis da ROI | Volumes ImageCAS | Figuras e tabelas exibidas | Médio para KDE |
 | [preprocessing_visualization.ipynb](preprocessing_visualization.ipynb) | Fatias axiais completas, MIP, downscale, threshold, LCC, Hough e vesselness | ImageCAS e `pipeline_config.json` | Figuras exibidas no notebook | Baixo para fatias; médio, ou alto com vesselness |
 
@@ -35,6 +36,7 @@ export IMAGECAS_BASE_PATH=/caminho/para/ImageCAS/1-1000
 |---|---|---|---|---|
 | [segmentation_results_eda.ipynb](segmentation_results_eda.ipynb) | Status dos óstios, distâncias e Dice por split | Resultados canônicos | `analysis/segmentation_results/` | Baixo |
 | [split_resolution_analysis.ipynb](split_resolution_analysis.ipynb) | Comparar train/val/test entre mid e high | Resultados canônicos | Tabelas e gráficos exibidos | Baixo |
+| [resolution_filter_envelope_dice_comparison.ipynb](resolution_filter_envelope_dice_comparison.ipynb) | Comparar o Dice em mid/high antes e depois do padrão filtro + envelope/lower100/pad2 | Baselines canônicos e runs selecionados de train/val/test | Médias, deltas pareados, IC95%, Wilcoxon/Holm e gráficos exibidos | Baixo |
 | [ia_vs_pipeline_analysis.ipynb](ia_vs_pipeline_analysis.ipynb) | Comparar IA e pipeline somente nos IDs comuns | `output/ia_results` e resultados canônicos | Tabelas e gráficos exibidos | Baixo |
 | [bad_cases_results_analysis.ipynb](bad_cases_results_analysis.ipynb) | Quantificar casos ruins em mid e high | Summaries canônicos | `analysis/bad_cases/` | Baixo |
 | [segmentation_method_comparison.ipynb](segmentation_method_comparison.ipynb) | Resumir threshold normal/fuzzy e RG/FC; comparar a melhor variante com o baseline | Runs de comparação | Tabelas e gráficos pareados no notebook | Baixo |

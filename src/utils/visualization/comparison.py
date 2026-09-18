@@ -16,6 +16,64 @@ except Exception:
 from ..comparison_utils.ia_math import prettify_method_label
 
 
+def plot_grouped_metric_panels(
+    summary: pd.DataFrame,
+    *,
+    panel_col: str,
+    group_col: str,
+    x_col: str,
+    metric_col: str,
+    panel_order: list[str],
+    group_order: list[str],
+    x_order: list[str],
+    colors: dict[str, str],
+    ylabel: str,
+    title: str,
+    ylim: tuple[float, float],
+    value_format: str = "%.3f",
+) -> tuple[Any, Any]:
+    """Plot a grouped metric using one panel per comparison dimension."""
+    fig, axes = plt.subplots(
+        1,
+        len(panel_order),
+        figsize=(7 * len(panel_order), 5),
+        sharey=True,
+        constrained_layout=True,
+    )
+    axes_array = np.atleast_1d(axes)
+    width = 0.8 / len(group_order)
+    x_positions = np.arange(len(x_order))
+    offsets = (np.arange(len(group_order)) - (len(group_order) - 1) / 2) * width
+
+    for axis, panel in zip(axes_array, panel_order, strict=True):
+        panel_data = summary.loc[summary[panel_col].eq(panel)]
+        for offset, group in zip(offsets, group_order, strict=True):
+            values = (
+                panel_data.loc[panel_data[group_col].eq(group)]
+                .set_index(x_col)
+                .reindex(x_order)[metric_col]
+            )
+            if values.isna().any():
+                raise ValueError(
+                    f"Dados incompletos para painel={panel!r}, grupo={group!r}"
+                )
+            bars = axis.bar(
+                x_positions + offset,
+                values,
+                width,
+                label=group,
+                color=colors[group],
+            )
+            axis.bar_label(bars, fmt=value_format, padding=3)
+        axis.set_title(panel)
+        axis.set_xticks(x_positions, x_order)
+        axis.set_ylim(*ylim)
+        axis.set_ylabel(ylabel)
+        axis.legend(loc="lower right")
+    fig.suptitle(title, fontsize=14)
+    return fig, axes
+
+
 def plot_dice_distribution_for_publication(
     dice_values: pd.Series,
     *,

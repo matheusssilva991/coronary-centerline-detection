@@ -1,0 +1,79 @@
+{
+  "metadata_schema_version": 3,
+  "run": {
+    "split": "test",
+    "resolution": "high"
+  },
+  "configuration": {
+    "source": "effective_pipeline_config",
+    "sha256": "9a3c5639904a61aad5f55e4e639d67de0d6fb010969cb9ee8a4008ca734d472e",
+    "snapshot_file": "../config/effective_pipeline_config.json",
+    "use_gpu": true,
+    "downscale_method": "opencv",
+    "downscale_factors": [
+      1,
+      1,
+      1
+    ],
+    "min_threshold_hu": -300,
+    "max_threshold_percentile": 99.9,
+    "threshold_method": "normal",
+    "artery_segmentation_method": "region_growing"
+  },
+  "results": {
+    "execution_time": {
+      "seconds": 119709.11365842819,
+      "minutes": 1995.1518943071364,
+      "hours": 33.25253157178561
+    },
+    "dice": {
+      "before_morphology": {
+        "mean": 0.25505482636335197,
+        "valid_exam_count": 697
+      },
+      "after_morphology": {
+        "mean": 0.4945367529375625,
+        "valid_exam_count": 700
+      }
+    },
+    "ostia": {
+      "processed_exam_count": 700,
+      "success": {
+        "count": 508,
+        "percent": 72.57142857142857
+      },
+      "types": {
+        "both_correct": {
+          "count": 267,
+          "percent": 38.142857142857146
+        },
+        "both_tolerable": {
+          "count": 241,
+          "percent": 34.42857142857143
+        },
+        "found_but_incorrect": {
+          "count": 189,
+          "percent": 27.0
+        },
+        "not_found": {
+          "count": 3,
+          "percent": 0.4285714285714286
+        },
+        "not_evaluated_or_error": {
+          "count": 0,
+          "percent": 0.0
+        }
+      },
+      "sides": {
+        "left_correct": {
+          "count": 405,
+          "percent": 57.85714285714286
+        },
+        "right_correct": {
+          "count": 409,
+          "percent": 58.42857142857143
+        }
+      }
+    }
+  }
+}

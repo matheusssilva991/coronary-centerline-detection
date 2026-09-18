@@ -13,6 +13,12 @@ from .config import (
     scale_config_to_resolution,
     serialize_config_for_json,
 )
+from .ccta_datasets import (
+    discover_ccta_volumes,
+    load_ccta_volume,
+    select_representative_exams,
+    summarize_ccta_inventory,
+)
 from .dataset import get_data_splits
 from .notebook_env import (
     configure_notebook_environment,
@@ -27,16 +33,20 @@ from .notebook_env import (
 __all__ = [
     "configure_notebook_environment",
     "deep_update_dict",
+    "discover_ccta_volumes",
     "get_bad_cases_export_dir",
     "get_cases_analysis_output_dir",
     "get_data_splits",
     "get_default_split_paths",
     "load_config_json",
+    "load_ccta_volume",
     "load_notebook_pipeline_config",
     "normalize_runtime_config",
     "resolve_existing_path",
     "resolve_imagecas_base_path",
     "save_config_json",
     "scale_config_to_resolution",
+    "select_representative_exams",
     "serialize_config_for_json",
+    "summarize_ccta_inventory",
 ]

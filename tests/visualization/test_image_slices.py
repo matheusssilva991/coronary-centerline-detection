@@ -99,10 +99,7 @@ class SaveVolumeSliceFigureTest(TestCase):
             }
             for image_id in (10, 20)
         }
-        vessel_maps = {
-            image_id: {"vesselness_artery": volume}
-            for image_id in (10, 20)
-        }
+        vessel_maps = {image_id: {"vesselness_artery": volume} for image_id in (10, 20)}
 
         with patch("matplotlib.pyplot.show"):
             plot_preprocessing_grid(

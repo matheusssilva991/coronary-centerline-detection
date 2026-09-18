@@ -51,9 +51,7 @@ class PairedStatisticsTests(unittest.TestCase):
             bootstrap_samples=500,
             random_state=7,
         )
-        self.assertEqual(
-            first["mean_delta_ci_95_low"], second["mean_delta_ci_95_low"]
-        )
+        self.assertEqual(first["mean_delta_ci_95_low"], second["mean_delta_ci_95_low"])
         self.assertEqual(
             first["mean_delta_ci_95_high"], second["mean_delta_ci_95_high"]
         )
@@ -77,7 +75,7 @@ class PairedStatisticsTests(unittest.TestCase):
 
 class PromotedConfigTests(unittest.TestCase):
     def test_defaults_and_article_isolation(self):
-        root = Path(__file__).resolve().parents[1]
+        root = Path(__file__).resolve().parents[2]
         config = json.loads((root / "config/pipeline_config.json").read_text())
         overrides = json.loads(
             (root / "config/aorta_filter_envelope_generalization.json").read_text()

@@ -9,6 +9,7 @@ _SUBMODULES = {
     "io",
     "metadata",
     "ostia_scenarios",
+    "run_comparison",
 }
 
 _SYMBOL_TO_MODULE = {
@@ -48,6 +49,12 @@ _SYMBOL_TO_MODULE = {
     "filter_ia_results_for_math_ids": "ostia_scenarios",
     "load_math_results_for_ostia_scenario": "ostia_scenarios",
     "load_ostia_comparison_scenario": "ostia_scenarios",
+    # run_comparison
+    "OSTIA_SUCCESS_STATUSES": "run_comparison",
+    "build_dice_ostia_overview": "run_comparison",
+    "compare_paired_run_matrix": "run_comparison",
+    "load_validated_comparison_runs": "run_comparison",
+    "ostia_success_mask": "run_comparison",
 }
 
 __all__ = sorted(_SUBMODULES) + list(_SYMBOL_TO_MODULE)

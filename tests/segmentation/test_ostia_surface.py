@@ -32,7 +32,9 @@ class OstiaSurfaceTests(TestCase):
     def test_partial_fraction_preserves_historical_interval(self):
         mask = np.ones((3, 3, 10), dtype=np.uint8)
         selected, _, _ = _extract_lower_region(mask, 0.85)
-        self.assertEqual(np.flatnonzero(selected.any(axis=(0, 1))).tolist(), list(range(7)))
+        self.assertEqual(
+            np.flatnonzero(selected.any(axis=(0, 1))).tolist(), list(range(7))
+        )
 
     def test_invalid_padding_is_rejected(self):
         for radius in (-1, 1.5):

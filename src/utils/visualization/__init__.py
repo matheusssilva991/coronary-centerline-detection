@@ -10,6 +10,7 @@ _SYMBOL_TO_MODULE = {
     "plot_bad_cases_by_subset": "bad_cases",
     # comparison
     "plot_comparison_bar_by_resolution": "comparison",
+    "plot_grouped_metric_panels": "comparison",
     "plot_image_dice_scatter_by_resolution": "comparison",
     "plot_ia_vs_math_scatter_by_resolution": "comparison",
     "plot_image_dice_scatter_interactive": "comparison",

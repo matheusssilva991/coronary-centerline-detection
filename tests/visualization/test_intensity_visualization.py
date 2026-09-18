@@ -21,9 +21,7 @@ class IntensityVisualizationTests(unittest.TestCase):
         self.assertAlmostEqual(median_hu, 100.0)
 
     def test_plots_distribution_with_numeric_mean_and_median_labels(self) -> None:
-        histogram = pd.DataFrame(
-            {"bin_center_hu": [0.0, 100.0], "count": [2, 1]}
-        )
+        histogram = pd.DataFrame({"bin_center_hu": [0.0, 100.0], "count": [2, 1]})
         fig, ax = plt.subplots()
         try:
             plot_binned_intensity_histogram(
