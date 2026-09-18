@@ -4,7 +4,7 @@ Este módulo concentra as etapas que transformam um caso ImageCAS bruto em
 volumes prontos para detecção de aorta/óstios e segmentação arterial.
 """
 
-from typing import Any, Dict
+from typing import Any, Dict, Sequence
 
 import cv2
 import numpy as np
@@ -52,6 +52,43 @@ def load_and_preprocess_image(
     spacing = nii_img.header.get_zooms()
     img = np.array(nii_img.get_fdata(), dtype=np.float32)
     label = np.array(nii_label.get_fdata()).astype(np.uint8)
+
+    return preprocess_ccta_volume(
+        img,
+        spacing,
+        config,
+        label=label,
+        include_intermediates=include_intermediates,
+    )
+
+
+def preprocess_ccta_volume(
+    image: Any,
+    spacing: Sequence[float],
+    config: Dict[str, Any],
+    *,
+    label: Any | None = None,
+    include_intermediates: bool = False,
+) -> Dict[str, Any]:
+    """Pré-processa um volume CCTA, com label de referência opcional.
+
+    Esta é a etapa comum usada pelo carregador ImageCAS e por volumes externos
+    já carregados, como OrCaScore e MM-WHS. O volume deve estar no layout
+    ``(x, y, z)`` e o espaçamento deve seguir a mesma ordem.
+    """
+    img = np.asarray(image, dtype=np.float32)
+    if img.ndim != 3:
+        raise ValueError("O volume CCTA deve ser tridimensional.")
+
+    spacing = tuple(float(value) for value in spacing[:3])
+    if len(spacing) != 3 or any(value <= 0 for value in spacing):
+        raise ValueError("spacing deve conter três valores positivos.")
+
+    label_array = None
+    if label is not None:
+        label_array = np.asarray(label, dtype=np.uint8)
+        if label_array.shape != img.shape:
+            raise ValueError("Imagem e label devem possuir o mesmo shape.")
 
     # Define o método de downsampling usado para imagem e label.
     downscale_factors = config["DOWNSCALE_FACTORS"]
@@ -159,7 +196,11 @@ def load_and_preprocess_image(
             }
         )
     # O label usa interpolação de vizinho mais próximo para preservar classes.
-    label = downscale_image_ndi(label, downscale_factors, order=0)
+    down_label = (
+        downscale_image_ndi(label_array, downscale_factors, order=0)
+        if label_array is not None
+        else None
+    )
 
     dx, dy, dz = (
         spacing[0] * downscale_factors[0],
@@ -169,7 +210,7 @@ def load_and_preprocess_image(
 
     result = {
         "lcc_image": lcc_image,
-        "label": label,
+        "label": down_label,
         "preprocessing_details": preprocessing_details,
         "spacing": spacing,
         "scaled_spacing": (dx, dy, dz),

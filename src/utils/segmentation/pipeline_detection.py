@@ -199,23 +199,14 @@ def detect_and_evaluate_ostia(
     config: Dict[str, Any],
 ) -> Dict[str, Any]:
     """Detecta os óstios e avalia correção/tolerância contra o label."""
-    dx, dy, dz = scaled_spacing
-    ostia_config = config["OSTIA_DETECTION"]
-    # Seleciona os dois óstios na superfície inferior da aorta usando vesselness.
-    ostia_left, ostia_right = find_ostia(
+    ostia_left, ostia_right = detect_ostia(
         aorta_mask,
         vesselness_ostios,
-        spacing=(dy, dx, dz),
-        top_n=ostia_config["top_n"],
-        max_z_diff_mm=ostia_config["max_z_diff_mm"],
-        lower_fraction=ostia_config["lower_fraction"],
-        min_center_distance_factor=ostia_config["min_center_distance_factor"],
-        min_lateral_factor=ostia_config["min_lateral_factor"],
-        erosion_radius=ostia_config["erosion_radius"],
-        surface_padding_radius=ostia_config.get("surface_padding_radius", 0),
-        pair_distance_mode=ostia_config.get("pair_distance_mode", "voxel_xyz"),
+        scaled_spacing,
+        config,
     )
 
+    dx, dy, dz = scaled_spacing
     label_artery = (label == 1).astype(np.uint8)
     left_coords = tuple(int(value) for value in ostia_left)
     right_coords = (
@@ -249,3 +240,27 @@ def detect_and_evaluate_ostia(
         "both_correct": both_correct,
         "both_tolerable": both_tolerable_inclusive and (not both_correct),
     }
+
+
+def detect_ostia(
+    aorta_mask: Any,
+    vesselness_ostia: Any,
+    scaled_spacing: Sequence[float],
+    config: Dict[str, Any],
+) -> tuple[Any, Any]:
+    """Detecta os dois óstios sem depender de uma máscara de referência."""
+    dx, dy, dz = scaled_spacing
+    ostia_config = config["OSTIA_DETECTION"]
+    return find_ostia(
+        aorta_mask,
+        vesselness_ostia,
+        spacing=(dy, dx, dz),
+        top_n=ostia_config["top_n"],
+        max_z_diff_mm=ostia_config["max_z_diff_mm"],
+        lower_fraction=ostia_config["lower_fraction"],
+        min_center_distance_factor=ostia_config["min_center_distance_factor"],
+        min_lateral_factor=ostia_config["min_lateral_factor"],
+        erosion_radius=ostia_config["erosion_radius"],
+        surface_padding_radius=ostia_config.get("surface_padding_radius", 0),
+        pair_distance_mode=ostia_config.get("pair_distance_mode", "voxel_xyz"),
+    )

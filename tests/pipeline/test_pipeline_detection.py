@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 import numpy as np
 
-from utils.segmentation.pipeline_detection import locate_aorta_circles
+from utils.segmentation.pipeline_detection import detect_ostia, locate_aorta_circles
 
 
 class AortaCircleDetectionTest(TestCase):
@@ -36,3 +36,28 @@ class AortaCircleDetectionTest(TestCase):
 
         self.assertEqual(result, expected)
         detect_circles.assert_called_once()
+
+    @patch("utils.segmentation.pipeline_detection.find_ostia")
+    def test_detects_ostia_without_reference_label(self, find_ostia):
+        find_ostia.return_value = ((1, 2, 3), (4, 5, 6))
+        config = {
+            "OSTIA_DETECTION": {
+                "top_n": 50,
+                "max_z_diff_mm": 20.0,
+                "lower_fraction": 1.0,
+                "min_center_distance_factor": 0.8,
+                "min_lateral_factor": 0.3,
+                "erosion_radius": 2,
+                "surface_padding_radius": 1,
+            }
+        }
+
+        result = detect_ostia(
+            np.zeros((4, 4, 4)),
+            np.zeros((4, 4, 4)),
+            (0.5, 0.75, 1.0),
+            config,
+        )
+
+        self.assertEqual(result, ((1, 2, 3), (4, 5, 6)))
+        self.assertEqual(find_ostia.call_args.kwargs["spacing"], (0.75, 0.5, 1.0))

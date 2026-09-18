@@ -36,6 +36,7 @@ _SYMBOL_TO_MODULE = {
     "refine_circle_with_neighbors": "aorta_localization",
     # pipeline modules
     "detect_and_evaluate_ostia": "pipeline_detection",
+    "detect_ostia": "pipeline_detection",
     "estimate_fuzzy_centers": "fuzzy_threshold",
     "fuzzy_threshold_from_config": "fuzzy_threshold",
     "fuzzy_threshold_outputs": "fuzzy_threshold",
@@ -45,6 +46,7 @@ _SYMBOL_TO_MODULE = {
     "locate_aorta_circles": "pipeline_detection",
     "segment_aorta": "pipeline_detection",
     "load_and_preprocess_image": "pipeline_preprocessing",
+    "preprocess_ccta_volume": "pipeline_preprocessing",
     "normalize_lower_threshold_method": "lower_threshold",
     "normal_region_growing_from_ostia": "artery_segmentation",
     "get_artery_postprocessing_stages": "pipeline_arteries",

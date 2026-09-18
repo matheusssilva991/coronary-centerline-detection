@@ -29,6 +29,7 @@ from utils.segmentation.pipeline_orchestration import (
 from utils.segmentation.pipeline_preprocessing import (
     compute_vesselness,
     load_and_preprocess_image,
+    preprocess_ccta_volume,
 )
 from utils.segmentation.pipeline_reporting import print_split_summary
 
@@ -60,6 +61,20 @@ def _preprocessing_config(method):
 
 
 class PipelineSimplificationTests(TestCase):
+    def test_preprocesses_unlabeled_external_ccta_volume(self):
+        image = np.linspace(-200, 800, 4 * 4 * 3, dtype=np.float32).reshape(4, 4, 3)
+
+        result = preprocess_ccta_volume(
+            image,
+            (0.5, 0.5, 1.0),
+            _preprocessing_config("normal"),
+            include_intermediates=True,
+        )
+
+        self.assertIsNone(result["label"])
+        self.assertEqual(result["lcc_image"].shape, (2, 2, 3))
+        self.assertEqual(result["scaled_spacing"], (1.0, 1.0, 1.0))
+
     def test_cli_uses_one_split_and_defaults_to_full(self):
         parser = build_parser(Path("/dataset"), Path("/output"))
 

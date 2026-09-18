@@ -33,6 +33,7 @@ coronary-centerline-detection/
 ├── src/                        # Código fonte
 │   ├── segmentation_pipeline.py    # Pipeline principal de processamento
 │   ├── main.ipynb                  # Notebook de execução principal
+│   ├── external_ccta_pipeline.ipynb # Pipeline interativo OrCaScore/MM-WHS
 │   ├── eda/                        # Notebooks de análise exploratória
 │   │   ├── README.md                        # Catálogo e instruções de execução
 │   │   ├── image_intensity_eda.ipynb        # Intensidades HU e percentis
@@ -330,7 +331,9 @@ Execute os notebooks para análise exploratória e visualização:
 uv run jupyter lab
 ```
 
-O pipeline interativo está em [`src/main.ipynb`](src/main.ipynb). Consulte o
+O pipeline interativo do ImageCAS está em [`src/main.ipynb`](src/main.ipynb), e
+o equivalente para OrCaScore/MM-WHS está em
+[`src/external_ccta_pipeline.ipynb`](src/external_ccta_pipeline.ipynb). Consulte o
 [`src/eda/README.md`](src/eda/README.md) para o catálogo completo das análises,
 suas entradas, saídas e custos aproximados.
 

@@ -14,6 +14,8 @@ from .config import (
     serialize_config_for_json,
 )
 from .ccta_datasets import (
+    align_ccta_volume_to_imagecas_view,
+    discover_ccta_dataset,
     discover_ccta_volumes,
     load_ccta_volume,
     select_representative_exams,
@@ -31,8 +33,10 @@ from .notebook_env import (
 )
 
 __all__ = [
+    "align_ccta_volume_to_imagecas_view",
     "configure_notebook_environment",
     "deep_update_dict",
+    "discover_ccta_dataset",
     "discover_ccta_volumes",
     "get_bad_cases_export_dir",
     "get_cases_analysis_output_dir",

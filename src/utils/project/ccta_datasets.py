@@ -232,6 +232,26 @@ def discover_ccta_volumes(
     return pd.DataFrame.from_records(records)
 
 
+def discover_ccta_dataset(
+    dataset: str,
+    base_path: str | Path,
+) -> pd.DataFrame:
+    """Inventory one supported external CCTA dataset."""
+    dataset_key = dataset.strip().lower().replace("_", "-")
+    if dataset_key in {"orcascore", "orca-score", "orca"}:
+        records = _orcascore_records(Path(base_path))
+    elif dataset_key in {"mm-whs", "mmwhs", "whs"}:
+        records = _mmwhs_records(Path(base_path))
+    else:
+        raise ValueError("dataset deve ser 'orcascore' ou 'mmwhs'.")
+
+    if not records:
+        raise FileNotFoundError(
+            f"Nenhum volume CCTA de {dataset!r} foi encontrado em {base_path}."
+        )
+    return pd.DataFrame.from_records(records)
+
+
 def load_ccta_volume(record: Mapping[str, Any] | pd.Series) -> NDArray[np.generic]:
     """Load one inventory record in native ``(x, y, z)`` voxel layout."""
     path = Path(record["path"])
@@ -240,6 +260,22 @@ def load_ccta_volume(record: Mapping[str, Any] | pd.Series) -> NDArray[np.generi
     if record["file_format"] == "NIfTI":
         return load_nifti_volume_xyz(path)
     raise ValueError(f"Formato não suportado: {record['file_format']!r}")
+
+
+def align_ccta_volume_to_imagecas_view(
+    volume: NDArray[np.generic],
+    dataset: str,
+) -> tuple[NDArray[np.generic], tuple[int, ...]]:
+    """Align an external CCTA volume with the ImageCAS visual convention.
+
+    OrCaScore requires a flip of axis 1 to remove the horizontal mirroring
+    observed against ImageCAS. The transform preserves the axial slice order,
+    voxel values and spacing. MM-WHS and ImageCAS are returned unchanged.
+    """
+    dataset_key = dataset.strip().lower().replace("_", "-")
+    if dataset_key in {"orcascore", "orca-score", "orca"}:
+        return volume[:, ::-1, :], (1,)
+    return volume, ()
 
 
 def select_representative_exams(
@@ -295,6 +331,8 @@ def _median_min_max(values: pd.Series) -> str:
 
 
 __all__ = [
+    "align_ccta_volume_to_imagecas_view",
+    "discover_ccta_dataset",
     "discover_ccta_volumes",
     "load_ccta_volume",
     "load_mhd_volume",

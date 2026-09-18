@@ -7,6 +7,8 @@ import nibabel as nib
 import numpy as np
 
 from utils.project.ccta_datasets import (
+    align_ccta_volume_to_imagecas_view,
+    discover_ccta_dataset,
     discover_ccta_volumes,
     load_ccta_volume,
     load_mhd_volume,
@@ -94,6 +96,14 @@ class CctaDatasetsTest(unittest.TestCase):
             inventory["path"].astype(str).str.contains("label|mr_train").any()
         )
 
+    def test_inventory_can_load_only_selected_dataset(self):
+        self._write_mhd("CCTA")
+
+        inventory = discover_ccta_dataset("orcascore", self.orca)
+
+        self.assertEqual(len(inventory), 1)
+        self.assertEqual(inventory.iloc[0]["dataset"], "OrCaScore")
+
     def test_loads_inventory_record_and_selects_representatives(self):
         _, mhd_zyx = self._write_mhd("CASE")
         self._write_nifti("ct_test", "ct_test_2001_image.nii.gz")
@@ -132,6 +142,27 @@ class CctaDatasetsTest(unittest.TestCase):
         imagecas = inventory.loc[inventory["dataset"].eq("ImageCAS")].iloc[0]
         self.assertEqual(imagecas["subset"], "full")
         self.assertEqual(imagecas["reported_orientation"], "LAS")
+
+    def test_aligns_orcascore_view_without_reversing_slices(self):
+        volume = np.arange(24).reshape(2, 3, 4)
+
+        aligned, flip_axes = align_ccta_volume_to_imagecas_view(
+            volume,
+            "OrCaScore",
+        )
+
+        self.assertEqual(flip_axes, (1,))
+        np.testing.assert_array_equal(aligned, volume[:, ::-1, :])
+        np.testing.assert_array_equal(aligned[:, :, 0], volume[:, ::-1, 0])
+        np.testing.assert_array_equal(aligned[:, :, -1], volume[:, ::-1, -1])
+
+    def test_visual_alignment_keeps_mmwhs_volume_unchanged(self):
+        volume = np.arange(8).reshape(2, 2, 2)
+
+        aligned, flip_axes = align_ccta_volume_to_imagecas_view(volume, "MM-WHS")
+
+        self.assertEqual(flip_axes, ())
+        self.assertIs(aligned, volume)
 
 
 if __name__ == "__main__":
