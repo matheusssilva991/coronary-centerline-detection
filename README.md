@@ -32,6 +32,7 @@ coronary-centerline-detection/
 │   └── Relatorio das etapas realizadas.md
 ├── src/                        # Código fonte
 │   ├── segmentation_pipeline.py    # Pipeline principal de processamento
+│   ├── external_ccta_batch_pipeline.py # Pipeline em lote OrCaScore/MM-WHS
 │   ├── main.ipynb                  # Notebook de execução principal
 │   ├── external_ccta_pipeline.ipynb # Pipeline interativo OrCaScore/MM-WHS
 │   ├── eda/                        # Notebooks de análise exploratória
@@ -337,6 +338,85 @@ o equivalente para OrCaScore/MM-WHS está em
 [`src/eda/README.md`](src/eda/README.md) para o catálogo completo das análises,
 suas entradas, saídas e custos aproximados.
 
+### Pipeline em lote para OrCaScore e MM-WHS
+
+O script [`src/external_ccta_batch_pipeline.py`](src/external_ccta_batch_pipeline.py)
+executa, por padrão, todos os exames `train` e `test` do banco selecionado. Ele
+usa a mesma configuração e as mesmas etapas do notebook externo:
+
+```bash
+uv run python src/external_ccta_batch_pipeline.py \
+  --dataset orcascore \
+  --resolution mid \
+  --gpu
+
+uv run python src/external_ccta_batch_pipeline.py \
+  --dataset mmwhs \
+  --resolution high \
+  --gpu
+```
+
+Os aliases `orca`, `whs` e `owhs` também são aceitos. Para executar somente um
+subset ou validar poucos exames antes do lote completo:
+
+```bash
+uv run python src/external_ccta_batch_pipeline.py \
+  --dataset orcascore \
+  --resolution mid \
+  --subset train \
+  --exam-ids TRV1P1 TRV2P2 \
+  --no-gpu
+```
+
+Uma execução interrompida pode ser retomada com os mesmos argumentos de banco,
+resolução, subset, `--exam-ids` e `--limit`:
+
+```bash
+uv run python src/external_ccta_batch_pipeline.py \
+  --dataset orcascore \
+  --resolution mid \
+  --resume-dir /media/matheus/HD/Results_dataset_ccta/orcascore/mid_res/<timestamp>
+```
+
+A raiz padrão é `/media/matheus/HD/Results_dataset_ccta`, configurável por
+`CCTA_RESULTS_ROOT` ou `--output-root`. A hierarquia é:
+
+```text
+Results_dataset_ccta/
+├── imagecas/                         # resultados ImageCAS já existentes
+├── orcascore/<resolution>_res/<run>/
+└── mmwhs/<resolution>_res/<run>/
+    ├── config/                       # configuração efetiva e manifesto
+    ├── numeric/                      # results_all/train/test.csv
+    ├── logs/
+    ├── metadata.json
+    └── visual/<subset>/<exam_id>/
+        ├── stages/
+        │   ├── 00_input/
+        │   ├── 01_threshold/
+        │   ├── 02_lcc/
+        │   ├── 03_aorta/
+        │   ├── 04_vesselness_ostia/
+        │   ├── 05_vesselness_artery/
+        │   ├── 06_artery_raw/
+        │   ├── 07_artery_closed/
+        │   └── 08_artery_final/
+        ├── aorta_circles.png
+        ├── aorta_ostia_artery.html
+        └── result.json
+```
+
+Cada pasta de etapa contém `mip_axial.png`, `first_slice.png`,
+`middle_slice.png` e `last_slice.png`. O downscale não recebe uma pasta visual
+própria. Como esses bancos não possuem referência coronariana compatível com o
+ImageCAS, Dice e acurácia dos óstios permanecem nulos.
+
+O status `success` indica que todas as etapas computacionais terminaram; não é
+uma validação anatômica. Os parâmetros de localização foram ajustados no
+ImageCAS e podem selecionar estruturas circulares periféricas nos bancos
+externos. Antes de interpretar volumes ou artérias, revise obrigatoriamente
+`aorta_circles.png` e `aorta_ostia_artery.html`.
+
 ## 📊 Resultados
 
 ### Métricas de Avaliação
@@ -364,6 +444,7 @@ Os resultados são salvos em:
 - `output/segmentation/runs/<resolution>_res/<timestamp>/config/`: config efetiva e IDs usados
 - `output/segmentation/analysis/`: análises derivadas dos notebooks
 - `output/segmentation/8.final_results/`: resultados legados mantidos como referência
+- `/media/matheus/HD/Results_dataset_ccta/`: artefatos volumosos dos três bancos
 
 ## 🔧 Configuração
 

@@ -11,7 +11,7 @@ O pad2 altera a selecao dos ostios, nao a mascara da aorta.
 - [Validacao 60](val_p99_9_m300/): os mesmos tres visuais por exame selecionado.
 
 Os arquivos `new_default_pad2.html` sao links para os runs de 06/09/2026,
-no disco `/media/matheus/HD/ImageCAS_pipeline_results`. Nao ha copia dos HTMLs.
+no disco `/media/matheus/HD/Results_dataset_ccta/imagecas`. Nao ha copia dos HTMLs.
 Os links antigos preservam a revisao original, inclusive diferencas de versao.
 Nao atribuir automaticamente seus rotulos aos novos runs: contagens de voxels
 iguais nao garantem igualdade espacial das mascaras.

@@ -65,7 +65,7 @@ Exemplos de uso:
   python segmentation_pipeline.py --split train --save-segmentation-visuals
 
   # Salvar os HTMLs em um disco externo, mantendo CSVs e logs no repositório
-  python segmentation_pipeline.py --split train --save-segmentation-visuals --visual-output-dir /media/matheus/HD/ImageCAS_pipeline_results
+  python segmentation_pipeline.py --split train --save-segmentation-visuals --visual-output-dir /media/matheus/HD/Results_dataset_ccta/imagecas
 
   # PROCESSAMENTO EM LOTES (salvamento incremental):
     # Processar em 10 lotes (divide as imagens entre 10 blocos)

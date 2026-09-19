@@ -8,7 +8,7 @@ cd "$REPO_ROOT"
 SPLIT="${SPLIT:-train}"
 USE_GPU="${USE_GPU:-1}"
 SAVE_VISUALS="${SAVE_VISUALS:-1}"
-VISUAL_OUTPUT_DIR="${VISUAL_OUTPUT_DIR:-/media/matheus/HD/ImageCAS_pipeline_results}"
+VISUAL_OUTPUT_DIR="${VISUAL_OUTPUT_DIR:-/media/matheus/HD/Results_dataset_ccta/imagecas}"
 BASE_CONFIG="${BASE_CONFIG:-config/aorta_filter_envelope_generalization.json}"
 NUM_BATCHES="${NUM_BATCHES:-5}"
 

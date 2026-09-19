@@ -115,6 +115,8 @@ _LAZY_EXPORTS = {
     "plot_pipeline_preprocessing_stages": ".visualization.preprocessing_views",
     "plot_spaced_detected_circles": ".visualization.hough",
     "plot_stage": ".visualization.preprocessing_views",
+    "save_detected_circles_figure": ".visualization.pipeline_artifacts",
+    "save_stage_views": ".visualization.pipeline_artifacts",
     "plot_subset_execution_time_by_resolution": ".visualization.subset",
     "plot_subset_metric_by_resolution": ".visualization.subset",
     "plot_subset_ostia_success_by_resolution": ".visualization.subset",

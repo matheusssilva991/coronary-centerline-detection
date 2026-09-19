@@ -35,6 +35,9 @@ _SYMBOL_TO_MODULE = {
     "plot_preprocessing_grid": "preprocessing_views",
     "plot_pipeline_preprocessing_stages": "preprocessing_views",
     "plot_stage": "preprocessing_views",
+    # pipeline_artifacts
+    "save_detected_circles_figure": "pipeline_artifacts",
+    "save_stage_views": "pipeline_artifacts",
     # vesselness
     "compute_vesselness_maps": "vesselness",
     "display_vesselness_summary": "vesselness",

@@ -17,7 +17,7 @@ GPU_ARGS=(--gpu)
 [[ "${USE_GPU:-1}" == 0 ]] && GPU_ARGS=(--no-gpu)
 VISUAL_ARGS=()
 if [[ "${SAVE_VISUALS:-0}" == 1 ]]; then
-  VISUAL_OUTPUT_DIR="${VISUAL_OUTPUT_DIR:-/media/matheus/HD/ImageCAS_pipeline_results}"
+  VISUAL_OUTPUT_DIR="${VISUAL_OUTPUT_DIR:-/media/matheus/HD/Results_dataset_ccta/imagecas}"
   [[ -d "$VISUAL_OUTPUT_DIR" && -w "$VISUAL_OUTPUT_DIR" ]] || {
     echo "Diretório visual ausente ou sem escrita: $VISUAL_OUTPUT_DIR" >&2; exit 2;
   }
