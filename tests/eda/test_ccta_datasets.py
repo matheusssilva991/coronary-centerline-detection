@@ -10,6 +10,7 @@ from utils.project.ccta_datasets import (
     align_ccta_volume_to_imagecas_view,
     discover_ccta_dataset,
     discover_ccta_volumes,
+    discover_orcascore_acquisitions,
     load_ccta_volume,
     load_mhd_volume,
     load_nifti_volume_xyz,
@@ -103,6 +104,18 @@ class CctaDatasetsTest(unittest.TestCase):
 
         self.assertEqual(len(inventory), 1)
         self.assertEqual(inventory.iloc[0]["dataset"], "OrCaScore")
+
+    def test_inventory_compares_paired_orcascore_acquisitions(self):
+        self._write_mhd("PAIR")
+        self._write_mhd("PAIR", ccta=False)
+
+        inventory = discover_orcascore_acquisitions(self.orca)
+
+        self.assertEqual(len(inventory), 2)
+        self.assertSetEqual(set(inventory["acquisition"]), {"contrast", "noncontrast"})
+        self.assertSetEqual(set(inventory["exam_id"]), {"PAIR"})
+        self.assertTrue(inventory["slice_count"].eq(2).all())
+        self.assertTrue(inventory["coverage_z_mm"].eq(3.0).all())
 
     def test_loads_inventory_record_and_selects_representatives(self):
         _, mhd_zyx = self._write_mhd("CASE")

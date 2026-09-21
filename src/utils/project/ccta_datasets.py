@@ -104,17 +104,21 @@ def load_mhd_volume_xyz(path: str | Path) -> NDArray[np.generic]:
     return np.transpose(load_mhd_volume(path), (2, 1, 0))
 
 
-def _orcascore_records(base_path: Path) -> list[dict[str, Any]]:
+def _orcascore_acquisition_records(
+    base_path: Path,
+    acquisitions: tuple[tuple[str, str], ...],
+) -> list[dict[str, Any]]:
     records: list[dict[str, Any]] = []
     for subset_dir, subset in (("Training_set", "train"), ("Test_set", "test")):
-        for path in sorted((base_path / subset_dir / "Images").glob("*CTAI.mhd")):
-            header = read_mhd_header(path)
-            shape_xyz, spacing_xyz = _mhd_geometry(header)
-            records.append(
-                _geometry_record(
+        image_dir = base_path / subset_dir / "Images"
+        for suffix, acquisition in acquisitions:
+            for path in sorted(image_dir.glob(f"*{suffix}.mhd")):
+                header = read_mhd_header(path)
+                shape_xyz, spacing_xyz = _mhd_geometry(header)
+                record = _geometry_record(
                     dataset="OrCaScore",
                     subset=subset,
-                    exam_id=path.stem.removesuffix("CTAI"),
+                    exam_id=path.stem.removesuffix(suffix),
                     path=path,
                     file_format="MHD/ZRAW",
                     shape_xyz=shape_xyz,
@@ -122,8 +126,24 @@ def _orcascore_records(base_path: Path) -> list[dict[str, Any]]:
                     dtype=header.get("ElementType", "unknown"),
                     orientation=header.get("AnatomicalOrientation", "unknown"),
                 )
-            )
+                record["acquisition"] = acquisition
+                records.append(record)
     return records
+
+
+def _orcascore_records(base_path: Path) -> list[dict[str, Any]]:
+    return _orcascore_acquisition_records(base_path, (("CTAI", "contrast"),))
+
+
+def discover_orcascore_acquisitions(base_path: str | Path) -> pd.DataFrame:
+    """Inventory paired contrast and non-contrast OrCaScore acquisitions."""
+    records = _orcascore_acquisition_records(
+        Path(base_path),
+        (("CTAI", "contrast"), ("CTI", "noncontrast")),
+    )
+    if not records:
+        raise FileNotFoundError("Nenhum volume CTI/CTAI foi encontrado no OrCaScore.")
+    return pd.DataFrame.from_records(records)
 
 
 def _mmwhs_records(base_path: Path) -> list[dict[str, Any]]:
@@ -334,6 +354,7 @@ __all__ = [
     "align_ccta_volume_to_imagecas_view",
     "discover_ccta_dataset",
     "discover_ccta_volumes",
+    "discover_orcascore_acquisitions",
     "load_ccta_volume",
     "load_mhd_volume",
     "load_mhd_volume_xyz",
