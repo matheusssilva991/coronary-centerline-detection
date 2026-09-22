@@ -1,4 +1,4 @@
-"""Normalize legacy run statuses without changing scientific result values."""
+"""Normaliza status legados sem alterar valores científicos dos runs."""
 
 from __future__ import annotations
 
@@ -49,7 +49,7 @@ VALID_OSTIA_STATUSES = frozenset(OSTIA_STATUS_PORTUGUESE_LABELS)
 
 @dataclass(frozen=True)
 class FileNormalization:
-    """Auditable description of one result CSV normalization."""
+    """Descreve de forma auditável a normalização de um CSV."""
 
     path: str
     row_count: int
@@ -73,7 +73,7 @@ def _is_result_csv(path: Path) -> bool:
 
 
 def discover_result_csvs(root: Path) -> list[Path]:
-    """Return physical result artifacts, excluding immutable provenance copies."""
+    """Retorna resultados físicos sem incluir cópias imutáveis de proveniência."""
     return sorted(path for path in root.rglob("*.csv") if _is_result_csv(path))
 
 
@@ -87,7 +87,7 @@ def _validate_status(column: str, value: str, path: Path, row_number: int) -> No
 
 
 def normalize_csv_bytes(path: Path) -> tuple[bytes, FileNormalization]:
-    """Return normalized CSV bytes plus an audit record, without writing."""
+    """Retorna o CSV normalizado e sua auditoria sem gravar arquivos."""
     original = path.read_bytes()
     text = original.decode("utf-8-sig")
     rows = list(csv.reader(io.StringIO(text, newline="")))
@@ -140,7 +140,7 @@ def normalize_csv_bytes(path: Path) -> tuple[bytes, FileNormalization]:
         csv.writer(output, lineterminator="\n").writerows(normalized_rows)
         normalized = output.getvalue().encode("utf-8")
 
-    # Protect all scientific values, identifiers, row order and column order.
+    # Preserva valores científicos, IDs e a ordem das linhas e colunas.
     normalized_check = list(
         csv.reader(io.StringIO(normalized.decode("utf-8-sig"), newline=""))
     )
@@ -170,6 +170,7 @@ def normalize_csv_bytes(path: Path) -> tuple[bytes, FileNormalization]:
 
 
 def _atomic_write(path: Path, content: bytes) -> None:
+    """Substitui um arquivo atomicamente após gravar o conteúdo temporário."""
     path.parent.mkdir(parents=True, exist_ok=True)
     file_descriptor, temporary_name = tempfile.mkstemp(
         prefix=f".{path.name}.", suffix=".tmp", dir=path.parent
@@ -192,7 +193,7 @@ def normalize_runs(
     apply: bool,
     manifest_path: Path | None = None,
 ) -> dict[str, object]:
-    """Inspect or apply status normalization to all recognized result CSVs."""
+    """Inspeciona ou aplica a normalização em todos os CSVs reconhecidos."""
     try:
         report_root = str(root.resolve().relative_to(REPO_ROOT))
     except ValueError:
@@ -246,30 +247,32 @@ def normalize_runs(
 
 
 def parse_args() -> argparse.Namespace:
+    """Lê os argumentos da normalização de status."""
     parser = argparse.ArgumentParser(
-        description="Normalize legacy result statuses to stable English codes."
+        description="Normaliza status legados para códigos estáveis em inglês."
     )
     parser.add_argument(
         "--root",
         type=Path,
         default=REPO_ROOT / "output/segmentation/runs",
-        help="Run tree to inspect (default: output/segmentation/runs).",
+        help="Árvore de runs a inspecionar (padrão: output/segmentation/runs).",
     )
     parser.add_argument(
         "--apply",
         action="store_true",
-        help="Persist changes atomically. Without this flag, only inspect.",
+        help="Persiste mudanças atomicamente; sem a flag, apenas inspeciona.",
     )
     parser.add_argument(
         "--manifest",
         type=Path,
         default=REPO_ROOT / "output/segmentation/status_normalization_manifest.json",
-        help="Audit manifest written in apply mode.",
+        help="Manifest de auditoria salvo no modo de aplicação.",
     )
     return parser.parse_args()
 
 
 def main() -> None:
+    """Executa a normalização ou inspeção solicitada pela CLI."""
     args = parse_args()
     report = normalize_runs(
         args.root,

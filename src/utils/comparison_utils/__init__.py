@@ -1,4 +1,4 @@
-"""Utilities package for IA vs mathematical comparison in EDA notebooks."""
+"""Reúne utilitários de comparação entre IA e métodos matemáticos nas EDAs."""
 
 from importlib import import_module
 

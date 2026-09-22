@@ -29,6 +29,7 @@ from utils.project.config import (
     load_config_json,
     scale_config_to_resolution,
 )
+from utils.project.dataframe import require_series_column
 
 
 class ParameterValidationTests(unittest.TestCase):
@@ -80,10 +81,14 @@ class ParameterValidationTests(unittest.TestCase):
             bins=4,
         )
         probability_by_image = profiles.groupby("IMG_ID")["probability"].sum()
+        if not isinstance(probability_by_image, pd.Series):
+            self.fail("O agrupamento deveria produzir uma Series.")
         self.assertEqual(
             profiles.groupby("IMG_ID")["bin_center_hu"].nunique().nunique(), 1
         )
-        self.assertTrue(np.allclose(probability_by_image, 1.0))
+        self.assertTrue(
+            np.allclose(probability_by_image.to_numpy(dtype=np.float64), 1.0)
+        )
 
         selected_mean = build_mean_normalized_intensity_histogram(
             profiles,
@@ -111,8 +116,10 @@ class ParameterValidationTests(unittest.TestCase):
         self.assertAlmostEqual(summary["dense_median_hu"], 400.5)
         self.assertAlmostEqual(summary["dense_max_hu"], 1000.0)
         self.assertAlmostEqual(summary["dense_voxel_percent"], 400.0 / 7.0)
-        self.assertEqual(histogram.groupby("histogram")["count"].sum()["full"], 7)
-        self.assertEqual(histogram.groupby("histogram")["count"].sum()["dense_hu"], 4)
+        histogram_names = require_series_column(histogram, "histogram")
+        counts = require_series_column(histogram, "count")
+        self.assertEqual(int(counts.loc[histogram_names.eq("full")].sum()), 7)
+        self.assertEqual(int(counts.loc[histogram_names.eq("dense_hu")].sum()), 4)
 
     def test_rejects_invalid_histogram_progress_interval(self) -> None:
         with self.assertRaisesRegex(ValueError, "progress_every"):

@@ -86,7 +86,7 @@ def plot_bad_dice_indicator(
     summarize_bad_dice_fn: Any,
     dice_threshold: float = 0.3,
 ) -> pd.DataFrame:
-    """Plot Dice indicator for bad cases with and without low-dice successful ostia."""
+    """Plota o Dice dos casos ruins incluindo ou não sucessos com Dice baixo."""
     mid_stats = summarize_bad_dice_fn(df_mid_bad, dice_threshold=dice_threshold)
     high_stats = summarize_bad_dice_fn(df_high_bad, dice_threshold=dice_threshold)
 

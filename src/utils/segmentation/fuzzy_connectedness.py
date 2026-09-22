@@ -61,13 +61,11 @@ def vesselness_affinity(
 ) -> float:
     """Calcula a afinidade geométrica de vesselness entre voxels vizinhos.
 
-    Args:
-        current_vessel: Valor normalizado de vesselness do voxel atual.
+    Argumentos:        current_vessel: Valor normalizado de vesselness do voxel atual.
         neighbor_vessel: Valor normalizado de vesselness do voxel vizinho.
         floor: Piso mínimo suave para evitar afinidades exatamente nulas.
 
-    Returns:
-        Afinidade no intervalo [0, 1].
+    Retorna:        Afinidade no intervalo [0, 1].
     """
     current_vessel = float(np.clip(current_vessel, 0.0, 1.0))
     neighbor_vessel = float(np.clip(neighbor_vessel, 0.0, 1.0))
@@ -119,15 +117,13 @@ def limit_candidate_mask_by_vesselness(
 ) -> tuple[NDArray[np.bool_], dict[str, Any]]:
     """Limita a propagação aos voxels candidatos com maior vesselness.
 
-    Args:
-        candidate_mask: Máscara binária da região onde a FC pode crescer.
+    Argumentos:        candidate_mask: Máscara binária da região onde a FC pode crescer.
         vesselness_norm: Vesselness já normalizado para [0, 1].
         max_candidate_voxels: Número máximo de voxels permitidos na região
             candidata. Se `None`, não limita.
         min_candidate_vesselness: Corte mínimo usado antes da limitação.
 
-    Returns:
-        Tupla com a máscara candidata final e metadados do corte aplicado.
+    Retorna:        Tupla com a máscara candidata final e metadados do corte aplicado.
     """
     candidate_mask = np.asarray(candidate_mask, dtype=bool)
     initial_voxels = int(candidate_mask.sum())
@@ -247,8 +243,7 @@ def fuzzy_connectedness_map(
     fila de prioridade processa primeiro os voxels com maior conectividade, de
     modo semelhante a um crescimento best-first.
 
-    Args:
-        image: Volume 3D em HU ou imagem pré-processada usada na similaridade HU.
+    Argumentos:        image: Volume 3D em HU ou imagem pré-processada usada na similaridade HU.
         vesselness: Mapa de vesselness arterial com o mesmo shape de `image`.
         seeds: Sementes do objeto em coordenadas `(y, x, z)`.
         sigma_hu: Escala da similaridade Gaussiana de intensidade.
@@ -259,11 +254,12 @@ def fuzzy_connectedness_map(
         vesselness_floor: Piso suave da afinidade de vesselness.
         vesselness_weight: Peso do vesselness na combinação ponderada.
 
-    Returns:
-        Mapa de conectividade e metadados da propagação.
+    Retorna:        Mapa de conectividade e metadados da propagação.
     """
     if image.shape != vesselness.shape:
-        raise ValueError(f"image and vesselness must have the same shape: {image.shape} vs {vesselness.shape}")
+        raise ValueError(
+            f"image and vesselness must have the same shape: {image.shape} vs {vesselness.shape}"
+        )
     if sigma_hu <= 0:
         raise ValueError("sigma_hu must be positive")
 
@@ -376,8 +372,7 @@ def fuzzy_connectedness_segmentation(
 ) -> dict[str, Any]:
     """Executa fuzzy connectedness e aplica o limiar absoluto ``alpha``.
 
-    Returns:
-        Dicionário com:
+    Retorna:        Dicionário com:
         - `connectivity`: mapa de conectividade do objeto;
         - `mask`: máscara binária antes do pós-processamento;
         - `details`: metadados da propagação e dos parâmetros efetivos.
@@ -432,8 +427,7 @@ def segment_artery_fuzzy_connectedness(
     refina as sementes, executa fuzzy connectedness e aplica o pós-processamento
     final.
 
-    Args:
-        image: Volume 3D usado na similaridade HU.
+    Argumentos:        image: Volume 3D usado na similaridade HU.
         vesselness_artery: Mapa de vesselness arterial.
         ostia_seeds: Óstios detectados em coordenadas `(y, x, z)`.
         lcc_mask: Máscara da maior componente conectada usada como limite
@@ -448,8 +442,7 @@ def segment_artery_fuzzy_connectedness(
             configurada. Experimentos podem desabilitá-la para reutilizar a
             mesma máscara bruta em diferentes pós-processamentos.
 
-    Returns:
-        Dicionário com máscara bruta, máscara pós-processada, mapa de
+    Retorna:        Dicionário com máscara bruta, máscara pós-processada, mapa de
         conectividade e metadados úteis para análise.
     """
     params = dict(params)

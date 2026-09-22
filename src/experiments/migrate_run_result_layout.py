@@ -45,6 +45,7 @@ RESULT_PATTERN = re.compile(
 
 
 def build_parser() -> argparse.ArgumentParser:
+    """Cria o parser da migração dos artefatos históricos."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--root",
@@ -78,6 +79,7 @@ def _metadata_path(numeric_dir: Path, split: str) -> Path | None:
 
 
 def _expected_ids(run_dir: Path, numeric_dir: Path, split: str) -> list[int]:
+    """Carrega os IDs esperados a partir dos artefatos do run."""
     split_payload = _load_json(run_dir / "config/split_ids.json") or {}
     split_ids = split_payload.get("splits", {}).get(split)
     if split_ids is not None:
@@ -105,6 +107,7 @@ def _is_partial_layout(numeric_dir: Path) -> bool:
 
 
 def _source_results(path: Path, split: str) -> Path | None:
+    """Localiza o consolidado atual ou legado usado como fonte."""
     numeric_dir = path.parent
     candidates = (
         numeric_dir / results_filename(split),
@@ -120,6 +123,7 @@ def _source_results(path: Path, split: str) -> Path | None:
 
 
 def _legacy_config_values(dataframe: pd.DataFrame) -> dict[str, Any]:
+    """Extrai configurações legadas ainda presentes nas linhas científicas."""
     values: dict[str, Any] = {}
     for column in RESULT_CONFIGURATION_COLUMNS:
         if column not in dataframe.columns or column == "max_threshold_hu":
@@ -138,6 +142,7 @@ def _configuration_identity(
     run_dir: Path,
     metadata: dict[str, Any],
 ) -> dict[str, Any]:
+    """Resolve a origem e o hash da configuração do run."""
     config_path = run_dir / "config/effective_pipeline_config.json"
     config = _load_json(config_path)
     if config is not None:
@@ -164,6 +169,7 @@ def _metadata_payload(
     batch_timings: list[dict[str, Any]],
     expected_batches: list[int],
 ) -> dict[str, Any]:
+    """Monta o metadata migrado a partir dos artefatos persistidos."""
     effective_config = _load_json(run_dir / "config/effective_pipeline_config.json")
     identity = _configuration_identity(run_dir, source)
     legacy_values = _compact_legacy_config(source)
@@ -230,6 +236,7 @@ def _write_json_temp(path: Path, payload: dict[str, Any]) -> Path:
 
 
 def _batch_sources(numeric_dir: Path, split: str) -> list[tuple[int, Path]]:
+    """Lista lotes atuais e legados rejeitando números duplicados."""
     batches: dict[int, list[Path]] = {}
     for path in numeric_dir.glob("*.csv"):
         number = batch_result_number(path, split)
@@ -248,6 +255,7 @@ def _batch_sources(numeric_dir: Path, split: str) -> list[tuple[int, Path]]:
 def _timing_dataframe(
     numeric_dir: Path, split: str
 ) -> tuple[pd.DataFrame | None, Path | None]:
+    """Normaliza o manifest de tempos sem recalcular durações."""
     candidates = (
         numeric_dir / batch_timings_filename(split),
         numeric_dir / f"ostios_{split}_batch_timings.csv",
@@ -373,6 +381,7 @@ def migrate_run(path: Path, *, apply: bool) -> str:
 
 
 def _candidate_results(root: Path) -> list[Path]:
+    """Descobre consolidados candidatos à migração sob uma raiz."""
     candidates: dict[Path, Path] = {}
     patterns = (
         "results_*.csv",
@@ -395,6 +404,7 @@ def _candidate_results(root: Path) -> list[Path]:
 
 
 def main() -> None:
+    """Executa a inspeção ou migração solicitada pela CLI."""
     args = build_parser().parse_args()
     counts: dict[str, int] = {}
     for result_path in _candidate_results(args.root):

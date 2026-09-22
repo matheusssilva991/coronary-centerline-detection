@@ -32,7 +32,7 @@ def plot_grouped_metric_panels(
     ylim: tuple[float, float],
     value_format: str = "%.3f",
 ) -> tuple[Any, Any]:
-    """Plot a grouped metric using one panel per comparison dimension."""
+    """Plota uma métrica agrupada em um painel por dimensão de comparação."""
     fig, axes = plt.subplots(
         1,
         len(panel_order),
@@ -302,9 +302,9 @@ def plot_ia_vs_math_scatter_by_resolution(
 def plot_image_dice_scatter_interactive(
     comparison_df: pd.DataFrame, resolution: str, comparison_title: Optional[str] = None
 ) -> None:
-    """Interactive per-image scatter (IA and Math) using Plotly.
+    """Plota Dice interativo por imagem para IA e método matemático.
 
-    Hover shows `img_id`, dice and method.
+    O cursor exibe `img_id`, Dice e método.
     """
     if px is None or go is None:
         raise ImportError(
@@ -373,9 +373,9 @@ def plot_image_dice_scatter_interactive(
 def plot_ia_vs_math_scatter_interactive(
     comparison_df: pd.DataFrame, resolution: str, comparison_title: Optional[str] = None
 ) -> None:
-    """Interactive IA vs Math scatter using Plotly.
+    """Plota a relação interativa entre IA e método matemático.
 
-    Hover shows `img_id` plus methods and scores.
+    O cursor exibe `img_id`, métodos e valores.
     """
     if px is None:
         raise ImportError(

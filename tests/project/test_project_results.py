@@ -4,6 +4,7 @@ from unittest import TestCase
 
 import pandas as pd
 
+from utils.project.dataframe import require_series_column
 from utils.project.results import (
     batch_result_number,
     get_batch_result_file,
@@ -14,6 +15,19 @@ from utils.project.results import (
 
 
 class ProjectResultsTests(TestCase):
+    def test_typed_column_helper_returns_a_unique_series(self):
+        frame = pd.DataFrame({"IMG_ID": [1, 2]})
+
+        column = require_series_column(frame, "IMG_ID")
+
+        self.assertListEqual(column.tolist(), [1, 2])
+
+    def test_typed_column_helper_rejects_duplicate_names(self):
+        frame = pd.DataFrame([[1, 2]], columns=["IMG_ID", "IMG_ID"])
+
+        with self.assertRaisesRegex(ValueError, "duplicada"):
+            require_series_column(frame, "IMG_ID")
+
     def test_save_results_persists_canonical_english_status_codes(self):
         with TemporaryDirectory() as temporary_dir:
             path = save_results(
@@ -45,6 +59,9 @@ class ProjectResultsTests(TestCase):
             ).to_csv(output_dir / "results_val_lote_1.csv", index=False)
 
             path = merge_batch_results("val", output_dir)
+            self.assertIsNotNone(path)
+            if path is None:
+                self.fail("A consolidação deveria retornar o caminho do CSV.")
             merged = pd.read_csv(path)
 
         self.assertEqual(merged.loc[0, "ostia_detection_status"], "both_correct")

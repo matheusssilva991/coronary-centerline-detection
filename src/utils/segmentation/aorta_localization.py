@@ -304,6 +304,8 @@ def filter_aorta_circle_trajectory(
             tail_start = None
             trim_rejected = True
         if not trim_rejected:
+            if tail_start is None:
+                raise RuntimeError("O início da cauda não foi definido para o corte.")
             trimmed = original[:tail_start]
             trimmed_count = candidate_trimmed_count
             trim_start_slice = int(original[tail_start]["slice_index"])
@@ -824,8 +826,7 @@ def detect_aorta_circles(
 ) -> list:
     """Detecta círculos da aorta ao longo do volume 3D fatia a fatia.
 
-    Args:
-        interpolate_missed_circles: Preenche por interpolação linear as fatias
+    Argumentos:        interpolate_missed_circles: Preenche por interpolação linear as fatias
             sem detecção quando uma nova detecção válida aparece antes do limite
             de misses consecutivos.
     """

@@ -12,7 +12,7 @@ from ..project.results_schema import (
 
 
 def _normalize_success_status(value: Any) -> str | None:
-    """Normalize legacy and readable success labels to internal status names."""
+    """Normaliza rótulos legados e legíveis para status internos."""
     return normalize_ostia_status(value)
 
 
@@ -20,18 +20,18 @@ def _success_status_series(
     df_split: pd.DataFrame,
     status_column: str,
 ) -> pd.Series:
-    """Return normalized ostia statuses, preferring the canonical alias."""
+    """Retorna status normalizados dos óstios priorizando o alias canônico."""
     source_column = "ostia_status" if "ostia_status" in df_split else status_column
     return df_split[source_column].map(_normalize_success_status)
 
 
 def _has_success_status_column(df_split: pd.DataFrame, status_column: str) -> bool:
-    """Check whether a readable or canonical ostia status is available."""
+    """Verifica se existe um status legível ou canônico dos óstios."""
     return "ostia_status" in df_split or status_column in df_split
 
 
 def _normalized_success_statuses(success_status: Sequence[str]) -> list[str]:
-    """Normalize the requested labels while preserving their display order."""
+    """Normaliza rótulos solicitados preservando a ordem de exibição."""
     return [
         normalized
         for status in success_status

@@ -30,28 +30,24 @@ def binary_closing(
     gpu: Optional[bool] = None,
 ) -> NDArray[np.uint8]:
     """
-    Binary closing com suporte automático a GPU.
+    Aplica fechamento binário com suporte automático a GPU.
 
-    Executa binary_closing na GPU se disponível ou scipy na CPU.
+    Executa o fechamento na GPU, quando disponível, ou com SciPy na CPU.
     Operação: dilação seguida de erosão, útil para fechar buracos pequenos.
 
-    Args:
-        mask (np.ndarray or cp.ndarray): Máscara binária
+    Argumentos:        mask (np.ndarray or cp.ndarray): Máscara binária
         structure (np.ndarray or cp.ndarray): Elemento estruturante
         gpu (bool, optional): Se None, detecta automaticamente. Se True, força GPU.
             Se False, força CPU.
 
-    Returns:
-        np.ndarray: Resultado na CPU (dtype=uint8)
+    Retorna:        np.ndarray: Resultado na CPU (dtype=uint8)
 
-    Example:
-        >>> from skimage.morphology import ball
+    Exemplo:        >>> from skimage.morphology import ball
         >>> mask = segment_aorta(volume)
         >>> closed = binary_closing(mask, structure=ball(2))  # Usa GPU se disponível
         >>> closed_cpu = binary_closing(mask, structure=ball(2), gpu=False)  # Força CPU
 
-    Note:
-        - GPU é ~5-10x mais rápido que CPU para volumes grandes
+    Observação:        - GPU é ~5-10x mais rápido que CPU para volumes grandes
         - Fallback automático para CPU se GPU não disponível ou falhar
         - Retorna sempre NumPy array na CPU para compatibilidade
     """
@@ -83,27 +79,23 @@ def binary_dilation(
     gpu: Optional[bool] = None,
 ) -> NDArray[np.uint8]:
     """
-    Binary dilation com suporte automático a GPU.
+    Aplica dilatação binária com suporte automático a GPU.
 
     Expande regiões em uma máscara binária. Útil para preencher lacunas
     e conectar regiões próximas.
 
-    Args:
-        mask (np.ndarray or cp.ndarray): Máscara binária
+    Argumentos:        mask (np.ndarray or cp.ndarray): Máscara binária
         structure (np.ndarray or cp.ndarray): Elemento estruturante
         gpu (bool, optional): Se None, detecta automaticamente. Se True, força GPU.
             Se False, força CPU.
 
-    Returns:
-        np.ndarray: Resultado na CPU (dtype=uint8)
+    Retorna:        np.ndarray: Resultado na CPU (dtype=uint8)
 
-    Example:
-        >>> from skimage.morphology import ball
+    Exemplo:        >>> from skimage.morphology import ball
         >>> mask = segment_vessels(volume)
         >>> dilated = binary_dilation(mask, structure=ball(1))
 
-    Note:
-        - GPU é ~5-10x mais rápido que CPU
+    Observação:        - GPU é ~5-10x mais rápido que CPU
         - Útil em pós-processamento de segmentação
         - Combine com erosion para closing/opening
     """
@@ -131,27 +123,23 @@ def binary_erosion(
     gpu: Optional[bool] = None,
 ) -> NDArray[np.uint8]:
     """
-    Binary erosion com suporte automático a GPU.
+    Aplica erosão binária com suporte automático a GPU.
 
     Reduz regiões em uma máscara binária. Útil para remover pequenos
     artefatos e separar objetos conectados.
 
-    Args:
-        mask (np.ndarray or cp.ndarray): Máscara binária
+    Argumentos:        mask (np.ndarray or cp.ndarray): Máscara binária
         structure (np.ndarray or cp.ndarray): Elemento estruturante
         gpu (bool, optional): Se None, detecta automaticamente. Se True, força GPU.
             Se False, força CPU.
 
-    Returns:
-        np.ndarray: Resultado na CPU (dtype=uint8)
+    Retorna:        np.ndarray: Resultado na CPU (dtype=uint8)
 
-    Example:
-        >>> from skimage.morphology import ball
+    Exemplo:        >>> from skimage.morphology import ball
         >>> mask = segment_aorta(volume)
         >>> eroded = binary_erosion(mask, structure=ball(2))
 
-    Note:
-        - GPU é ~5-10x mais rápido que CPU
+    Observação:        - GPU é ~5-10x mais rápido que CPU
         - Útil para remover ruído em máscaras
         - Combine com dilation para opening/closing
     """
@@ -174,34 +162,30 @@ def binary_erosion(
 
 
 # =============================================================================
-# Connected Components
+# Componentes conectados
 # =============================================================================
 
 
 def label(mask: NDArray[Any], gpu: Optional[bool] = None) -> Tuple[NDArray[Any], int]:
     """
-    Connected components labeling com suporte automático a GPU.
+    Rotula componentes conectados com suporte automático a GPU.
 
     Identifica e rotula regiões conectadas em uma máscara binária.
 
-    Args:
-        mask (np.ndarray or cp.ndarray): Máscara binária
+    Argumentos:        mask (np.ndarray or cp.ndarray): Máscara binária
         gpu (bool, optional): Se None, detecta automaticamente. Se True, força GPU.
             Se False, força CPU.
 
-    Returns:
-        tuple: (labeled_array, num_features) onde:
+    Retorna:        tuple: (labeled_array, num_features) onde:
             - labeled_array (np.ndarray): Array com rótulos (0=fundo, 1,2,3...=componentes)
             - num_features (int): Número de componentes encontrados
 
-    Example:
-        >>> mask = threshold_volume(volume) > 0.5
+    Exemplo:        >>> mask = threshold_volume(volume) > 0.5
         >>> labeled, num_components = label(mask)
         >>> print(f"Encontrados {num_components} componentes")
         Encontrados 5 componentes
 
-    Note:
-        - GPU é ~3-8x mais rápido que CPU
+    Observação:        - GPU é ~3-8x mais rápido que CPU
         - Usa conectividade completa (26-vizinhança em 3D)
         - Retorna sempre NumPy array na CPU
     """
@@ -230,23 +214,19 @@ def keep_largest_component(
     Identifica todos os componentes conectados e retorna apenas o maior.
     Útil para remover ruído e manter apenas a estrutura principal.
 
-    Args:
-        mask (np.ndarray): Máscara binária de entrada
+    Argumentos:        mask (np.ndarray): Máscara binária de entrada
         gpu (bool, optional): Se None, usa GPU se disponível. Se True, força GPU.
             Se False, força CPU.
 
-    Returns:
-        np.ndarray: Máscara binária (dtype=uint8) contendo apenas o maior
+    Retorna:        np.ndarray: Máscara binária (dtype=uint8) contendo apenas o maior
             componente conectado
 
-    Example:
-        >>> noisy_mask = segment_structure(volume)
+    Exemplo:        >>> noisy_mask = segment_structure(volume)
         >>> clean_mask = keep_largest_component(noisy_mask)
         >>> print(f"Redução: {noisy_mask.sum()} → {clean_mask.sum()} voxels")
         Redução: 45892 → 43210 voxels
 
-    Note:
-        - Usa GPU automaticamente se disponível (3-8x mais rápido)
+    Observação:        - Usa GPU automaticamente se disponível (3-8x mais rápido)
         - Fallback para CPU se GPU não disponível
         - Retorna máscara original (como uint8) se vazia
         - Útil após segmentação para remover componentes espúrios
@@ -288,25 +268,21 @@ def binary_opening(
     Remove pequenos objetos (ruído) enquanto preserva estruturas grandes.
     Opening = dilatação(erosão(imagem)).
 
-    Args:
-        input (np.ndarray): Imagem binária de entrada
+    Argumentos:        input (np.ndarray): Imagem binária de entrada
         structure (np.ndarray, optional): Elemento estruturante.
             Se None, usa um elemento simples (cubo/disco).
         gpu (bool, optional): Se None, usa GPU se disponível. Se True, força GPU.
             Se False, força CPU.
 
-    Returns:
-        np.ndarray: Imagem após opening, como NumPy array
+    Retorna:        np.ndarray: Imagem após opening, como NumPy array
 
-    Example:
-        >>> from skimage.morphology import ball
+    Exemplo:        >>> from skimage.morphology import ball
         >>> mask = np.random.randint(0, 2, (64, 64, 64))
         >>> opened = binary_opening(mask, structure=ball(2))
         >>> print(f"Original: {mask.sum()}, Opened: {opened.sum()}")
         Original: 16384, Opened: 15200
 
-    Note:
-        - GPU: 5-10x mais rápido para volumes grandes
+    Observação:        - GPU: 5-10x mais rápido para volumes grandes
         - CPU fallback automático se GPU falhar
         - Útil para remover ruído sem afetar estruturas grandes
         - Use após binarização para limpar a máscara

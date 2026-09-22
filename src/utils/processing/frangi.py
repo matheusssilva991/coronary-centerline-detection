@@ -72,8 +72,7 @@ def get_vesselness(
     Calcula o mapa de vesselness usando o filtro de Frangi.
     Usa GPU se disponível, caso contrário usa CPU.
 
-    Args:
-        image: Imagem 3D de entrada (NumPy ou CuPy array)
+    Argumentos:        image: Imagem 3D de entrada (NumPy ou CuPy array)
         sigmas: Range de sigmas para multi-escala
         alpha: Sensibilidade a estruturas blob (0.1-1.0, padrão 0.5)
         beta: Sensibilidade ao ruído de fundo (0.1-1.0, padrão 0.5)
@@ -88,8 +87,7 @@ def get_vesselness(
         gpu: Se None (padrão), detecta automaticamente. Se True, força GPU. Se False, força CPU.
         return_cpu: Se True, converte resultado GPU para NumPy antes de retornar.
 
-    Returns:
-        vesselness_norm: Mapa de vesselness normalizado (ou não), como NumPy array
+    Retorna:        vesselness_norm: Mapa de vesselness normalizado (ou não), como NumPy array
     """
     sigma_values = _as_sigma_sequence(sigmas)
     _validate_normalization_method(normalization)

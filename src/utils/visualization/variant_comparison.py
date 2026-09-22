@@ -163,6 +163,7 @@ def _split_from_result_path(path: Path) -> str | None:
 
 
 def _load_variant_config_labels(path: Path) -> tuple[Any, Any]:
+    """Carrega os rótulos de método usados para identificar uma variante."""
     split = _split_from_result_path(path)
     if split is None:
         return None, None

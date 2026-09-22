@@ -715,6 +715,7 @@ def compare_images_cpu_gpu(
 
 
 def _json_safe(value: Any) -> Any:
+    """Converte valores científicos em estruturas compatíveis com JSON."""
     if isinstance(value, dict):
         return {str(key): _json_safe(item) for key, item in value.items()}
     if isinstance(value, (list, tuple)):

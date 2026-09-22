@@ -88,8 +88,7 @@ def fuzzy_threshold_outputs(
     normalização das três classes, a máscara seleciona voxels cuja classe
     dominante é objeto.
 
-    Args:
-        volume: Volume 3D usado para estimar e aplicar as pertinências.
+    Argumentos:        volume: Volume 3D usado para estimar e aplicar as pertinências.
         min_hu: Limiar mínimo que ancora a separação entre fundo mole e objeto.
         soft_margin_hu: Distância abaixo de ``min_hu`` usada como centro de
             fundo mole.
@@ -98,8 +97,7 @@ def fuzzy_threshold_outputs(
         smooth_radius: Raio da janela cúbica de suavização das pertinências.
         smooth_mode: Tipo de suavização local, ``mean`` ou ``median``.
 
-    Returns:
-        Máscara de objeto e metadados dos centros/pertinências.
+    Retorna:        Máscara de objeto e metadados dos centros/pertinências.
     """
     centers = estimate_fuzzy_centers(
         volume,

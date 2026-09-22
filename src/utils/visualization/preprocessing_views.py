@@ -69,9 +69,7 @@ def plot_pipeline_preprocessing_stages(
     axes[0].set_title("Imagem original")
     axes[1].imshow(down_image[:, :, slice_idx], cmap="gray")
     axes[1].set_title("Downsampling")
-    axes[2].imshow(
-        threshold_mask[:, :, slice_idx], cmap="gray", vmin=0, vmax=1
-    )
+    axes[2].imshow(threshold_mask[:, :, slice_idx], cmap="gray", vmin=0, vmax=1)
     axes[2].set_title("Máscara de threshold")
     axes[3].imshow(lcc_image[:, :, slice_idx], cmap="gray")
     axes[3].set_title("Imagem após LCC")

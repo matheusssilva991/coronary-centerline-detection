@@ -323,15 +323,23 @@ class RunSummaryTests(unittest.TestCase):
 
             results_path = merge_batch_results("val", numeric_dir)
             paths = {"mid_res": {"val": numeric_dir}}
+            self.assertIsNotNone(results_path)
+            if results_path is None:
+                self.fail("A consolidação deveria retornar o caminho do CSV.")
 
             self.assertEqual(Path(results_path).name, "results_val.csv")
-            self.assertEqual(len(load_split_results(paths, "mid_res", "val")), 4)
+            loaded = load_split_results(paths, "mid_res", "val")
+            self.assertIsNotNone(loaded)
+            if loaded is None:
+                self.fail("Os resultados consolidados deveriam estar disponíveis.")
+            self.assertEqual(len(loaded), 4)
             with self.assertRaises(FileNotFoundError):
                 load_split_summary(paths, "mid_res", "val")
-            self.assertAlmostEqual(
-                summarize_split_results(paths, "mid_res", "val")["dice_artery_mean"],
-                0.55,
-            )
+            summary = summarize_split_results(paths, "mid_res", "val")
+            self.assertIsNotNone(summary)
+            if summary is None:
+                self.fail("O resumo sob demanda deveria estar disponível.")
+            self.assertAlmostEqual(summary["dice_artery_mean"], 0.55)
 
     def test_legacy_results_remain_readable(self) -> None:
         with TemporaryDirectory() as temporary_dir:
@@ -339,7 +347,11 @@ class RunSummaryTests(unittest.TestCase):
             _results().to_csv(numeric_dir / "ostios_test_summary.csv", index=False)
             paths = {"mid_res": {"test": numeric_dir}}
 
-            self.assertEqual(len(load_split_results(paths, "mid_res", "test")), 4)
+            loaded = load_split_results(paths, "mid_res", "test")
+            self.assertIsNotNone(loaded)
+            if loaded is None:
+                self.fail("Os resultados legados deveriam continuar legíveis.")
+            self.assertEqual(len(loaded), 4)
             with self.assertRaisesRegex(ValueError, "formato legado"):
                 load_split_summary(paths, "mid_res", "test")
 

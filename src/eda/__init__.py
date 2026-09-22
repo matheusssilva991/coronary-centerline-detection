@@ -1,4 +1,1 @@
-"""Exploratory Data Analysis subpackage.
-
-Contains Jupyter notebooks and supporting modules for EDA.
-"""
+"""Reúne notebooks e módulos de análise exploratória."""

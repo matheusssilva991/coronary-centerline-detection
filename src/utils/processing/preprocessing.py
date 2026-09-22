@@ -130,15 +130,12 @@ def threshold_image(
 def threshold_image_with_offset(
     image: NDArray[Any], min_val: float = -300, max_val: float = 675
 ) -> Tuple[NDArray[Any], NDArray[Any], float]:
+    """Aplica o limiar e desloca os valores válidos para uma faixa positiva."""
     offset = np.abs(min_val)
 
-    # 1. Cria a máscara binária
+    # Cria a máscara e preserva zero fora da faixa selecionada.
     thresh_mask = (image >= min_val) & (image <= max_val)
-
-    # 2. Cria uma matriz vazia preenchida com zeros
     thresh_img = np.zeros_like(image)
-
-    # 3. Aplica o offset onde a máscara é True
     thresh_img[thresh_mask] = image[thresh_mask] + offset
 
     return thresh_img, thresh_mask, offset
@@ -179,15 +176,13 @@ def build_lcc_image_from_mask(
     O offset mantém intensidades negativas distinguíveis do fundo
     durante a extração do componente conectado.
 
-    Args:
-        volume: Volume 3D já reduzido para a resolução de trabalho.
+    Argumentos:        volume: Volume 3D já reduzido para a resolução de trabalho.
         mask: Máscara binária candidata.
         offset: Valor somado aos voxels válidos antes do LCC.
         per_slice: Se True, calcula o LCC em cada fatia axial; caso contrário,
             calcula um único LCC no volume inteiro.
 
-    Returns:
-        Tupla com a imagem filtrada pelo LCC e a máscara do LCC.
+    Retorna:        Tupla com a imagem filtrada pelo LCC e a máscara do LCC.
     """
     # Recria a imagem limiarizada a partir da máscara candidata.
     thresholded = np.zeros_like(volume, dtype=np.float32)

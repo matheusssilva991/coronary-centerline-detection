@@ -1,4 +1,4 @@
-"""Load and validate manual reviews used by the aorta EDA notebooks."""
+"""Carrega e valida revisões manuais usadas nas EDAs da aorta."""
 
 from __future__ import annotations
 
@@ -9,10 +9,14 @@ from typing import Any, Collection
 import numpy as np
 import pandas as pd
 
-from ..project.results_schema import normalize_ostia_status
-
 from ..comparison_utils.io import load_split_results
+from ..project.dataframe import (
+    numeric_series,
+    require_series_column,
+    to_numeric_series,
+)
 from ..project.result_paths import results_filename
+from ..project.results_schema import normalize_ostia_status
 
 
 AORTA_REVIEW_ID_FIELDS = (
@@ -26,7 +30,7 @@ OSTIA_REVIEW_ID_FIELDS = (
 
 
 def load_aorta_visual_reviews(path: str | Path) -> dict[str, Any]:
-    """Load the visual-review catalog and validate every variant and split."""
+    """Carrega o catálogo visual e valida cada variante e split."""
     review_path = Path(path)
     data = json.loads(review_path.read_text(encoding="utf-8"))
     variants = data.get("variants")
@@ -46,7 +50,7 @@ def get_aorta_visual_review(
     variant: str,
     split: str,
 ) -> dict[str, Any]:
-    """Return one review with ID lists converted to sets and note keys to integers."""
+    """Retorna uma revisão com IDs em conjuntos e chaves de notas inteiras."""
     try:
         raw_review = catalog["variants"][variant][split]
     except KeyError as exc:
@@ -69,7 +73,7 @@ def resolve_aorta_review_results_path(
     review: dict[str, Any],
     split: str,
 ) -> Path:
-    """Resolve the per-image results CSV associated with a catalog entry."""
+    """Resolve o CSV por imagem associado a uma entrada do catálogo."""
     numeric_dir = Path(repo_root) / review["run_dir"] / "numeric"
     current = numeric_dir / results_filename(split)
     legacy = numeric_dir / f"ostios_{split}_results.csv"
@@ -81,11 +85,10 @@ resolve_aorta_review_summary_path = resolve_aorta_review_results_path
 
 
 def add_aorta_extent_metrics(dataframe: pd.DataFrame) -> pd.DataFrame:
-    """Derive comparable axial-extent metrics from circles and the aorta mask.
+    """Calcula métricas axiais comparáveis entre círculos e máscara da aorta.
 
-    Positive ``segmented_minus_circle_slices`` values indicate that the final
-    mask occupies more slices than the circle trajectory. Negative values
-    indicate axial retraction after segmentation and post-processing.
+    Valores positivos em ``segmented_minus_circle_slices`` indicam uma máscara
+    final mais extensa que a trajetória; valores negativos indicam retração.
     """
     df = dataframe.copy()
     required = {
@@ -97,9 +100,9 @@ def add_aorta_extent_metrics(dataframe: pd.DataFrame) -> pd.DataFrame:
     if missing:
         raise ValueError(f"Missing aorta extent columns: {sorted(missing)}")
 
-    image_slices = pd.to_numeric(df["image_slice_count"], errors="coerce")
-    circle_slices = pd.to_numeric(df["aorta_circle_count"], errors="coerce")
-    segmented_slices = pd.to_numeric(df["aorta_segmented_slice_count"], errors="coerce")
+    image_slices = numeric_series(df, "image_slice_count")
+    circle_slices = numeric_series(df, "aorta_circle_count")
+    segmented_slices = numeric_series(df, "aorta_segmented_slice_count")
     valid_image_slices = image_slices.where(image_slices.gt(0))
     valid_circle_slices = circle_slices.where(circle_slices.gt(0))
 
@@ -112,14 +115,14 @@ def add_aorta_extent_metrics(dataframe: pd.DataFrame) -> pd.DataFrame:
 
     if "aorta_volume_fraction" in df.columns:
         df["aorta_volume_percentage"] = (
-            pd.to_numeric(df["aorta_volume_fraction"], errors="coerce") * 100.0
+            numeric_series(df, "aorta_volume_fraction") * 100.0
         )
     if {
         "aorta_circle_first_slice",
         "aorta_circle_last_slice",
     }.issubset(df.columns):
-        first = pd.to_numeric(df["aorta_circle_first_slice"], errors="coerce")
-        last = pd.to_numeric(df["aorta_circle_last_slice"], errors="coerce")
+        first = numeric_series(df, "aorta_circle_first_slice")
+        last = numeric_series(df, "aorta_circle_last_slice")
         df["circle_first_position"] = first / valid_image_slices
         df["circle_last_position"] = last / valid_image_slices
         df["circle_center_position"] = (first + last) / (2.0 * valid_image_slices)
@@ -135,7 +138,7 @@ def load_aorta_review_cohort(
     required_columns: Collection[str] = (),
     use_reviewed_ostia_labels: bool = False,
 ) -> pd.DataFrame:
-    """Load a reviewed run and add visual, ostia, and axial-extent labels."""
+    """Carrega um run revisado e adiciona rótulos visuais, de óstios e axiais."""
     results_path = resolve_aorta_review_results_path(repo_root, review, split)
     numeric_dir = results_path.parent
     dataframe = load_split_results({"mid_res": {split: numeric_dir}}, "mid_res", split)
@@ -147,11 +150,13 @@ def load_aorta_review_cohort(
         raise ValueError(f"Missing result columns for {split!r}: {sorted(missing)}")
 
     df = dataframe.copy()
-    df["IMG_ID"] = pd.to_numeric(df["IMG_ID"], errors="raise").astype(int)
+    image_ids = to_numeric_series(require_series_column(df, "IMG_ID"), errors="raise")
+    df["IMG_ID"] = image_ids.astype(int)
     good_ids = {int(img_id) for img_id in review["aorta_good_ids"]}
     bad_ids = {int(img_id) for img_id in review["aorta_bad_ids"]}
     expected_ids = good_ids | bad_ids
-    observed_ids = set(df["IMG_ID"])
+    image_ids = require_series_column(df, "IMG_ID")
+    observed_ids = set(image_ids)
     if expected_ids != observed_ids:
         raise ValueError(
             f"Incompatible IDs for {split!r}. "
@@ -159,13 +164,17 @@ def load_aorta_review_cohort(
             f"unclassified={sorted(observed_ids - expected_ids)}"
         )
 
-    df["visual_aorta_quality"] = np.where(df["IMG_ID"].isin(good_ids), "boa", "ruim")
-    df["visual_review_note"] = df["IMG_ID"].map(review.get("notes", {})).fillna("")
-    normalized_status = df["ostia_detection_status"].map(normalize_ostia_status)
-    csv_success = normalized_status.isin({"both_correct", "both_tolerable"})
+    df["visual_aorta_quality"] = np.where(
+        image_ids.isin(tuple(good_ids)), "boa", "ruim"
+    )
+    notes = review.get("notes", {})
+    df["visual_review_note"] = image_ids.map(lambda value: notes.get(value)).fillna("")
+    ostia_status = require_series_column(df, "ostia_detection_status")
+    normalized_status = ostia_status.map(normalize_ostia_status)
+    csv_success = normalized_status.isin(("both_correct", "both_tolerable"))
     if use_reviewed_ostia_labels:
         bad_ostia_ids = {int(img_id) for img_id in review.get("ostia_bad_ids", ())}
-        df["ostia_success"] = ~df["IMG_ID"].isin(bad_ostia_ids)
+        df["ostia_success"] = ~image_ids.isin(tuple(bad_ostia_ids))
     else:
         df["ostia_success"] = csv_success
     df["ostia_outcome"] = np.where(df["ostia_success"], "sucesso", "falha")
@@ -181,7 +190,7 @@ def load_aorta_review_cohort(
 
 
 def _validate_review(review: Any, variant: str, split: str) -> None:
-    """Reject incomplete or contradictory manual classifications."""
+    """Rejeita classificações manuais incompletas ou contraditórias."""
     if not isinstance(review, dict) or not review.get("run_dir"):
         raise ValueError(f"Missing run_dir for variant={variant!r}, split={split!r}.")
     missing = [field for field in AORTA_REVIEW_ID_FIELDS if field not in review]

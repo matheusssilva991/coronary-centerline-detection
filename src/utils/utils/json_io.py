@@ -8,11 +8,9 @@ from typing import Any, Dict
 def load_json_file(path: str) -> Dict[str, Any]:
     """Carrega um arquivo JSON com validação e mensagens de erro claras.
 
-    Args:
-        path: Caminho para o arquivo JSON.
+    Argumentos:        path: Caminho para o arquivo JSON.
 
-    Returns:
-        Dicionário representando o conteúdo JSON.
+    Retorna:        Dicionário representando o conteúdo JSON.
     """
     if not os.path.exists(path):
         raise FileNotFoundError(f"Arquivo JSON não encontrado: {path}")

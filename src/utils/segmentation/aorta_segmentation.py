@@ -43,13 +43,11 @@ def _calculate_roi_bounds(
     """
     Calcula os limites da região de interesse (ROI) baseado nos círculos detectados.
 
-    Args:
-        detected_circles (list): Lista de dicionários com círculos detectados
+    Argumentos:        detected_circles (list): Lista de dicionários com círculos detectados
         volume_shape (tuple): Shape do volume 3D (altura, largura, profundidade)
         roi_margin (int): Margem extra em voxels ao redor da ROI
 
-    Returns:
-        dict: Dicionário com os limites da ROI contendo:
+    Retorna:        dict: Dicionário com os limites da ROI contendo:
             - 'x_min', 'x_max': Limites no eixo x
             - 'y_min', 'y_max': Limites no eixo y
             - 'z_min', 'z_max': Limites no eixo z
@@ -86,12 +84,10 @@ def _adjust_circles_to_roi(
     """
     Ajusta as coordenadas dos círculos para o sistema de coordenadas da ROI.
 
-    Args:
-        detected_circles (list): Lista de círculos em coordenadas globais
+    Argumentos:        detected_circles (list): Lista de círculos em coordenadas globais
         roi_bounds (dict): Limites da ROI com 'x_min', 'y_min', 'z_min', etc.
 
-    Returns:
-        list: Lista de círculos com coordenadas ajustadas para a ROI
+    Retorna:        list: Lista de círculos com coordenadas ajustadas para a ROI
     """
     roi_circles = []
     z_min = roi_bounds["z_min"]
@@ -124,16 +120,14 @@ def _initialize_level_set_from_circles(
     Cria uma máscara binária onde cada círculo é desenhado como um disco
     preenchido na fatia correspondente.
 
-    Args:
-        volume_shape (tuple): Shape do volume (altura, largura, profundidade)
+    Argumentos:        volume_shape (tuple): Shape do volume (altura, largura, profundidade)
         circles (list): Lista de dicionários com círculos contendo
             'slice_index', 'center_x', 'center_y', 'radius'
         radius_reduction_factor (float): Fator para reduzir o raio inicial.
             Valores < 1.0 criam sementes menores que os círculos detectados.
             Default: 0.8
 
-    Returns:
-        np.ndarray: Máscara binária 3D (dtype=int8) com as sementes inicializadas
+    Retorna:        np.ndarray: Máscara binária 3D (dtype=int8) com as sementes inicializadas
     """
     init_level_set = np.zeros(volume_shape, dtype=np.int8)
     height, width = volume_shape[:2]
@@ -434,8 +428,7 @@ def level_set_segmentation(
     4. Aplica contorno ativo geodésico morfológico
     5. Retorna máscara no volume completo (se usou ROI)
 
-    Args:
-        volume_ccta (np.ndarray): Volume 3D original (altura, largura, profundidade),
+    Argumentos:        volume_ccta (np.ndarray): Volume 3D original (altura, largura, profundidade),
             já pré-processado/normalizado
         detected_circles (list): Lista de dicionários, cada um contendo:
             - 'slice_index' (int): Índice da fatia
@@ -463,20 +456,17 @@ def level_set_segmentation(
             Valores maiores = mais suavização, menos sensibilidade a ruído.
             Default: 2
 
-    Returns:
-        np.ndarray: Máscara binária 3D (dtype=int8) com a segmentação da aorta,
+    Retorna:        np.ndarray: Máscara binária 3D (dtype=int8) com a segmentação da aorta,
             com o mesmo shape do volume_ccta de entrada. Valores: 0 (fundo) e 1 (aorta)
 
-    Example:
-        >>> volume = load_ccta_volume()  # shape: (512, 512, 200)
+    Exemplo:        >>> volume = load_ccta_volume()  # shape: (512, 512, 200)
         >>> circles = detect_aorta_circles(volume, ...)
         >>> mask = level_set_segmentation(
         ...     volume, circles, num_iter=100, balloon=2
         ... )
         >>> print(f"Volume aorta: {mask.sum()} voxels")
 
-    Note:
-        - Para volumes grandes, use_roi=True é altamente recomendado
+    Observação:        - Para volumes grandes, use_roi=True é altamente recomendado
         - O parâmetro balloon controla se o contorno expande ou contrai
         - Ajuste alpha e sigma se houver muito ruído ou bordas fracas
     """
@@ -575,8 +565,14 @@ def classify_aorta_segmentation_feedback(
     a inspeção visual ou uma máscara de referência da aorta.
     """
     config = feedback_config or {}
-    values = (circle_fill_q25, circle_area_ratio_p90, volume_fraction)
-    if any(value is None or not np.isfinite(value) for value in values):
+    if (
+        circle_fill_q25 is None
+        or circle_area_ratio_p90 is None
+        or volume_fraction is None
+        or not np.isfinite(circle_fill_q25)
+        or not np.isfinite(circle_area_ratio_p90)
+        or not np.isfinite(volume_fraction)
+    ):
         return AORTA_FEEDBACK_INSUFFICIENT_DATA
 
     fill = float(circle_fill_q25)
@@ -587,9 +583,7 @@ def classify_aorta_segmentation_feedback(
     # alto reforça o alerta quando a razão está próxima do limite principal.
     over_area_ratio = float(config.get("oversegmentation_area_ratio_p90", 3.0))
     over_volume = float(config.get("oversegmentation_volume_fraction", 0.019))
-    over_paired_ratio = float(
-        config.get("oversegmentation_paired_area_ratio_p90", 2.8)
-    )
+    over_paired_ratio = float(config.get("oversegmentation_paired_area_ratio_p90", 2.8))
     if area_ratio > over_area_ratio or (
         volume > over_volume and area_ratio > over_paired_ratio
     ):
@@ -622,9 +616,7 @@ def calculate_slice_area_jump_p95(aorta_mask: NDArray[Any]) -> float:
 
     # Considera o intervalo segmentado completo para capturar cortes internos.
     areas = areas[occupied[0] : occupied[-1] + 1]
-    denominator = np.maximum.reduce(
-        [areas[1:], areas[:-1], np.ones(areas.size - 1)]
-    )
+    denominator = np.maximum.reduce([areas[1:], areas[:-1], np.ones(areas.size - 1)])
     jumps = np.abs(np.diff(areas)) / denominator
     return float(np.quantile(jumps, 0.95)) if jumps.size else 0.0
 
@@ -646,22 +638,18 @@ def remove_leaks_morphology(
     O tamanho do elemento estruturante (raio) controla a escala dos artefatos
     removidos. Vazamentos maiores que o raio serão preservados.
 
-    Args:
-        mask_3d (np.ndarray): Máscara binária 3D a ser limpa (dtype=bool ou int)
+    Argumentos:        mask_3d (np.ndarray): Máscara binária 3D a ser limpa (dtype=bool ou int)
         radius (int): Raio do elemento estruturante esférico (ball) em voxels.
             Valores maiores removem estruturas maiores mas podem alterar
             significativamente a geometria. Default: 3
 
-    Returns:
-        np.ndarray: Máscara limpa com o mesmo shape e dtype da entrada
+    Retorna:        np.ndarray: Máscara limpa com o mesmo shape e dtype da entrada
 
-    Example:
-        >>> noisy_mask = segment_aorta(volume)
+    Exemplo:        >>> noisy_mask = segment_aorta(volume)
         >>> clean_mask = remove_leaks_morphology(noisy_mask, radius=2)
         >>> print(f"Removed {noisy_mask.sum() - clean_mask.sum()} voxels")
 
-    Note:
-        - A operação preserva o tipo de dado da entrada
+    Observação:        - A operação preserva o tipo de dado da entrada
         - Para máscaras muito ruidosas, considere aplicar múltiplas vezes
           com raios diferentes ou usar outras técnicas de pós-processamento
         - O custo computacional cresce com o raio (O(r³))

@@ -389,11 +389,10 @@ def build_normalized_intensity_histograms(
     histogram_name: str = "full",
     bins: int = 256,
 ) -> pd.DataFrame:
-    """Rebin per-image histograms as probabilities on a shared HU grid.
+    """Redistribui histogramas por imagem em uma grade HU compartilhada.
 
-    Each source histogram is converted to a cumulative probability curve and
-    interpolated at shared bin edges. This prevents images with more voxels or
-    different original HU ranges from being compared on incompatible bins.
+    Converte cada histograma em probabilidade acumulada e interpola os limites
+    comuns, evitando comparar imagens com grades ou quantidades incompatíveis.
     """
     if bins <= 0:
         raise ValueError("bins deve ser maior que zero.")
@@ -476,7 +475,7 @@ def build_mean_intensity_histogram(
     histogram_name: str = "full",
     bins: int = 256,
 ) -> pd.DataFrame:
-    """Average normalized image histograms on a shared HU grid."""
+    """Calcula a média dos histogramas normalizados em uma grade HU comum."""
     profiles = build_normalized_intensity_histograms(
         histogram_bins,
         image_ids=image_ids,

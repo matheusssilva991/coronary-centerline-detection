@@ -1,6 +1,7 @@
 """Regressoes da superficie candidata e do intervalo axial dos ostios."""
 
 from unittest import TestCase
+from typing import cast
 
 import numpy as np
 from scipy import ndimage as ndi
@@ -17,7 +18,10 @@ class OstiaSurfaceTests(TestCase):
         for padding in (0, 1, 2, 3):
             with self.subTest(padding=padding):
                 expanded = ndi.binary_dilation(mask, structure=ball(padding))
-                expected = expanded & ~ndi.binary_erosion(expanded, structure=ball(4))
+                eroded = np.asarray(
+                    ndi.binary_erosion(expanded, structure=ball(4)), dtype=bool
+                )
+                expected = np.asarray(expanded, dtype=bool) & ~eroded
                 actual = find_aorta_surface(mask, 4, padding)
                 np.testing.assert_array_equal(actual, expected)
                 np.testing.assert_array_equal(mask, original)
@@ -37,6 +41,6 @@ class OstiaSurfaceTests(TestCase):
         )
 
     def test_invalid_padding_is_rejected(self):
-        for radius in (-1, 1.5):
+        for radius in (-1, cast(int, 1.5)):
             with self.assertRaises(ValueError):
                 find_aorta_surface(np.ones((3, 3, 3)), surface_padding_radius=radius)

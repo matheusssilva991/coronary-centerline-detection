@@ -1,7 +1,7 @@
-"""Helpers para comparar variantes fuzzy no pipeline coronário.
+"""Compara variantes fuzzy no pipeline coronário.
 
 Este módulo concentra a lógica que o notebook de comparação usa para alternar
-entre threshold normal, threshold fuzzy, region growing e fuzzy connectedness.
+entre limiar normal, limiar fuzzy, crescimento de região e conectividade fuzzy.
 """
 
 from __future__ import annotations
@@ -465,10 +465,7 @@ def evaluate_prepared_image(
         raw_mask = artery_result["raw_artery_mask"]
         artery_mask = artery_result["artery_mask"]
         row.update(
-            {
-                column: artery_result.get(column)
-                for column in ARTERY_BRANCH_COLUMNS
-            }
+            {column: artery_result.get(column) for column in ARTERY_BRANCH_COLUMNS}
         )
 
     dice_before = float(dice_score(raw_mask, label_artery))

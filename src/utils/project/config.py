@@ -1,4 +1,4 @@
-"""Utilities para carregar/salvar e normalizar configurações JSON."""
+"""Carrega, salva e normaliza configurações JSON."""
 
 import copy
 import json
@@ -117,14 +117,12 @@ def scale_config_to_resolution(
     - MID RESOLUTION (factor=2): usa valores padrão (18-31 pixels)
     - HIGH RESOLUTION (factor=1): multiplica por 2 (36-62 pixels)
 
-    Args:
-        config: Dicionário de configuração original
+    Argumentos:        config: Dicionário de configuração original
         reference_downscale_xy: Fator de downscale de referência (padrão: 2).
         enabled_groups: Grupos de escala que serão aplicados. ``None`` mantém
             o comportamento histórico e ativa todos os grupos.
 
-    Returns:
-        Configuração escalada com todos os parâmetros espaciais ajustados
+    Retorna:        Configuração escalada com todos os parâmetros espaciais ajustados
     """
     cfg = copy.deepcopy(config)
     groups = (
@@ -135,8 +133,7 @@ def scale_config_to_resolution(
     unknown_groups = groups.difference(RESOLUTION_SCALING_GROUPS)
     if unknown_groups:
         raise ValueError(
-            "Grupos de escala desconhecidos: "
-            f"{', '.join(sorted(unknown_groups))}"
+            f"Grupos de escala desconhecidos: {', '.join(sorted(unknown_groups))}"
         )
 
     factor_xy = cfg["DOWNSCALE_FACTORS"][0]

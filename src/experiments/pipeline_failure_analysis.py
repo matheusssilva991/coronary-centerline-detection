@@ -91,7 +91,9 @@ def main() -> None:
     focused_cohort.to_csv(args.output_dir / "focused_cohort.csv", index=False)
     for filename in LEGACY_DETAIL_FILES:
         (args.output_dir / filename).unlink(missing_ok=True)
-    with (args.output_dir / "analysis_metadata.json").open("w", encoding="utf-8") as handle:
+    with (args.output_dir / "analysis_metadata.json").open(
+        "w", encoding="utf-8"
+    ) as handle:
         json.dump(
             {
                 "result_root": str(

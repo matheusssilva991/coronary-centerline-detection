@@ -1,4 +1,4 @@
-"""Notebook bootstrap helpers for exploratory notebooks."""
+"""Configura o ambiente compartilhado dos notebooks exploratórios."""
 
 from __future__ import annotations
 
@@ -16,10 +16,9 @@ from .result_paths import results_filename
 
 
 def configure_notebook_environment(chdir_to_src: bool = True) -> Path:
-    """Add src to sys.path and optionally switch cwd to the src directory.
+    """Adiciona `src` ao caminho e opcionalmente altera o diretório atual.
 
-    Returns:
-        Path to the repository root.
+    Retorna o caminho da raiz do repositório.
     """
     repo_root = Path(__file__).resolve().parents[3]
     src_dir = repo_root / "src"
@@ -38,7 +37,7 @@ def resolve_existing_path(
     candidates: list[Path],
     description: str,
 ) -> Path:
-    """Resolve a dataset/output path from an env var or known local candidates."""
+    """Resolve um caminho por variável de ambiente ou candidatos locais."""
     env_value = os.environ.get(env_var)
     if env_value:
         path = Path(env_value).expanduser()
@@ -97,17 +96,17 @@ def load_notebook_pipeline_config(
 
 
 def _numeric_result_dir(path: Path) -> Path:
-    """Return the numeric subdir for new runs, otherwise keep legacy paths."""
+    """Resolve o subdiretório numérico ou preserva caminhos legados."""
     numeric_dir = path / "numeric"
     return numeric_dir if numeric_dir.exists() else path
 
 
 def _latest_split_result_dir(parent: Path, split: str) -> Path | None:
-    """Find the newest consolidated result below a split/run directory."""
+    """Localiza o resultado consolidado mais recente de um split."""
     results_name = results_filename(split)
     candidates = []
 
-    # Supports both ``<split>/numeric`` and ``<split>/<timestamp>/numeric``.
+    # Aceita tanto ``<split>/numeric`` quanto ``<split>/<timestamp>/numeric``.
     for run_dir in (parent, *sorted(parent.glob("*"))):
         if not run_dir.is_dir():
             continue
@@ -135,22 +134,22 @@ def _resolve_split_result_dir(
     resolution: str,
     split: str,
 ) -> Path | None:
-    """Resolve one split, preferring canonical and standard runs."""
+    """Resolve um split priorizando runs canônicos e padrão."""
     canonical_parent = repo_root / "output/segmentation/canonical" / resolution / split
     canonical_result = _latest_split_result_dir(canonical_parent, split)
     if canonical_result is not None:
         return canonical_result
 
-    # Only inspect direct timestamped runs, avoiding experiment subdirectories.
+    # Inspeciona apenas runs datados diretos, sem entrar em experimentos.
     runs_parent = repo_root / "output/segmentation/runs" / resolution
     return _latest_split_result_dir(runs_parent, split)
 
 
 def get_default_split_paths(repo_root: Path) -> dict[str, dict[str, Path]]:
-    """Return available consolidated result folders used by EDA notebooks.
+    """Retorna pastas de resultados consolidados usadas pelas EDAs.
 
-    Canonical folders may contain a timestamp level between the split and its
-    ``numeric`` directory. Missing resolution/split combinations are omitted.
+    Pastas canônicas podem conter um nível de data entre o split e ``numeric``.
+    Combinações ausentes de resolução e split são omitidas.
     """
     result: dict[str, dict[str, Path]] = {"mid_res": {}, "high_res": {}}
     for resolution in result:
@@ -167,10 +166,10 @@ def get_default_split_paths(repo_root: Path) -> dict[str, dict[str, Path]]:
 
 
 def get_bad_cases_export_dir(repo_root: Path) -> Path:
-    """Return the shared bad-cases export directory."""
+    """Retorna o diretório compartilhado de exportação dos casos ruins."""
     return repo_root / "output/segmentation/analysis/bad_cases"
 
 
 def get_cases_analysis_output_dir(repo_root: Path) -> Path:
-    """Return the HTML output directory for cases-analysis notebooks."""
+    """Retorna o diretório HTML das análises de casos."""
     return repo_root / "output/segmentation/analysis/cases_analysis/visual"

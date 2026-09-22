@@ -1,9 +1,11 @@
 import numpy as np
 import pandas as pd
 
+from ..project.dataframe import numeric_series, require_series_column
+
 
 def get_total_success_percent(metadata, default=np.nan):
-    """Read total success percent with backward-compatible fallback."""
+    """Lê o percentual de sucesso total com fallback para schemas antigos."""
     current = metadata.get("results", {}).get("ostia", {}).get("success", {})
     if "percent" in current:
         return current["percent"]
@@ -11,7 +13,7 @@ def get_total_success_percent(metadata, default=np.nan):
     results_summary = metadata.get("results_summary", {})
     success_total_percent = results_summary.get("total_success_percent", default)
     if pd.isna(success_total_percent):
-        # Fallback para schema antigo: correto + toleravel.
+        # Fallback para schema antigo: correto + tolerável.
         both_correct = results_summary.get("both_correct_percent", 0)
         both_tolerable = results_summary.get("both_tolerable_percent", 0)
         success_total_percent = both_correct + both_tolerable
@@ -19,7 +21,7 @@ def get_total_success_percent(metadata, default=np.nan):
 
 
 def get_execution_time_seconds(metadata, default=np.nan):
-    """Read execution time from metadata."""
+    """Lê o tempo de execução registrado nos metadados."""
     current = metadata.get("results", {}).get("execution_time", {})
     if "seconds" in current:
         return current["seconds"]
@@ -29,7 +31,7 @@ def get_execution_time_seconds(metadata, default=np.nan):
 
 
 def get_num_images(metadata, default=np.nan):
-    """Read number of images from metadata."""
+    """Lê a quantidade de imagens registrada nos metadados."""
     current = metadata.get("results", {}).get("ostia", {})
     if "processed_exam_count" in current:
         return current["processed_exam_count"]
@@ -42,11 +44,10 @@ def build_split_resolution_summary(
     split_paths_by_resolution,
     valid_splits=("train", "val", "test"),
 ):
-    """Build the summary table consumed by split/resolution EDA plots.
+    """Monta a tabela consumida pelos gráficos de split e resolução.
 
-    Missing resolution/split pairs are retained with ``is_available=False`` so
-    the notebook can report incomplete result collections without special-case
-    loading logic.
+    Mantém pares ausentes com ``is_available=False`` para que os notebooks
+    relatem coleções incompletas sem lógica especial de carregamento.
     """
     from .bad_cases import filter_correct_ostia_cases
     from ..project.results_schema import summarize_results_df
@@ -80,12 +81,9 @@ def build_split_resolution_summary(
                 continue
 
             # Resume Dice para todos os casos e para óstios aceitos.
-            dice_all = pd.to_numeric(results_df["dice_artery"], errors="coerce")
-            dice_all = dice_all.dropna()
+            dice_all = numeric_series(results_df, "dice_artery").dropna()
             correct_cases = filter_correct_ostia_cases(results_df)
-            dice_correct = pd.to_numeric(
-                correct_cases["dice_artery"], errors="coerce"
-            ).dropna()
+            dice_correct = numeric_series(correct_cases, "dice_artery").dropna()
 
             result_summary = summarize_results_df(results_df)
             timings = load_split_batch_timings(
@@ -94,12 +92,18 @@ def build_split_resolution_summary(
                 subset_name,
             )
             timing_records = [] if timings is None else timings.to_dict("records")
-            execution_time_seconds = summarize_batch_timing_records(timing_records).get(
+            execution_value = summarize_batch_timing_records(timing_records).get(
                 "total_known_duration_seconds"
             )
+            execution_time_seconds = (
+                float(execution_value) if execution_value is not None else None
+            )
             num_images = len(results_df)
-            total_success_percent = result_summary["total_success_percent"]
-            if pd.notna(num_images) and pd.notna(total_success_percent):
+            success_value = result_summary["total_success_percent"]
+            total_success_percent = (
+                float(success_value) if success_value is not None else None
+            )
+            if total_success_percent is not None:
                 total_ostia_success = (num_images * 2) * (total_success_percent / 100)
             else:
                 total_ostia_success = np.nan
@@ -120,7 +124,7 @@ def build_split_resolution_summary(
                     ),
                     "execution_time_min": (
                         execution_time_seconds / 60
-                        if pd.notna(execution_time_seconds)
+                        if execution_time_seconds is not None
                         else np.nan
                     ),
                     "total_success_percent": total_success_percent,
@@ -150,7 +154,7 @@ def build_split_resolution_summary(
         "disponivel": "is_available",
     }
     for alias, source in aliases.items():
-        summary[alias] = summary[source]
+        summary[alias] = require_series_column(summary, source)
     return summary
 
 

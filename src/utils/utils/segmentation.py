@@ -10,12 +10,10 @@ def segment_by_hu(
 ) -> Tuple[NDArray[np.uint8], Dict[int, Dict[str, Any]]]:
     """Segmenta volume de CT em classes de tecido com base em faixas de HU.
 
-    Args:
-        img_3d: Volume 3D de intensidades (HU).
+    Argumentos:        img_3d: Volume 3D de intensidades (HU).
         include_labels: Sequência opcional de rótulos (inteiros) a manter.
 
-    Returns:
-        Tupla contendo o volume segmentado (dtype uint8) e o dicionário de faixas HU.
+    Retorna:        Tupla contendo o volume segmentado (dtype uint8) e o dicionário de faixas HU.
     """
     hu_ranges = {
         1: {"name": "Ar", "range": (-1050, -950), "color": [0, 0, 0]},

@@ -1,4 +1,1 @@
-"""Coronary centerline detection package.
-
-Main package for coronary artery segmentation and analysis.
-"""
+"""Reúne segmentação e análise de artérias coronárias."""

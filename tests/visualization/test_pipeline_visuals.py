@@ -202,6 +202,9 @@ class PipelineVisualTests(unittest.TestCase):
                 output,
                 Path(temp_dir) / "img_28_aorta_ostia_artery.html",
             )
+            self.assertIsNotNone(output)
+            if output is None:
+                self.fail("A exportação deveria retornar o caminho do artefato.")
             self.assertTrue(output.exists())
 
         visualize.assert_called_once()

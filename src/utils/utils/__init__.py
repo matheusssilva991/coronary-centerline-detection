@@ -1,6 +1,6 @@
-"""General utility submodules.
+"""Reúne submódulos utilitários gerais.
 
-Public API remains available from utils.utils.
+A API pública permanece disponível por ``utils.utils``.
 """
 
 from .json_io import load_json_file, save_json_file

@@ -1,16 +1,21 @@
-"""Discovery and loading helpers for the OrCaScore, MM-WHS and ImageCAS CCTA."""
+"""Descobre e carrega CCTA dos bancos OrCaScore, MM-WHS e ImageCAS."""
 
 from __future__ import annotations
 
 import zlib
 from collections.abc import Mapping
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
-import nibabel as nib
 import numpy as np
 import pandas as pd
+from nibabel.funcs import as_closest_canonical
+from nibabel.loadsave import load as load_nifti
+from nibabel.orientations import aff2axcodes
+from nibabel.spatialimages import SpatialImage
 from numpy.typing import NDArray
+
+from .dataframe import require_series_column
 
 
 _MHD_DTYPES = {
@@ -26,7 +31,7 @@ _MHD_DTYPES = {
 
 
 def read_mhd_header(path: str | Path) -> dict[str, str]:
-    """Read scalar fields from a MetaImage ``.mhd`` header."""
+    """Lê campos escalares do cabeçalho MetaImage ``.mhd``."""
     header_path = Path(path)
     fields: dict[str, str] = {}
     for raw_line in header_path.read_text(encoding="utf-8").splitlines():
@@ -48,7 +53,7 @@ def _mhd_geometry(
 
 
 def load_mhd_volume(path: str | Path) -> NDArray[np.generic]:
-    """Load a 3-D MetaImage volume and return it in ``(z, y, x)`` order."""
+    """Carrega um volume MetaImage 3D na ordem ``(z, y, x)``."""
     header_path = Path(path)
     header = read_mhd_header(header_path)
     shape_xyz, _ = _mhd_geometry(header)
@@ -78,8 +83,8 @@ def load_mhd_volume(path: str | Path) -> NDArray[np.generic]:
 
 
 def load_nifti_volume_zyx(path: str | Path) -> NDArray[np.generic]:
-    """Load a NIfTI image, orient it canonically and return ``(z, y, x)``."""
-    image = nib.as_closest_canonical(nib.load(str(path)))
+    """Carrega e orienta uma imagem NIfTI na ordem ``(z, y, x)``."""
+    image = cast(SpatialImage, as_closest_canonical(_load_spatial_image(path)))
     volume_xyz = np.asanyarray(image.dataobj)
     if volume_xyz.dtype == np.float64:
         volume_xyz = volume_xyz.astype(np.float32)
@@ -89,8 +94,8 @@ def load_nifti_volume_zyx(path: str | Path) -> NDArray[np.generic]:
 
 
 def load_nifti_volume_xyz(path: str | Path) -> NDArray[np.generic]:
-    """Load a NIfTI image in its native ``(x, y, z)`` voxel layout."""
-    image = nib.load(str(path))
+    """Carrega uma imagem NIfTI na disposição nativa ``(x, y, z)``."""
+    image = _load_spatial_image(path)
     volume_xyz = np.asanyarray(image.dataobj)
     if volume_xyz.dtype == np.float64:
         volume_xyz = volume_xyz.astype(np.float32)
@@ -100,14 +105,22 @@ def load_nifti_volume_xyz(path: str | Path) -> NDArray[np.generic]:
 
 
 def load_mhd_volume_xyz(path: str | Path) -> NDArray[np.generic]:
-    """Load a MetaImage volume in native ``(x, y, z)`` voxel layout."""
+    """Carrega um volume MetaImage na disposição nativa ``(x, y, z)``."""
     return np.transpose(load_mhd_volume(path), (2, 1, 0))
+
+
+def _load_spatial_image(path: str | Path) -> SpatialImage:
+    image = load_nifti(str(path))
+    if not isinstance(image, SpatialImage):
+        raise ValueError(f"O arquivo não contém uma imagem espacial NIfTI: {path}")
+    return image
 
 
 def _orcascore_acquisition_records(
     base_path: Path,
     acquisitions: tuple[tuple[str, str], ...],
 ) -> list[dict[str, Any]]:
+    """Monta registros OrCaScore para os tipos de aquisição solicitados."""
     records: list[dict[str, Any]] = []
     for subset_dir, subset in (("Training_set", "train"), ("Test_set", "test")):
         image_dir = base_path / subset_dir / "Images"
@@ -136,7 +149,7 @@ def _orcascore_records(base_path: Path) -> list[dict[str, Any]]:
 
 
 def discover_orcascore_acquisitions(base_path: str | Path) -> pd.DataFrame:
-    """Inventory paired contrast and non-contrast OrCaScore acquisitions."""
+    """Inventaria aquisições OrCaScore pareadas com e sem contraste."""
     records = _orcascore_acquisition_records(
         Path(base_path),
         (("CTAI", "contrast"), ("CTI", "noncontrast")),
@@ -147,10 +160,11 @@ def discover_orcascore_acquisitions(base_path: str | Path) -> pd.DataFrame:
 
 
 def _mmwhs_records(base_path: Path) -> list[dict[str, Any]]:
+    """Monta registros NIfTI dos subsets de CT do MM-WHS."""
     records: list[dict[str, Any]] = []
     for subset_dir, subset in (("ct_train", "train"), ("ct_test", "test")):
         for path in sorted((base_path / subset_dir).glob("ct_*_image.nii.gz")):
-            image = nib.load(str(path))
+            image = _load_spatial_image(path)
             shape_xyz = tuple(int(value) for value in image.shape)
             spacing_xyz = tuple(float(value) for value in image.header.get_zooms()[:3])
             exam_id = path.name.removesuffix("_image.nii.gz")
@@ -164,20 +178,21 @@ def _mmwhs_records(base_path: Path) -> list[dict[str, Any]]:
                     shape_xyz=shape_xyz,
                     spacing_xyz=spacing_xyz,
                     dtype=str(image.get_data_dtype()),
-                    orientation="".join(nib.aff2axcodes(image.affine)),
+                    orientation="".join(aff2axcodes(image.affine)),
                 )
             )
     return records
 
 
 def _imagecas_records(base_path: Path) -> list[dict[str, Any]]:
+    """Monta registros NIfTI do ImageCAS em ordem numérica."""
     records: list[dict[str, Any]] = []
     paths = sorted(
         base_path.glob("*.img.nii.gz"),
         key=lambda path: int(path.name.removesuffix(".img.nii.gz")),
     )
     for path in paths:
-        image = nib.load(str(path))
+        image = _load_spatial_image(path)
         shape_xyz = tuple(int(value) for value in image.shape)
         spacing_xyz = tuple(float(value) for value in image.header.get_zooms()[:3])
         records.append(
@@ -190,7 +205,7 @@ def _imagecas_records(base_path: Path) -> list[dict[str, Any]]:
                 shape_xyz=shape_xyz,
                 spacing_xyz=spacing_xyz,
                 dtype=str(image.get_data_dtype()),
-                orientation="".join(nib.aff2axcodes(image.affine)),
+                orientation="".join(aff2axcodes(image.affine)),
             )
         )
     return records
@@ -208,6 +223,7 @@ def _geometry_record(
     dtype: str,
     orientation: str,
 ) -> dict[str, Any]:
+    """Monta um registro tabular com geometria e espaçamento do volume."""
     size_x, size_y, size_z = shape_xyz
     spacing_x, spacing_y, spacing_z = spacing_xyz
     return {
@@ -236,10 +252,10 @@ def discover_ccta_volumes(
     mmwhs_path: str | Path,
     imagecas_path: str | Path | None = None,
 ) -> pd.DataFrame:
-    """Inventory only contrast-enhanced CCTA images from the datasets.
+    """Inventaria apenas imagens CCTA com contraste dos bancos.
 
-    OrCaScore ``*CTI.mhd`` non-contrast scans, reference masks, MM-WHS MRI
-    volumes and MM-WHS labels are intentionally excluded.
+    Exclui aquisições OrCaScore ``*CTI.mhd`` sem contraste, máscaras de
+    referência, volumes de ressonância e rótulos do MM-WHS.
     """
     records: list[dict[str, Any]] = [
         *_orcascore_records(Path(orcascore_path)),
@@ -256,7 +272,7 @@ def discover_ccta_dataset(
     dataset: str,
     base_path: str | Path,
 ) -> pd.DataFrame:
-    """Inventory one supported external CCTA dataset."""
+    """Inventaria um banco CCTA externo suportado."""
     dataset_key = dataset.strip().lower().replace("_", "-")
     if dataset_key in {"orcascore", "orca-score", "orca"}:
         records = _orcascore_records(Path(base_path))
@@ -273,24 +289,31 @@ def discover_ccta_dataset(
 
 
 def load_ccta_volume(record: Mapping[str, Any] | pd.Series) -> NDArray[np.generic]:
-    """Load one inventory record in native ``(x, y, z)`` voxel layout."""
-    path = Path(record["path"])
-    if record["file_format"] == "MHD/ZRAW":
+    """Carrega um registro do inventário na disposição nativa ``(x, y, z)``."""
+    path_value = record.get("path")
+    file_format = record.get("file_format")
+    if not isinstance(path_value, (str, Path)):
+        raise TypeError("O registro CCTA deve conter um caminho válido em 'path'.")
+    if not isinstance(file_format, str):
+        raise TypeError("O registro CCTA deve conter texto em 'file_format'.")
+
+    path = Path(path_value)
+    if file_format == "MHD/ZRAW":
         return load_mhd_volume_xyz(path)
-    if record["file_format"] == "NIfTI":
+    if file_format == "NIfTI":
         return load_nifti_volume_xyz(path)
-    raise ValueError(f"Formato não suportado: {record['file_format']!r}")
+    raise ValueError(f"Formato não suportado: {file_format!r}")
 
 
 def align_ccta_volume_to_imagecas_view(
     volume: NDArray[np.generic],
     dataset: str,
 ) -> tuple[NDArray[np.generic], tuple[int, ...]]:
-    """Align an external CCTA volume with the ImageCAS visual convention.
+    """Alinha um volume CCTA externo à convenção visual do ImageCAS.
 
-    OrCaScore requires a flip of axis 1 to remove the horizontal mirroring
-    observed against ImageCAS. The transform preserves the axial slice order,
-    voxel values and spacing. MM-WHS and ImageCAS are returned unchanged.
+    O OrCaScore exige inversão do eixo 1 para remover o espelhamento horizontal.
+    A transformação preserva fatias, valores e espaçamento; os demais bancos
+    permanecem inalterados.
     """
     dataset_key = dataset.strip().lower().replace("_", "-")
     if dataset_key in {"orcascore", "orca-score", "orca"}:
@@ -303,47 +326,68 @@ def select_representative_exams(
     *,
     quantiles: tuple[float, ...] = (0.25, 0.5, 0.75),
 ) -> pd.DataFrame:
-    """Select exams nearest to slice-count quantiles within each dataset."""
+    """Seleciona exames próximos aos quantis de fatias de cada banco."""
     selected_indices: list[int] = []
     for _, group in inventory.groupby("dataset", sort=False):
         available = group.copy()
+        slice_counts = require_series_column(group, "slice_count")
         for quantile in quantiles:
             if available.empty:
                 break
-            target = float(group["slice_count"].quantile(quantile))
-            index = (available["slice_count"] - target).abs().idxmin()
+            target = float(np.asarray(slice_counts.quantile(quantile)).item())
+            available_slice_counts = require_series_column(available, "slice_count")
+            index = (available_slice_counts - target).abs().idxmin()
             selected_indices.append(int(index))
             available = available.drop(index=index)
     return inventory.loc[selected_indices].reset_index(drop=True)
 
 
 def summarize_ccta_inventory(inventory: pd.DataFrame) -> pd.DataFrame:
-    """Return compact geometry statistics for each dataset."""
+    """Resume estatísticas geométricas de cada banco."""
     rows: list[dict[str, Any]] = []
     for dataset, group in inventory.groupby("dataset", sort=False):
+        subset = require_series_column(group, "subset")
+        orientation = require_series_column(group, "reported_orientation")
+        size_x = require_series_column(group, "size_x")
+        size_y = require_series_column(group, "size_y")
+        slice_count = require_series_column(group, "slice_count")
+        spacing_x = require_series_column(group, "spacing_x_mm")
+        spacing_y = require_series_column(group, "spacing_y_mm")
+        spacing_z = require_series_column(group, "spacing_z_mm")
+        coverage_z = require_series_column(group, "coverage_z_mm")
+        spacing_xy = pd.Series(
+            (spacing_x.to_numpy(dtype=float) + spacing_y.to_numpy(dtype=float)) / 2
+        )
         rows.append(
             {
                 "dataset": dataset,
                 "exams": len(group),
-                "train": int(group["subset"].eq("train").sum()),
-                "val": int(group["subset"].eq("val").sum()),
-                "test": int(group["subset"].eq("test").sum()),
-                "full": int(group["subset"].eq("full").sum()),
-                "reported_orientation": ", ".join(
-                    sorted(group["reported_orientation"].unique())
-                ),
+                "train": _count_equal(subset, "train"),
+                "val": _count_equal(subset, "val"),
+                "test": _count_equal(subset, "test"),
+                "full": _count_equal(subset, "full"),
+                "reported_orientation": ", ".join(sorted(orientation.unique())),
                 "matrix_xy": ", ".join(
-                    sorted({f"{x}x{y}" for x, y in zip(group.size_x, group.size_y)})
+                    sorted(
+                        {
+                            f"{x}x{y}"
+                            for x, y in zip(
+                                size_x.to_numpy(), size_y.to_numpy(), strict=True
+                            )
+                        }
+                    )
                 ),
-                "slices_median_min_max": _median_min_max(group["slice_count"]),
-                "spacing_xy_mm_median_min_max": _median_min_max(
-                    (group["spacing_x_mm"] + group["spacing_y_mm"]) / 2
-                ),
-                "spacing_z_mm_median_min_max": _median_min_max(group["spacing_z_mm"]),
-                "coverage_z_mm_median_min_max": _median_min_max(group["coverage_z_mm"]),
+                "slices_median_min_max": _median_min_max(slice_count),
+                "spacing_xy_mm_median_min_max": _median_min_max(spacing_xy),
+                "spacing_z_mm_median_min_max": _median_min_max(spacing_z),
+                "coverage_z_mm_median_min_max": _median_min_max(coverage_z),
             }
         )
     return pd.DataFrame(rows)
+
+
+def _count_equal(values: pd.Series, expected: str) -> int:
+    return int(np.count_nonzero(values.eq(expected).to_numpy()))
 
 
 def _median_min_max(values: pd.Series) -> str:

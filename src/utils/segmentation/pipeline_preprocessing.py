@@ -35,8 +35,7 @@ def load_and_preprocess_image(
 ) -> Dict[str, Any]:
     """Carrega imagem/label, reduz resolução e monta a maior componente conectada.
 
-    Args:
-        img_id: Identificador do exame ImageCAS.
+    Argumentos:        img_id: Identificador do exame ImageCAS.
         base_path: Diretório que contém os volumes e labels.
         config: Configuração efetiva e já escalada para a resolução escolhida.
         include_intermediates: Inclui imagem original, downsample, máscara de

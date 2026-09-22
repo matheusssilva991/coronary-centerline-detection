@@ -8,8 +8,10 @@ import math
 from pathlib import Path
 from typing import Any, Sequence
 
+import numpy as np
 import pandas as pd
 
+from .dataframe import require_series_column, to_numeric_series
 from .result_paths import metadata_filename
 from .results_schema import add_internal_result_aliases
 
@@ -48,6 +50,7 @@ def effective_config_sha256(config: dict[str, Any]) -> str:
 
 
 def _first_present(*values: Any) -> Any:
+    """Retorna o primeiro valor disponível na ordem informada."""
     for value in values:
         if value is not None:
             return value
@@ -100,21 +103,30 @@ def _truthy_series(dataframe: pd.DataFrame, column: str) -> pd.Series:
     return normalized.isin({"true", "1", "sim", "s", "yes", "y"})
 
 
+def _is_missing_scalar(value: Any) -> bool:
+    """Reconhece valores escalares ausentes sem avaliar arrays como booleanos."""
+    if value is None:
+        return True
+    missing = pd.isna(value)
+    return isinstance(missing, (bool, np.bool_)) and bool(missing)
+
+
 def _has_text(value: Any) -> bool:
-    if value is None or pd.isna(value):
-        return False
-    return bool(str(value).strip())
+    """Indica se um valor escalar contém texto útil."""
+    return not _is_missing_scalar(value) and bool(str(value).strip())
 
 
 def _metric_summary(values: pd.Series) -> dict[str, Any]:
-    numeric = pd.to_numeric(values, errors="coerce").dropna()
+    """Resume a média e a quantidade válida de uma métrica."""
+    numeric = to_numeric_series(values).dropna()
     return {
-        "mean": float(numeric.mean()) if not numeric.empty else None,
+        "mean": float(np.asarray(numeric.mean()).item()) if not numeric.empty else None,
         "valid_exam_count": int(len(numeric)),
     }
 
 
 def _percent_entry(count: int, total: int) -> dict[str, Any]:
+    """Monta a contagem e o percentual usando o total processado."""
     return {
         "count": int(count),
         "percent": (float(count / total * 100) if total else None),
@@ -189,22 +201,36 @@ def build_metadata_results(
     total = len(dataframe)
 
     empty_numeric = pd.Series(index=dataframe.index, dtype=float)
-    final_dice = dataframe.get("dice_artery", empty_numeric)
-    before_dice = dataframe.get("dice_artery_before_morphology", empty_numeric)
-    explicit_after = pd.to_numeric(
-        dataframe.get("dice_artery_after_morphology", empty_numeric),
-        errors="coerce",
+    final_dice = (
+        require_series_column(dataframe, "dice_artery")
+        if "dice_artery" in dataframe.columns
+        else empty_numeric
     )
+    before_dice = (
+        require_series_column(dataframe, "dice_artery_before_morphology")
+        if "dice_artery_before_morphology" in dataframe.columns
+        else empty_numeric
+    )
+    after_values = (
+        require_series_column(dataframe, "dice_artery_after_morphology")
+        if "dice_artery_after_morphology" in dataframe.columns
+        else empty_numeric
+    )
+    explicit_after = to_numeric_series(after_values)
     # O Dice final histórico representa a saída após morfologia. O fallback é
     # aplicado por exame para também tolerar arquivos mistos.
-    after_dice = explicit_after.fillna(pd.to_numeric(final_dice, errors="coerce"))
+    after_dice = explicit_after.fillna(to_numeric_series(final_dice))
 
     both_correct = _truthy_series(dataframe, "both_correct")
     both_tolerable = _truthy_series(dataframe, "both_tolerable") & ~both_correct
     ostia_found = _truthy_series(dataframe, "ostia_found")
+    status_values = (
+        require_series_column(dataframe, "ostia_status")
+        if "ostia_status" in dataframe.columns
+        else pd.Series("", index=dataframe.index, dtype=str)
+    )
     statuses = (
-        dataframe.get("ostia_status", pd.Series("", index=dataframe.index, dtype=str))
-        .fillna("")
+        status_values.fillna("")
         .astype(str)
         .str.strip()
         .str.lower()
@@ -243,7 +269,9 @@ def build_metadata_results(
             category = "not_evaluated_or_error"
         elif ostia_found.iloc[position]:
             category = "found_but_incorrect"
-        elif "ostia_found" in dataframe.columns and not pd.isna(row.get("ostia_found")):
+        elif "ostia_found" in dataframe.columns and not _is_missing_scalar(
+            row.get("ostia_found")
+        ):
             category = "not_found"
         else:
             category = "not_evaluated_or_error"

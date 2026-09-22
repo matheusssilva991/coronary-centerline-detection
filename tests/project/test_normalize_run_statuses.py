@@ -37,10 +37,14 @@ class NormalizeRunStatusesTests(unittest.TestCase):
         original = path.read_bytes()
 
         report = normalize_runs(self.root, apply=False)
+        summary = report["summary"]
+        self.assertIsInstance(summary, dict)
+        if not isinstance(summary, dict):
+            self.fail("O relatório deve conter um resumo em formato de objeto.")
 
         self.assertEqual(path.read_bytes(), original)
-        self.assertEqual(report["summary"]["changed_file_count"], 1)
-        self.assertEqual(report["summary"]["changed_cell_count"], 2)
+        self.assertEqual(summary["changed_file_count"], 1)
+        self.assertEqual(summary["changed_cell_count"], 2)
 
     def test_apply_normalizes_only_status_cells_and_is_idempotent(self) -> None:
         path = self._write_csv(
@@ -54,6 +58,10 @@ class NormalizeRunStatusesTests(unittest.TestCase):
         manifest = self.root / "manifest.json"
 
         report = normalize_runs(self.root, apply=True, manifest_path=manifest)
+        summary = report["summary"]
+        self.assertIsInstance(summary, dict)
+        if not isinstance(summary, dict):
+            self.fail("O relatório deve conter um resumo em formato de objeto.")
 
         with path.open(encoding="utf-8", newline="") as csv_file:
             rows = list(csv.DictReader(csv_file))
@@ -64,12 +72,16 @@ class NormalizeRunStatusesTests(unittest.TestCase):
         self.assertEqual(rows[0]["status"], "one_correct")
         self.assertEqual(rows[1]["ostia_detection_status"], "not_found")
         self.assertEqual(rows[1]["status"], "not_found")
-        self.assertEqual(report["summary"]["changed_cell_count"], 4)
+        self.assertEqual(summary["changed_cell_count"], 4)
         self.assertTrue(manifest.exists())
         self.assertEqual(json.loads(manifest.read_text())["mode"], "apply")
 
         second_report = normalize_runs(self.root, apply=True)
-        self.assertEqual(second_report["summary"]["changed_file_count"], 0)
+        second_summary = second_report["summary"]
+        self.assertIsInstance(second_summary, dict)
+        if not isinstance(second_summary, dict):
+            self.fail("O relatório deve conter um resumo em formato de objeto.")
+        self.assertEqual(second_summary["changed_file_count"], 0)
 
     def test_legacy_results_are_included_but_provenance_is_immutable(self) -> None:
         legacy = self._write_csv(

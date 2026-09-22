@@ -1,8 +1,8 @@
-"""Shared helpers for experiment sweep scripts.
+"""Reúne utilitários compartilhados pelos scripts de varredura.
 
-The files in ``src/experiments`` are meant to be executed directly on a
-workstation or server. This module keeps CLI path handling, variant expansion,
-split sampling and CSV serialization consistent across those scripts.
+Os arquivos em ``src/experiments`` são executados diretamente em uma estação
+ou servidor. Este módulo uniformiza caminhos da CLI, variantes, amostragem de
+splits e serialização CSV.
 """
 
 from __future__ import annotations
@@ -23,7 +23,7 @@ SRC_DIR = REPO_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-# Keep single-GPU machines safe when the environment does not select a device.
+# Protege máquinas com uma GPU quando o ambiente não seleciona um dispositivo.
 os.environ.setdefault("CUDA_VISIBLE_DEVICES", "0")
 
 from utils.project.dataset import get_data_splits  # noqa: E402
@@ -31,14 +31,14 @@ from utils.project.results import make_json_safe  # noqa: E402
 
 
 def resolve_cli_path(path: Path | None) -> Path | None:
-    """Resolve relative CLI paths from the repository root."""
+    """Resolve caminhos relativos da CLI a partir da raiz do repositório."""
     if path is None:
         return None
     return path if path.is_absolute() else REPO_ROOT / path
 
 
 def load_json_arg(value: str | None) -> Any:
-    """Load a JSON argument from inline text or from a repository-relative file."""
+    """Carrega JSON de texto ou de arquivo relativo ao repositório."""
     if value is None:
         return None
 
@@ -53,7 +53,7 @@ def load_json_arg(value: str | None) -> Any:
 
 
 def load_json_file(path: Path) -> Any:
-    """Load JSON from an absolute or repository-relative path."""
+    """Carrega JSON de um caminho absoluto ou relativo ao repositório."""
     resolved_path = resolve_cli_path(path)
     if resolved_path is None:
         raise ValueError("JSON file path cannot be None")
@@ -61,7 +61,7 @@ def load_json_file(path: Path) -> Any:
 
 
 def sanitize_name(name: str) -> str:
-    """Make a name safe for folders and CSV fields."""
+    """Normaliza um nome para uso em pastas e campos CSV."""
     safe = "".join(
         char if char.isalnum() or char in {"_", "-", "."} else "_" for char in str(name)
     )
@@ -69,7 +69,7 @@ def sanitize_name(name: str) -> str:
 
 
 def set_nested(config: dict[str, Any], dotted_key: str, value: Any) -> None:
-    """Set ``A.B.C`` inside a nested dictionary."""
+    """Define ``A.B.C`` dentro de um dicionário aninhado."""
     keys = dotted_key.split(".")
     target = config
     for key in keys[:-1]:
@@ -78,7 +78,7 @@ def set_nested(config: dict[str, Any], dotted_key: str, value: Any) -> None:
 
 
 def get_nested(data: dict[str, Any], dotted_key: str, default: Any = None) -> Any:
-    """Get ``A.B.C`` from a nested dictionary."""
+    """Obtém ``A.B.C`` de um dicionário aninhado."""
     target: Any = data
     for key in dotted_key.split("."):
         if not isinstance(target, dict) or key not in target:
@@ -88,7 +88,7 @@ def get_nested(data: dict[str, Any], dotted_key: str, default: Any = None) -> An
 
 
 def deep_update(base: dict[str, Any], updates: dict[str, Any]) -> dict[str, Any]:
-    """Recursively merge dictionaries without mutating the inputs."""
+    """Combina dicionários recursivamente sem alterar as entradas."""
     merged = copy.deepcopy(base)
     for key, value in updates.items():
         if isinstance(value, dict) and isinstance(merged.get(key), dict):
@@ -101,7 +101,7 @@ def deep_update(base: dict[str, Any], updates: dict[str, Any]) -> dict[str, Any]
 def apply_overrides(
     config: dict[str, Any], overrides: dict[str, Any]
 ) -> dict[str, Any]:
-    """Apply dotted-key or nested-dict overrides to a copied config."""
+    """Aplica sobrescritas pontuadas ou aninhadas em uma cópia da configuração."""
     updated = copy.deepcopy(config)
     for key, value in overrides.items():
         if "." in key:
@@ -114,7 +114,7 @@ def apply_overrides(
 
 
 def make_grid_variants(grid: dict[str, Any]) -> list[dict[str, Any]]:
-    """Build cartesian-product variants from a dotted-key grid."""
+    """Monta variantes cartesianas a partir de uma grade de chaves pontuadas."""
     keys = list(grid)
     values = [value if isinstance(value, list) else [value] for value in grid.values()]
     variants = []
@@ -136,7 +136,7 @@ def select_ids(
     base_path: Path,
     split_config_path: str | Path | None = None,
 ) -> list[int]:
-    """Select image IDs from a fixed split or an explicit comma-separated list."""
+    """Seleciona IDs por split fixo ou lista explícita separada por vírgulas."""
     if ids_arg:
         return [int(item.strip()) for item in ids_arg.split(",") if item.strip()]
     if start_index < 0:
@@ -153,7 +153,7 @@ def select_ids(
 
 
 def csv_safe(df: pd.DataFrame) -> pd.DataFrame:
-    """Serialize list/dict/numpy-like values before CSV writing."""
+    """Serializa listas, dicionários e valores NumPy antes do CSV."""
     out = df.copy()
     for column in out.columns:
         if out[column].dtype != "object":
@@ -169,7 +169,7 @@ def csv_safe(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def write_json(path: Path, data: dict[str, Any]) -> None:
-    """Write JSON with project-safe serialization."""
+    """Salva JSON usando a serialização segura do projeto."""
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         json.dumps(make_json_safe(data), indent=2, ensure_ascii=False),

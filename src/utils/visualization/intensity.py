@@ -1,8 +1,10 @@
-"""Helpers de visualização para histogramas de intensidade em HU."""
+"""Reúne visualizações de histogramas de intensidade em HU."""
 
 from typing import Any
 
 import pandas as pd
+
+from ..project.dataframe import numeric_series, require_series_column
 
 
 def calculate_binned_intensity_mean_median(
@@ -16,8 +18,8 @@ def calculate_binned_intensity_mean_median(
     if missing:
         raise ValueError(f"Colunas de histograma ausentes: {sorted(missing)}")
 
-    centers = pd.to_numeric(histogram["bin_center_hu"], errors="coerce")
-    weights = pd.to_numeric(histogram[value_column], errors="coerce").fillna(0)
+    centers = numeric_series(histogram, "bin_center_hu")
+    weights = numeric_series(histogram, value_column).fillna(0)
     valid = centers.notna() & weights.gt(0)
     centers = centers.loc[valid]
     weights = weights.loc[valid]
@@ -49,8 +51,8 @@ def plot_binned_intensity_histogram(
         raise ValueError(f"Colunas de histograma ausentes: {sorted(missing)}")
 
     ax.step(
-        histogram["bin_center_hu"],
-        histogram[value_column],
+        require_series_column(histogram, "bin_center_hu"),
+        require_series_column(histogram, value_column),
         where="mid",
         color=color,
         linewidth=linewidth,

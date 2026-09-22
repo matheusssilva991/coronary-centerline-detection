@@ -8,12 +8,12 @@ from ..project.results_schema import normalize_ostia_status, normalize_result_st
 
 
 def _status_to_english(value):
-    """Normalize status values to the canonical English format."""
+    """Normaliza status para o formato canônico em inglês."""
     return normalize_result_status(value)
 
 
 def _compute_success_mask(df, success_status):
-    """Compute success mask supporting multiple summary schemas."""
+    """Calcula a máscara de sucesso aceitando diferentes schemas."""
     # Produz máscara booleana de sucesso de óstio.
     if "ostia_status" in df.columns:
         # Schema intermediário: status consolidado por linha.
@@ -46,7 +46,7 @@ def _compute_success_mask(df, success_status):
 
 
 def _compute_bad_case_status(df, bad_mask, success_mask, low_dice_mask):
-    """Build a reason label for each bad case."""
+    """Monta o motivo associado a cada caso ruim."""
     # Rotula o motivo de cada caso ruim.
     status_series = df.get("status", pd.Series(index=df.index, dtype="object"))
     ostia_status_series = df.get(
@@ -81,7 +81,7 @@ def _compute_bad_case_status(df, bad_mask, success_mask, low_dice_mask):
 
 
 def get_bad_cases(df, success_status=None, dice_threshold=0.30):
-    """Return bad cases by status or Dice threshold with `bad_case_status`."""
+    """Retorna casos ruins por status ou limiar de Dice."""
     # Seleciona casos ruins por falha de óstio ou Dice baixo.
     if success_status is None:
         success_status = ["both_tolerable", "both_correct"]
@@ -111,7 +111,7 @@ def get_bad_cases(df, success_status=None, dice_threshold=0.30):
 
 
 def filter_correct_ostia_cases(df, success_status=None):
-    """Return only cases where ostia detection is considered successful."""
+    """Retorna apenas casos com detecção dos óstios bem-sucedida."""
     # Mantém somente linhas com sucesso de óstio.
     if success_status is None:
         success_status = ["both_tolerable", "both_correct"]
@@ -126,7 +126,7 @@ def filter_correct_ostia_cases(df, success_status=None):
 
 
 def build_bad_cases_export_df(df_bad_cases, subset_name, resolution):
-    """Create a standardized bad-cases export DataFrame with English keys."""
+    """Cria a exportação padronizada dos casos ruins com chaves em inglês."""
     # Monta tabela padrão para exportação.
     if df_bad_cases is None or df_bad_cases.empty:
         # Sem linhas: devolve apenas cabeçalho padrão.
@@ -154,7 +154,7 @@ def build_bad_cases_export_df(df_bad_cases, subset_name, resolution):
 
 
 def save_bad_cases_artifacts(df_bad_cases, output_dir, subset_name, resolution):
-    """Save bad cases to CSV and JSON, separated by subset and resolution."""
+    """Salva casos ruins em CSV e JSON por subset e resolução."""
 
     # Garante pasta de saída.
     output_path = Path(output_dir)
@@ -192,7 +192,7 @@ def prepare_bad_cases_for_subset(
     output_dir,
     valid_splits=("train", "val", "test"),
 ):
-    """Load, filter and export bad cases for a given subset."""
+    """Carrega, filtra e exporta casos ruins de um subset."""
     # Pipeline completo: carregar, filtrar e exportar.
     if split_name not in valid_splits:
         raise ValueError(f"split_name must be one of {valid_splits}")
@@ -239,7 +239,7 @@ def prepare_bad_cases_for_subset(
 
 
 def summarize_bad_dice_with_threshold(df_bad, dice_threshold=0.3):
-    """Summarize bad-case Dice with and without low-dice successful ostia cases."""
+    """Resume o Dice ruim incluindo ou não sucessos de óstios com Dice baixo."""
     # Resume Dice com e sem casos low_dice de óstio correto.
     if df_bad is None or df_bad.empty or "dice_artery" not in df_bad.columns:
         # Retorno padrão para ausência de dados.

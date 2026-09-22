@@ -50,11 +50,9 @@ def use_gpu() -> bool:
     """
     Retorna True se GPU está disponível e CuPy está instalado.
 
-    Returns:
-        bool: True se GPU disponível, False caso contrário
+    Retorna:        bool: True se GPU disponível, False caso contrário
 
-    Example:
-        >>> if use_gpu():
+    Exemplo:        >>> if use_gpu():
         ...     print("GPU disponível!")
         ... else:
         ...     print("Usando CPU")
@@ -68,14 +66,11 @@ def to_gpu(arr: Any) -> Any:
 
     Se GPU não estiver disponível, retorna o array inalterado.
 
-    Args:
-        arr (np.ndarray or cp.ndarray): Array a converter
+    Argumentos:        arr (np.ndarray or cp.ndarray): Array a converter
 
-    Returns:
-        cp.ndarray or np.ndarray: Array na GPU se disponível, senão retorna entrada
+    Retorna:        cp.ndarray or np.ndarray: Array na GPU se disponível, senão retorna entrada
 
-    Example:
-        >>> arr_cpu = np.array([1, 2, 3])
+    Exemplo:        >>> arr_cpu = np.array([1, 2, 3])
         >>> arr_gpu = to_gpu(arr_cpu)  # cp.ndarray se GPU disponível
     """
     if GPU_AVAILABLE and cp is not None and isinstance(arr, np.ndarray):
@@ -89,14 +84,11 @@ def to_cpu(arr: Any) -> Any:
 
     Se o array já for NumPy, retorna inalterado.
 
-    Args:
-        arr (np.ndarray or cp.ndarray): Array a converter
+    Argumentos:        arr (np.ndarray or cp.ndarray): Array a converter
 
-    Returns:
-        np.ndarray: Array na CPU (sempre NumPy)
+    Retorna:        np.ndarray: Array na CPU (sempre NumPy)
 
-    Example:
-        >>> arr_gpu = cp.array([1, 2, 3])  # Na GPU
+    Exemplo:        >>> arr_gpu = cp.array([1, 2, 3])  # Na GPU
         >>> arr_cpu = to_cpu(arr_gpu)  # np.ndarray na CPU
     """
     if GPU_AVAILABLE and cp is not None and isinstance(arr, cp.ndarray):
@@ -110,14 +102,11 @@ def get_array_module(arr: Any) -> Any:
 
     Útil para escrever código que funciona tanto com NumPy quanto CuPy.
 
-    Args:
-        arr (np.ndarray or cp.ndarray): Array de entrada
+    Argumentos:        arr (np.ndarray or cp.ndarray): Array de entrada
 
-    Returns:
-        module: numpy ou cupy
+    Retorna:        module: numpy ou cupy
 
-    Example:
-        >>> arr = cp.array([1, 2, 3])
+    Exemplo:        >>> arr = cp.array([1, 2, 3])
         >>> xp = get_array_module(arr)
         >>> result = xp.sum(arr)  # Usa cp.sum() automaticamente
     """
@@ -132,11 +121,9 @@ def ensure_cpu(arr: Any) -> Any:
 
     Alias para to_cpu() com nome mais descritivo.
 
-    Args:
-        arr: Array de qualquer tipo
+    Argumentos:        arr: Array de qualquer tipo
 
-    Returns:
-        np.ndarray: Array na CPU
+    Retorna:        np.ndarray: Array na CPU
     """
     return to_cpu(arr)
 
@@ -147,10 +134,8 @@ def ensure_gpu(arr: Any) -> Any:
 
     Alias para to_gpu() com nome mais descritivo.
 
-    Args:
-        arr: Array de qualquer tipo
+    Argumentos:        arr: Array de qualquer tipo
 
-    Returns:
-        cp.ndarray or np.ndarray: Array na GPU se disponível
+    Retorna:        cp.ndarray or np.ndarray: Array na GPU se disponível
     """
     return to_gpu(arr)

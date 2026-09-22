@@ -155,7 +155,10 @@ def find_aorta_surface(
     a superficie interna original. Em volumes anisotropicos, o alcance
     fisico difere entre eixos. Padding zero reproduz a superficie original.
     """
-    if surface_padding_radius < 0 or int(surface_padding_radius) != surface_padding_radius:
+    if (
+        surface_padding_radius < 0
+        or int(surface_padding_radius) != surface_padding_radius
+    ):
         raise ValueError("surface_padding_radius deve ser um inteiro nao negativo")
 
     mask = aorta_mask.astype(bool)

@@ -1,4 +1,4 @@
-"""Visualization domain subpackage - all exports loaded on-demand."""
+"""Reúne visualizações carregadas sob demanda."""
 
 from importlib import import_module
 

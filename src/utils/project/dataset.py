@@ -1,4 +1,4 @@
-"""Utilities para listagem e divisão de datasets."""
+"""Lista e divide os bancos de imagens do projeto."""
 
 import json
 from pathlib import Path
@@ -32,7 +32,7 @@ def _load_fixed_splits(
     split_config_path: Path,
     available_ids: List[int],
 ) -> Tuple[List[int], List[int], List[int]]:
-    """Load frozen train/val/test IDs and validate them against the dataset."""
+    """Carrega IDs fixos dos splits e os valida contra o banco."""
     data = json.loads(split_config_path.read_text(encoding="utf-8"))
     splits = data.get("splits", {})
     required_keys = ("train", "val", "test")
@@ -77,7 +77,7 @@ def _should_use_default_fixed_splits(
     val_size: float,
     random_state: int,
 ) -> bool:
-    """Use frozen ImageCAS splits only for the canonical split parameters."""
+    """Usa splits fixos do ImageCAS apenas com parâmetros canônicos."""
     return (
         test_size == DEFAULT_TEST_SIZE
         and val_size == DEFAULT_VAL_SIZE
@@ -99,8 +99,7 @@ def get_data_splits(
     os mesmos IDs entre execuções e refactors. Ao informar ``split_config_path``,
     o arquivo indicado é usado independentemente dos demais parâmetros.
 
-    Returns:
-        (train_ids, val_ids, test_ids, all_ids)
+    Retorna:        (train_ids, val_ids, test_ids, all_ids)
     """
     # A listagem compartilhada também sustenta o modo full sem criar splits.
     all_ids = list_dataset_image_ids(base_path)

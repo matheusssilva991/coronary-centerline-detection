@@ -11,6 +11,7 @@ from utils.project.external_visual_assessment import (
     load_external_visual_assessments,
     summarize_visual_status,
 )
+from utils.project.dataframe import require_series_column
 
 
 class ExternalVisualAssessmentTest(unittest.TestCase):
@@ -106,7 +107,10 @@ class ExternalVisualAssessmentTest(unittest.TestCase):
             ["First", "Second"],
         )
 
-        totals = summary.groupby("dataset")["percent"].sum()
+        totals_frame = summary.groupby("dataset", as_index=False)["percent"].sum()
+        if not isinstance(totals_frame, pd.DataFrame):
+            self.fail("O agrupamento deveria produzir um DataFrame.")
+        totals = require_series_column(totals_frame, "percent")
         self.assertTrue(totals.round(10).eq(100.0).all())
         general_adequate = summary.loc[
             summary["dataset"].eq("Geral") & summary["status"].eq("Adequada")

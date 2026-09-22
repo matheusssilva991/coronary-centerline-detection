@@ -24,7 +24,7 @@ def _create_volume_slice_figure(
     padding_fraction: float = 0.0,
     output_size_px: tuple[int, int] | None = None,
 ) -> tuple[Any, Any]:
-    """Create a complete 2D slice figure shared by display and export."""
+    """Cria a figura 2D completa compartilhada pela exibição e exportação."""
     if image_volume.ndim != 3:
         raise ValueError("image_volume deve ser 3D.")
     if axis not in (0, 1, 2):
@@ -93,7 +93,7 @@ def plot_volume_slice(
     output_size_px: tuple[int, int] | None = None,
     show: bool = True,
 ) -> tuple[Any, Any]:
-    """Display one complete volume slice without clipping border pixels."""
+    """Exibe uma fatia completa do volume sem recortar pixels das bordas."""
     fig, ax = _create_volume_slice_figure(
         image_volume,
         slice_index,

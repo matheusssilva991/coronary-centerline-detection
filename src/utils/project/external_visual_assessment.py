@@ -1,4 +1,4 @@
-"""Loading and summaries for external-CCTA visual assessments."""
+"""Carrega e resume avaliações visuais de CCTA externas."""
 
 from collections.abc import Mapping, Sequence
 from pathlib import Path
@@ -47,6 +47,7 @@ def _validate_assessment_frame(
     dataset: str,
     source_path: Path,
 ) -> pd.DataFrame:
+    """Valida colunas, IDs e status de uma avaliação visual."""
     missing_columns = sorted(set(ASSESSMENT_COLUMNS).difference(frame.columns))
     if missing_columns:
         raise ValueError(
@@ -91,7 +92,7 @@ def _validate_assessment_frame(
 def load_external_visual_assessments(
     assessment_paths: Mapping[str, str | Path],
 ) -> pd.DataFrame:
-    """Load and validate one visual-assessment workbook per dataset."""
+    """Carrega e valida uma planilha de avaliação visual por banco."""
     if not assessment_paths:
         raise ValueError("Nenhum arquivo de avaliação visual foi informado.")
 
@@ -140,7 +141,7 @@ def summarize_visual_status(
     status_order: Sequence[str],
     dataset_order: Sequence[str],
 ) -> pd.DataFrame:
-    """Return counts and percentages by dataset plus a weighted aggregate."""
+    """Retorna contagens e percentuais por banco e no agregado ponderado."""
     rows: list[dict[str, object]] = []
     cohorts = [
         *(

@@ -1,4 +1,4 @@
-"""Headless visual artifacts for batch segmentation runs."""
+"""Gera artefatos visuais sem interface para segmentações em lote."""
 
 from __future__ import annotations
 
@@ -42,7 +42,7 @@ def save_stage_views(
     vmax: float | None = None,
     dpi: int = 140,
 ) -> dict[str, Path]:
-    """Save axial MIP and first, middle and last axial slices for one stage."""
+    """Salva MIP e fatias axial inicial, central e final de uma etapa."""
     array = np.asarray(volume)
     if array.ndim != 3:
         raise ValueError("volume deve ser tridimensional.")
@@ -94,7 +94,7 @@ def save_detected_circles_figure(
     vmax: float | None = None,
     dpi: int = 140,
 ) -> Path:
-    """Save representative axial slices with detected aorta circles."""
+    """Salva fatias axiais representativas com os círculos da aorta."""
     if not detected_circles:
         raise ValueError("detected_circles não pode ser vazio.")
     array = np.asarray(image)

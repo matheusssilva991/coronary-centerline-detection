@@ -18,12 +18,10 @@ def load_img_and_label(
 ) -> Tuple[NDArray[Any], Optional[NDArray[Any]]]:
     """Carrega imagem NIfTI e rótulo opcional como arrays NumPy.
 
-    Args:
-        img_path: Caminho para o arquivo de imagem NIfTI.
+    Argumentos:        img_path: Caminho para o arquivo de imagem NIfTI.
         label_path: Caminho opcional para arquivo de rótulo NIfTI.
 
-    Returns:
-        Tupla (img, label) com arrays NumPy ou None quando não informado.
+    Retorna:        Tupla (img, label) com arrays NumPy ou None quando não informado.
     """
     img_object = cast(SpatialImage, load_nifti(img_path))
     img = np.asarray(img_object.get_fdata())
@@ -57,8 +55,7 @@ def save_nii_image(
 ) -> None:
     """Salva um volume NumPy como imagem NIfTI.
 
-    Args:
-        image: Array NumPy do volume.
+    Argumentos:        image: Array NumPy do volume.
         affine: Matriz afin para o NIfTI.
         path_to_save: Caminho de saída.
     """

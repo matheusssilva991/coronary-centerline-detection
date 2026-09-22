@@ -13,7 +13,7 @@ from ..utils import load_json_file
 
 
 def load_split_metadata(split_paths_by_resolution, resolution, subset_name):
-    """Load metadata JSON for a given resolution/split, or None when unavailable."""
+    """Carrega o metadata de uma resolução e split, se disponível."""
     # Busca a pasta da resolucao solicitada.
     split_paths = split_paths_by_resolution.get(resolution, {})
     if subset_name not in split_paths:

@@ -9,6 +9,8 @@ from typing import Any, Iterable
 
 import pandas as pd
 
+from .dataframe import require_series_column
+
 from .results_metadata import make_json_safe
 from .results_schema import add_internal_result_aliases, summarize_results_df
 
@@ -132,11 +134,11 @@ def validate_result_integrity(
             }
         )
 
-    persisted_ids = _normalized_image_ids(dataframe["IMG_ID"].tolist())
-    persisted_series = pd.Series(persisted_ids, dtype=int)
-    duplicate_ids = sorted(
-        persisted_series[persisted_series.duplicated()].unique().tolist()
+    persisted_ids = _normalized_image_ids(
+        require_series_column(dataframe, "IMG_ID").tolist()
     )
+    persisted_series = pd.Series(persisted_ids, dtype=int)
+    duplicate_ids = sorted(persisted_series.loc[persisted_series.duplicated()].unique())
     expected_set = set(expected_ids)
     persisted_set = set(persisted_ids)
     report = {

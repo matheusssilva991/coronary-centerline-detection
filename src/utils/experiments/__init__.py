@@ -1,4 +1,4 @@
-"""Shared utilities for manual experiment runners."""
+"""Reúne utilitários compartilhados pelos experimentos manuais."""
 
 from .aorta_visual_review import (
     add_aorta_extent_metrics,

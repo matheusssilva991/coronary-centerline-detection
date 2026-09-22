@@ -10,12 +10,10 @@ def extract_square_region(
 ) -> NDArray:
     """Extrai uma ROI retangular de um volume 3D.
 
-    Args:
-        image: Volume 3D com shape (H, W, D) ou similar.
+    Argumentos:        image: Volume 3D com shape (H, W, D) ou similar.
         x_min/x_max/y_min/y_max: Coordenadas inteiras da ROI.
 
-    Returns:
-        Sub-volume recortado como NDArray.
+    Retorna:        Sub-volume recortado como NDArray.
     """
     h, w, _ = image.shape
 
@@ -40,14 +38,12 @@ def extract_circular_region(
 ) -> NDArray:
     """Extrai uma ROI circular de um volume 3D mascarando cada fatia 2D.
 
-    Args:
-        image: Volume 3D (H, W, D).
+    Argumentos:        image: Volume 3D (H, W, D).
         center: Tupla (y, x) do centro; se None usa centro da imagem.
         radius: Raio em pixels; se None usa min(H,W)//4.
         mask_background: Se True, aplica máscara circular nas fatias.
 
-    Returns:
-        Sub-volume (com máscara aplicada se solicitado).
+    Retorna:        Sub-volume (com máscara aplicada se solicitado).
     """
     h, w, _ = image.shape
 

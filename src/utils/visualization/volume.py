@@ -364,6 +364,7 @@ def visualize_arteries_comparison(
 
 
 def save_k3d_plot_html(plot: Any, html_path: str) -> None:
+    """Salva um gráfico K3D como HTML independente."""
     output_path = Path(html_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(plot.get_snapshot(), encoding="utf-8")

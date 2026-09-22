@@ -2,6 +2,7 @@ import unittest
 from unittest.mock import patch
 
 import matplotlib.pyplot as plt
+from matplotlib.patches import Rectangle
 import pandas as pd
 
 from utils.visualization.segmentation_eda import (
@@ -99,7 +100,9 @@ class SegmentationEdaSuccessTests(unittest.TestCase):
 
         plot_success_error_by_subset(data, "train", self.success_status)
         mid_axis = plt.gcf().axes[1]
-        bar_heights = [bar.get_height() for bar in mid_axis.patches]
+        bar_heights = [
+            bar.get_height() for bar in mid_axis.patches if isinstance(bar, Rectangle)
+        ]
 
         show_mock.assert_called_once()
         self.assertEqual(bar_heights, [1, 1])

@@ -1,9 +1,9 @@
-"""Run fuzzy pipeline comparison variants from the command line.
+"""Executa variantes fuzzy do pipeline pela linha de comando.
 
-It compares the four retained combinations of normal/fuzzy thresholding and
-region growing/fuzzy connectedness.
+Compara as quatro combinações mantidas de limiar normal/fuzzy e crescimento
+de região/conectividade fuzzy.
 
-Example:
+Exemplo:
     uv run python src/experiments/fuzzy_pipeline_comparison.py --split train --sample-size 30
 """
 
@@ -44,7 +44,9 @@ from utils.project.config import scale_config_to_resolution  # noqa: E402
 from utils.project.notebook_env import resolve_imagecas_base_path  # noqa: E402
 
 
-DEFAULT_OUTPUT_ROOT = REPO_ROOT / "output/segmentation/analysis/fuzzy_pipeline_comparison"
+DEFAULT_OUTPUT_ROOT = (
+    REPO_ROOT / "output/segmentation/analysis/fuzzy_pipeline_comparison"
+)
 DEFAULT_CONFIG_PATH = REPO_ROOT / "config/pipeline_config.json"
 
 
@@ -75,6 +77,7 @@ FUZZY_THRESHOLD_PARAMS = {
     **FUZZY_PARAMS,
 }
 
+
 def variant(
     name: str,
     description: str,
@@ -83,7 +86,7 @@ def variant(
     threshold_rule: str,
     vesselness_rule: str,
 ) -> dict[str, Any]:
-    """Create a variant dictionary with a consistent shape."""
+    """Cria uma variante com estrutura consistente."""
     return {
         "name": name,
         "description": description,
@@ -94,7 +97,7 @@ def variant(
 
 
 def default_variants() -> list[dict[str, Any]]:
-    """Return the compact, article-oriented comparison set."""
+    """Retorna o conjunto compacto de comparações voltado ao artigo."""
     normal_threshold = "P10.75 <= I <= P99.8"
     fuzzy_threshold = "P10.5 + fuzzy object argmax (P99.8/P99.96)"
     no_weight = "no vesselness weighting"
@@ -146,7 +149,7 @@ def default_variants() -> list[dict[str, Any]]:
 
 
 def failure_correction_variants() -> list[dict[str, Any]]:
-    """Return focused, interpretable corrections around the current defaults."""
+    """Retorna correções focadas e interpretáveis dos padrões atuais."""
     variants = default_variants()
     normal_threshold = "P10.75 <= I <= P99.8"
     fuzzy_dense_threshold = "P10.5 + fuzzy object argmax (P99.8/P99.98)"
@@ -243,7 +246,7 @@ def failure_correction_variants() -> list[dict[str, Any]]:
 
 
 def variants_for_set(name: str) -> list[dict[str, Any]]:
-    """Resolve a named experiment set without changing article defaults."""
+    """Resolve um conjunto de experimentos sem alterar os padrões do artigo."""
     if name in {"article", "baseline"}:
         return default_variants()
     if name == "corrections":
@@ -256,7 +259,7 @@ def select_variants(
     names: str | None,
     limit: int | None,
 ) -> list[dict[str, Any]]:
-    """Select variants by comma-separated names and/or a simple limit."""
+    """Seleciona variantes por nomes separados por vírgula ou por limite."""
     selected = all_variants
     if names:
         requested = [name.strip() for name in names.split(",") if name.strip()]
@@ -271,7 +274,7 @@ def select_variants(
 
 
 def parse_split_sizes(value: str) -> list[tuple[str, int]]:
-    """Parse ``train:30,val:30`` into ordered split/size pairs."""
+    """Converte ``train:30,val:30`` em pares ordenados de split e tamanho."""
     split_sizes: list[tuple[str, int]] = []
     valid_splits = {"train", "val", "test"}
     for raw_item in value.split(","):
@@ -304,7 +307,7 @@ def select_image_items(
     split_sizes_arg: str | None,
     base_path: Path,
 ) -> list[tuple[str, int]]:
-    """Select images while preserving the split name for each ID."""
+    """Seleciona imagens preservando o split associado a cada ID."""
     if ids_arg:
         image_ids = select_ids(split, sample_size, start_index, ids_arg, base_path)
         allowed_ids = set(select_ids(split, 10_000, 0, None, base_path))
@@ -340,7 +343,7 @@ def select_image_items(
 
 
 def build_parser() -> argparse.ArgumentParser:
-    """Create CLI parser."""
+    """Cria o parser da linha de comando."""
     parser = argparse.ArgumentParser(
         description="Compare fuzzy threshold, RG and FC variants on the coronary pipeline.",
     )
@@ -403,7 +406,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def load_ids_csv(path: Path) -> pd.DataFrame:
-    """Read and validate an ID/cohort CSV."""
+    """Lê e valida um CSV de IDs e coortes."""
     frame = pd.read_csv(path)
     if "IMG_ID" not in frame.columns:
         raise ValueError(f"{path} must contain an IMG_ID column.")
@@ -418,7 +421,7 @@ def load_ids_csv(path: Path) -> pd.DataFrame:
 
 
 def make_diagnostics(run_dir: Path, image_rows: list[dict[str, Any]]) -> None:
-    """Write extra CSVs that help decide when FC or RG is better."""
+    """Salva CSVs auxiliares para comparar FC e RG."""
     df = pd.DataFrame(image_rows)
     diagnostics_dir = run_dir / "diagnostics"
     diagnostics_dir.mkdir(parents=True, exist_ok=True)
@@ -438,11 +441,13 @@ def make_diagnostics(run_dir: Path, image_rows: list[dict[str, Any]]) -> None:
         "artery_voxels",
     ]
 
-    # Some images can fail in every variant and therefore have only NaN Dice.
-    # Keep diagnostics generation robust and list those images separately.
+    # Algumas imagens falham em todas as variantes e ficam apenas com Dice NaN;
+    # elas são listadas separadamente para não interromper os diagnósticos.
     valid_dice_df = df.dropna(subset=["dice_artery"])
     missing_dice_df = df[
-        df.groupby("IMG_ID")["dice_artery"].transform(lambda values: values.notna().sum())
+        df.groupby("IMG_ID")["dice_artery"].transform(
+            lambda values: values.notna().sum()
+        )
         == 0
     ]
     if not missing_dice_df.empty:
@@ -508,13 +513,17 @@ def make_diagnostics(run_dir: Path, image_rows: list[dict[str, Any]]) -> None:
     for baseline, correction in correction_pairs:
         if baseline not in available or correction not in available:
             continue
-        pair = df[df["variant"].isin([baseline, correction])].pivot_table(
-            index="IMG_ID",
-            columns="variant",
-            values="dice_artery",
-            aggfunc="first",
-            dropna=False,
-        ).reindex(columns=[baseline, correction])
+        pair = (
+            df[df["variant"].isin([baseline, correction])]
+            .pivot_table(
+                index="IMG_ID",
+                columns="variant",
+                values="dice_artery",
+                aggfunc="first",
+                dropna=False,
+            )
+            .reindex(columns=[baseline, correction])
+        )
         pair["baseline_variant"] = baseline
         pair["correction_variant"] = correction
         pair["dice_delta"] = pair[correction] - pair[baseline]
@@ -548,7 +557,7 @@ def make_diagnostics(run_dir: Path, image_rows: list[dict[str, Any]]) -> None:
 
 
 def main() -> None:
-    """Run all selected variants and save compact CSV outputs."""
+    """Executa as variantes selecionadas e salva resultados compactos."""
     args = build_parser().parse_args()
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     run_name = sanitize_name(args.run_name or timestamp)
@@ -635,7 +644,9 @@ def main() -> None:
         config_overrides, experiment = split_overrides(overrides)
         config = apply_overrides(base_config, config_overrides)
         config = scale_config_to_resolution(config)
-        parameter_rows.append(parameter_row(variant_name, overrides, config, experiment))
+        parameter_rows.append(
+            parameter_row(variant_name, overrides, config, experiment)
+        )
 
         print(f"\n[{variant_index}/{len(variants)}] {variant_name}")
         start_time = time.time()

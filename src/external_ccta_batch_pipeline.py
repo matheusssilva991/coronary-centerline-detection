@@ -1,4 +1,4 @@
-"""Batch execution of the segmentation pipeline on OrCaScore and MM-WHS CCTA."""
+"""Executa o pipeline em lote nas CCTA do OrCaScore e MM-WHS."""
 
 from __future__ import annotations
 
@@ -21,6 +21,7 @@ import pandas as pd
 
 from utils.processing.gpu_utils import use_gpu
 from utils.project.config import load_config_json, save_config_json
+from utils.project.dataframe import require_series_column
 from utils.project.ccta_datasets import (
     align_ccta_volume_to_imagecas_view,
     discover_ccta_dataset,
@@ -79,7 +80,7 @@ DATASET_SPECS = {
 
 @dataclass(frozen=True)
 class RunPaths:
-    """Structured directories for one external-dataset run."""
+    """Representa os diretórios de uma execução em banco externo."""
 
     run_dir: Path
     numeric_dir: Path
@@ -89,7 +90,7 @@ class RunPaths:
 
 
 def normalize_dataset_name(value: str) -> str:
-    """Normalize CLI aliases to the two supported dataset keys."""
+    """Normaliza aliases da CLI para os dois bancos suportados."""
     normalized = value.strip().lower().replace("_", "-")
     aliases = {
         "orca": "orcascore",
@@ -106,7 +107,7 @@ def normalize_dataset_name(value: str) -> str:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    """Build the external CCTA batch CLI."""
+    """Cria o parser da execução em lote de CCTA externas."""
     parser = argparse.ArgumentParser(
         description=(
             "Executa o pipeline completo em todas as CCTA do OrCaScore ou MM-WHS "
@@ -192,7 +193,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def resolve_dataset_path(dataset: str, explicit_path: Path | None) -> Path:
-    """Resolve and validate the selected dataset root."""
+    """Resolve e valida a raiz do banco selecionado."""
     if explicit_path is not None:
         path = explicit_path.expanduser()
     else:
@@ -215,7 +216,7 @@ def create_run_paths(
     *,
     resume_dir: Path | None = None,
 ) -> RunPaths:
-    """Create a new timestamped run or resolve an existing run."""
+    """Cria uma execução datada ou recupera uma execução existente."""
     if resume_dir is None:
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         run_dir = output_root / dataset / f"{resolution}_res" / timestamp
@@ -248,18 +249,22 @@ def select_inventory(
     exam_ids: Sequence[str] | None,
     limit: int | None,
 ) -> pd.DataFrame:
-    """Filter the discovered inventory while preserving a deterministic order."""
+    """Filtra o inventário mantendo uma ordem determinística."""
     selected = inventory.copy()
     if subset != "all":
         selected = selected.loc[selected["subset"].eq(subset)]
     if exam_ids:
         requested = {str(exam_id) for exam_id in exam_ids}
-        available = set(selected["exam_id"].astype(str))
+        exam_ids_series = require_series_column(selected, "exam_id").astype(str)
+        available = set(exam_ids_series)
         missing = sorted(requested - available)
         if missing:
             raise ValueError(f"IDs não encontrados no recorte selecionado: {missing}")
-        selected = selected.loc[selected["exam_id"].astype(str).isin(requested)]
-    subset_order = selected["subset"].map({"train": 0, "test": 1}).fillna(2)
+        selected = selected.loc[exam_ids_series.isin(tuple(requested))]
+    subset_values = require_series_column(selected, "subset")
+    subset_order = subset_values.map(
+        lambda value: {"train": 0, "test": 1}.get(str(value))
+    ).fillna(2)
     selected = (
         selected.assign(_subset_order=subset_order)
         .sort_values(["_subset_order", "exam_id"], kind="stable")
@@ -275,6 +280,7 @@ def select_inventory(
 
 
 def _save_json_atomic(payload: Mapping[str, Any], path: Path) -> None:
+    """Salva um objeto JSON por substituição atômica."""
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_suffix(path.suffix + ".tmp")
     temporary.write_text(
@@ -285,10 +291,12 @@ def _save_json_atomic(payload: Mapping[str, Any], path: Path) -> None:
 
 
 def _load_json(path: Path) -> dict[str, Any]:
+    """Carrega um objeto JSON persistido."""
     return json.loads(path.read_text(encoding="utf-8"))
 
 
 def _save_dataframe_atomic(dataframe: pd.DataFrame, path: Path) -> None:
+    """Salva um DataFrame em CSV por substituição atômica."""
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_suffix(path.suffix + ".tmp")
     dataframe.to_csv(temporary, index=False)
@@ -296,6 +304,7 @@ def _save_dataframe_atomic(dataframe: pd.DataFrame, path: Path) -> None:
 
 
 def _coordinates_to_fields(prefix: str, coordinates: Any) -> dict[str, int | None]:
+    """Converte uma coordenada opcional em campos escalares nomeados."""
     values = (
         tuple(int(value) for value in coordinates) if coordinates is not None else ()
     )
@@ -316,6 +325,7 @@ def _save_combined_visual(
     artery_mask: Any,
     spacing: Sequence[float],
 ) -> None:
+    """Salva a visualização 3D conjunta das estruturas segmentadas."""
     output_path.parent.mkdir(parents=True, exist_ok=True)
     visualize_aorta_ostia_artery(
         aorta_mask,
@@ -339,6 +349,7 @@ def _save_stage(
     vmin: float | None = None,
     vmax: float | None = None,
 ) -> None:
+    """Salva as vistas representativas de uma etapa intermediária."""
     if exam_dir is None:
         return
     save_stage_views(
@@ -358,7 +369,7 @@ def process_external_exam(
     visual_root: Path | None,
     align_orcascore: bool = True,
 ) -> dict[str, Any]:
-    """Run all notebook stages for one unlabeled external CCTA exam."""
+    """Executa todas as etapas para um exame CCTA externo sem rótulo."""
     started = time.perf_counter()
     dataset = str(record["dataset"])
     subset = str(record["subset"])
@@ -379,10 +390,9 @@ def process_external_exam(
 
     try:
         native_image = load_ccta_volume(record).astype(np.float32, copy=False)
-        spacing = (
-            float(record["spacing_x_mm"]),
-            float(record["spacing_y_mm"]),
-            float(record["spacing_z_mm"]),
+        spacing = tuple(
+            float(_record_value(record, column))
+            for column in ("spacing_x_mm", "spacing_y_mm", "spacing_z_mm")
         )
         image = native_image
         flipped_axes: tuple[int, ...] = ()
@@ -631,10 +641,12 @@ def process_external_exam(
 
 
 def _result_key(row: Mapping[str, Any]) -> tuple[str, str]:
+    """Retorna a chave única de banco e exame de um resultado."""
     return str(row["subset"]), str(row["exam_id"])
 
 
 def _result_sort_key(row: Mapping[str, Any]) -> tuple[int, str]:
+    """Retorna a chave determinística de ordenação de um resultado."""
     subset_order = {"train": 0, "test": 1}
     return subset_order.get(str(row["subset"]), 2), str(row["exam_id"])
 
@@ -643,18 +655,27 @@ def _upsert_result(
     rows: list[dict[str, Any]],
     result: dict[str, Any],
 ) -> list[dict[str, Any]]:
+    """Insere ou substitui um resultado preservando a ordem determinística."""
     key = _result_key(result)
     updated = [row for row in rows if _result_key(row) != key]
     updated.append(result)
     return sorted(updated, key=_result_sort_key)
 
 
+def _record_value(record: Mapping[str, Any] | pd.Series, key: str) -> Any:
+    """Obtém um valor escalar de um registro tabular ou mapeamento."""
+    return record.get(key)
+
+
 def save_numeric_results(rows: list[dict[str, Any]], numeric_dir: Path) -> None:
-    """Persist the consolidated and per-subset external results atomically."""
+    """Salva resultados consolidados e por subset de forma atômica."""
     dataframe = pd.DataFrame(rows)
     if dataframe.empty:
         return
-    subset_order = dataframe["subset"].map({"train": 0, "test": 1}).fillna(2)
+    subset_values = require_series_column(dataframe, "subset")
+    subset_order = subset_values.map(
+        lambda value: {"train": 0, "test": 1}.get(str(value))
+    ).fillna(2)
     dataframe = (
         dataframe.assign(_subset_order=subset_order)
         .sort_values(["_subset_order", "exam_id"], kind="stable")
@@ -669,6 +690,7 @@ def save_numeric_results(rows: list[dict[str, Any]], numeric_dir: Path) -> None:
 
 
 def load_existing_results(numeric_dir: Path) -> list[dict[str, Any]]:
+    """Carrega resultados já persistidos para permitir retomadas."""
     path = numeric_dir / "results_all.csv"
     if not path.is_file():
         return []
@@ -684,6 +706,7 @@ def _metadata_payload(
     started_at: datetime,
     state: str,
 ) -> dict[str, Any]:
+    """Monta o metadata compacto da execução externa."""
     status_counts = pd.Series(
         [row.get("status", "unknown") for row in rows]
     ).value_counts()
@@ -712,6 +735,7 @@ def _metadata_payload(
 
 
 def _configure_logging(logs_dir: Path, verbose: bool) -> None:
+    """Configura logs em arquivo e no terminal para a execução."""
     level = logging.DEBUG if verbose else logging.INFO
     formatter = logging.Formatter(
         "%(asctime)s %(levelname)s %(name)s [%(filename)s:%(lineno)d] %(message)s"
@@ -728,7 +752,7 @@ def _configure_logging(logs_dir: Path, verbose: bool) -> None:
 
 
 def run(args: argparse.Namespace) -> RunPaths:
-    """Execute the selected external cohort and return its run paths."""
+    """Executa a coorte externa selecionada e retorna seus diretórios."""
     base_path = resolve_dataset_path(args.dataset, args.base_path)
     inventory = discover_ccta_dataset(args.dataset, base_path)
     selected = select_inventory(

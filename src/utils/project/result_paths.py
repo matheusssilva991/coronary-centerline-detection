@@ -10,26 +10,32 @@ SPLIT_NAMES = ("train", "val", "test", "full")
 
 
 def results_filename(split: str) -> str:
+    """Retorna o nome do resultado consolidado de um split."""
     return f"results_{split}.csv"
 
 
 def batch_results_filename(split: str, batch_number: int) -> str:
+    """Retorna o nome do resultado de um lote."""
     return f"results_{split}_lote_{batch_number}.csv"
 
 
 def summary_filename(split: str) -> str:
+    """Retorna o nome legado do resumo agregado de um split."""
     return f"summary_{split}.csv"
 
 
 def metadata_filename(split: str) -> str:
+    """Retorna o nome do metadata de um split."""
     return f"metadata_{split}.json"
 
 
 def batch_timings_filename(split: str) -> str:
+    """Retorna o nome do manifest de tempos dos lotes."""
     return f"batch_timings_{split}.csv"
 
 
 def integrity_filename(split: str) -> str:
+    """Retorna o nome do marcador de integridade de um split."""
     return f"integrity_{split}.json"
 
 
@@ -43,6 +49,7 @@ def result_candidates(directory: Path, split: str) -> tuple[Path, ...]:
 
 
 def summary_candidates(directory: Path, split: str) -> tuple[Path, ...]:
+    """Retorna candidatos atuais e legados de resumo."""
     return (
         directory / summary_filename(split),
         directory / f"ostios_{split}_summary.csv",
@@ -50,6 +57,7 @@ def summary_candidates(directory: Path, split: str) -> tuple[Path, ...]:
 
 
 def metadata_candidates(directory: Path, split: str) -> tuple[Path, ...]:
+    """Retorna candidatos atuais e legados de metadata."""
     return (
         directory / metadata_filename(split),
         directory / f"ostios_{split}_metadata.json",
@@ -57,6 +65,7 @@ def metadata_candidates(directory: Path, split: str) -> tuple[Path, ...]:
 
 
 def batch_timings_candidates(directory: Path, split: str) -> tuple[Path, ...]:
+    """Retorna candidatos atuais e legados de tempos por lote."""
     return (
         directory / batch_timings_filename(split),
         directory / f"ostios_{split}_batch_timings.csv",

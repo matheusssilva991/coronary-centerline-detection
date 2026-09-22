@@ -5,6 +5,7 @@ from __future__ import annotations
 import unicodedata
 from typing import Any, cast
 
+import numpy as np
 import pandas as pd
 
 from .results_columns import (
@@ -71,7 +72,7 @@ RESULT_STATUS_ALIASES: dict[str, str] = {
 
 
 def _status_key(value: Any) -> str | None:
-    """Convert a status scalar to an accent-free snake-case lookup key."""
+    """Converte um status escalar em chave snake case sem acentos."""
     if value is None or pd.isna(value):
         return None
     normalized = unicodedata.normalize("NFKD", str(value).strip().casefold())
@@ -85,19 +86,19 @@ def _status_key(value: Any) -> str | None:
 
 
 def normalize_ostia_status(value: Any) -> str | None:
-    """Normalize persisted and legacy ostia statuses to English status codes."""
+    """Normaliza status atuais e legados dos óstios para códigos em inglês."""
     key = _status_key(value)
     return None if key is None else OSTIA_STATUS_ALIASES.get(key, key)
 
 
 def normalize_result_status(value: Any) -> str | None:
-    """Normalize persisted and legacy result statuses to English status codes."""
+    """Normaliza status atuais e legados dos resultados para códigos em inglês."""
     key = _status_key(value)
     return None if key is None else RESULT_STATUS_ALIASES.get(key, key)
 
 
 def ostia_status_label_pt(value: Any) -> str:
-    """Return the Portuguese presentation label for an ostia status code."""
+    """Retorna o rótulo em português de um status dos óstios."""
     normalized = normalize_ostia_status(value)
     if normalized is None:
         return "sem status"
@@ -105,7 +106,7 @@ def ostia_status_label_pt(value: Any) -> str:
 
 
 def result_status_label_pt(value: Any) -> str:
-    """Return the Portuguese presentation label for a result status code."""
+    """Retorna o rótulo em português de um status de resultado."""
     normalized = normalize_result_status(value)
     if normalized is None:
         return "sem status"
@@ -128,6 +129,7 @@ def _get_result_value(result: dict[str, Any], column: str, default: Any = None) 
 
 
 def _as_bool_value(value: Any) -> bool:
+    """Converte flags escalares atuais e legadas em booleanos."""
     if isinstance(value, bool):
         return value
     if value is None:
@@ -550,6 +552,14 @@ def _numeric_series(df: pd.DataFrame, column: str) -> pd.Series:
     return series.map(_as_optional_float)
 
 
+def _scalar_float(value: Any) -> float:
+    """Converte uma redução numérica do pandas em float escalar."""
+    array = np.asarray(value)
+    if array.ndim != 0:
+        raise ValueError("Era esperado um valor numérico escalar.")
+    return float(array.item())
+
+
 def _numeric_stats(
     df: pd.DataFrame,
     column: str,
@@ -569,17 +579,17 @@ def _numeric_stats(
 
     stats.update(
         {
-            f"{prefix}_mean": float(values.mean()),
-            f"{prefix}_std": (float(values.std()) if len(values) > 1 else None),
-            f"{prefix}_median": float(values.median()),
-            f"{prefix}_q1": float(values.quantile(0.25)),
-            f"{prefix}_q3": float(values.quantile(0.75)),
-            f"{prefix}_min": float(values.min()),
-            f"{prefix}_max": float(values.max()),
+            f"{prefix}_mean": _scalar_float(values.mean()),
+            f"{prefix}_std": (_scalar_float(values.std()) if len(values) > 1 else None),
+            f"{prefix}_median": _scalar_float(values.median()),
+            f"{prefix}_q1": _scalar_float(values.quantile(0.25)),
+            f"{prefix}_q3": _scalar_float(values.quantile(0.75)),
+            f"{prefix}_min": _scalar_float(values.min()),
+            f"{prefix}_max": _scalar_float(values.max()),
         }
     )
     if include_sum:
-        stats[f"{prefix}_sum"] = float(values.sum())
+        stats[f"{prefix}_sum"] = _scalar_float(values.sum())
     return stats
 
 
@@ -685,8 +695,8 @@ def summarize_results_df(df: pd.DataFrame) -> dict[str, Any]:
 
     # Métricas de Dice permanecem nulas quando nenhuma artéria foi segmentada.
     if dice_series.notna().any():
-        valid_ostia_dice = dice_series[total_success_series & dice_series.notna()]
-        invalid_ostia_dice = dice_series[(~total_success_series) & dice_series.notna()]
+        valid_ostia_dice = dice_series.where(total_success_series).dropna()
+        invalid_ostia_dice = dice_series.where(~total_success_series).dropna()
         summary.update(
             {
                 "dice_artery_mean": float(dice_series.mean()),

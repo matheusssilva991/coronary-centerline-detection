@@ -3,8 +3,11 @@ import unittest
 import zlib
 from pathlib import Path
 
-import nibabel as nib
 import numpy as np
+from nibabel.loadsave import load as load_nifti
+from nibabel.loadsave import save as save_nifti
+from nibabel.nifti1 import Nifti1Image
+from nibabel.spatialimages import SpatialImage
 
 from utils.project.ccta_datasets import (
     align_ccta_volume_to_imagecas_view,
@@ -58,21 +61,21 @@ class CctaDatasetsTest(unittest.TestCase):
         target = self.mmwhs / folder
         target.mkdir(parents=True, exist_ok=True)
         path = target / name
-        image = nib.Nifti1Image(
+        image = Nifti1Image(
             np.arange(60, dtype=np.int16).reshape(3, 4, 5),
             np.diag([0.7, 0.8, 1.2, 1]),
         )
-        nib.save(image, path)
+        save_nifti(image, path)
         return path
 
     def _write_imagecas(self, image_id: int) -> Path:
         self.imagecas.mkdir(parents=True, exist_ok=True)
         path = self.imagecas / f"{image_id}.img.nii.gz"
-        image = nib.Nifti1Image(
+        image = Nifti1Image(
             np.arange(60, dtype=np.int16).reshape(3, 4, 5),
             np.diag([-0.7, 0.8, 1.2, 1]),
         )
-        nib.save(image, path)
+        save_nifti(image, path)
         return path
 
     def test_loads_compressed_mhd_in_zyx_order(self):
@@ -134,7 +137,10 @@ class CctaDatasetsTest(unittest.TestCase):
 
     def test_native_nifti_loader_matches_preprocessing_layout(self):
         path = self._write_imagecas(90)
-        raw = np.asanyarray(nib.load(path).dataobj)
+        image = load_nifti(path)
+        if not isinstance(image, SpatialImage):
+            self.fail("O teste esperava uma imagem NIfTI espacial.")
+        raw = np.asanyarray(image.dataobj)
 
         loaded = load_nifti_volume_xyz(path)
 

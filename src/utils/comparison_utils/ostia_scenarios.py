@@ -8,7 +8,7 @@ from .ia_math import filter_to_common_ia_math_ids, get_common_ia_math_keys
 
 
 def load_math_results_for_ostia_scenario(math_paths, scenario):
-    """Load mathematical comparison results for a specific ostia scenario."""
+    """Carrega resultados matemáticos de um cenário específico de óstios."""
     math_frames = []
     missing_math_files = []
 
@@ -75,7 +75,7 @@ def load_math_results_for_ostia_scenario(math_paths, scenario):
 
 
 def filter_ia_results_for_math_ids(ia_results_df, math_results_df):
-    """Keep only IA rows whose image IDs are present in the mathematical subset."""
+    """Mantém linhas da IA cujos IDs estão no subconjunto matemático."""
     if ia_results_df.empty:
         return ia_results_df.copy()
 
@@ -94,7 +94,7 @@ def filter_ia_results_for_math_ids(ia_results_df, math_results_df):
 
 
 def load_ostia_comparison_scenario(ia_results_df, math_paths, scenario):
-    """Build the IA and mathematical subsets for a comparison scenario."""
+    """Monta os subconjuntos de IA e matemática para uma comparação."""
     scenario_math_df, missing_math_files = load_math_results_for_ostia_scenario(
         math_paths,
         scenario,
@@ -102,9 +102,7 @@ def load_ostia_comparison_scenario(ia_results_df, math_paths, scenario):
 
     scenario_raw_df = pd.concat([ia_results_df, scenario_math_df], ignore_index=True)
     scenario_common_df = filter_to_common_ia_math_ids(scenario_raw_df)
-    scenario_ia_df = scenario_common_df.loc[
-        scenario_common_df["source"] == "ia"
-    ].copy()
+    scenario_ia_df = scenario_common_df.loc[scenario_common_df["source"] == "ia"].copy()
     scenario_math_df = scenario_common_df.loc[
         scenario_common_df["source"] == "math"
     ].copy()
@@ -113,7 +111,7 @@ def load_ostia_comparison_scenario(ia_results_df, math_paths, scenario):
 
 
 def build_ostia_image_comparison_df(ia_results_df, math_results_df):
-    """Pair every IA method per image with the mathematical Dice.
+    """Pareia cada método de IA por imagem com o Dice matemático.
 
     Keeping one row per IA method avoids selecting the best model separately
     for each examination, which would make the visual comparison optimistic.
@@ -147,9 +145,7 @@ def build_ostia_image_comparison_df(ia_results_df, math_results_df):
         ascending=[True, True, True, False],
     )
     ia_by_method_df = (
-        ia_subset.groupby(
-            ["target_resolution", "img_id", "method"], as_index=False
-        )
+        ia_subset.groupby(["target_resolution", "img_id", "method"], as_index=False)
         .first()
         .rename(columns={"dice": "ia_dice", "method": "ia_method"})
     )
