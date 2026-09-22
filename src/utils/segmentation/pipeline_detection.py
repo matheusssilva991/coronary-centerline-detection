@@ -25,6 +25,15 @@ class AortaSegmentationResult:
     diagnostics: Dict[str, Any]
 
 
+@dataclass(frozen=True)
+class AortaCircleTrackingResult:
+    """Trajetórias original e filtrada dos círculos da aorta."""
+
+    original_circles: List[Dict[str, Any]]
+    filtered_circles: List[Dict[str, Any]]
+    filter_diagnostics: Dict[str, Any]
+
+
 def locate_aorta_circles(
     lcc_image: Any,
     downscale_factors: Sequence[int],
@@ -76,6 +85,32 @@ def filter_located_aorta_circles(
         pixel_spacing,
         image_slice_count,
         circle_config.get("trajectory_filter", {}),
+    )
+
+
+def locate_and_filter_aorta_circles(
+    lcc_image: Any,
+    downscale_factors: Sequence[int],
+    scaled_spacing: Sequence[float],
+    circle_config: Dict[str, Any],
+) -> AortaCircleTrackingResult:
+    """Localiza a aorta e filtra sua trajetória para a segmentação."""
+    original_circles = locate_aorta_circles(
+        lcc_image,
+        downscale_factors,
+        scaled_spacing,
+        circle_config,
+    )
+    filtered_circles, filter_diagnostics = filter_located_aorta_circles(
+        original_circles,
+        scaled_spacing,
+        int(np.asarray(lcc_image).shape[2]),
+        circle_config,
+    )
+    return AortaCircleTrackingResult(
+        original_circles=original_circles,
+        filtered_circles=filtered_circles,
+        filter_diagnostics=filter_diagnostics,
     )
 
 

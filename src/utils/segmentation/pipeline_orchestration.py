@@ -24,8 +24,7 @@ from .pipeline_arteries import segment_arteries_from_ostia
 from .aorta_segmentation import classify_aorta_segmentation_feedback
 from .pipeline_detection import (
     detect_and_evaluate_ostia,
-    filter_located_aorta_circles,
-    locate_aorta_circles,
+    locate_and_filter_aorta_circles,
     segment_aorta_with_diagnostics,
 )
 from .pipeline_preprocessing import compute_vesselness, load_and_preprocess_image
@@ -333,24 +332,6 @@ def summarize_aorta_volume(aorta_mask, image_voxel_count):
     }
 
 
-def _segment_aorta_from_filtered_circles(
-    lcc_image,
-    filtered_circles,
-    filter_diagnostics,
-    config,
-):
-    """Segmenta a aorta uma vez usando a trajetória filtrada."""
-    level_set_config = config["LEVEL_SET"]
-    candidate = segment_aorta_with_diagnostics(
-        lcc_image,
-        filtered_circles,
-        level_set_config,
-        use_gpu=config.get("USE_GPU", False),
-    )
-
-    return filtered_circles, candidate, filter_diagnostics
-
-
 def _circle_result_fields(
     detected_circles,
     image_slice_count,
@@ -439,14 +420,14 @@ def process_image(img_id, config, base_path, visual_output_dir=None):
         )
 
         # Localiza a aorta por círculos em fatias consecutivas.
-        detected_circles = locate_aorta_circles(
+        circle_tracking = locate_and_filter_aorta_circles(
             lcc_image,
             downscale_factors,
             scaled_spacing,
             config["CIRCLE_DETECTION"],
         )
         circle_summary = summarize_aorta_circles(
-            detected_circles,
+            circle_tracking.original_circles,
             result["image_slice_count"],
             scaled_spacing,
             config["CIRCLE_DETECTION"],
@@ -455,22 +436,15 @@ def process_image(img_id, config, base_path, visual_output_dir=None):
 
         # Filtra somente a trajetória consumida pelas etapas seguintes. O
         # resumo acima continua descrevendo a saída original do detector.
-        detected_circles, circle_filter_diagnostics = filter_located_aorta_circles(
-            detected_circles,
-            scaled_spacing,
-            result["image_slice_count"],
-            config["CIRCLE_DETECTION"],
-        )
+        detected_circles = circle_tracking.filtered_circles
+        result.update(circle_tracking.filter_diagnostics)
         # Segmenta a aorta uma vez com a trajetória selecionada pelo filtro.
-        detected_circles, aorta_segmentation, circle_filter_diagnostics = (
-            _segment_aorta_from_filtered_circles(
-                lcc_image,
-                detected_circles,
-                circle_filter_diagnostics,
-                config,
-            )
+        aorta_segmentation = segment_aorta_with_diagnostics(
+            lcc_image,
+            detected_circles,
+            config["LEVEL_SET"],
+            use_gpu=config.get("USE_GPU", False),
         )
-        result.update(circle_filter_diagnostics)
         aorta_mask = aorta_segmentation.mask
         result.update(aorta_segmentation.diagnostics)
         # Relaciona a máscara da aorta ao volume processado completo.

@@ -12,7 +12,11 @@ from .nifti_io import (
     save_npy_array,
 )
 from .normalization import normalize_image, normalize_vesselness, robust_normalize
-from .roi import extract_circular_region, extract_square_region
+from .roi import (
+    extract_circular_region,
+    extract_square_region,
+    mask_bounding_box_slices,
+)
 from .segmentation import segment_by_hu
 
 __all__ = [
@@ -27,6 +31,7 @@ __all__ = [
     "save_npy_array",
     "extract_square_region",
     "extract_circular_region",
+    "mask_bounding_box_slices",
     "segment_by_hu",
     "dice_score",
 ]

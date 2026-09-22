@@ -1,8 +1,46 @@
 """Funções auxiliares para extração de regiões de interesse em volumes 3D."""
 
+from collections.abc import Sequence
+from typing import Any, Optional, Tuple
+
 import numpy as np
-from typing import Optional, Tuple
 from numpy.typing import NDArray
+
+
+def mask_bounding_box_slices(
+    mask: NDArray[Any],
+    spacing: Sequence[float],
+    margin_mm: float,
+) -> tuple[slice, slice, slice]:
+    """Calcula o recorte 3D da máscara com uma margem física por eixo."""
+    mask_array = np.asarray(mask)
+    if mask_array.ndim != 3:
+        raise ValueError("A máscara deve ser tridimensional.")
+    if not np.any(mask_array):
+        raise ValueError("A máscara não pode estar vazia.")
+
+    spacing_array = np.asarray(tuple(spacing), dtype=float)
+    if spacing_array.shape != (3,):
+        raise ValueError("O espaçamento deve conter exatamente três valores.")
+    if not np.all(np.isfinite(spacing_array)) or np.any(spacing_array <= 0):
+        raise ValueError("O espaçamento deve conter valores finitos e positivos.")
+
+    resolved_margin = float(margin_mm)
+    if not np.isfinite(resolved_margin) or resolved_margin < 0:
+        raise ValueError("A margem deve ser finita e não negativa.")
+
+    coordinates = np.argwhere(mask_array != 0)
+    margin_voxels = np.ceil(resolved_margin / spacing_array).astype(int)
+    lower = np.maximum(coordinates.min(axis=0) - margin_voxels, 0)
+    upper = np.minimum(
+        coordinates.max(axis=0) + margin_voxels + 1,
+        np.asarray(mask_array.shape),
+    )
+    return (
+        slice(int(lower[0]), int(upper[0])),
+        slice(int(lower[1]), int(upper[1])),
+        slice(int(lower[2]), int(upper[2])),
+    )
 
 
 def extract_square_region(
@@ -76,4 +114,5 @@ def extract_circular_region(
 __all__ = [
     "extract_circular_region",
     "extract_square_region",
+    "mask_bounding_box_slices",
 ]

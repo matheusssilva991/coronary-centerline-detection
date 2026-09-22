@@ -11,6 +11,7 @@ import pandas as pd
 from external_ccta_batch_pipeline import (
     build_parser,
     create_run_paths,
+    load_existing_results,
     normalize_dataset_name,
     process_external_exam,
     run,
@@ -19,6 +20,31 @@ from external_ccta_batch_pipeline import (
 
 
 class ExternalCctaBatchPipelineTest(unittest.TestCase):
+    def test_loads_existing_results_with_string_keys_and_preserved_order(self):
+        rows = [
+            {
+                "subset": "train",
+                "exam_id": "TRV1P2",
+                "execution_time_seconds": 1.5,
+            },
+            {
+                "subset": "test",
+                "exam_id": "TRV2P1",
+                "execution_time_seconds": 2.0,
+            },
+        ]
+
+        with tempfile.TemporaryDirectory() as temporary_dir:
+            numeric_dir = Path(temporary_dir)
+            pd.DataFrame(rows).to_csv(numeric_dir / "results_all.csv", index=False)
+
+            loaded = load_existing_results(numeric_dir)
+
+        self.assertEqual(loaded, rows)
+        self.assertTrue(
+            all(isinstance(key, str) for row in loaded for key in row),
+        )
+
     def test_cli_normalizes_supported_dataset_aliases(self):
         parser = build_parser()
 
@@ -133,26 +159,22 @@ class ExternalCctaBatchPipelineTest(unittest.TestCase):
     @patch("external_ccta_batch_pipeline._save_combined_visual")
     @patch("external_ccta_batch_pipeline.save_detected_circles_figure")
     @patch("external_ccta_batch_pipeline._save_stage")
-    @patch("external_ccta_batch_pipeline.get_artery_postprocessing_stages")
-    @patch("external_ccta_batch_pipeline.normal_region_growing_from_ostia")
+    @patch("external_ccta_batch_pipeline.segment_artery_masks_from_vesselness")
     @patch("external_ccta_batch_pipeline.detect_ostia")
     @patch("external_ccta_batch_pipeline.compute_vesselness")
     @patch("external_ccta_batch_pipeline.segment_aorta_with_diagnostics")
-    @patch("external_ccta_batch_pipeline.filter_located_aorta_circles")
-    @patch("external_ccta_batch_pipeline.locate_aorta_circles")
+    @patch("external_ccta_batch_pipeline.locate_and_filter_aorta_circles")
     @patch("external_ccta_batch_pipeline.preprocess_ccta_volume")
     @patch("external_ccta_batch_pipeline.load_ccta_volume")
     def test_processes_all_notebook_stages_and_returns_external_metrics(
         self,
         load_volume,
         preprocess,
-        locate_circles,
-        filter_circles,
+        track_circles,
         segment_aorta,
         vesselness,
         detect_ostia,
-        region_growing,
-        postprocess,
+        segment_arteries,
         save_stage,
         save_circles,
         save_combined,
@@ -168,7 +190,15 @@ class ExternalCctaBatchPipelineTest(unittest.TestCase):
                 "radius": 1,
                 "accum": 0.9,
                 "interpolated": False,
-            }
+            },
+            {
+                "slice_index": 2,
+                "center_x": 1,
+                "center_y": 1,
+                "radius": 1,
+                "accum": 0.8,
+                "interpolated": False,
+            },
         ]
         load_volume.return_value = image
         preprocess.return_value = {
@@ -182,10 +212,10 @@ class ExternalCctaBatchPipelineTest(unittest.TestCase):
                 "lcc_voxels": 12,
             },
         }
-        locate_circles.return_value = circles
-        filter_circles.return_value = (
-            circles,
-            {"aorta_circle_filter_method": "robust"},
+        track_circles.return_value = SimpleNamespace(
+            original_circles=circles,
+            filtered_circles=circles[:1],
+            filter_diagnostics={"aorta_circle_filter_method": "robust"},
         )
         segment_aorta.return_value = SimpleNamespace(
             mask=mask,
@@ -193,12 +223,11 @@ class ExternalCctaBatchPipelineTest(unittest.TestCase):
         )
         vesselness.side_effect = [processed, processed]
         detect_ostia.return_value = ((0, 0, 1), (1, 1, 1))
-        region_growing.return_value = mask
-        postprocess.return_value = {
-            "raw_mask": mask,
-            "closed_mask": mask,
-            "final_mask": mask,
-        }
+        segment_arteries.return_value = SimpleNamespace(
+            raw_mask=mask,
+            closed_mask=mask,
+            final_mask=mask,
+        )
         record = pd.Series(
             {
                 "dataset": "MM-WHS",
@@ -221,6 +250,7 @@ class ExternalCctaBatchPipelineTest(unittest.TestCase):
                     "LEVEL_SET": {},
                     "VESSELNESS_AORTA": {},
                     "VESSELNESS_ARTERY": {},
+                    "ARTERY_SEGMENTATION": {"method": "fuzzy_connectedness"},
                     "USE_GPU": False,
                 },
                 "mid",
@@ -233,12 +263,94 @@ class ExternalCctaBatchPipelineTest(unittest.TestCase):
 
         self.assertEqual(result["status"], "success")
         self.assertEqual(result["processed_slice_count"], 3)
+        self.assertEqual(result["aorta_circle_count_before_filter"], 2)
+        self.assertEqual(result["aorta_circle_count"], 1)
         self.assertEqual(result["ostia_left_z"], 1)
         self.assertGreater(result["artery_volume_after_morphology_ml"], 0)
         self.assertEqual(persisted["status"], "success")
         self.assertEqual(save_stage.call_count, 9)
         save_circles.assert_called_once()
         save_combined.assert_called_once()
+        self.assertEqual(
+            segment_arteries.call_args.kwargs["method"],
+            "region_growing",
+        )
+
+    @patch("external_ccta_batch_pipeline.detect_ostia")
+    @patch("external_ccta_batch_pipeline.compute_vesselness")
+    @patch("external_ccta_batch_pipeline.segment_aorta_with_diagnostics")
+    @patch("external_ccta_batch_pipeline.locate_and_filter_aorta_circles")
+    @patch("external_ccta_batch_pipeline.preprocess_ccta_volume")
+    @patch("external_ccta_batch_pipeline.load_ccta_volume")
+    def test_ostia_failure_skips_arterial_vesselness(
+        self,
+        load_volume,
+        preprocess,
+        track_circles,
+        segment_aorta,
+        vesselness,
+        detect_ostia,
+    ):
+        image = np.ones((4, 4, 3), dtype=np.float32)
+        processed = np.ones((2, 2, 3), dtype=np.float32)
+        mask = np.ones_like(processed, dtype=np.uint8)
+        circles = [
+            {
+                "slice_index": 1,
+                "center_x": 1,
+                "center_y": 1,
+                "radius": 1,
+                "accum": 0.9,
+                "interpolated": False,
+            }
+        ]
+        load_volume.return_value = image
+        preprocess.return_value = {
+            "threshold_mask": mask,
+            "lcc_image": processed,
+            "downscale_factors": (2, 2, 1),
+            "scaled_spacing": (1.0, 1.0, 1.5),
+            "preprocessing_details": {},
+        }
+        track_circles.return_value = SimpleNamespace(
+            original_circles=circles,
+            filtered_circles=circles,
+            filter_diagnostics={},
+        )
+        segment_aorta.return_value = SimpleNamespace(mask=mask, diagnostics={})
+        vesselness.return_value = processed
+        detect_ostia.side_effect = ValueError("Nenhum óstio encontrado")
+        record = pd.Series(
+            {
+                "dataset": "MM-WHS",
+                "subset": "train",
+                "exam_id": "ct_train_1001",
+                "reported_orientation": "RAS",
+                "spacing_x_mm": 0.5,
+                "spacing_y_mm": 0.5,
+                "spacing_z_mm": 1.5,
+            }
+        )
+
+        result = process_external_exam(
+            record,
+            {
+                "CIRCLE_DETECTION": {},
+                "LEVEL_SET": {},
+                "VESSELNESS_AORTA": {"stage": "ostia"},
+                "VESSELNESS_ARTERY": {"stage": "artery"},
+                "USE_GPU": False,
+            },
+            "mid",
+            visual_root=None,
+        )
+
+        self.assertEqual(result["status"], "ostia_not_found")
+        self.assertEqual(vesselness.call_count, 1)
+        self.assertEqual(
+            vesselness.call_args.kwargs["vesselness_config"],
+            {"stage": "ostia"},
+        )
 
 
 if __name__ == "__main__":

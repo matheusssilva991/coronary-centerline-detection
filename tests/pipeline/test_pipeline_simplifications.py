@@ -22,6 +22,7 @@ from utils.segmentation.pipeline_orchestration import (
     _ostia_result_fields,
     _preprocessing_result_fields,
     _resolve_batch_plan,
+    process_image,
     run_pipeline,
     summarize_aorta_circles,
     summarize_aorta_volume,
@@ -61,6 +62,58 @@ def _preprocessing_config(method):
 
 
 class PipelineSimplificationTests(TestCase):
+    @patch(
+        "utils.segmentation.pipeline_orchestration.detect_and_evaluate_ostia",
+        side_effect=ValueError("Nenhum óstio encontrado"),
+    )
+    @patch("utils.segmentation.pipeline_orchestration.segment_aorta_with_diagnostics")
+    @patch("utils.segmentation.pipeline_orchestration.locate_and_filter_aorta_circles")
+    @patch("utils.segmentation.pipeline_orchestration.compute_vesselness")
+    @patch("utils.segmentation.pipeline_orchestration.load_and_preprocess_image")
+    def test_imagecas_summary_keeps_original_circle_trajectory(
+        self,
+        load_image,
+        compute_vesselness_mock,
+        track_circles,
+        segment_aorta,
+        _detect_ostia,
+    ):
+        lcc_image = np.ones((4, 4, 3), dtype=np.float32)
+        original = [{"slice_index": 0}, {"slice_index": 1}]
+        filtered = [{"slice_index": 0}]
+        load_image.return_value = {
+            "lcc_image": lcc_image,
+            "label": np.zeros_like(lcc_image, dtype=np.uint8),
+            "scaled_spacing": (1.0, 1.0, 1.0),
+            "preprocessing_details": {},
+            "downscale_factors": (1, 1, 1),
+        }
+        compute_vesselness_mock.return_value = lcc_image
+        track_circles.return_value = SimpleNamespace(
+            original_circles=original,
+            filtered_circles=filtered,
+            filter_diagnostics={"aorta_circle_used_count": 1},
+        )
+        segment_aorta.return_value = SimpleNamespace(
+            mask=np.ones_like(lcc_image, dtype=np.uint8),
+            diagnostics={},
+        )
+
+        result = process_image(
+            13,
+            {
+                "VESSELNESS_AORTA": {},
+                "CIRCLE_DETECTION": {},
+                "LEVEL_SET": {},
+                "OSTIA_VALIDATION": {"distance_threshold_mm": 1.0},
+                "USE_GPU": False,
+            },
+            Path("/dataset"),
+        )
+
+        self.assertEqual(result["aorta_circle_count"], 2)
+        self.assertEqual(result["aorta_circle_used_count"], 1)
+
     def test_preprocesses_unlabeled_external_ccta_volume(self):
         image = np.linspace(-200, 800, 4 * 4 * 3, dtype=np.float32).reshape(4, 4, 3)
 

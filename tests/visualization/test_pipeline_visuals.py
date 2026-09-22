@@ -13,10 +13,39 @@ from segmentation_pipeline import (
     run_processing_split,
 )
 from utils.segmentation.pipeline_cli import build_parser
-from utils.segmentation.pipeline_visuals import save_segmentation_visual
+from utils.segmentation.pipeline_visuals import (
+    save_segmentation_visual,
+    save_segmentation_visual_to_path,
+)
 
 
 class PipelineVisualTests(unittest.TestCase):
+    @patch("utils.segmentation.pipeline_visuals.visualize_aorta_ostia_artery")
+    def test_saves_generic_visual_without_ground_truth(self, visualize):
+        def write_snapshot(*args, **kwargs):
+            Path(kwargs["save_html_path"]).write_text("<html></html>")
+
+        visualize.side_effect = write_snapshot
+        mask = np.ones((2, 2, 2), dtype=np.uint8)
+
+        with TemporaryDirectory() as temp_dir:
+            output_path = Path(temp_dir) / "exam" / "combined.html"
+            output = save_segmentation_visual_to_path(
+                output_path,
+                plot_name="Exame externo",
+                aorta_mask=mask,
+                ostia_left=(0, 0, 0),
+                ostia_right=(1, 1, 1),
+                artery_mask=mask,
+                spacing=(1.0, 1.0, 1.5),
+            )
+
+            self.assertEqual(output, output_path)
+            self.assertTrue(output.exists())
+
+        self.assertIsNone(visualize.call_args.kwargs["label_artery"])
+        self.assertEqual(visualize.call_args.kwargs["plot_name"], "Exame externo")
+
     def test_cli_accepts_robust_circle_filter_and_run_group(self):
         parser = build_parser(Path("/dataset"), Path("/output"))
 

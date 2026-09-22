@@ -29,15 +29,15 @@ from utils.project.ccta_datasets import (
 )
 from utils.project.notebook_env import load_notebook_pipeline_config
 from utils.project.results import make_json_safe
-from utils.segmentation.artery_segmentation import normal_region_growing_from_ostia
 from utils.segmentation.aorta_segmentation import (
     classify_aorta_segmentation_feedback,
 )
-from utils.segmentation.pipeline_arteries import get_artery_postprocessing_stages
+from utils.segmentation.pipeline_arteries import (
+    segment_artery_masks_from_vesselness,
+)
 from utils.segmentation.pipeline_detection import (
     detect_ostia,
-    filter_located_aorta_circles,
-    locate_aorta_circles,
+    locate_and_filter_aorta_circles,
     segment_aorta_with_diagnostics,
 )
 from utils.segmentation.pipeline_orchestration import (
@@ -48,11 +48,11 @@ from utils.segmentation.pipeline_preprocessing import (
     compute_vesselness,
     preprocess_ccta_volume,
 )
+from utils.segmentation.pipeline_visuals import save_segmentation_visual_to_path
 from utils.visualization.pipeline_artifacts import (
     save_detected_circles_figure,
     save_stage_views,
 )
-from utils.visualization.volume import visualize_aorta_ostia_artery
 
 
 LOGGER = logging.getLogger("external_ccta_batch_pipeline")
@@ -326,17 +326,14 @@ def _save_combined_visual(
     spacing: Sequence[float],
 ) -> None:
     """Salva a visualização 3D conjunta das estruturas segmentadas."""
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    visualize_aorta_ostia_artery(
-        aorta_mask,
-        ostia_left,
-        ostia_right,
+    save_segmentation_visual_to_path(
+        output_path,
+        plot_name=f"{exam_label}: aorta, óstios e artérias",
+        aorta_mask=aorta_mask,
+        ostia_left=ostia_left,
+        ostia_right=ostia_right,
         artery_mask=artery_mask,
         spacing=spacing,
-        use_physical_coords=True,
-        save_html_path=str(output_path),
-        display_plot=False,
-        plot_name=f"{exam_label}: aorta, óstios e artérias",
     )
 
 
@@ -458,25 +455,22 @@ def process_external_exam(
             vmin=-200.0,
             vmax=1000.0,
         )
+        del image_data, threshold_mask, image, native_image
 
-        raw_circles = locate_aorta_circles(
+        circle_tracking = locate_and_filter_aorta_circles(
             lcc_image,
             downscale_factors,
             scaled_spacing,
             config["CIRCLE_DETECTION"],
         )
+        raw_circles = circle_tracking.original_circles
         if not raw_circles:
             raise RuntimeError("Nenhum círculo da aorta foi detectado.")
-        detected_circles, filter_details = filter_located_aorta_circles(
-            raw_circles,
-            scaled_spacing,
-            lcc_image.shape[2],
-            config["CIRCLE_DETECTION"],
-        )
+        detected_circles = circle_tracking.filtered_circles
         if not detected_circles:
             raise RuntimeError("O filtro removeu todos os círculos da aorta.")
         result["aorta_circle_count_before_filter"] = len(raw_circles)
-        result.update(filter_details)
+        result.update(circle_tracking.filter_diagnostics)
         result.update(
             summarize_aorta_circles(
                 detected_circles,
@@ -533,17 +527,6 @@ def process_external_exam(
             vesselness_ostia,
             title="Vesselness para detecção dos óstios",
         )
-        vesselness_artery = compute_vesselness(
-            lcc_image,
-            vesselness_config=config["VESSELNESS_ARTERY"],
-            use_gpu=config.get("USE_GPU", False),
-        )
-        _save_stage(
-            exam_dir,
-            "05_vesselness_artery",
-            vesselness_artery,
-            title="Vesselness para segmentação arterial",
-        )
 
         try:
             ostia_left, ostia_right = detect_ostia(
@@ -555,6 +538,7 @@ def process_external_exam(
         except ValueError as error:
             result["status"] = "ostia_not_found"
             result["error"] = str(error)
+            vesselness_ostia = None
             if exam_dir is not None:
                 _save_combined_visual(
                     exam_dir / "aorta_ostia_artery.html",
@@ -569,12 +553,28 @@ def process_external_exam(
 
         result.update(_coordinates_to_fields("ostia_left", ostia_left))
         result.update(_coordinates_to_fields("ostia_right", ostia_right))
-        raw_artery_mask = normal_region_growing_from_ostia(
+        vesselness_ostia = None
+
+        vesselness_artery = compute_vesselness(
+            lcc_image,
+            vesselness_config=config["VESSELNESS_ARTERY"],
+            use_gpu=config.get("USE_GPU", False),
+        )
+        _save_stage(
+            exam_dir,
+            "05_vesselness_artery",
+            vesselness_artery,
+            title="Vesselness para segmentação arterial",
+        )
+        artery_segmentation = segment_artery_masks_from_vesselness(
+            lcc_image,
             vesselness_artery,
             ostia_left,
             ostia_right,
             config,
-        ).astype(np.uint8)
+            method="region_growing",
+        )
+        raw_artery_mask = artery_segmentation.raw_mask
         _save_stage(
             exam_dir,
             "06_artery_raw",
@@ -583,9 +583,9 @@ def process_external_exam(
             vmin=0.0,
             vmax=1.0,
         )
-        postprocessing = get_artery_postprocessing_stages(raw_artery_mask, config)
-        closed_mask = postprocessing["closed_mask"]
-        artery_mask = postprocessing["final_mask"]
+        closed_mask = artery_segmentation.closed_mask
+        artery_mask = artery_segmentation.final_mask
+        del vesselness_artery
         _save_stage(
             exam_dir,
             "07_artery_closed",
@@ -694,7 +694,8 @@ def load_existing_results(numeric_dir: Path) -> list[dict[str, Any]]:
     path = numeric_dir / "results_all.csv"
     if not path.is_file():
         return []
-    return pd.read_csv(path).where(pd.notna, None).to_dict(orient="records")
+    records = pd.read_csv(path).where(pd.notna, None).to_dict(orient="records")
+    return [{str(key): value for key, value in record.items()} for record in records]
 
 
 def _metadata_payload(

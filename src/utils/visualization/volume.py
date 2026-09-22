@@ -1,10 +1,12 @@
-import numpy as np
-import k3d
-from k3d.factory import plot as create_plot
-from skimage import measure
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any, Optional, Sequence, cast
+
+import k3d
+import numpy as np
+from k3d.factory import plot as create_plot
 from numpy.typing import NDArray
+from skimage import measure
 
 
 def visualize_3d_k3d(
@@ -202,6 +204,73 @@ def _add_mask_mesh(
     )
 
 
+def visualize_label_map_3d(
+    label_map: NDArray[Any],
+    label_specs: Mapping[int, tuple[str, int]],
+    *,
+    spacing: Sequence[float] = (1, 1, 1),
+    opacity: float = 0.72,
+    use_physical_coords: bool = True,
+    save_html_path: str | Path | None = None,
+    display_plot: bool = True,
+    plot_name: str = "Estruturas rotuladas",
+) -> Any:
+    """Renderiza em uma cena K3D os valores presentes de um mapa de rótulos."""
+    label_array = np.asarray(label_map)
+    if label_array.ndim != 3:
+        raise ValueError("O mapa de rótulos deve ser tridimensional.")
+
+    spacing_values = np.asarray(tuple(spacing), dtype=float)
+    if spacing_values.shape != (3,):
+        raise ValueError("O espaçamento deve conter exatamente três valores.")
+    if not np.all(np.isfinite(spacing_values)) or np.any(spacing_values <= 0):
+        raise ValueError("O espaçamento deve conter valores finitos e positivos.")
+
+    resolved_opacity = float(opacity)
+    if not np.isfinite(resolved_opacity) or not 0 <= resolved_opacity <= 1:
+        raise ValueError("A opacidade deve ser um valor finito entre 0 e 1.")
+
+    present_specs = [
+        (int(label_value), name, int(color))
+        for label_value, (name, color) in label_specs.items()
+        if np.any(label_array == label_value)
+    ]
+    if not present_specs:
+        raise ValueError("Nenhum dos rótulos selecionados está presente no volume.")
+
+    if use_physical_coords:
+        mesh_spacing = tuple(float(value) for value in spacing_values)
+        axes_labels = ["X (mm)", "Y (mm)", "Z (mm)"]
+    else:
+        mesh_spacing = (1.0, 1.0, 1.0)
+        axes_labels = ["X (pixels)", "Y (pixels)", "Z (pixels)"]
+
+    plot = cast(
+        Any,
+        create_plot(
+            name=plot_name,
+            height=800,
+            grid_visible=True,
+            axes=axes_labels,
+        ),
+    )
+    for label_value, name, color in present_specs:
+        _add_mask_mesh(
+            plot,
+            label_array == label_value,
+            spacing=mesh_spacing,
+            color=color,
+            opacity=resolved_opacity,
+            name=name,
+        )
+
+    if save_html_path is not None:
+        save_k3d_plot_html(plot, save_html_path)
+    if display_plot:
+        plot.display()
+    return plot
+
+
 def _add_ostium_point(
     plot: Any,
     ostium: Optional[Sequence[float]],
@@ -363,7 +432,7 @@ def visualize_arteries_comparison(
     return plot
 
 
-def save_k3d_plot_html(plot: Any, html_path: str) -> None:
+def save_k3d_plot_html(plot: Any, html_path: str | Path) -> None:
     """Salva um gráfico K3D como HTML independente."""
     output_path = Path(html_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)

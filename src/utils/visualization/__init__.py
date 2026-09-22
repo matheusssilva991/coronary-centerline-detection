@@ -56,6 +56,7 @@ _SYMBOL_TO_MODULE = {
     "plot_subset_ostia_success_by_resolution": "subset",
     # volume
     "visualize_3d_k3d": "volume",
+    "visualize_label_map_3d": "volume",
     "visualize_aorta_ostia_artery": "volume",
     "visualize_aorta_with_ostia": "volume",
     "visualize_arteries_comparison": "volume",

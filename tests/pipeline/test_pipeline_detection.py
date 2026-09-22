@@ -5,10 +5,45 @@ from unittest.mock import patch
 
 import numpy as np
 
-from utils.segmentation.pipeline_detection import detect_ostia, locate_aorta_circles
+from utils.segmentation.pipeline_detection import (
+    detect_ostia,
+    locate_and_filter_aorta_circles,
+    locate_aorta_circles,
+)
 
 
 class AortaCircleDetectionTest(TestCase):
+    @patch("utils.segmentation.pipeline_detection.filter_located_aorta_circles")
+    @patch("utils.segmentation.pipeline_detection.locate_aorta_circles")
+    def test_locates_and_filters_circles_in_one_shared_stage(
+        self,
+        locate_circles,
+        filter_circles,
+    ):
+        original = [{"slice_index": 1}, {"slice_index": 2}]
+        filtered = [{"slice_index": 1}]
+        diagnostics = {"aorta_circle_filter_applied": True}
+        locate_circles.return_value = original
+        filter_circles.return_value = filtered, diagnostics
+        image = np.zeros((8, 8, 3), dtype=np.float32)
+
+        result = locate_and_filter_aorta_circles(
+            image,
+            (2, 2, 1),
+            (1.0, 1.0, 1.5),
+            {"trajectory_filter": {}},
+        )
+
+        self.assertEqual(result.original_circles, original)
+        self.assertEqual(result.filtered_circles, filtered)
+        self.assertEqual(result.filter_diagnostics, diagnostics)
+        filter_circles.assert_called_once_with(
+            original,
+            (1.0, 1.0, 1.5),
+            3,
+            {"trajectory_filter": {}},
+        )
+
     @patch("utils.segmentation.pipeline_detection.detect_aorta_circles")
     def test_locates_circles_with_scaled_spacing(self, detect_circles):
         expected = [{"slice_index": 2, "center": (4, 4), "radius": 2}]

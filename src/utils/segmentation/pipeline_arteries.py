@@ -5,6 +5,7 @@ seleciona o método de segmentação das artérias e aplica o pós-processamento
 morfológico final antes de calcular métricas.
 """
 
+from dataclasses import dataclass
 from typing import Any, Dict, Optional, Sequence
 
 import numpy as np
@@ -15,6 +16,17 @@ from ..project.results_columns import ARTERY_BRANCH_COLUMNS
 from ..utils.metrics import dice_score
 from .artery_segmentation import normal_region_growing_from_ostia
 from .pipeline_preprocessing import compute_vesselness
+
+
+@dataclass(frozen=True)
+class ArterySegmentationResult:
+    """Máscaras e diagnósticos produzidos pela segmentação arterial."""
+
+    raw_mask: np.ndarray
+    closed_mask: np.ndarray
+    final_mask: np.ndarray
+    method: str
+    details: Dict[str, Any]
 
 
 def _normalize_artery_segmentation_method(method: Any) -> str:
@@ -99,7 +111,7 @@ def _segment_with_region_growing(
     ostia_left: Optional[Sequence[int]],
     ostia_right: Optional[Sequence[int]],
     config: Dict[str, Any],
-) -> tuple[np.ndarray, np.ndarray, Dict[str, Any]]:
+) -> tuple[np.ndarray, Dict[str, Any]]:
     """Executa o region growing padrão e retorna máscara + metadados."""
     # Segmenta as artérias a partir dos óstios esquerdo e direito.
     details: Dict[str, Any] = {}
@@ -110,16 +122,10 @@ def _segment_with_region_growing(
         config,
         branch_diagnostics=details,
     )
-    # Fecha pequenas falhas e dilata a máscara uma única vez.
-    artery_mask = postprocess_artery_mask(raw_mask, config)
-    return (
-        artery_mask,
-        raw_mask,
-        {
-            **details,
-            "raw_artery_voxels": int(np.sum(raw_mask)),
-        },
-    )
+    return raw_mask, {
+        **details,
+        "raw_artery_voxels": int(np.sum(raw_mask)),
+    }
 
 
 def _segment_with_fuzzy_connectedness(
@@ -128,7 +134,7 @@ def _segment_with_fuzzy_connectedness(
     ostia_left: Optional[Sequence[int]],
     ostia_right: Optional[Sequence[int]],
     config: Dict[str, Any],
-) -> tuple[np.ndarray, np.ndarray, Dict[str, Any]]:
+) -> tuple[np.ndarray, Dict[str, Any]]:
     """Executa fuzzy connectedness arterial e retorna máscara + metadados."""
     from .fuzzy_connectedness import segment_artery_fuzzy_connectedness
 
@@ -150,11 +156,50 @@ def _segment_with_fuzzy_connectedness(
         params=fc_config,
         max_candidate_voxels=max_candidate_voxels,
         max_processed_voxels=max_processed_voxels,
+        apply_postprocessing=False,
     )
-    return (
-        fc_result["artery_mask"],
-        fc_result["raw_mask"],
-        fc_result.get("details", {}),
+    return fc_result["raw_mask"], fc_result.get("details", {})
+
+
+def segment_artery_masks_from_vesselness(
+    lcc_image: Any,
+    vesselness_artery: Any,
+    ostia_left: Optional[Sequence[int]],
+    ostia_right: Optional[Sequence[int]],
+    config: Dict[str, Any],
+    *,
+    method: Any = None,
+) -> ArterySegmentationResult:
+    """Segmenta artérias sem exigir uma referência coronariana."""
+    configured_method = config.get("ARTERY_SEGMENTATION", {}).get(
+        "method", "region_growing"
+    )
+    normalized_method = _normalize_artery_segmentation_method(
+        configured_method if method is None else method
+    )
+    if normalized_method == "fuzzy_connectedness":
+        raw_mask, details = _segment_with_fuzzy_connectedness(
+            lcc_image,
+            vesselness_artery,
+            ostia_left,
+            ostia_right,
+            config,
+        )
+    else:
+        raw_mask, details = _segment_with_region_growing(
+            vesselness_artery,
+            ostia_left,
+            ostia_right,
+            config,
+        )
+
+    stages = get_artery_postprocessing_stages(raw_mask, config)
+    return ArterySegmentationResult(
+        raw_mask=stages["raw_mask"],
+        closed_mask=stages["closed_mask"],
+        final_mask=stages["final_mask"],
+        method=normalized_method,
+        details=details,
     )
 
 
@@ -199,25 +244,16 @@ def segment_arteries_from_vesselness(
     função.
     """
 
-    # Despacha RG ou FC mantendo o mesmo contrato de máscaras e métricas.
-    method = _normalize_artery_segmentation_method(
-        config.get("ARTERY_SEGMENTATION", {}).get("method", "region_growing")
+    segmentation = segment_artery_masks_from_vesselness(
+        lcc_image,
+        vesselness_artery,
+        ostia_left,
+        ostia_right,
+        config,
     )
-    if method == "fuzzy_connectedness":
-        artery_mask, raw_artery_mask, details = _segment_with_fuzzy_connectedness(
-            lcc_image,
-            vesselness_artery,
-            ostia_left,
-            ostia_right,
-            config,
-        )
-    else:
-        artery_mask, raw_artery_mask, details = _segment_with_region_growing(
-            vesselness_artery,
-            ostia_left,
-            ostia_right,
-            config,
-        )
+    artery_mask = segmentation.final_mask
+    raw_artery_mask = segmentation.raw_mask
+    details = segmentation.details
 
     # Mede separadamente o método de crescimento e o efeito da morfologia final.
     dice_before = float(dice_score(raw_artery_mask, label_artery))
@@ -238,7 +274,7 @@ def segment_arteries_from_vesselness(
         "dice_artery_morphology_delta": dice_after - dice_before,
         # Alias mantido para compatibilidade com relatórios antigos.
         "dice_artery": dice_after,
-        "artery_segmentation_method": method,
+        "artery_segmentation_method": segmentation.method,
         "fc_processed_voxels": details.get("processed_voxels"),
         "fc_effective_alpha": details.get("effective_alpha"),
         "fc_object_seed_count": details.get("object_seed_count"),
