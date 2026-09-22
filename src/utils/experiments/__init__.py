@@ -29,7 +29,6 @@ from .parameter_validation import (
     summarize_top_threshold_cases,
     summarize_intensity_histograms,
     validate_parameter_validation_append,
-    variant_by_name,
 )
 
 __all__ = [
@@ -59,5 +58,4 @@ __all__ = [
     "summarize_top_threshold_cases",
     "summarize_intensity_histograms",
     "validate_parameter_validation_append",
-    "variant_by_name",
 ]

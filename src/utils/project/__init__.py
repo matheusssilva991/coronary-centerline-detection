@@ -26,7 +26,6 @@ from .dataset import get_data_splits
 from .notebook_env import (
     configure_notebook_environment,
     get_bad_cases_export_dir,
-    get_cases_analysis_output_dir,
     get_default_split_paths,
     load_notebook_pipeline_config,
     resolve_existing_path,
@@ -41,7 +40,6 @@ __all__ = [
     "discover_ccta_volumes",
     "discover_orcascore_acquisitions",
     "get_bad_cases_export_dir",
-    "get_cases_analysis_output_dir",
     "get_data_splits",
     "get_default_split_paths",
     "load_config_json",

@@ -5,11 +5,10 @@ from __future__ import annotations
 import zlib
 from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 import numpy as np
 import pandas as pd
-from nibabel.funcs import as_closest_canonical
 from nibabel.loadsave import load as load_nifti
 from nibabel.orientations import aff2axcodes
 from nibabel.spatialimages import SpatialImage
@@ -80,17 +79,6 @@ def load_mhd_volume(path: str | Path) -> NDArray[np.generic]:
             f"Volume MHD possui {volume.size} voxels; esperado {expected_voxels}."
         )
     return volume.reshape(tuple(reversed(shape_xyz)))
-
-
-def load_nifti_volume_zyx(path: str | Path) -> NDArray[np.generic]:
-    """Carrega e orienta uma imagem NIfTI na ordem ``(z, y, x)``."""
-    image = cast(SpatialImage, as_closest_canonical(_load_spatial_image(path)))
-    volume_xyz = np.asanyarray(image.dataobj)
-    if volume_xyz.dtype == np.float64:
-        volume_xyz = volume_xyz.astype(np.float32)
-    if volume_xyz.ndim != 3:
-        raise ValueError("A análise suporta apenas volumes NIfTI tridimensionais.")
-    return np.transpose(volume_xyz, (2, 1, 0))
 
 
 def load_nifti_volume_xyz(path: str | Path) -> NDArray[np.generic]:
@@ -403,7 +391,6 @@ __all__ = [
     "load_mhd_volume",
     "load_mhd_volume_xyz",
     "load_nifti_volume_xyz",
-    "load_nifti_volume_zyx",
     "read_mhd_header",
     "select_representative_exams",
     "summarize_ccta_inventory",

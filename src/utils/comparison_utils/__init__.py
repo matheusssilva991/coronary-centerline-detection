@@ -46,7 +46,6 @@ _SYMBOL_TO_MODULE = {
     "prettify_method_label": "ia_math",
     # ostia_scenarios
     "build_ostia_image_comparison_df": "ostia_scenarios",
-    "filter_ia_results_for_math_ids": "ostia_scenarios",
     "load_math_results_for_ostia_scenario": "ostia_scenarios",
     "load_ostia_comparison_scenario": "ostia_scenarios",
     # run_comparison

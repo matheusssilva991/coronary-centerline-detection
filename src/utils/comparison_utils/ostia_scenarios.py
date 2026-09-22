@@ -4,7 +4,7 @@ import pandas as pd
 
 from ..project.results import add_internal_result_aliases
 from .bad_cases import filter_correct_ostia_cases
-from .ia_math import filter_to_common_ia_math_ids, get_common_ia_math_keys
+from .ia_math import filter_to_common_ia_math_ids
 
 
 def load_math_results_for_ostia_scenario(math_paths, scenario):
@@ -72,25 +72,6 @@ def load_math_results_for_ostia_scenario(math_paths, scenario):
         "method",
     ]
     return pd.DataFrame(columns=columns), missing_math_files
-
-
-def filter_ia_results_for_math_ids(ia_results_df, math_results_df):
-    """Mantém linhas da IA cujos IDs estão no subconjunto matemático."""
-    if ia_results_df.empty:
-        return ia_results_df.copy()
-
-    if math_results_df.empty:
-        return ia_results_df.iloc[0:0].copy()
-
-    common_keys = get_common_ia_math_keys(
-        pd.concat([ia_results_df, math_results_df], ignore_index=True)
-    )
-    if common_keys.empty:
-        return ia_results_df.iloc[0:0].copy()
-
-    return ia_results_df.merge(
-        common_keys, on=["target_resolution", "img_id"], how="inner"
-    )
 
 
 def load_ostia_comparison_scenario(ia_results_df, math_paths, scenario):

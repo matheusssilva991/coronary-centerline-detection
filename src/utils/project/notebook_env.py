@@ -168,8 +168,3 @@ def get_default_split_paths(repo_root: Path) -> dict[str, dict[str, Path]]:
 def get_bad_cases_export_dir(repo_root: Path) -> Path:
     """Retorna o diretório compartilhado de exportação dos casos ruins."""
     return repo_root / "output/segmentation/analysis/bad_cases"
-
-
-def get_cases_analysis_output_dir(repo_root: Path) -> Path:
-    """Retorna o diretório HTML das análises de casos."""
-    return repo_root / "output/segmentation/analysis/cases_analysis/visual"

@@ -60,14 +60,6 @@ _SYMBOL_TO_MODULE = {
     "visualize_aorta_with_ostia": "volume",
     "visualize_arteries_comparison": "volume",
     "save_k3d_plot_html": "volume",
-    # category
-    "plot_category_metric_bar": "category",
-    "plot_downscale_execution_time": "category",
-    "plot_downscale_dice": "category",
-    "plot_downscale_ostia_success": "category",
-    "plot_validation_dice": "category",
-    "plot_validation_execution_time": "category",
-    "plot_validation_ostia_success": "category",
     # variant_comparison
     "best_variant_by_suffix": "variant_comparison",
     "add_pair_ostia_status_groups": "variant_comparison",

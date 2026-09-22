@@ -8,7 +8,6 @@ splits e serialização CSV.
 from __future__ import annotations
 
 import copy
-import itertools
 import json
 import os
 import sys
@@ -35,21 +34,6 @@ def resolve_cli_path(path: Path | None) -> Path | None:
     if path is None:
         return None
     return path if path.is_absolute() else REPO_ROOT / path
-
-
-def load_json_arg(value: str | None) -> Any:
-    """Carrega JSON de texto ou de arquivo relativo ao repositório."""
-    if value is None:
-        return None
-
-    path = resolve_cli_path(Path(value))
-    try:
-        path_exists = path is not None and path.exists()
-    except OSError:
-        path_exists = False
-    if path_exists:
-        return json.loads(path.read_text(encoding="utf-8"))
-    return json.loads(value)
 
 
 def load_json_file(path: Path) -> Any:
@@ -111,21 +95,6 @@ def apply_overrides(
         else:
             updated[key] = copy.deepcopy(value)
     return updated
-
-
-def make_grid_variants(grid: dict[str, Any]) -> list[dict[str, Any]]:
-    """Monta variantes cartesianas a partir de uma grade de chaves pontuadas."""
-    keys = list(grid)
-    values = [value if isinstance(value, list) else [value] for value in grid.values()]
-    variants = []
-    for index, combination in enumerate(itertools.product(*values), start=1):
-        overrides = dict(zip(keys, combination))
-        name_parts = [
-            f"{key.split('.')[-1]}={value}" for key, value in overrides.items()
-        ]
-        variant_name = sanitize_name(f"grid_{index:03d}_{'_'.join(name_parts)}")
-        variants.append({"name": variant_name, "overrides": overrides})
-    return variants
 
 
 def select_ids(

@@ -1119,14 +1119,6 @@ def select_parameter_validation_cases(
     return pd.DataFrame(rows)
 
 
-def variant_by_name(name: str) -> dict[str, Any]:
-    """Retorna uma cópia da definição de uma variante pelo nome."""
-    variants = {item["name"]: item for item in parameter_validation_variants()}
-    if name not in variants:
-        raise ValueError(f"Variante desconhecida: {name}")
-    return copy.deepcopy(variants[name])
-
-
 __all__ = [
     "build_parameter_pairwise_summary",
     "build_parameter_sensitivity_summary",
@@ -1136,5 +1128,4 @@ __all__ = [
     "prepared_context_cache_key",
     "select_parameter_validation_cases",
     "validate_parameter_validation_append",
-    "variant_by_name",
 ]
