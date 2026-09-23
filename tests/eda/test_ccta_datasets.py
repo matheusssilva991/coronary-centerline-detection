@@ -14,6 +14,7 @@ from utils.project.ccta_datasets import (
     discover_ccta_dataset,
     discover_ccta_volumes,
     discover_orcascore_acquisitions,
+    load_ccta_aorta_ground_truth,
     load_ccta_volume,
     load_mhd_volume,
     load_nifti_volume_xyz,
@@ -107,6 +108,54 @@ class CctaDatasetsTest(unittest.TestCase):
 
         self.assertEqual(len(inventory), 1)
         self.assertEqual(inventory.iloc[0]["dataset"], "OrCaScore")
+
+    def test_mmwhs_inventory_loads_aorta_ground_truth(self):
+        self._write_nifti("ct_train", "ct_train_1001_image.nii.gz")
+        label_path = self.mmwhs / "ct_train" / "ct_train_1001_label.nii.gz"
+        label = np.zeros((3, 4, 5), dtype=np.uint16)
+        label[1:, 1:3, 2:4] = 820
+        save_nifti(
+            Nifti1Image(label, np.diag([0.7, 0.8, 1.2, 1])),
+            label_path,
+        )
+
+        inventory = discover_ccta_dataset("mmwhs", self.mmwhs)
+        record = inventory.iloc[0]
+        ground_truth = load_ccta_aorta_ground_truth(record)
+
+        self.assertEqual(record["label_path"], label_path)
+        self.assertEqual(record["aorta_label_value"], 820)
+        self.assertIsNotNone(ground_truth)
+        if ground_truth is None:
+            self.fail("O ground truth da aorta deveria estar disponível.")
+        np.testing.assert_array_equal(ground_truth, label == 820)
+
+    def test_aorta_ground_truth_is_optional_without_label(self):
+        self._write_nifti("ct_test", "ct_test_2001_image.nii.gz")
+
+        record = discover_ccta_dataset("mmwhs", self.mmwhs).iloc[0]
+
+        self.assertIsNone(record["label_path"])
+        self.assertIsNone(load_ccta_aorta_ground_truth(record))
+
+    def test_aorta_ground_truth_rejects_invalid_shape_or_missing_class(self):
+        self._write_nifti("ct_train", "ct_train_1001_image.nii.gz")
+        label_path = self.mmwhs / "ct_train" / "ct_train_1001_label.nii.gz"
+        save_nifti(
+            Nifti1Image(np.full((2, 4, 5), 820, dtype=np.uint16), np.eye(4)),
+            label_path,
+        )
+        record = discover_ccta_dataset("mmwhs", self.mmwhs).iloc[0]
+
+        with self.assertRaisesRegex(ValueError, "shape diferente"):
+            load_ccta_aorta_ground_truth(record)
+
+        save_nifti(
+            Nifti1Image(np.zeros((3, 4, 5), dtype=np.uint16), np.eye(4)),
+            label_path,
+        )
+        with self.assertRaisesRegex(ValueError, "não contém a classe"):
+            load_ccta_aorta_ground_truth(record)
 
     def test_inventory_compares_paired_orcascore_acquisitions(self):
         self._write_mhd("PAIR")

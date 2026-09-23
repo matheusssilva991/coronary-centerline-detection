@@ -372,6 +372,69 @@ def visualize_aorta_ostia_artery(
     return plot
 
 
+def visualize_binary_masks_comparison(
+    reference_mask: NDArray[Any],
+    predicted_mask: NDArray[Any],
+    spacing: Sequence[float] = (1, 1, 1),
+    use_physical_coords: bool = True,
+    save_html_path: str | Path | None = None,
+    display_plot: bool = True,
+    plot_name: str = "Referência vs predição",
+    reference_name: str = "Referência",
+    predicted_name: str = "Predita",
+    reference_color: int = 0x00FF00,
+    predicted_color: int = 0xFF0000,
+    reference_opacity: float = 0.35,
+    predicted_opacity: float = 0.35,
+) -> Any:
+    """Renderiza duas máscaras binárias comparáveis no mesmo gráfico 3D."""
+
+    reference = np.asarray(reference_mask) > 0
+    prediction = np.asarray(predicted_mask) > 0
+    if reference.ndim != 3 or prediction.ndim != 3:
+        raise ValueError("As máscaras de comparação devem ser tridimensionais.")
+    if reference.shape != prediction.shape:
+        raise ValueError("As máscaras de comparação devem possuir o mesmo shape.")
+    if not np.any(reference) or not np.any(prediction):
+        raise ValueError("As máscaras de comparação não podem estar vazias.")
+
+    if use_physical_coords:
+        dy, dx, dz = tuple(float(s) for s in spacing)
+        axes_labels = ["Y (mm)", "X (mm)", "Z (mm)"]
+    else:
+        dy, dx, dz = 1.0, 1.0, 1.0
+        axes_labels = ["Y (pixels)", "X (pixels)", "Z (pixels)"]
+
+    plot = cast(
+        Any,
+        create_plot(name=plot_name, height=800, grid_visible=True, axes=axes_labels),
+    )
+
+    _add_mask_mesh(
+        plot,
+        reference,
+        spacing=(dy, dx, dz),
+        color=reference_color,
+        opacity=reference_opacity,
+        name=reference_name,
+    )
+    _add_mask_mesh(
+        plot,
+        prediction,
+        spacing=(dy, dx, dz),
+        color=predicted_color,
+        opacity=predicted_opacity,
+        name=predicted_name,
+    )
+
+    if save_html_path is not None:
+        save_k3d_plot_html(plot, save_html_path)
+
+    if display_plot:
+        plot.display()
+    return plot
+
+
 def visualize_arteries_comparison(
     label_mask: NDArray[Any],
     predicted_mask: NDArray[Any],
@@ -386,50 +449,21 @@ def visualize_arteries_comparison(
     predicted_opacity: float = 0.35,
 ) -> Any:
     """Renderiza a artéria de referência e a predita no mesmo gráfico 3D."""
-
-    if use_physical_coords:
-        dy, dx, dz = tuple(float(s) for s in spacing)
-        axes_labels = ["Y (mm)", "X (mm)", "Z (mm)"]
-    else:
-        dy, dx, dz = 1.0, 1.0, 1.0
-        axes_labels = ["Y (pixels)", "X (pixels)", "Z (pixels)"]
-
-    plot = cast(
-        Any,
-        create_plot(name=plot_name, height=800, grid_visible=True, axes=axes_labels),
+    return visualize_binary_masks_comparison(
+        label_mask,
+        predicted_mask,
+        spacing=spacing,
+        use_physical_coords=use_physical_coords,
+        save_html_path=save_html_path,
+        display_plot=display_plot,
+        plot_name=plot_name,
+        reference_name="Label",
+        predicted_name="Predita",
+        reference_color=label_color,
+        predicted_color=predicted_color,
+        reference_opacity=label_opacity,
+        predicted_opacity=predicted_opacity,
     )
-
-    verts_label, faces_label, _, _ = measure.marching_cubes(
-        label_mask.astype(float), level=0.5, spacing=(dy, dx, dz)
-    )
-    mesh_label = k3d.mesh(
-        verts_label.astype(np.float32),
-        faces_label.astype(np.uint32),
-        color=label_color,
-        opacity=label_opacity,
-        name="Label",
-    )
-    plot += mesh_label
-
-    verts_pred, faces_pred, _, _ = measure.marching_cubes(
-        predicted_mask.astype(float), level=0.5, spacing=(dy, dx, dz)
-    )
-    mesh_pred = k3d.mesh(
-        verts_pred.astype(np.float32),
-        faces_pred.astype(np.uint32),
-        color=predicted_color,
-        opacity=predicted_opacity,
-        name="Predita",
-    )
-    plot += mesh_pred
-
-    if save_html_path is not None:
-        with open(save_html_path, "w", encoding="utf-8") as html_file:
-            html_file.write(plot.get_snapshot())
-
-    if display_plot:
-        plot.display()
-    return plot
 
 
 def save_k3d_plot_html(plot: Any, html_path: str | Path) -> None:

@@ -402,14 +402,18 @@ Results_dataset_ccta/
         │   ├── 07_artery_closed/
         │   └── 08_artery_final/
         ├── aorta_circles.png
+        ├── aorta_ground_truth_comparison.html # MM-WHS train
         ├── aorta_ostia_artery.html
         └── result.json
 ```
 
 Cada pasta de etapa contém `mip_axial.png`, `first_slice.png`,
 `middle_slice.png` e `last_slice.png`. O downscale não recebe uma pasta visual
-própria. Como esses bancos não possuem referência coronariana compatível com o
-ImageCAS, Dice e acurácia dos óstios permanecem nulos.
+própria. Os 20 exames CT de treino do MM-WHS possuem o rótulo 820 da aorta
+ascendente; nesses casos, o pipeline calcula `aorta_dice` no volume processado e
+salva a comparação 3D com o ground truth. Como os bancos não possuem referência
+coronariana compatível com o ImageCAS, o Dice arterial e a acurácia dos óstios
+permanecem nulos.
 
 O status `success` indica que todas as etapas computacionais terminaram; não é
 uma validação anatômica. Os parâmetros de localização foram ajustados no

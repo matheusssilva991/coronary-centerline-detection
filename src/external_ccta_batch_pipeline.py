@@ -25,6 +25,7 @@ from utils.project.dataframe import require_series_column
 from utils.project.ccta_datasets import (
     align_ccta_volume_to_imagecas_view,
     discover_ccta_dataset,
+    load_ccta_aorta_ground_truth,
     load_ccta_volume,
 )
 from utils.project.notebook_env import load_notebook_pipeline_config
@@ -49,10 +50,12 @@ from utils.segmentation.pipeline_preprocessing import (
     preprocess_ccta_volume,
 )
 from utils.segmentation.pipeline_visuals import save_segmentation_visual_to_path
+from utils.utils.metrics import dice_score
 from utils.visualization.pipeline_artifacts import (
     save_detected_circles_figure,
     save_stage_views,
 )
+from utils.visualization.volume import visualize_binary_masks_comparison
 
 
 LOGGER = logging.getLogger("external_ccta_batch_pipeline")
@@ -337,6 +340,29 @@ def _save_combined_visual(
     )
 
 
+def _save_aorta_ground_truth_visual(
+    output_path: Path,
+    *,
+    exam_label: str,
+    ground_truth: Any,
+    prediction: Any,
+    spacing: Sequence[float],
+) -> None:
+    """Salva a comparação 3D entre a aorta de referência e a predita."""
+    visualize_binary_masks_comparison(
+        ground_truth,
+        prediction,
+        spacing=spacing,
+        save_html_path=output_path,
+        display_plot=False,
+        plot_name=f"{exam_label}: aorta de referência vs predita",
+        reference_name="Aorta ground truth",
+        predicted_name="Aorta predita",
+        reference_color=0x39B54A,
+        predicted_color=0xFF5555,
+    )
+
+
 def _save_stage(
     exam_dir: Path | None,
     stage_name: str,
@@ -366,7 +392,7 @@ def process_external_exam(
     visual_root: Path | None,
     align_orcascore: bool = True,
 ) -> dict[str, Any]:
-    """Executa todas as etapas para um exame CCTA externo sem rótulo."""
+    """Executa todas as etapas para um exame CCTA externo."""
     started = time.perf_counter()
     dataset = str(record["dataset"])
     subset = str(record["subset"])
@@ -383,10 +409,24 @@ def process_external_exam(
         "quality_validated": False,
         "dice": None,
         "ostia_accuracy": None,
+        "aorta_ground_truth_available": False,
+        "aorta_ground_truth_evaluated": False,
+        "aorta_ground_truth_voxels": None,
+        "aorta_dice": None,
     }
 
     try:
         native_image = load_ccta_volume(record).astype(np.float32, copy=False)
+        native_aorta_ground_truth = load_ccta_aorta_ground_truth(record)
+        if (
+            native_aorta_ground_truth is not None
+            and native_aorta_ground_truth.shape != native_image.shape
+        ):
+            raise ValueError(
+                "Imagem e ground truth da aorta possuem shapes diferentes: "
+                f"{native_image.shape} != {native_aorta_ground_truth.shape}."
+            )
+        result["aorta_ground_truth_available"] = native_aorta_ground_truth is not None
         spacing = tuple(
             float(_record_value(record, column))
             for column in ("spacing_x_mm", "spacing_y_mm", "spacing_z_mm")
@@ -395,6 +435,21 @@ def process_external_exam(
         flipped_axes: tuple[int, ...] = ()
         if align_orcascore:
             image, flipped_axes = align_ccta_volume_to_imagecas_view(image, dataset)
+            if native_aorta_ground_truth is not None:
+                aorta_ground_truth, ground_truth_flipped_axes = (
+                    align_ccta_volume_to_imagecas_view(
+                        native_aorta_ground_truth,
+                        dataset,
+                    )
+                )
+                if ground_truth_flipped_axes != flipped_axes:
+                    raise RuntimeError(
+                        "Imagem e ground truth receberam alinhamentos diferentes."
+                    )
+            else:
+                aorta_ground_truth = None
+        else:
+            aorta_ground_truth = native_aorta_ground_truth
         result.update(
             {
                 "visual_flip_axes": ",".join(map(str, flipped_axes)),
@@ -419,6 +474,7 @@ def process_external_exam(
             image,
             spacing,
             config,
+            label=aorta_ground_truth,
             include_intermediates=True,
         )
         threshold_mask = image_data["threshold_mask"]
@@ -427,6 +483,7 @@ def process_external_exam(
         scaled_spacing = tuple(float(value) for value in image_data["scaled_spacing"])
         visual_spacing = (scaled_spacing[1], scaled_spacing[0], scaled_spacing[2])
         preprocessing_details = dict(image_data["preprocessing_details"])
+        processed_aorta_ground_truth = image_data["label"]
         result.update(preprocessing_details)
         result.update(
             {
@@ -455,7 +512,14 @@ def process_external_exam(
             vmin=-200.0,
             vmax=1000.0,
         )
-        del image_data, threshold_mask, image, native_image
+        del (
+            image_data,
+            threshold_mask,
+            image,
+            native_image,
+            native_aorta_ground_truth,
+            aorta_ground_truth,
+        )
 
         circle_tracking = locate_and_filter_aorta_circles(
             lcc_image,
@@ -507,6 +571,36 @@ def process_external_exam(
         )
         voxel_volume_mm3 = float(np.prod(scaled_spacing))
         result["aorta_volume_ml"] = float(aorta_mask.sum() * voxel_volume_mm3 / 1000.0)
+        if processed_aorta_ground_truth is not None:
+            aorta_ground_truth_mask = np.asarray(processed_aorta_ground_truth) > 0
+            if aorta_ground_truth_mask.shape != aorta_mask.shape:
+                raise ValueError(
+                    "Aorta predita e ground truth processado possuem shapes diferentes: "
+                    f"{aorta_mask.shape} != {aorta_ground_truth_mask.shape}."
+                )
+            if not np.any(aorta_ground_truth_mask):
+                raise ValueError(
+                    "O ground truth da aorta ficou vazio após o downscale."
+                )
+            result.update(
+                {
+                    "aorta_ground_truth_evaluated": True,
+                    "aorta_ground_truth_voxels": int(aorta_ground_truth_mask.sum()),
+                    "aorta_dice": float(
+                        dice_score(aorta_mask, aorta_ground_truth_mask)
+                    ),
+                }
+            )
+            if exam_dir is not None:
+                _save_aorta_ground_truth_visual(
+                    exam_dir / "aorta_ground_truth_comparison.html",
+                    exam_label=f"{dataset} {exam_id}",
+                    ground_truth=aorta_ground_truth_mask,
+                    prediction=aorta_mask,
+                    spacing=visual_spacing,
+                )
+            del aorta_ground_truth_mask
+        processed_aorta_ground_truth = None
         _save_stage(
             exam_dir,
             "03_aorta",
@@ -712,8 +806,17 @@ def _metadata_payload(
         [row.get("status", "unknown") for row in rows]
     ).value_counts()
     total_seconds = sum(float(row.get("execution_time_seconds") or 0.0) for row in rows)
+    aorta_dice_values = [
+        float(value)
+        for row in rows
+        if isinstance(
+            value := row.get("aorta_dice"),
+            (int, float, np.integer, np.floating),
+        )
+        and np.isfinite(float(value))
+    ]
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "dataset": dataset,
         "resolution": resolution,
         "selected_subset": subset,
@@ -728,11 +831,42 @@ def _metadata_payload(
             "hours": total_seconds / 3600.0,
         },
         "ground_truth_metrics": {
-            "dice": None,
+            "aorta": {
+                "available_exam_count": sum(
+                    row.get("aorta_ground_truth_available") is True for row in rows
+                ),
+                "evaluated_exam_count": len(aorta_dice_values),
+                "dice_mean": (
+                    float(np.mean(aorta_dice_values)) if aorta_dice_values else None
+                ),
+            },
             "ostia_accuracy": None,
-            "reason": "Os bancos externos não possuem referência coronariana compatível.",
+            "coronary_reason": (
+                "Os bancos externos não possuem referência coronariana compatível."
+            ),
         },
     }
+
+
+def _has_valid_aorta_dice(row: Mapping[str, Any]) -> bool:
+    """Verifica se um resultado possui Dice da aorta finito e normalizado."""
+    value = row.get("aorta_dice")
+    return (
+        isinstance(value, (int, float, np.integer, np.floating))
+        and np.isfinite(float(value))
+        and 0.0 <= float(value) <= 1.0
+    )
+
+
+def _is_terminal_result(
+    row: Mapping[str, Any],
+    aorta_ground_truth_keys: set[tuple[str, str]],
+) -> bool:
+    """Valida conclusão do exame, exigindo Dice quando há referência."""
+    if str(row.get("status")) not in {"success", "ostia_not_found"}:
+        return False
+    key = _result_key(row)
+    return key not in aorta_ground_truth_keys or _has_valid_aorta_dice(row)
 
 
 def _configure_logging(logs_dir: Path, verbose: bool) -> None:
@@ -775,6 +909,11 @@ def run(args: argparse.Namespace) -> RunPaths:
     ]
     selected_keys = {
         (record["subset"], record["exam_id"]) for record in selected_exam_records
+    }
+    aorta_ground_truth_keys = {
+        (str(record["subset"]), str(record["exam_id"]))
+        for _, record in selected.iterrows()
+        if isinstance(record.get("label_path"), (str, Path))
     }
 
     config_path = paths.config_dir / "effective_pipeline_config.json"
@@ -846,7 +985,7 @@ def run(args: argparse.Namespace) -> RunPaths:
     completed = {
         _result_key(row)
         for row in rows
-        if str(row.get("status")) in {"success", "ostia_not_found"}
+        if _is_terminal_result(row, aorta_ground_truth_keys)
     }
     pending_records = [
         record
@@ -911,7 +1050,7 @@ def run(args: argparse.Namespace) -> RunPaths:
     terminal_keys = {
         _result_key(row)
         for row in rows
-        if row.get("status") in {"success", "ostia_not_found"}
+        if _is_terminal_result(row, aorta_ground_truth_keys)
     }
     attempted_keys = {_result_key(row) for row in rows}
     all_attempted = selected_keys.issubset(attempted_keys)

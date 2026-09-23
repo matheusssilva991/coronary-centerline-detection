@@ -60,6 +60,7 @@ _SYMBOL_TO_MODULE = {
     "visualize_aorta_ostia_artery": "volume",
     "visualize_aorta_with_ostia": "volume",
     "visualize_arteries_comparison": "volume",
+    "visualize_binary_masks_comparison": "volume",
     "save_k3d_plot_html": "volume",
     # variant_comparison
     "best_variant_by_suffix": "variant_comparison",

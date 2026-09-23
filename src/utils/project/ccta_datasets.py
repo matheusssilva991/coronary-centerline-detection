@@ -27,6 +27,7 @@ _MHD_DTYPES = {
     "MET_FLOAT": np.dtype("f4"),
     "MET_DOUBLE": np.dtype("f8"),
 }
+MMWHS_AORTA_LABEL_VALUE = 820
 
 
 def read_mhd_header(path: str | Path) -> dict[str, str]:
@@ -156,6 +157,10 @@ def _mmwhs_records(base_path: Path) -> list[dict[str, Any]]:
             shape_xyz = tuple(int(value) for value in image.shape)
             spacing_xyz = tuple(float(value) for value in image.header.get_zooms()[:3])
             exam_id = path.name.removesuffix("_image.nii.gz")
+            label_candidate = path.with_name(
+                path.name.replace("_image.nii.gz", "_label.nii.gz")
+            )
+            label_path = label_candidate if label_candidate.is_file() else None
             records.append(
                 _geometry_record(
                     dataset="MM-WHS",
@@ -167,6 +172,10 @@ def _mmwhs_records(base_path: Path) -> list[dict[str, Any]]:
                     spacing_xyz=spacing_xyz,
                     dtype=str(image.get_data_dtype()),
                     orientation="".join(aff2axcodes(image.affine)),
+                    label_path=label_path,
+                    aorta_label_value=(
+                        MMWHS_AORTA_LABEL_VALUE if label_path is not None else None
+                    ),
                 )
             )
     return records
@@ -210,6 +219,8 @@ def _geometry_record(
     spacing_xyz: tuple[float, ...],
     dtype: str,
     orientation: str,
+    label_path: Path | None = None,
+    aorta_label_value: int | None = None,
 ) -> dict[str, Any]:
     """Monta um registro tabular com geometria e espaçamento do volume."""
     size_x, size_y, size_z = shape_xyz
@@ -222,6 +233,8 @@ def _geometry_record(
         "file_format": file_format,
         "dtype": dtype,
         "reported_orientation": orientation,
+        "label_path": label_path,
+        "aorta_label_value": aorta_label_value,
         "size_x": size_x,
         "size_y": size_y,
         "slice_count": size_z,
@@ -291,6 +304,48 @@ def load_ccta_volume(record: Mapping[str, Any] | pd.Series) -> NDArray[np.generi
     if file_format == "NIfTI":
         return load_nifti_volume_xyz(path)
     raise ValueError(f"Formato não suportado: {file_format!r}")
+
+
+def load_ccta_aorta_ground_truth(
+    record: Mapping[str, Any] | pd.Series,
+) -> NDArray[np.bool_] | None:
+    """Carrega a máscara binária da aorta quando o inventário possui referência."""
+    label_path_value = record.get("label_path")
+    label_value = record.get("aorta_label_value")
+    if not isinstance(label_path_value, (str, Path)):
+        return None
+    if not isinstance(label_value, (int, float, np.integer, np.floating)):
+        return None
+    if not np.isfinite(float(label_value)):
+        return None
+
+    label_path = Path(label_path_value)
+    if not label_path.is_file():
+        return None
+    label = load_nifti_volume_xyz(label_path)
+    expected_dimensions: list[int] = []
+    for column in ("size_x", "size_y", "slice_count"):
+        dimension = record.get(column)
+        if not isinstance(dimension, (int, float, np.integer, np.floating)):
+            raise ValueError(f"Dimensão inválida no inventário: {column}.")
+        if not np.isfinite(float(dimension)) or int(dimension) <= 0:
+            raise ValueError(f"Dimensão inválida no inventário: {column}.")
+        expected_dimensions.append(int(dimension))
+    expected_shape = (
+        expected_dimensions[0],
+        expected_dimensions[1],
+        expected_dimensions[2],
+    )
+    if label.shape != expected_shape:
+        raise ValueError(
+            "O label da aorta possui shape diferente da imagem inventariada: "
+            f"{label.shape} != {expected_shape}."
+        )
+
+    aorta_mask = np.asarray(label == int(label_value), dtype=bool)
+    if not np.any(aorta_mask):
+        raise ValueError(f"O label não contém a classe de aorta {int(label_value)}.")
+    return aorta_mask
 
 
 def align_ccta_volume_to_imagecas_view(
@@ -387,6 +442,7 @@ __all__ = [
     "discover_ccta_dataset",
     "discover_ccta_volumes",
     "discover_orcascore_acquisitions",
+    "load_ccta_aorta_ground_truth",
     "load_ccta_volume",
     "load_mhd_volume",
     "load_mhd_volume_xyz",

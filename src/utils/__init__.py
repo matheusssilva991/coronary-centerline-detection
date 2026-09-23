@@ -22,6 +22,7 @@ _LAZY_EXPORTS = {
     "load_notebook_pipeline_config": ".project.notebook_env",
     "serialize_config_for_json": ".project.config",
     "get_data_splits": ".project.dataset",
+    "load_ccta_aorta_ground_truth": ".project.ccta_datasets",
     # General utils
     "dice_score": ".utils.metrics",
     "binary_segmentation_metrics": ".utils.metrics",
@@ -131,6 +132,7 @@ _LAZY_EXPORTS = {
     "visualize_aorta_ostia_artery": ".visualization.volume",
     "visualize_aorta_with_ostia": ".visualization.volume",
     "visualize_arteries_comparison": ".visualization.volume",
+    "visualize_binary_masks_comparison": ".visualization.volume",
     "visualize_circles_on_slices": ".visualization.image_slices",
 }
 

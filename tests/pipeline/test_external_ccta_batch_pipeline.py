@@ -1,6 +1,7 @@
 import json
 import tempfile
 import unittest
+from datetime import datetime, timezone
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -9,6 +10,7 @@ import numpy as np
 import pandas as pd
 
 from external_ccta_batch_pipeline import (
+    _metadata_payload,
     build_parser,
     create_run_paths,
     load_existing_results,
@@ -81,6 +83,38 @@ class ExternalCctaBatchPipelineTest(unittest.TestCase):
             self.assertTrue(paths.numeric_dir.is_dir())
             self.assertTrue(paths.config_dir.is_dir())
             self.assertTrue(paths.logs_dir.is_dir())
+
+    def test_metadata_aggregates_only_valid_aorta_dice(self):
+        metadata = _metadata_payload(
+            dataset="mmwhs",
+            resolution="mid",
+            subset="train",
+            rows=[
+                {
+                    "status": "success",
+                    "aorta_ground_truth_available": True,
+                    "aorta_dice": 0.6,
+                },
+                {
+                    "status": "ostia_not_found",
+                    "aorta_ground_truth_available": True,
+                    "aorta_dice": 0.8,
+                },
+                {
+                    "status": "success",
+                    "aorta_ground_truth_available": False,
+                    "aorta_dice": None,
+                },
+            ],
+            started_at=datetime.now(timezone.utc),
+            state="complete",
+        )
+
+        aorta = metadata["ground_truth_metrics"]["aorta"]
+        self.assertEqual(metadata["schema_version"], 2)
+        self.assertEqual(aorta["available_exam_count"], 2)
+        self.assertEqual(aorta["evaluated_exam_count"], 2)
+        self.assertAlmostEqual(aorta["dice_mean"], 0.7)
 
     @patch("external_ccta_batch_pipeline.use_gpu", return_value=False)
     @patch(
@@ -156,6 +190,92 @@ class ExternalCctaBatchPipelineTest(unittest.TestCase):
         self.assertEqual(metadata["state"], "complete")
         process_exam.assert_not_called()
 
+    @patch("external_ccta_batch_pipeline.use_gpu", return_value=False)
+    @patch(
+        "external_ccta_batch_pipeline.load_notebook_pipeline_config",
+        return_value={"USE_GPU": False},
+    )
+    @patch("external_ccta_batch_pipeline.resolve_dataset_path")
+    @patch("external_ccta_batch_pipeline.discover_ccta_dataset")
+    @patch("external_ccta_batch_pipeline.process_external_exam")
+    def test_resume_reprocesses_labeled_exam_without_aorta_dice(
+        self,
+        process_exam,
+        discover_dataset,
+        resolve_dataset_path,
+        _load_config,
+        _use_gpu,
+    ):
+        discover_dataset.return_value = pd.DataFrame(
+            {
+                "dataset": ["MM-WHS"],
+                "subset": ["train"],
+                "exam_id": ["ct_train_1001"],
+                "label_path": ["/dataset/ct_train_1001_label.nii.gz"],
+            }
+        )
+        resolve_dataset_path.return_value = Path("/dataset")
+        process_exam.return_value = {
+            "dataset": "MM-WHS",
+            "subset": "train",
+            "exam_id": "ct_train_1001",
+            "resolution": "mid",
+            "status": "success",
+            "aorta_ground_truth_available": True,
+            "aorta_ground_truth_evaluated": True,
+            "aorta_dice": 0.75,
+            "execution_time_seconds": 1.0,
+        }
+
+        with tempfile.TemporaryDirectory() as temporary_dir:
+            args = build_parser().parse_args(
+                [
+                    "--dataset",
+                    "mmwhs",
+                    "--resolution",
+                    "mid",
+                    "--subset",
+                    "train",
+                    "--output-root",
+                    temporary_dir,
+                    "--no-visuals",
+                ]
+            )
+            with patch("external_ccta_batch_pipeline._configure_logging"):
+                paths = run(args)
+                for filename in ("results_all.csv", "results_train.csv"):
+                    result_path = paths.numeric_dir / filename
+                    legacy = pd.read_csv(result_path).drop(
+                        columns=[
+                            "aorta_ground_truth_available",
+                            "aorta_ground_truth_evaluated",
+                            "aorta_dice",
+                        ]
+                    )
+                    legacy.to_csv(result_path, index=False)
+
+                process_exam.reset_mock()
+                resume_args = build_parser().parse_args(
+                    [
+                        "--dataset",
+                        "mmwhs",
+                        "--resolution",
+                        "mid",
+                        "--subset",
+                        "train",
+                        "--resume-dir",
+                        str(paths.run_dir),
+                        "--no-visuals",
+                    ]
+                )
+                run(resume_args)
+
+            refreshed = pd.read_csv(paths.numeric_dir / "results_train.csv")
+
+        process_exam.assert_called_once()
+        self.assertEqual(refreshed.loc[0, "aorta_dice"], 0.75)
+
+    @patch("external_ccta_batch_pipeline._save_aorta_ground_truth_visual")
     @patch("external_ccta_batch_pipeline._save_combined_visual")
     @patch("external_ccta_batch_pipeline.save_detected_circles_figure")
     @patch("external_ccta_batch_pipeline._save_stage")
@@ -165,10 +285,12 @@ class ExternalCctaBatchPipelineTest(unittest.TestCase):
     @patch("external_ccta_batch_pipeline.segment_aorta_with_diagnostics")
     @patch("external_ccta_batch_pipeline.locate_and_filter_aorta_circles")
     @patch("external_ccta_batch_pipeline.preprocess_ccta_volume")
+    @patch("external_ccta_batch_pipeline.load_ccta_aorta_ground_truth")
     @patch("external_ccta_batch_pipeline.load_ccta_volume")
     def test_processes_all_notebook_stages_and_returns_external_metrics(
         self,
         load_volume,
+        load_ground_truth,
         preprocess,
         track_circles,
         segment_aorta,
@@ -178,6 +300,7 @@ class ExternalCctaBatchPipelineTest(unittest.TestCase):
         save_stage,
         save_circles,
         save_combined,
+        save_aorta_comparison,
     ):
         image = np.arange(48, dtype=np.float32).reshape(4, 4, 3)
         processed = np.ones((2, 2, 3), dtype=np.float32)
@@ -201,11 +324,13 @@ class ExternalCctaBatchPipelineTest(unittest.TestCase):
             },
         ]
         load_volume.return_value = image
+        load_ground_truth.return_value = np.ones_like(image, dtype=bool)
         preprocess.return_value = {
             "threshold_mask": mask,
             "lcc_image": processed,
             "downscale_factors": (2, 2, 1),
             "scaled_spacing": (1.0, 1.0, 1.5),
+            "label": mask,
             "preprocessing_details": {
                 "threshold_mode": "normal",
                 "threshold_voxels": 12,
@@ -267,10 +392,19 @@ class ExternalCctaBatchPipelineTest(unittest.TestCase):
         self.assertEqual(result["aorta_circle_count"], 1)
         self.assertEqual(result["ostia_left_z"], 1)
         self.assertGreater(result["artery_volume_after_morphology_ml"], 0)
+        self.assertTrue(result["aorta_ground_truth_available"])
+        self.assertTrue(result["aorta_ground_truth_evaluated"])
+        self.assertEqual(result["aorta_ground_truth_voxels"], int(mask.sum()))
+        self.assertEqual(result["aorta_dice"], 1.0)
         self.assertEqual(persisted["status"], "success")
         self.assertEqual(save_stage.call_count, 9)
         save_circles.assert_called_once()
         save_combined.assert_called_once()
+        save_aorta_comparison.assert_called_once()
+        np.testing.assert_array_equal(
+            preprocess.call_args.kwargs["label"],
+            load_ground_truth.return_value,
+        )
         self.assertEqual(
             segment_arteries.call_args.kwargs["method"],
             "region_growing",
@@ -281,10 +415,12 @@ class ExternalCctaBatchPipelineTest(unittest.TestCase):
     @patch("external_ccta_batch_pipeline.segment_aorta_with_diagnostics")
     @patch("external_ccta_batch_pipeline.locate_and_filter_aorta_circles")
     @patch("external_ccta_batch_pipeline.preprocess_ccta_volume")
+    @patch("external_ccta_batch_pipeline.load_ccta_aorta_ground_truth")
     @patch("external_ccta_batch_pipeline.load_ccta_volume")
     def test_ostia_failure_skips_arterial_vesselness(
         self,
         load_volume,
+        load_ground_truth,
         preprocess,
         track_circles,
         segment_aorta,
@@ -305,11 +441,13 @@ class ExternalCctaBatchPipelineTest(unittest.TestCase):
             }
         ]
         load_volume.return_value = image
+        load_ground_truth.return_value = np.ones_like(image, dtype=bool)
         preprocess.return_value = {
             "threshold_mask": mask,
             "lcc_image": processed,
             "downscale_factors": (2, 2, 1),
             "scaled_spacing": (1.0, 1.0, 1.5),
+            "label": mask,
             "preprocessing_details": {},
         }
         track_circles.return_value = SimpleNamespace(
@@ -346,6 +484,7 @@ class ExternalCctaBatchPipelineTest(unittest.TestCase):
         )
 
         self.assertEqual(result["status"], "ostia_not_found")
+        self.assertEqual(result["aorta_dice"], 1.0)
         self.assertEqual(vesselness.call_count, 1)
         self.assertEqual(
             vesselness.call_args.kwargs["vesselness_config"],

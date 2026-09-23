@@ -5,7 +5,11 @@ from unittest.mock import patch
 
 import numpy as np
 
-from utils.visualization.volume import visualize_label_map_3d
+from utils.visualization.volume import (
+    visualize_arteries_comparison,
+    visualize_binary_masks_comparison,
+    visualize_label_map_3d,
+)
 
 
 class _FakePlot:
@@ -121,6 +125,75 @@ class LabelMapVisualizationTests(unittest.TestCase):
                 opacity=1.1,
                 display_plot=False,
             )
+
+
+class BinaryMaskComparisonTests(unittest.TestCase):
+    @patch("utils.visualization.volume._add_mask_mesh")
+    @patch("utils.visualization.volume.create_plot")
+    def test_builds_named_reference_and_prediction_meshes(
+        self,
+        create_plot,
+        add_mask_mesh,
+    ):
+        plot = _FakePlot()
+        create_plot.return_value = plot
+        reference = np.zeros((3, 3, 3), dtype=np.uint8)
+        prediction = np.zeros_like(reference)
+        reference[1, 1, 1] = 1
+        prediction[1:, 1, 1] = 1
+
+        result = visualize_binary_masks_comparison(
+            reference,
+            prediction,
+            spacing=(0.7, 0.8, 1.2),
+            reference_name="Aorta ground truth",
+            predicted_name="Aorta predita",
+            display_plot=False,
+        )
+
+        self.assertIs(result, plot)
+        self.assertEqual(add_mask_mesh.call_count, 2)
+        self.assertEqual(
+            [call.kwargs["name"] for call in add_mask_mesh.call_args_list],
+            ["Aorta ground truth", "Aorta predita"],
+        )
+        self.assertEqual(
+            add_mask_mesh.call_args_list[0].kwargs["spacing"],
+            (0.7, 0.8, 1.2),
+        )
+
+    def test_rejects_incompatible_or_empty_masks(self):
+        populated = np.ones((2, 2, 2), dtype=np.uint8)
+        empty = np.zeros_like(populated)
+
+        with self.assertRaisesRegex(ValueError, "mesmo shape"):
+            visualize_binary_masks_comparison(
+                populated,
+                np.ones((3, 2, 2), dtype=np.uint8),
+                display_plot=False,
+            )
+        with self.assertRaisesRegex(ValueError, "não podem estar vazias"):
+            visualize_binary_masks_comparison(
+                populated,
+                empty,
+                display_plot=False,
+            )
+
+    @patch("utils.visualization.volume.visualize_binary_masks_comparison")
+    def test_artery_wrapper_preserves_legacy_labels(self, compare_masks):
+        mask = np.ones((2, 2, 2), dtype=np.uint8)
+        expected_plot = _FakePlot()
+        compare_masks.return_value = expected_plot
+
+        result = visualize_arteries_comparison(
+            mask,
+            mask,
+            display_plot=False,
+        )
+
+        self.assertIs(result, expected_plot)
+        self.assertEqual(compare_masks.call_args.kwargs["reference_name"], "Label")
+        self.assertEqual(compare_masks.call_args.kwargs["predicted_name"], "Predita")
 
 
 if __name__ == "__main__":

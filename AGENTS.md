@@ -2,14 +2,18 @@
 
 ## Project Structure & Module Organization
 
-Core code lives in `src/`. Run the full workflow through
+Core code lives in `src/`. Run the ImageCAS workflow through
 `src/segmentation_pipeline.py`; use `src/main.ipynb` for an inspectable single-case
-execution. Reusable code is grouped under `src/utils/processing`,
+execution. Run external MM-WHS and OrCaScore batches through
+`src/external_ccta_batch_pipeline.py`; use `src/external_ccta_pipeline.ipynb`
+for an inspectable external CCTA exam. Reusable code is grouped under
+`src/utils/processing`,
 `src/utils/segmentation`, `src/utils/project`, and `src/utils/visualization`.
 Experiment drivers and shell runners belong in `src/experiments/`; exploratory
 analysis belongs in `src/eda/` and should be indexed in `src/eda/README.md`.
-Configuration files are in `config/`, automated tests in `tests/`, documentation
-in `doc/`, and generated results under `output/segmentation/`.
+Configuration files are in `config/`, automated tests in `tests/`, and
+documentation in `doc/`. ImageCAS results live under `output/segmentation/`;
+external CCTA results use `CCTA_RESULTS_ROOT` or the batch CLI's `--output-root`.
 
 ## Build, Test, and Development Commands
 
@@ -18,7 +22,8 @@ in `doc/`, and generated results under `output/segmentation/`.
 - `uv run python src/segmentation_pipeline.py --split train --resolution mid --gpu`:
   run the configured training split.
 - `uv run jupyter lab`: open the execution and EDA notebooks.
-- `uv run python -m unittest discover -s tests -p 'test_*.py'`: run all tests.
+- `PYTHONPATH=src uv run python -m unittest discover -s tests -p 'test_*.py'`:
+  run all tests, including imports from the external CCTA pipeline.
 - `uv run ruff check src tests`: run static lint checks.
 - `uv run ruff format --check src tests`: verify formatting.
 - `pyright`: run basic type checking using `pyrightconfig.json`, when installed.
@@ -48,8 +53,9 @@ and `refactor:`. Keep commits scoped, for example:
 `feat: add per-branch artery diagnostics`. Pull requests should explain the
 behavioral change, configuration and split used, verification commands, and
 before/after metrics. Include screenshots for visualization changes. Avoid
-committing large HTML or volumetric artifacts; retain essential CSV summaries
-and store large visuals at the configured external output path.
+committing large HTML or volumetric artifacts. Preserve per-exam results,
+metadata, and effective configuration for reproducibility; store large visuals
+at the configured output path.
 
 ## Configuration & Data
 

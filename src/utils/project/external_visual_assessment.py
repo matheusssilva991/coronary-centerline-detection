@@ -35,6 +35,12 @@ STATUS_ORDER_BY_COLUMN = {
     "ostia_result": OSTIA_STATUS_ORDER,
     "artery_result": AORTA_ARTERY_STATUS_ORDER,
 }
+VISUAL_SUBSETS = ("train", "test")
+FULLY_ADEQUATE_STATUS = {
+    "aorta": ("aorta_result", "Adequada"),
+    "ostia": ("ostia_result", "Ambos adequados"),
+    "artery": ("artery_result", "Adequada"),
+}
 
 
 def _clean_text_column(series: pd.Series) -> pd.Series:
@@ -135,6 +141,130 @@ def load_external_visual_assessments(
     return pd.concat(frames, ignore_index=True)
 
 
+def load_assessment_subset_lookup(
+    result_paths: Mapping[str, Sequence[str | Path]],
+) -> pd.DataFrame:
+    """Carrega o split de cada exame a partir dos resultados de vários runs."""
+    if not result_paths:
+        raise ValueError("Nenhum CSV de resultados foi informado.")
+
+    frames: list[pd.DataFrame] = []
+    required = {"dataset", "exam_id", "subset"}
+    for dataset, paths in result_paths.items():
+        if not paths:
+            raise ValueError(f"{dataset}: nenhum CSV de resultados foi informado.")
+        for raw_path in paths:
+            path = Path(raw_path)
+            if not path.is_file():
+                raise FileNotFoundError(f"CSV de resultados não encontrado: {path}")
+            frame = pd.read_csv(
+                path,
+                dtype={"dataset": "string", "exam_id": "string", "subset": "string"},
+            )
+            missing = sorted(required.difference(frame.columns))
+            if missing:
+                raise ValueError(f"{path}: colunas obrigatórias ausentes: {missing}")
+            identity = frame.loc[:, ["dataset", "exam_id", "subset"]].copy()
+            if identity.empty or identity.isna().any().any():
+                raise ValueError(f"{path}: identidade de exames vazia ou incompleta.")
+            if not identity["dataset"].eq(dataset).all():
+                raise ValueError(f"{path}: banco diferente de {dataset!r}.")
+            if not identity["subset"].isin(VISUAL_SUBSETS).all():
+                raise ValueError(f"{path}: split diferente de train/test.")
+            if identity["exam_id"].duplicated().any():
+                raise ValueError(f"{path}: IDs de exame duplicados.")
+            frames.append(identity.rename(columns={"exam_id": "image_id"}))
+
+    lookup = pd.concat(frames, ignore_index=True)
+    conflicts = lookup.groupby(["dataset", "image_id"])["subset"].nunique()
+    if conflicts.gt(1).any():
+        raise ValueError(
+            "Splits contraditórios entre runs: "
+            f"{conflicts.index[conflicts.gt(1)].tolist()}"
+        )
+    return lookup.drop_duplicates(["dataset", "image_id"]).reset_index(drop=True)
+
+
+def attach_assessment_subsets(
+    assessments: pd.DataFrame,
+    subset_lookup: pd.DataFrame,
+) -> pd.DataFrame:
+    """Associa splits às avaliações visuais e rejeita exames sem correspondência."""
+    if "subset" in assessments.columns:
+        raise ValueError("As avaliações visuais já contêm a coluna subset.")
+    required_lookup = {"dataset", "image_id", "subset"}
+    missing = sorted(required_lookup.difference(subset_lookup.columns))
+    if missing:
+        raise ValueError(f"Colunas ausentes no mapa de splits: {missing}")
+    if subset_lookup.duplicated(["dataset", "image_id"]).any():
+        raise ValueError("O mapa de splits contém IDs duplicados.")
+
+    result = assessments.merge(
+        subset_lookup.loc[:, ["dataset", "image_id", "subset"]],
+        on=["dataset", "image_id"],
+        how="left",
+        sort=False,
+        validate="many_to_one",
+    )
+    unknown = result.loc[result["subset"].isna(), ["dataset", "image_id"]]
+    if not unknown.empty:
+        raise ValueError(
+            "Avaliações visuais sem split nos CSVs: "
+            f"{list(unknown.itertuples(index=False, name=None))}"
+        )
+    return result
+
+
+def summarize_visual_overview(
+    assessments: pd.DataFrame,
+    dataset_order: Sequence[str],
+) -> pd.DataFrame:
+    """Resume acertos visuais por banco e split, com totais ponderados."""
+    required = {"dataset", "subset", *STATUS_ORDER_BY_COLUMN}
+    missing = sorted(required.difference(assessments.columns))
+    if missing:
+        raise ValueError(f"Colunas ausentes na avaliação visual: {missing}")
+    if not assessments["subset"].isin(VISUAL_SUBSETS).all():
+        raise ValueError("A avaliação visual contém split diferente de train/test.")
+
+    cohorts = [
+        (
+            dataset,
+            subset,
+            assessments.loc[
+                assessments["dataset"].eq(dataset) & assessments["subset"].eq(subset)
+            ],
+        )
+        for dataset in dataset_order
+        for subset in VISUAL_SUBSETS
+    ]
+    cohorts.extend(
+        (
+            "Geral",
+            subset,
+            assessments.loc[assessments["subset"].eq(subset)],
+        )
+        for subset in VISUAL_SUBSETS
+    )
+    cohorts.append(("Geral", "total", assessments))
+
+    rows: list[dict[str, object]] = []
+    for dataset, subset, cohort in cohorts:
+        if cohort.empty:
+            raise ValueError(f"Nenhuma avaliação encontrada para {dataset}/{subset}.")
+        row: dict[str, object] = {
+            "dataset": dataset,
+            "subset": subset,
+            "exam_count": len(cohort),
+        }
+        for stage, (column, adequate_status) in FULLY_ADEQUATE_STATUS.items():
+            count = int(cohort[column].eq(adequate_status).sum())
+            row[f"{stage}_adequate_count"] = count
+            row[f"{stage}_adequate_percent"] = 100.0 * count / len(cohort)
+        rows.append(row)
+    return pd.DataFrame(rows)
+
+
 def summarize_visual_status(
     assessments: pd.DataFrame,
     column: str,
@@ -171,6 +301,9 @@ __all__ = [
     "ASSESSMENT_COLUMNS",
     "ASSESSMENT_SHEET_NAME",
     "OSTIA_STATUS_ORDER",
+    "attach_assessment_subsets",
+    "load_assessment_subset_lookup",
     "load_external_visual_assessments",
+    "summarize_visual_overview",
     "summarize_visual_status",
 ]

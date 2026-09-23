@@ -8,8 +8,11 @@ import pandas as pd
 
 from utils.project.external_visual_assessment import (
     AORTA_ARTERY_STATUS_ORDER,
+    attach_assessment_subsets,
+    load_assessment_subset_lookup,
     load_external_visual_assessments,
     summarize_visual_status,
+    summarize_visual_overview,
 )
 from utils.project.dataframe import require_series_column
 
@@ -117,3 +120,106 @@ class ExternalVisualAssessmentTest(unittest.TestCase):
         ].iloc[0]
         self.assertEqual(general_adequate["count"], 2)
         self.assertAlmostEqual(general_adequate["percent"], 200 / 3)
+
+    def _write_results(self, name: str, records: list[dict[str, str]]) -> Path:
+        path = self.root / name
+        pd.DataFrame.from_records(records).to_csv(path, index=False)
+        return path
+
+    def test_split_lookup_uses_other_run_for_missing_result(self):
+        mid = self._write_results(
+            "mid.csv",
+            [
+                {"dataset": "Dataset", "exam_id": "case_1", "subset": "train"},
+                {"dataset": "Dataset", "exam_id": "case_2", "subset": "test"},
+            ],
+        )
+        high = self._write_results(
+            "high.csv",
+            [{"dataset": "Dataset", "exam_id": "case_1", "subset": "train"}],
+        )
+        assessments = load_external_visual_assessments(
+            {"Dataset": self._write_workbook(self._valid_frame())}
+        )
+
+        lookup = load_assessment_subset_lookup({"Dataset": [mid, high]})
+        result = attach_assessment_subsets(assessments, lookup)
+
+        self.assertEqual(result["subset"].tolist(), ["train", "test"])
+        self.assertEqual(len(result), 2)
+
+    def test_split_lookup_rejects_conflicts(self):
+        mid = self._write_results(
+            "mid.csv",
+            [{"dataset": "Dataset", "exam_id": "case_1", "subset": "train"}],
+        )
+        high = self._write_results(
+            "high.csv",
+            [{"dataset": "Dataset", "exam_id": "case_1", "subset": "test"}],
+        )
+
+        with self.assertRaisesRegex(ValueError, "Splits contraditórios"):
+            load_assessment_subset_lookup({"Dataset": [mid, high]})
+
+    def test_split_join_rejects_visual_id_without_result(self):
+        result_path = self._write_results(
+            "result.csv",
+            [{"dataset": "Dataset", "exam_id": "case_1", "subset": "train"}],
+        )
+        assessments = load_external_visual_assessments(
+            {"Dataset": self._write_workbook(self._valid_frame())}
+        )
+
+        with self.assertRaisesRegex(ValueError, "sem split"):
+            attach_assessment_subsets(
+                assessments,
+                load_assessment_subset_lookup({"Dataset": [result_path]}),
+            )
+
+    def test_overview_weights_totals_by_exam_count(self):
+        frame = pd.DataFrame(
+            {
+                "dataset": ["A", "A", "A", "B", "B", "B"],
+                "subset": ["train", "train", "test", "train", "test", "test"],
+                "aorta_result": [
+                    "Adequada",
+                    "Adequada",
+                    "Parcial",
+                    "Não avaliável",
+                    "Adequada",
+                    "Parcial",
+                ],
+                "ostia_result": [
+                    "Ambos adequados",
+                    "Um adequado",
+                    "Inadequados",
+                    "Não avaliável",
+                    "Ambos adequados",
+                    "Não avaliável",
+                ],
+                "artery_result": [
+                    "Adequada",
+                    "Parcial",
+                    "Inadequada",
+                    "Não avaliável",
+                    "Adequada",
+                    "Parcial",
+                ],
+            }
+        )
+
+        result = summarize_visual_overview(frame, ["A", "B"])
+
+        self.assertEqual(len(result), 7)
+        train = result.loc[
+            result["dataset"].eq("Geral") & result["subset"].eq("train")
+        ].iloc[0]
+        self.assertEqual(train["exam_count"], 3)
+        self.assertEqual(train["aorta_adequate_count"], 2)
+        self.assertAlmostEqual(train["aorta_adequate_percent"], 200 / 3)
+        total = result.loc[
+            result["dataset"].eq("Geral") & result["subset"].eq("total")
+        ].iloc[0]
+        self.assertEqual(total["exam_count"], 6)
+        self.assertEqual(total["aorta_adequate_count"], 3)
+        self.assertEqual(total["aorta_adequate_percent"], 50.0)
