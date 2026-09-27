@@ -6,7 +6,10 @@ from pathlib import Path
 
 import pandas as pd
 
-from utils.project.external_ccta_results import load_mmwhs_train_aorta_dice
+from utils.project.external_ccta_results import (
+    load_mmwhs_train_aorta_dice,
+    load_mmwhs_test_aorta_dice,
+)
 
 
 class ExternalCctaResultsTest(unittest.TestCase):
@@ -53,3 +56,29 @@ class ExternalCctaResultsTest(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, "IDs de treino ausentes ou duplicados"):
             load_mmwhs_train_aorta_dice(self.results_path)
+
+    def test_loads_official_test_dice_and_keeps_unavailable_as_nan(self):
+        frame = self._valid_frame()
+        frame["aorta_evaluation_method"] = [None, None, "mmwhs_official_1mm_wine"]
+        frame["aorta_evaluation_status"] = [None, None, "success"]
+        frame.loc[2, "aorta_dice"] = 0.632263
+        extra = frame.iloc[[2]].copy()
+        extra.loc[:, "exam_id"] = "ct_test_2002"
+        extra.loc[:, "aorta_evaluation_status"] = "unavailable"
+        extra.loc[:, "aorta_dice"] = float("nan")
+        self._write_results(pd.concat([frame, extra], ignore_index=True))
+
+        result = load_mmwhs_test_aorta_dice(self.results_path)
+
+        self.assertEqual(result.index.tolist(), ["ct_test_2001", "ct_test_2002"])
+        self.assertAlmostEqual(result.loc["ct_test_2001"], 0.632263)
+        self.assertTrue(pd.isna(result.loc["ct_test_2002"]))
+
+    def test_rejects_official_test_dice_with_error_status(self):
+        frame = self._valid_frame()
+        frame["aorta_evaluation_method"] = [None, None, "mmwhs_official_1mm_wine"]
+        frame["aorta_evaluation_status"] = [None, None, "error"]
+        self._write_results(frame)
+
+        with self.assertRaisesRegex(ValueError, "pendentes ou com erro"):
+            load_mmwhs_test_aorta_dice(self.results_path)

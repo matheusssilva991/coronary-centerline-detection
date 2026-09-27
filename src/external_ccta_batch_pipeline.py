@@ -28,8 +28,23 @@ from utils.project.ccta_datasets import (
     load_ccta_aorta_ground_truth,
     load_ccta_volume,
 )
+from utils.project.mmwhs_official_aorta import (
+    EVALUATOR_FOLDER,
+    OFFICIAL_AORTA_METHOD,
+    AortaPrediction,
+    evaluate_with_wine,
+    has_aorta_mask,
+    parse_dice_lo,
+    predict_aorta,
+    preflight_evaluator,
+    restore_native_mask,
+    verify_run_result,
+    save_prediction,
+    validate_saved_prediction,
+)
 from utils.project.notebook_env import load_notebook_pipeline_config
 from utils.project.results import make_json_safe
+from utils.segmentation.fuzzy_threshold import normalize_threshold_mode
 from utils.segmentation.aorta_segmentation import (
     classify_aorta_segmentation_feedback,
 )
@@ -169,6 +184,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Retoma uma execução e ignora exames já concluídos com sucesso.",
     )
     parser.add_argument(
+        "--no-hu-threshold",
+        action="store_true",
+        help="Preserva todos os voxels finitos após o downscale, sem corte de HU ou LCC.",
+    )
+    parser.add_argument(
         "--gpu",
         action=argparse.BooleanOptionalAction,
         default=None,
@@ -190,6 +210,28 @@ def build_parser() -> argparse.ArgumentParser:
         "--fail-fast",
         action="store_true",
         help="Interrompe no primeiro exame com erro.",
+    )
+    parser.add_argument(
+        "--test-aorta-dice",
+        dest="evaluate_mmwhs_test_aorta",
+        action="store_true",
+        help="Avalia a aorta do MM-WHS test com o avaliador oficial via Wine.",
+    )
+    parser.add_argument(
+        "--evaluate-mmwhs-test-aorta",
+        dest="evaluate_mmwhs_test_aorta",
+        action="store_true",
+        help=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--aorta-eval-only",
+        action="store_true",
+        help="Atualiza apenas o Dice da aorta em um --resume-dir, sem refazer o pipeline.",
+    )
+    parser.add_argument(
+        "--evaluator-dir",
+        type=Path,
+        help="Pasta do avaliador oficial; padrão: dentro do MM-WHS.",
     )
     parser.add_argument("--verbose", action="store_true")
     return parser
@@ -391,6 +433,7 @@ def process_external_exam(
     *,
     visual_root: Path | None,
     align_orcascore: bool = True,
+    aorta_export_dir: Path | None = None,
 ) -> dict[str, Any]:
     """Executa todas as etapas para um exame CCTA externo."""
     started = time.perf_counter()
@@ -413,6 +456,9 @@ def process_external_exam(
         "aorta_ground_truth_evaluated": False,
         "aorta_ground_truth_voxels": None,
         "aorta_dice": None,
+        "aorta_evaluation_method": None,
+        "aorta_evaluation_status": None,
+        "aorta_evaluation_error": None,
     }
 
     try:
@@ -500,7 +546,11 @@ def process_external_exam(
             exam_dir,
             "01_threshold",
             threshold_mask,
-            title="Máscara após threshold",
+            title=(
+                "Voxels finitos (sem limiar HU)"
+                if preprocessing_details.get("threshold_mode") == "none"
+                else "Máscara após threshold"
+            ),
             vmin=0.0,
             vmax=1.0,
         )
@@ -508,7 +558,11 @@ def process_external_exam(
             exam_dir,
             "02_lcc",
             lcc_image,
-            title="Imagem após LCC",
+            title=(
+                "Imagem sem corte de HU"
+                if preprocessing_details.get("threshold_mode") == "none"
+                else "Imagem após LCC"
+            ),
             vmin=-200.0,
             vmax=1000.0,
         )
@@ -571,6 +625,35 @@ def process_external_exam(
         )
         voxel_volume_mm3 = float(np.prod(scaled_spacing))
         result["aorta_volume_ml"] = float(aorta_mask.sum() * voxel_volume_mm3 / 1000.0)
+        if aorta_export_dir is not None and dataset == "MM-WHS" and subset == "test":
+            result["aorta_evaluation_method"] = OFFICIAL_AORTA_METHOD
+            prediction_path = aorta_export_dir / f"{exam_id}_label.nii.gz"
+            try:
+                if prediction_path.exists():
+                    validate_saved_prediction(
+                        Path(str(record["path"])), prediction_path
+                    )
+                else:
+                    prediction = AortaPrediction(
+                        mask=np.asarray(aorta_mask, dtype=np.uint8),
+                        native_shape=(
+                            int(result["original_size_x"]),
+                            int(result["original_size_y"]),
+                            int(result["original_slice_count"]),
+                        ),
+                        flipped_axes=flipped_axes,
+                        circle_count=len(detected_circles),
+                    )
+                    native_mask = restore_native_mask(prediction)
+                    save_prediction(
+                        Path(str(record["path"])), native_mask, prediction_path
+                    )
+                    del native_mask, prediction
+                result["aorta_evaluation_status"] = "pending"
+            except Exception as error:
+                LOGGER.exception("Falha ao exportar a aorta de %s", exam_id)
+                result["aorta_evaluation_status"] = "error"
+                result["aorta_evaluation_error"] = str(error)
         if processed_aorta_ground_truth is not None:
             aorta_ground_truth_mask = np.asarray(processed_aorta_ground_truth) > 0
             if aorta_ground_truth_mask.shape != aorta_mask.shape:
@@ -792,6 +875,77 @@ def load_existing_results(numeric_dir: Path) -> list[dict[str, Any]]:
     return [{str(key): value for key, value in record.items()} for record in records]
 
 
+def evaluate_test_aorta_result(
+    row: Mapping[str, Any],
+    record: pd.Series,
+    config: dict[str, Any],
+    run_dir: Path,
+    evaluator_dir: Path,
+    *,
+    rebuild_mask: bool,
+    align_volume: bool = True,
+) -> dict[str, Any]:
+    """Avalia a aorta sem alterar o resultado científico do exame."""
+    updated = dict(row)
+    exam_id = str(record["exam_id"])
+    updated["aorta_evaluation_method"] = OFFICIAL_AORTA_METHOD
+    updated["aorta_ground_truth_available"] = True
+    updated["aorta_evaluation_error"] = None
+    if not has_aorta_mask(row):
+        updated["aorta_evaluation_status"] = "unavailable"
+        updated["aorta_ground_truth_evaluated"] = False
+        updated["aorta_dice"] = None
+        return updated
+
+    output_dir = run_dir / "evaluation" / "aorta" / "test" / exam_id
+    prediction_path = output_dir / f"{exam_id}_label.nii.gz"
+    try:
+        reference_path = Path(str(record["path"]))
+        if prediction_path.exists():
+            validate_saved_prediction(reference_path, prediction_path)
+        elif rebuild_mask:
+            prediction = predict_aorta(
+                record, {**config, "USE_GPU": False}, align_volume=align_volume
+            )
+            verify_run_result(run_dir, exam_id, prediction)
+            native_mask = restore_native_mask(prediction)
+            save_prediction(reference_path, native_mask, prediction_path)
+            del native_mask, prediction
+        else:
+            raise FileNotFoundError(f"Predição da aorta ausente: {prediction_path}")
+        dice_path = evaluate_with_wine(
+            prediction_path, exam_id, evaluator_dir, output_dir
+        )
+        updated["aorta_dice"] = parse_dice_lo(dice_path, exam_id)
+        updated["aorta_ground_truth_evaluated"] = True
+        updated["aorta_evaluation_status"] = "success"
+    except Exception as error:
+        LOGGER.exception("Falha na avaliação oficial da aorta de %s", exam_id)
+        updated["aorta_dice"] = None
+        updated["aorta_ground_truth_evaluated"] = False
+        updated["aorta_evaluation_status"] = "error"
+        updated["aorta_evaluation_error"] = str(error)
+    return updated
+
+
+def _official_evaluation_complete(row: Mapping[str, Any], run_dir: Path) -> bool:
+    """Confere que o Dice persistido corresponde ao arquivo oficial do exame."""
+    if row.get("aorta_evaluation_status") != "success" or not _has_valid_aorta_dice(
+        row
+    ):
+        return False
+    exam_id = str(row["exam_id"])
+    dice_path = (
+        run_dir / "evaluation" / "aorta" / "test" / exam_id / f"{exam_id}_dice.xls"
+    )
+    if not dice_path.is_file():
+        return False
+    saved_dice = parse_dice_lo(dice_path, exam_id)
+    if not np.isclose(saved_dice, float(row["aorta_dice"]), rtol=0, atol=1e-6):
+        raise ValueError(f"Dice do CSV diverge do arquivo oficial: {exam_id}")
+    return True
+
+
 def _metadata_payload(
     *,
     dataset: str,
@@ -809,14 +963,27 @@ def _metadata_payload(
     aorta_dice_values = [
         float(value)
         for row in rows
+        if str(row.get("subset")) == "train"
         if isinstance(
             value := row.get("aorta_dice"),
             (int, float, np.integer, np.floating),
         )
         and np.isfinite(float(value))
     ]
+    official_test_rows = [
+        row
+        for row in rows
+        if str(row.get("subset")) == "test"
+        and row.get("aorta_evaluation_method") == OFFICIAL_AORTA_METHOD
+    ]
+    official_test_dice = [
+        float(row["aorta_dice"])
+        for row in official_test_rows
+        if _has_valid_aorta_dice(row)
+        and row.get("aorta_evaluation_status") == "success"
+    ]
     return {
-        "schema_version": 2,
+        "schema_version": 3,
         "dataset": dataset,
         "resolution": resolution,
         "selected_subset": subset,
@@ -833,12 +1000,31 @@ def _metadata_payload(
         "ground_truth_metrics": {
             "aorta": {
                 "available_exam_count": sum(
-                    row.get("aorta_ground_truth_available") is True for row in rows
+                    str(row.get("subset")) == "train"
+                    and row.get("aorta_ground_truth_available") is True
+                    for row in rows
                 ),
                 "evaluated_exam_count": len(aorta_dice_values),
                 "dice_mean": (
                     float(np.mean(aorta_dice_values)) if aorta_dice_values else None
                 ),
+                "test_official": {
+                    "available_exam_count": len(official_test_rows),
+                    "evaluated_exam_count": len(official_test_dice),
+                    "unavailable_exam_count": sum(
+                        row.get("aorta_evaluation_status") == "unavailable"
+                        for row in official_test_rows
+                    ),
+                    "error_exam_count": sum(
+                        row.get("aorta_evaluation_status") == "error"
+                        for row in official_test_rows
+                    ),
+                    "dice_mean": (
+                        float(np.mean(official_test_dice))
+                        if official_test_dice
+                        else None
+                    ),
+                },
             },
             "ostia_accuracy": None,
             "coronary_reason": (
@@ -896,6 +1082,21 @@ def run(args: argparse.Namespace) -> RunPaths:
         exam_ids=args.exam_ids,
         limit=args.limit,
     )
+    evaluate_official = bool(getattr(args, "evaluate_mmwhs_test_aorta", False))
+    evaluation_only = bool(getattr(args, "aorta_eval_only", False))
+    if evaluation_only and (not evaluate_official or args.resume_dir is None):
+        raise ValueError("--aorta-eval-only exige --test-aorta-dice e --resume-dir.")
+    if evaluate_official and args.dataset != "mmwhs":
+        raise ValueError("A avaliação oficial da aorta é exclusiva do MM-WHS.")
+    test_records = selected.loc[require_series_column(selected, "subset").eq("test")]
+    if evaluate_official and test_records.empty:
+        raise ValueError("A avaliação oficial exige exames MM-WHS test na seleção.")
+    evaluator_dir = getattr(args, "evaluator_dir", None) or base_path / EVALUATOR_FOLDER
+    if evaluate_official:
+        preflight_evaluator(
+            evaluator_dir,
+            [str(value) for value in require_series_column(test_records, "exam_id")],
+        )
     paths = create_run_paths(
         args.output_root,
         args.dataset,
@@ -920,6 +1121,10 @@ def run(args: argparse.Namespace) -> RunPaths:
     manifest_path = paths.config_dir / "run_manifest.json"
     if args.resume_dir is None:
         config = load_notebook_pipeline_config(args.config_file, args.resolution)
+        if args.no_hu_threshold:
+            thresholding = dict(config.get("THRESHOLDING", {}))
+            thresholding["method"] = "none"
+            config["THRESHOLDING"] = thresholding
     else:
         if not config_path.is_file() or not manifest_path.is_file():
             raise FileNotFoundError(
@@ -954,12 +1159,23 @@ def run(args: argparse.Namespace) -> RunPaths:
                 f"salvas={saved_options}, solicitadas={requested_options}."
             )
         config = load_config_json(str(config_path), {})
+        if (
+            args.no_hu_threshold
+            and normalize_threshold_mode(config.get("THRESHOLDING", {}).get("method"))
+            != "none"
+        ):
+            raise ValueError(
+                "--no-hu-threshold não corresponde à configuração salva do run."
+            )
 
-    gpu_available = use_gpu()
-    requested_gpu = config.get("USE_GPU", False) if args.gpu is None else args.gpu
-    config["USE_GPU"] = bool(requested_gpu and gpu_available)
-    if requested_gpu and not gpu_available:
-        LOGGER.warning("GPU solicitada, mas indisponível; execução seguirá em CPU.")
+    if evaluation_only:
+        config["USE_GPU"] = False
+    else:
+        gpu_available = use_gpu()
+        requested_gpu = config.get("USE_GPU", False) if args.gpu is None else args.gpu
+        config["USE_GPU"] = bool(requested_gpu and gpu_available)
+        if requested_gpu and not gpu_available:
+            LOGGER.warning("GPU solicitada, mas indisponível; execução seguirá em CPU.")
 
     if args.resume_dir is None:
         save_config_json(config, str(config_path))
@@ -982,16 +1198,45 @@ def run(args: argparse.Namespace) -> RunPaths:
         )
 
     rows = load_existing_results(paths.numeric_dir)
-    completed = {
-        _result_key(row)
-        for row in rows
-        if _is_terminal_result(row, aorta_ground_truth_keys)
-    }
-    pending_records = [
-        record
-        for _, record in selected.iterrows()
-        if (str(record["subset"]), str(record["exam_id"])) not in completed
-    ]
+    if evaluation_only:
+        existing_by_key = {_result_key(row): row for row in rows}
+        if len(existing_by_key) != len(rows):
+            raise ValueError("O CSV do run contém IDs duplicados.")
+        missing = [
+            str(record["exam_id"])
+            for _, record in test_records.iterrows()
+            if (str(record["subset"]), str(record["exam_id"])) not in existing_by_key
+        ]
+        if missing:
+            raise ValueError(f"Resultados de teste ausentes no run: {missing}")
+        pending_records = [
+            record
+            for _, record in test_records.iterrows()
+            if not (
+                existing_by_key[(str(record["subset"]), str(record["exam_id"]))].get(
+                    "aorta_evaluation_status"
+                )
+                == "unavailable"
+                and not has_aorta_mask(
+                    existing_by_key[(str(record["subset"]), str(record["exam_id"]))]
+                )
+            )
+            and not _official_evaluation_complete(
+                existing_by_key[(str(record["subset"]), str(record["exam_id"]))],
+                paths.run_dir,
+            )
+        ]
+    else:
+        completed = {
+            _result_key(row)
+            for row in rows
+            if _is_terminal_result(row, aorta_ground_truth_keys)
+        }
+        pending_records = [
+            record
+            for _, record in selected.iterrows()
+            if (str(record["subset"]), str(record["exam_id"])) not in completed
+        ]
     started_at = datetime.now(timezone.utc)
     LOGGER.info(
         "Run %s | dataset=%s resolution=%s selecionados=%d pendentes=%d",
@@ -1003,6 +1248,10 @@ def run(args: argparse.Namespace) -> RunPaths:
     )
 
     metadata_path = paths.run_dir / "metadata.json"
+    if args.resume_dir is not None and metadata_path.is_file():
+        previous_started_at = _load_json(metadata_path).get("started_at")
+        if isinstance(previous_started_at, str):
+            started_at = datetime.fromisoformat(previous_started_at)
     _save_json_atomic(
         _metadata_payload(
             dataset=args.dataset,
@@ -1022,13 +1271,40 @@ def run(args: argparse.Namespace) -> RunPaths:
             record["subset"],
             record["exam_id"],
         )
-        result = process_external_exam(
-            record,
-            config,
-            args.resolution,
-            visual_root=paths.visual_dir if args.visuals else None,
-            align_orcascore=args.align_orcascore,
-        )
+        if evaluation_only:
+            result = evaluate_test_aorta_result(
+                existing_by_key[(str(record["subset"]), str(record["exam_id"]))],
+                record,
+                config,
+                paths.run_dir,
+                evaluator_dir,
+                rebuild_mask=True,
+                align_volume=args.align_orcascore,
+            )
+        else:
+            export_dir = (
+                paths.run_dir / "evaluation" / "aorta" / "test" / str(record["exam_id"])
+                if evaluate_official and str(record["subset"]) == "test"
+                else None
+            )
+            result = process_external_exam(
+                record,
+                config,
+                args.resolution,
+                visual_root=paths.visual_dir if args.visuals else None,
+                align_orcascore=args.align_orcascore,
+                aorta_export_dir=export_dir,
+            )
+            if export_dir is not None:
+                result = evaluate_test_aorta_result(
+                    result,
+                    record,
+                    config,
+                    paths.run_dir,
+                    evaluator_dir,
+                    rebuild_mask=False,
+                    align_volume=args.align_orcascore,
+                )
         rows = _upsert_result(rows, result)
         save_numeric_results(rows, paths.numeric_dir)
         _save_json_atomic(
@@ -1042,7 +1318,7 @@ def run(args: argparse.Namespace) -> RunPaths:
             ),
             metadata_path,
         )
-        if result["status"] != "success" and args.fail_fast:
+        if result["status"] != "success" and args.fail_fast and not evaluation_only:
             raise RuntimeError(
                 f"Falha no exame {record['exam_id']}: {result.get('error')}"
             )

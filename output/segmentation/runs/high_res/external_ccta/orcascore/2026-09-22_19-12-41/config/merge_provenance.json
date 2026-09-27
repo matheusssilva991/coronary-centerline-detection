@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "merged_at": "2026-09-23T11:39:55.530237+00:00",
+  "primary_run": "2026-09-22_19-12-41",
+  "additional_run": "2026-09-23_07-19-39",
+  "effective_config_sha256": "7873d82aab47259e8f7a21e96196fb211c486983fb2a6aed277ad196ec2fca03",
+  "primary_result_count": 45,
+  "additional_result_count": 26,
+  "merged_result_count": 71,
+  "selected_exam_count": 72,
+  "missing_exams": [
+    {
+      "subset": "test",
+      "exam_id": "TEV2P6"
+    }
+  ],
+  "primary_results_sha256": "81311525b282c20421b32ac9c77b755504b14c4df1f8f013de6d50001c54e039",
+  "additional_results_sha256": "6253465e7841866893cc40b84fbd8c8973cb3be2c78401d26f28c3db734d4e9e",
+  "note": "Linhas científicas preservadas; metadata agregado recalculado dos CSVs persistidos."
+}

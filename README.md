@@ -359,6 +359,11 @@ uv run python src/external_ccta_batch_pipeline.py \
 Os aliases `orca`, `whs` e `owhs` também são aceitos. Para executar somente um
 subset ou validar poucos exames antes do lote completo:
 
+Use `--no-hu-threshold` em uma execução nova para preservar todos os voxels
+finitos após o downscale, sem corte de HU e sem LCC. O modo `none` fica
+registrado em `config/effective_pipeline_config.json` do run. A flag não altera
+outros limiares, como o `LEVEL_SET.threshold`.
+
 ```bash
 uv run python src/external_ccta_batch_pipeline.py \
   --dataset orcascore \
@@ -414,6 +419,32 @@ ascendente; nesses casos, o pipeline calcula `aorta_dice` no volume processado e
 salva a comparação 3D com o ground truth. Como os bancos não possuem referência
 coronariana compatível com o ImageCAS, o Dice arterial e a acurácia dos óstios
 permanecem nulos.
+
+Para avaliar a aorta dos exames CT de teste com os labels criptografados,
+instale Wine e habilite explicitamente o avaliador oficial:
+
+```bash
+uv run python src/external_ccta_batch_pipeline.py \
+  --dataset mmwhs --resolution high --subset test \
+  --test-aorta-dice --gpu
+```
+
+Para acrescentar o Dice a um run existente sem repetir óstios e artérias,
+use os mesmos filtros da seleção original (por exemplo, `--subset all`):
+
+```bash
+uv run python src/external_ccta_batch_pipeline.py \
+  --dataset mmwhs --resolution high --subset all \
+  --resume-dir /media/matheus/HD/Results_dataset_ccta/mmwhs/high_res/<run> \
+  --test-aorta-dice --aorta-eval-only
+```
+
+O destino é o próprio run em `CCTA_RESULTS_ROOT` (ou `--output-root`):
+`evaluation/aorta/test/<exam_id>/` contém a predição NIfTI, sua versão em
+1 mm e o resultado tabulado `*_dice.xls`. A sexta coluna, `DiceLO`, é a
+aorta. O Dice de treino é calculado diretamente no volume processado; o de
+teste segue o protocolo oficial em 1 mm. O metadata apresenta médias
+separadas. Exames sem máscara da aorta mantêm Dice ausente, não zero.
 
 O status `success` indica que todas as etapas computacionais terminaram; não é
 uma validação anatômica. Os parâmetros de localização foram ajustados no

@@ -112,7 +112,9 @@ Interpretacao:
 
 ### `THRESHOLDING` (object)
 
-- `method`: `normal` ou `fuzzy`.
+- `method`: `normal`, `fuzzy` ou `none`.
+- `none` preserva os voxels finitos após o downscale, sem corte de HU nem LCC;
+  serve para comparar o efeito do pré-processamento, não é o baseline.
 - O fuzzy usa somente `object_argmax`, com margem 100 HU, centro de objeto
   P99,8, centro denso P99,96 e sem suavização espacial.
 - `fuzzy.lower_percentile = 10.5` aplica automaticamente o piso vencedor ao

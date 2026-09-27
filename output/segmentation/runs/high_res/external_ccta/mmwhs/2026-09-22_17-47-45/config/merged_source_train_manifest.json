@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "dataset": "mmwhs",
+  "resolution": "high",
+  "selected_subset": "train",
+  "visuals_enabled": true,
+  "orcascore_visual_alignment": true,
+  "config_source": "config/pipeline_config.json",
+  "selected_exams": [
+    {
+      "subset": "train",
+      "exam_id": "ct_train_1001"
+    },
+    {
+      "subset": "train",
+      "exam_id": "ct_train_1002"
+    },
+    {
+      "subset": "train",
+      "exam_id": "ct_train_1003"
+    },
+    {
+      "subset": "train",
+      "exam_id": "ct_train_1004"
+    },
+    {
+      "subset": "train",
+      "exam_id": "ct_train_1005"
+    },
+    {
+      "subset": "train",
+      "exam_id": "ct_train_1006"
+    },
+    {
+      "subset": "train",
+      "exam_id": "ct_train_1007"
+    },
+    {
+      "subset": "train",
+      "exam_id": "ct_train_1008"
+    },
+    {
+      "subset": "train",
+      "exam_id": "ct_train_1009"
+    },
+    {
+      "subset": "train",
+      "exam_id": "ct_train_1010"
+    },
+    {
+      "subset": "train",
+      "exam_id": "ct_train_1011"
+    },
+    {
+      "subset": "train",
+      "exam_id": "ct_train_1012"
+    },
+    {
+      "subset": "train",
+      "exam_id": "ct_train_1013"
+    },
+    {
+      "subset": "train",
+      "exam_id": "ct_train_1014"
+    },
+    {
+      "subset": "train",
+      "exam_id": "ct_train_1015"
+    },
+    {
+      "subset": "train",
+      "exam_id": "ct_train_1016"
+    },
+    {
+      "subset": "train",
+      "exam_id": "ct_train_1017"
+    },
+    {
+      "subset": "train",
+      "exam_id": "ct_train_1018"
+    },
+    {
+      "subset": "train",
+      "exam_id": "ct_train_1019"
+    },
+    {
+      "subset": "train",
+      "exam_id": "ct_train_1020"
+    }
+  ]
+}

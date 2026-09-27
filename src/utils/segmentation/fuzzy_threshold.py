@@ -25,6 +25,7 @@ def normalize_threshold_mode(mode: Any) -> str:
         "threshold": "normal",
         "fuzzy": "fuzzy",
         "object": "fuzzy",
+        "none": "none",
     }
     if normalized not in aliases:
         valid = ", ".join(sorted(set(aliases.values())))

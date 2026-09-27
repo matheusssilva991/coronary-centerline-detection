@@ -1,0 +1,27 @@
+{
+  "schema_version": 2,
+  "dataset": "mmwhs",
+  "resolution": "high",
+  "selected_subset": "train",
+  "state": "complete",
+  "started_at": "2026-09-22T20:47:45.304902+00:00",
+  "updated_at": "2026-09-22T21:46:25.934033+00:00",
+  "processed_exam_count": 20,
+  "status_counts": {
+    "success": 20
+  },
+  "execution_time": {
+    "seconds": 3520.1318349199973,
+    "minutes": 58.66886391533329,
+    "hours": 0.9778143985888882
+  },
+  "ground_truth_metrics": {
+    "aorta": {
+      "available_exam_count": 20,
+      "evaluated_exam_count": 20,
+      "dice_mean": 0.858091194242442
+    },
+    "ostia_accuracy": null,
+    "coronary_reason": "Os bancos externos não possuem referência coronariana compatível."
+  }
+}

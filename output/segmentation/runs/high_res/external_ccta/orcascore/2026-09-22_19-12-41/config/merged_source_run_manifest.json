@@ -1,0 +1,115 @@
+{
+  "schema_version": 1,
+  "dataset": "orcascore",
+  "resolution": "high",
+  "selected_subset": "test",
+  "visuals_enabled": true,
+  "orcascore_visual_alignment": true,
+  "config_source": "config/pipeline_config.json",
+  "selected_exams": [
+    {
+      "subset": "test",
+      "exam_id": "TEV2P7"
+    },
+    {
+      "subset": "test",
+      "exam_id": "TEV2P8"
+    },
+    {
+      "subset": "test",
+      "exam_id": "TEV3P1"
+    },
+    {
+      "subset": "test",
+      "exam_id": "TEV3P2"
+    },
+    {
+      "subset": "test",
+      "exam_id": "TEV3P3"
+    },
+    {
+      "subset": "test",
+      "exam_id": "TEV3P4"
+    },
+    {
+      "subset": "test",
+      "exam_id": "TEV3P5"
+    },
+    {
+      "subset": "test",
+      "exam_id": "TEV3P6"
+    },
+    {
+      "subset": "test",
+      "exam_id": "TEV3P7"
+    },
+    {
+      "subset": "test",
+      "exam_id": "TEV3P8"
+    },
+    {
+      "subset": "test",
+      "exam_id": "TEV4P1"
+    },
+    {
+      "subset": "test",
+      "exam_id": "TEV4P2"
+    },
+    {
+      "subset": "test",
+      "exam_id": "TEV4P3"
+    },
+    {
+      "subset": "test",
+      "exam_id": "TEV4P4"
+    },
+    {
+      "subset": "test",
+      "exam_id": "TEV4P5"
+    },
+    {
+      "subset": "test",
+      "exam_id": "TEV4P6"
+    },
+    {
+      "subset": "test",
+      "exam_id": "TEV4P7"
+    },
+    {
+      "subset": "test",
+      "exam_id": "TEV4P8"
+    },
+    {
+      "subset": "test",
+      "exam_id": "VAV1P1"
+    },
+    {
+      "subset": "test",
+      "exam_id": "VAV1P2"
+    },
+    {
+      "subset": "test",
+      "exam_id": "VAV2P1"
+    },
+    {
+      "subset": "test",
+      "exam_id": "VAV2P2"
+    },
+    {
+      "subset": "test",
+      "exam_id": "VAV3P1"
+    },
+    {
+      "subset": "test",
+      "exam_id": "VAV3P2"
+    },
+    {
+      "subset": "test",
+      "exam_id": "VAV4P1"
+    },
+    {
+      "subset": "test",
+      "exam_id": "VAV4P2"
+    }
+  ]
+}

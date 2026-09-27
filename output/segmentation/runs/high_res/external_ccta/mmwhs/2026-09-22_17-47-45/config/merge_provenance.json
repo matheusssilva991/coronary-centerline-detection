@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "merged_at": "2026-09-23T14:06:08.335901+00:00",
+  "train_run": "2026-09-22_17-47-45",
+  "test_run": "2026-09-23_08-55-10",
+  "effective_config_sha256": "7873d82aab47259e8f7a21e96196fb211c486983fb2a6aed277ad196ec2fca03",
+  "train_result_count": 20,
+  "test_result_count": 40,
+  "merged_result_count": 60,
+  "train_results_sha256": "b05e1af95b5701cb252cad49e47212b68b2694850e54e76518b81bff600326f6",
+  "test_results_sha256": "f32bd674403791c3ed98e4aa8fce1a98bbe412a0f26f8dd90a7041b2aa45990b",
+  "note": "Linhas científicas preservadas; metadata agregado calculado dos CSVs persistidos."
+}

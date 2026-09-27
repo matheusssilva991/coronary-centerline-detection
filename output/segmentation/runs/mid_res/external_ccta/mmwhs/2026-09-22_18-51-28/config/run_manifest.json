@@ -1,0 +1,251 @@
+{
+  "schema_version": 1,
+  "dataset": "mmwhs",
+  "resolution": "mid",
+  "selected_subset": "all",
+  "visuals_enabled": true,
+  "orcascore_visual_alignment": true,
+  "config_source": "config/pipeline_config.json",
+  "selected_exams": [
+    {
+      "subset": "train",
+      "exam_id": "ct_train_1001"
+    },
+    {
+      "subset": "train",
+      "exam_id": "ct_train_1002"
+    },
+    {
+      "subset": "train",
+      "exam_id": "ct_train_1003"
+    },
+    {
+      "subset": "train",
+      "exam_id": "ct_train_1004"
+    },
+    {
+      "subset": "train",
+      "exam_id": "ct_train_1005"
+    },
+    {
+      "subset": "train",
+      "exam_id": "ct_train_1006"
+    },
+    {
+      "subset": "train",
+      "exam_id": "ct_train_1007"
+    },
+    {
+      "subset": "train",
+      "exam_id": "ct_train_1008"
+    },
+    {
+      "subset": "train",
+      "exam_id": "ct_train_1009"
+    },
+    {
+      "subset": "train",
+      "exam_id": "ct_train_1010"
+    },
+    {
+      "subset": "train",
+      "exam_id": "ct_train_1011"
+    },
+    {
+      "subset": "train",
+      "exam_id": "ct_train_1012"
+    },
+    {
+      "subset": "train",
+      "exam_id": "ct_train_1013"
+    },
+    {
+      "subset": "train",
+      "exam_id": "ct_train_1014"
+    },
+    {
+      "subset": "train",
+      "exam_id": "ct_train_1015"
+    },
+    {
+      "subset": "train",
+      "exam_id": "ct_train_1016"
+    },
+    {
+      "subset": "train",
+      "exam_id": "ct_train_1017"
+    },
+    {
+      "subset": "train",
+      "exam_id": "ct_train_1018"
+    },
+    {
+      "subset": "train",
+      "exam_id": "ct_train_1019"
+    },
+    {
+      "subset": "train",
+      "exam_id": "ct_train_1020"
+    },
+    {
+      "subset": "test",
+      "exam_id": "ct_test_2001"
+    },
+    {
+      "subset": "test",
+      "exam_id": "ct_test_2002"
+    },
+    {
+      "subset": "test",
+      "exam_id": "ct_test_2003"
+    },
+    {
+      "subset": "test",
+      "exam_id": "ct_test_2004"
+    },
+    {
+      "subset": "test",
+      "exam_id": "ct_test_2005"
+    },
+    {
+      "subset": "test",
+      "exam_id": "ct_test_2006"
+    },
+    {
+      "subset": "test",
+      "exam_id": "ct_test_2007"
+    },
+    {
+      "subset": "test",
+      "exam_id": "ct_test_2008"
+    },
+    {
+      "subset": "test",
+      "exam_id": "ct_test_2009"
+    },
+    {
+      "subset": "test",
+      "exam_id": "ct_test_2010"
+    },
+    {
+      "subset": "test",
+      "exam_id": "ct_test_2011"
+    },
+    {
+      "subset": "test",
+      "exam_id": "ct_test_2012"
+    },
+    {
+      "subset": "test",
+      "exam_id": "ct_test_2013"
+    },
+    {
+      "subset": "test",
+      "exam_id": "ct_test_2014"
+    },
+    {
+      "subset": "test",
+      "exam_id": "ct_test_2015"
+    },
+    {
+      "subset": "test",
+      "exam_id": "ct_test_2016"
+    },
+    {
+      "subset": "test",
+      "exam_id": "ct_test_2017"
+    },
+    {
+      "subset": "test",
+      "exam_id": "ct_test_2018"
+    },
+    {
+      "subset": "test",
+      "exam_id": "ct_test_2019"
+    },
+    {
+      "subset": "test",
+      "exam_id": "ct_test_2020"
+    },
+    {
+      "subset": "test",
+      "exam_id": "ct_test_2021"
+    },
+    {
+      "subset": "test",
+      "exam_id": "ct_test_2022"
+    },
+    {
+      "subset": "test",
+      "exam_id": "ct_test_2023"
+    },
+    {
+      "subset": "test",
+      "exam_id": "ct_test_2024"
+    },
+    {
+      "subset": "test",
+      "exam_id": "ct_test_2025"
+    },
+    {
+      "subset": "test",
+      "exam_id": "ct_test_2026"
+    },
+    {
+      "subset": "test",
+      "exam_id": "ct_test_2027"
+    },
+    {
+      "subset": "test",
+      "exam_id": "ct_test_2028"
+    },
+    {
+      "subset": "test",
+      "exam_id": "ct_test_2029"
+    },
+    {
+      "subset": "test",
+      "exam_id": "ct_test_2030"
+    },
+    {
+      "subset": "test",
+      "exam_id": "ct_test_2031"
+    },
+    {
+      "subset": "test",
+      "exam_id": "ct_test_2032"
+    },
+    {
+      "subset": "test",
+      "exam_id": "ct_test_2033"
+    },
+    {
+      "subset": "test",
+      "exam_id": "ct_test_2034"
+    },
+    {
+      "subset": "test",
+      "exam_id": "ct_test_2035"
+    },
+    {
+      "subset": "test",
+      "exam_id": "ct_test_2036"
+    },
+    {
+      "subset": "test",
+      "exam_id": "ct_test_2037"
+    },
+    {
+      "subset": "test",
+      "exam_id": "ct_test_2038"
+    },
+    {
+      "subset": "test",
+      "exam_id": "ct_test_2039"
+    },
+    {
+      "subset": "test",
+      "exam_id": "ct_test_2040"
+    }
+  ]
+}

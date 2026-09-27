@@ -110,7 +110,7 @@ def preprocess_ccta_volume(
         "threshold_mode": threshold_mode,
     }
 
-    # A redução é idêntica para os thresholds normal e fuzzy.
+    # A redução é idêntica para todos os modos de pré-processamento.
     if use_opencv:
         down_image = downscale_image_opencv(
             img,
@@ -120,7 +120,28 @@ def preprocess_ccta_volume(
     else:
         down_image = downscale_image_ndi(img, downscale_factors, order=3)
 
-    if threshold_mode == "normal":
+    if threshold_mode == "none":
+        # Sem corte de HU, todos os voxels finitos continuam candidatos.
+        # A LCC da máscara completa não filtraria as fatias, então a omitimos.
+        candidate_mask = np.isfinite(down_image)
+        lcc_image = (
+            down_image
+            if bool(candidate_mask.all())
+            else np.where(candidate_mask, down_image, 0).astype(np.float32)
+        )
+        lcc_mask = candidate_mask
+        selected_mask = candidate_mask
+        preprocessing_details.update(
+            {
+                "lower_threshold_method": None,
+                "min_threshold": None,
+                "max_threshold": None,
+                "effective_upper_threshold_hu": None,
+                "threshold_voxels": None,
+                "lcc_voxels": None,
+            }
+        )
+    elif threshold_mode == "normal":
         # Caminho histórico: threshold HU superior por percentil + LCC.
         min_threshold, lower_threshold_details = resolve_lower_threshold(
             down_image,
@@ -134,6 +155,7 @@ def preprocess_ccta_volume(
             down_image,
             *thresh_vals,
         )
+        selected_mask = thresh_mask
 
         lcc_image = np.zeros_like(thresh_image, dtype=thresh_image.dtype)
         lcc_mask = np.zeros_like(thresh_mask, dtype=bool)
@@ -177,6 +199,7 @@ def preprocess_ccta_volume(
             down_image,
             fuzzy_config,
         )
+        selected_mask = fuzzy_mask
         lcc_image, lcc_mask = build_lcc_image_from_mask(
             down_image,
             fuzzy_mask,
@@ -220,11 +243,7 @@ def preprocess_ccta_volume(
             {
                 "image": img,
                 "down_image": down_image,
-                "threshold_mask": (
-                    thresh_mask.astype(bool)
-                    if threshold_mode == "normal"
-                    else fuzzy_mask.astype(bool)
-                ),
+                "threshold_mask": selected_mask.astype(bool),
                 "lcc_mask": lcc_mask.astype(bool),
             }
         )

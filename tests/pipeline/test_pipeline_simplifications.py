@@ -128,6 +128,30 @@ class PipelineSimplificationTests(TestCase):
         self.assertEqual(result["lcc_image"].shape, (2, 2, 3))
         self.assertEqual(result["scaled_spacing"], (1.0, 1.0, 1.0))
 
+    def test_no_hu_threshold_preserves_finite_values_without_lcc(self):
+        image = np.array(
+            [[[-1000.0, 0.0], [400.0, 2000.0]], [[-500.0, 100.0], [800.0, 1500.0]]],
+            dtype=np.float32,
+        )
+        config = _preprocessing_config("none")
+        config["DOWNSCALE_FACTORS"] = [1, 1, 1]
+
+        result = preprocess_ccta_volume(
+            image,
+            (1.0, 1.0, 1.0),
+            config,
+            include_intermediates=True,
+        )
+
+        np.testing.assert_array_equal(result["lcc_image"], image)
+        self.assertTrue(result["threshold_mask"].all())
+        self.assertTrue(result["lcc_mask"].all())
+        details = result["preprocessing_details"]
+        self.assertEqual(details["threshold_mode"], "none")
+        self.assertIsNone(details["min_threshold"])
+        self.assertIsNone(details["effective_upper_threshold_hu"])
+        self.assertIsNone(details["threshold_voxels"])
+
     def test_cli_uses_one_split_and_defaults_to_full(self):
         parser = build_parser(Path("/dataset"), Path("/output"))
 

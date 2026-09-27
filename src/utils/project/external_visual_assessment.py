@@ -6,6 +6,8 @@ import warnings
 
 import pandas as pd
 
+from utils.project.dataframe import require_series_column
+
 ASSESSMENT_SHEET_NAME = "Avaliação visual"
 ASSESSMENT_COLUMNS = (
     "image_id",

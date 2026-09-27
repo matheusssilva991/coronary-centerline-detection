@@ -19,6 +19,7 @@ from external_ccta_batch_pipeline import (
     run,
     select_inventory,
 )
+from utils.project.mmwhs_official_aorta import OFFICIAL_AORTA_METHOD
 
 
 class ExternalCctaBatchPipelineTest(unittest.TestCase):
@@ -56,6 +57,10 @@ class ExternalCctaBatchPipelineTest(unittest.TestCase):
         self.assertEqual(orca.dataset, "orcascore")
         self.assertEqual(whs.dataset, "mmwhs")
         self.assertEqual(normalize_dataset_name("MM-WHS"), "mmwhs")
+        no_threshold = parser.parse_args(
+            ["--dataset", "mmwhs", "--resolution", "mid", "--no-hu-threshold"]
+        )
+        self.assertTrue(no_threshold.no_hu_threshold)
 
     def test_inventory_filters_subset_ids_and_limit(self):
         inventory = pd.DataFrame(
@@ -91,19 +96,30 @@ class ExternalCctaBatchPipelineTest(unittest.TestCase):
             subset="train",
             rows=[
                 {
+                    "subset": "train",
                     "status": "success",
                     "aorta_ground_truth_available": True,
                     "aorta_dice": 0.6,
                 },
                 {
+                    "subset": "train",
                     "status": "ostia_not_found",
                     "aorta_ground_truth_available": True,
                     "aorta_dice": 0.8,
                 },
                 {
+                    "subset": "train",
                     "status": "success",
                     "aorta_ground_truth_available": False,
                     "aorta_dice": None,
+                },
+                {
+                    "subset": "test",
+                    "status": "success",
+                    "aorta_evaluation_method": OFFICIAL_AORTA_METHOD,
+                    "aorta_evaluation_status": "success",
+                    "aorta_ground_truth_available": True,
+                    "aorta_dice": 0.5,
                 },
             ],
             started_at=datetime.now(timezone.utc),
@@ -111,10 +127,12 @@ class ExternalCctaBatchPipelineTest(unittest.TestCase):
         )
 
         aorta = metadata["ground_truth_metrics"]["aorta"]
-        self.assertEqual(metadata["schema_version"], 2)
+        self.assertEqual(metadata["schema_version"], 3)
         self.assertEqual(aorta["available_exam_count"], 2)
         self.assertEqual(aorta["evaluated_exam_count"], 2)
         self.assertAlmostEqual(aorta["dice_mean"], 0.7)
+        self.assertEqual(aorta["test_official"]["evaluated_exam_count"], 1)
+        self.assertAlmostEqual(aorta["test_official"]["dice_mean"], 0.5)
 
     @patch("external_ccta_batch_pipeline.use_gpu", return_value=False)
     @patch(
@@ -161,6 +179,7 @@ class ExternalCctaBatchPipelineTest(unittest.TestCase):
                     "train",
                     "--output-root",
                     temporary_dir,
+                    "--no-hu-threshold",
                     "--no-visuals",
                 ]
             )
@@ -177,6 +196,7 @@ class ExternalCctaBatchPipelineTest(unittest.TestCase):
                         "train",
                         "--resume-dir",
                         str(paths.run_dir),
+                        "--no-hu-threshold",
                         "--no-visuals",
                     ]
                 )
@@ -185,9 +205,15 @@ class ExternalCctaBatchPipelineTest(unittest.TestCase):
             metadata = json.loads(
                 (resumed_paths.run_dir / "metadata.json").read_text(encoding="utf-8")
             )
+            effective_config = json.loads(
+                (resumed_paths.config_dir / "effective_pipeline_config.json").read_text(
+                    encoding="utf-8"
+                )
+            )
 
         self.assertEqual(resumed_paths.run_dir, paths.run_dir)
         self.assertEqual(metadata["state"], "complete")
+        self.assertEqual(effective_config["THRESHOLDING"]["method"], "none")
         process_exam.assert_not_called()
 
     @patch("external_ccta_batch_pipeline.use_gpu", return_value=False)
