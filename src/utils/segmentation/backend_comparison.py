@@ -48,7 +48,7 @@ from .pipeline_preprocessing import compute_vesselness, load_and_preprocess_imag
 REPO_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_CONFIG_PATH = REPO_ROOT / "config" / "pipeline_config.json"
 DEFAULT_SPLIT_CONFIG_PATH = REPO_ROOT / "config" / "imagecas_splits.json"
-DEFAULT_BASE_PATH = Path("/media/matheus/HD/DatasetsCCTA/ImageCAS/1-1000")
+DEFAULT_BASE_PATH = Path("/run/media/matheus/HD/DatasetsCCTA/ImageCAS/1-1000")
 DEFAULT_BASE_PATH_FALLBACK = Path("/data04/home/mpmaia/ImageCAS/database/1-1000")
 DEFAULT_OUTPUT_ROOT = REPO_ROOT / "output" / "segmentation" / "backend_comparison"
 T = TypeVar("T")

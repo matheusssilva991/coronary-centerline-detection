@@ -43,6 +43,7 @@ from utils.project.mmwhs_official_aorta import (
     validate_saved_prediction,
 )
 from utils.project.notebook_env import load_notebook_pipeline_config
+from utils.project.run_notification import notify_run_completion
 from utils.project.results import make_json_safe
 from utils.segmentation.fuzzy_threshold import normalize_threshold_mode
 from utils.segmentation.aorta_segmentation import (
@@ -79,19 +80,19 @@ DEFAULT_CONFIG_PATH = REPO_ROOT / "config" / "pipeline_config.json"
 DEFAULT_OUTPUT_ROOT = Path(
     os.environ.get(
         "CCTA_RESULTS_ROOT",
-        "/media/matheus/HD/Results_dataset_ccta",
+        "/run/media/matheus/HD/Results_dataset_ccta",
     )
 )
 DATASET_SPECS = {
     "orcascore": {
         "display_name": "OrCaScore",
         "environment": "ORCASCORE_BASE_PATH",
-        "default_path": Path("/media/matheus/HD/DatasetsCCTA/Orca_Score_Calcium"),
+        "default_path": Path("/run/media/matheus/HD/DatasetsCCTA/Orca_Score_Calcium"),
     },
     "mmwhs": {
         "display_name": "MM-WHS",
         "environment": "MMWHS_BASE_PATH",
-        "default_path": Path("/media/matheus/HD/DatasetsCCTA/MM-WHS-2017-Dataset"),
+        "default_path": Path("/run/media/matheus/HD/DatasetsCCTA/MM-WHS-2017-Dataset"),
     },
 }
 
@@ -232,6 +233,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--evaluator-dir",
         type=Path,
         help="Pasta do avaliador oficial; padrão: dentro do MM-WHS.",
+    )
+    parser.add_argument(
+        "--notify",
+        action="store_true",
+        help="Avisa no desktop e toca um som ao terminar o run.",
     )
     parser.add_argument("--verbose", action="store_true")
     return parser
@@ -1103,6 +1109,7 @@ def run(args: argparse.Namespace) -> RunPaths:
         args.resolution,
         resume_dir=args.resume_dir,
     )
+    args.notification_run_dir = paths.run_dir
     _configure_logging(paths.logs_dir, args.verbose)
     selected_exam_records = [
         {"subset": str(record["subset"]), "exam_id": str(record["exam_id"])}
@@ -1353,15 +1360,68 @@ def run(args: argparse.Namespace) -> RunPaths:
     return paths
 
 
+def _notify_external_result(args: argparse.Namespace, paths: RunPaths) -> None:
+    """Lê o metadata final e diferencia falhas científicas das avaliações."""
+    try:
+        metadata = _load_json(paths.run_dir / "metadata.json")
+        state = str(metadata.get("state") or "incomplete")
+        if state not in {"complete", "complete_with_errors", "incomplete"}:
+            state = "incomplete"
+        status_counts = metadata.get("status_counts") or {}
+        pipeline_errors = int(status_counts.get("error") or 0)
+        official = (
+            (metadata.get("ground_truth_metrics") or {}).get("aorta") or {}
+        ).get("test_official") or {}
+        evaluation_errors = int(official.get("error_exam_count") or 0)
+        details = [
+            f"{int(metadata.get('processed_exam_count') or 0)} exame(s) processado(s)."
+        ]
+        if pipeline_errors:
+            details.append(f"Pipeline: {pipeline_errors} erro(s).")
+        if evaluation_errors:
+            details.append(f"Avaliação oficial: {evaluation_errors} falha(s).")
+        if state == "complete" and evaluation_errors:
+            state = "complete_with_warnings"
+    except (OSError, ValueError, TypeError, AttributeError) as error:
+        LOGGER.warning("Não foi possível ler o metadata final para o aviso: %s", error)
+        state = "incomplete"
+        details = ["Metadata final indisponível; confira o run."]
+
+    notify_run_completion(
+        pipeline=args.dataset,
+        split=args.subset,
+        resolution=args.resolution,
+        run_dir=paths.run_dir,
+        status=state,
+        details=" ".join(details),
+    )
+
+
 def main(argv: Sequence[str] | None = None) -> int:
-    """CLI entry point."""
+    """Executa o batch externo e avisa sobre o resultado quando solicitado."""
     parser = build_parser()
     args = parser.parse_args(argv)
     try:
         paths = run(args)
-    except (FileNotFoundError, ValueError, RuntimeError) as error:
-        LOGGER.error("%s", error)
-        return 1
+    except BaseException as error:
+        if args.notify:
+            run_dir = getattr(args, "notification_run_dir", args.resume_dir)
+            notify_run_completion(
+                pipeline=args.dataset,
+                split=args.subset,
+                resolution=args.resolution,
+                run_dir=Path(run_dir) if run_dir is not None else None,
+                status="interrupted"
+                if isinstance(error, KeyboardInterrupt)
+                else "failed",
+                details="Consulte o terminal e os logs para detalhes.",
+            )
+        if isinstance(error, (FileNotFoundError, ValueError, RuntimeError)):
+            LOGGER.error("%s", error)
+            return 1
+        raise
+    if args.notify:
+        _notify_external_result(args, paths)
     print(f"Resultados salvos em: {paths.run_dir}")
     return 0
 

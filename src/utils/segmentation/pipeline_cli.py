@@ -65,7 +65,7 @@ Exemplos de uso:
   python segmentation_pipeline.py --split train --save-segmentation-visuals
 
   # Salvar os HTMLs em um disco externo, mantendo CSVs e logs no repositório
-  python segmentation_pipeline.py --split train --save-segmentation-visuals --visual-output-dir /media/matheus/HD/Results_dataset_ccta/imagecas
+  python segmentation_pipeline.py --split train --save-segmentation-visuals --visual-output-dir /run/media/matheus/HD/Results_dataset_ccta/imagecas
 
   # PROCESSAMENTO EM LOTES (salvamento incremental):
     # Processar em 10 lotes (divide as imagens entre 10 blocos)
@@ -368,6 +368,11 @@ def build_parser(default_base_path, default_output_dir):
         help="Arquivo JSON com configurações para sobrescrever valores padrão",
     )
     parser.add_argument(
+        "--config-replace",
+        action="store_true",
+        help="Usa --config-file como configuração completa, sem mesclar com os padrões atuais.",
+    )
+    parser.add_argument(
         "--split-config",
         type=str,
         default=None,
@@ -425,6 +430,11 @@ def build_parser(default_base_path, default_output_dir):
         default=None,
         help="Diretório anterior para retomar (ex: output/segmentation/runs/mid_res/2026-03-14_10-30-00). Obrigatório quando a retomada começa de um lote > 0.",
     )
+    parser.add_argument(
+        "--notify",
+        action="store_true",
+        help="Avisa no desktop e toca um som ao terminar o run.",
+    )
     return parser
 
 
@@ -477,6 +487,8 @@ def parse_pipeline_args(default_base_path, default_output_dir):
         args.image_ids = list(dict.fromkeys(args.image_ids))
     if args.merge_only and not args.resume_dir:
         parser.error("--merge-only requer --resume-dir com a pasta de saída existente")
+    if args.config_replace and not args.config_file:
+        parser.error("--config-replace requer --config-file")
     if args.merge_only and args.image_ids:
         parser.error("--image-ids não pode ser usado com --merge-only")
     if args.run_group:

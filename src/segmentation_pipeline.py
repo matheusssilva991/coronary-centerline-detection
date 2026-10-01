@@ -18,6 +18,7 @@ from utils.project.config import (
     scale_config_to_resolution,
 )
 from utils.project.dataset import get_data_splits, list_dataset_image_ids
+from utils.project.run_notification import notify_run_completion
 from utils.project.results import (
     ResultIntegrityError,
     batch_result_number,
@@ -54,7 +55,7 @@ else:
     logger.warning("GPU não disponível. Acelerações CPU usadas.")
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-BASE_PATH = Path("/media/matheus/HD/DatasetsCCTA/ImageCAS/1-1000")
+BASE_PATH = Path("/run/media/matheus/HD/DatasetsCCTA/ImageCAS/1-1000")
 BASE_PATH_FALLBACK = Path("/data04/home/mpmaia/ImageCAS/database/1-1000")
 OUTPUT_DIR = REPO_ROOT / "output"
 PIPELINE_CONFIG_PATH = REPO_ROOT / "config" / "pipeline_config.json"
@@ -140,13 +141,24 @@ def _apply_execution_overrides(config, args):
     for config_key, value in direct_overrides.items():
         if value is not None:
             config[config_key] = value
-    config["SAVE_SEGMENTATION_VISUALS"] = bool(
-        getattr(args, "save_segmentation_visuals", False)
-    )
+    save_visuals = bool(getattr(args, "save_segmentation_visuals", False))
+    if (
+        not getattr(args, "config_replace", False)
+        or "SAVE_SEGMENTATION_VISUALS" in config
+        or save_visuals
+    ):
+        config["SAVE_SEGMENTATION_VISUALS"] = save_visuals
     visual_output_dir = getattr(args, "visual_output_dir", None)
-    config["VISUAL_OUTPUT_DIR"] = (
-        Path(visual_output_dir).as_posix() if visual_output_dir is not None else None
-    )
+    if (
+        not getattr(args, "config_replace", False)
+        or "VISUAL_OUTPUT_DIR" in config
+        or visual_output_dir is not None
+    ):
+        config["VISUAL_OUTPUT_DIR"] = (
+            Path(visual_output_dir).as_posix()
+            if visual_output_dir is not None
+            else None
+        )
 
     nested_overrides = (
         ("ARTERY_SEGMENTATION", "method", args.artery_segmentation_method),
@@ -207,7 +219,7 @@ def _apply_execution_overrides(config, args):
         )
 
     circle_filter = getattr(args, "aorta_circle_filter", None)
-    circle_filter_config = circle_detection_config.setdefault("trajectory_filter", {})
+    circle_filter_config = circle_detection_config.get("trajectory_filter") or {}
     if circle_filter is not None:
         circle_filter_config["method"] = circle_filter
     circle_filter_min_coverage = getattr(args, "aorta_circle_filter_min_coverage", None)
@@ -225,6 +237,11 @@ def _apply_execution_overrides(config, args):
     )
     if synthetic_tail_slices is not None:
         circle_filter_config["synthetic_tail_slices"] = int(synthetic_tail_slices)
+    if (
+        circle_filter_config
+        and circle_detection_config.get("trajectory_filter") is not circle_filter_config
+    ):
+        circle_detection_config["trajectory_filter"] = circle_filter_config
 
 
 def _apply_threshold_overrides(config, args):
@@ -260,7 +277,8 @@ def build_effective_config(args):
     effective_config = copy.deepcopy(select_resolution_config(args))
 
     if args.config_file:
-        effective_config = load_config_json(args.config_file, effective_config)
+        base_config = {} if getattr(args, "config_replace", False) else effective_config
+        effective_config = load_config_json(args.config_file, base_config)
         print(f"⚙️  Configuração carregada de: {args.config_file}")
 
     # A resolução escolhida na CLI prevalece sobre fatores salvos em snapshots
@@ -580,6 +598,14 @@ def _record_incomplete_integrity(output_dir, split_name, error):
     temporary.replace(marker)
 
 
+def _pipeline_error_count(results):
+    """Conta exames com falha registrada no consolidado validado."""
+    if "error" not in results.columns:
+        return 0
+    errors = results["error"].fillna("").astype(str).str.strip()
+    return int(errors.ne("").sum())
+
+
 def run_merge_only_split(
     split_name,
     image_ids,
@@ -623,6 +649,7 @@ def run_merge_only_split(
         execution_time,
         timing_summary=batch_timing_summary,
     )
+    return _pipeline_error_count(df)
 
 
 def run_processing_split(
@@ -689,6 +716,7 @@ def run_processing_split(
         timing_summary=batch_timing_summary,
         current_run_execution_time=current_run_execution_time,
     )
+    return _pipeline_error_count(df)
 
 
 def run_requested_split(
@@ -707,7 +735,7 @@ def run_requested_split(
     print(f"{'=' * 60}")
 
     if args.merge_only:
-        run_merge_only_split(
+        return run_merge_only_split(
             split_name,
             image_ids,
             output_dir,
@@ -715,7 +743,7 @@ def run_requested_split(
             resolution=args.resolution,
         )
     else:
-        run_processing_split(
+        return run_processing_split(
             split_name,
             image_ids,
             output_dir,
@@ -726,9 +754,8 @@ def run_requested_split(
         )
 
 
-def main():
-    """Função principal com argumentos de linha de comando."""
-    args = parse_pipeline_args(BASE_PATH, OUTPUT_DIR)
+def _run_from_args(args):
+    """Executa os argumentos validados e retorna o estado persistido."""
     if args.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
         logger.debug("Logging verbose habilitado (DEBUG)")
@@ -740,6 +767,7 @@ def main():
 
     print_run_settings(args, effective_config, base_path)
     output_dirs = resolve_output_dir(args, output_root_dir)
+    args.notification_run_dir = Path(output_dirs["run_dir"])
     setup_file_logging(output_dirs["logs_dir"])
     split_name, image_ids = build_split_to_run(args, base_path)
     if args.merge_only:
@@ -752,7 +780,7 @@ def main():
             image_ids,
             split_config_path=args.split_config,
         )
-    run_requested_split(
+    error_count = run_requested_split(
         args,
         split_name,
         image_ids,
@@ -761,10 +789,45 @@ def main():
         base_path,
         output_dirs["visual_dir"],
     )
+    return Path(output_dirs["run_dir"]), split_name, int(error_count or 0)
+
+
+def main():
+    """Executa o pipeline e avisa sobre o resultado quando solicitado."""
+    args = parse_pipeline_args(BASE_PATH, OUTPUT_DIR)
+    try:
+        run_dir, split_name, error_count = _run_from_args(args)
+    except BaseException as error:
+        if args.notify:
+            fallback_dir = (
+                Path(args.resume_dir) if args.resume_dir is not None else None
+            )
+            notify_run_completion(
+                pipeline="ImageCAS",
+                split=args.split,
+                resolution=args.resolution,
+                run_dir=getattr(args, "notification_run_dir", fallback_dir),
+                status="interrupted"
+                if isinstance(error, KeyboardInterrupt)
+                else "failed",
+                details="Consulte o terminal e os logs para detalhes.",
+            )
+        raise
 
     print(f"\n{'=' * 60}")
     print("✨ Processamento concluído!")
     print(f"{'=' * 60}\n")
+    if args.notify:
+        notify_run_completion(
+            pipeline="ImageCAS",
+            split=split_name,
+            resolution=args.resolution,
+            run_dir=run_dir,
+            status="complete_with_errors" if error_count else "complete",
+            details=(
+                f"{error_count} exame(s) com erro de pipeline." if error_count else None
+            ),
+        )
 
 
 if __name__ == "__main__":

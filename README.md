@@ -313,6 +313,19 @@ result = process_image(IMG_ID=1)
 
 ### Processamento em Lote
 
+Para receber um aviso no desktop e um som curto ao término de um run ImageCAS,
+adicione `--notify` ao comando de `src/segmentation_pipeline.py`. A opção também
+vale para retomadas e `--merge-only`; permanece desligada por padrão.
+
+```bash
+uv run python src/segmentation_pipeline.py --split train --resolution mid --notify
+```
+
+Para repetir um snapshot histórico sem herdar opções adicionadas posteriormente
+em `config/pipeline_config.json`, use `--config-file <snapshot.json>` junto de
+`--config-replace`. As opções explícitas da CLI, como `--downscale-method`, ainda
+prevalecem sobre o snapshot.
+
 ```python
 from segmentation_pipeline import run_pipeline
 
@@ -356,6 +369,12 @@ uv run python src/external_ccta_batch_pipeline.py \
   --gpu
 ```
 
+Adicione `--notify` a qualquer comando em lote para receber o aviso ao terminar.
+O estado informado vem do metadata do run; falhas da avaliação oficial da aorta
+são indicadas separadamente das falhas de segmentação. Os avisos usam
+`notify-send` e `canberra-gtk-play` e requerem uma sessão gráfica ativa. Se um
+desses comandos não estiver disponível, o resultado do run não será alterado.
+
 Os aliases `orca`, `whs` e `owhs` também são aceitos. Para executar somente um
 subset ou validar poucos exames antes do lote completo:
 
@@ -380,10 +399,10 @@ resolução, subset, `--exam-ids` e `--limit`:
 uv run python src/external_ccta_batch_pipeline.py \
   --dataset orcascore \
   --resolution mid \
-  --resume-dir /media/matheus/HD/Results_dataset_ccta/orcascore/mid_res/<timestamp>
+  --resume-dir /run/media/matheus/HD/Results_dataset_ccta/orcascore/mid_res/<timestamp>
 ```
 
-A raiz padrão é `/media/matheus/HD/Results_dataset_ccta`, configurável por
+A raiz padrão é `/run/media/matheus/HD/Results_dataset_ccta`, configurável por
 `CCTA_RESULTS_ROOT` ou `--output-root`. A hierarquia é:
 
 ```text
@@ -435,7 +454,7 @@ use os mesmos filtros da seleção original (por exemplo, `--subset all`):
 ```bash
 uv run python src/external_ccta_batch_pipeline.py \
   --dataset mmwhs --resolution high --subset all \
-  --resume-dir /media/matheus/HD/Results_dataset_ccta/mmwhs/high_res/<run> \
+  --resume-dir /run/media/matheus/HD/Results_dataset_ccta/mmwhs/high_res/<run> \
   --test-aorta-dice --aorta-eval-only
 ```
 
@@ -479,7 +498,7 @@ Os resultados são salvos em:
 - `output/segmentation/runs/<resolution>_res/<timestamp>/config/`: config efetiva e IDs usados
 - `output/segmentation/analysis/`: análises derivadas dos notebooks
 - `output/segmentation/8.final_results/`: resultados legados mantidos como referência
-- `/media/matheus/HD/Results_dataset_ccta/`: artefatos volumosos dos três bancos
+- `/run/media/matheus/HD/Results_dataset_ccta/`: artefatos volumosos dos três bancos
 
 ## 🔧 Configuração
 
