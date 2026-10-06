@@ -20,8 +20,8 @@ ficam em `output/segmentation/analysis/`.
   Dice. A referência congelada em
   `config/article_cbeb_sensitivity.json` usa P99.9 como referência do artigo do
   CBEB. Seus resultados alimentam a análise OFAT em
-  `src/eda/pipeline_sensitivity_analysis.ipynb` e a investigação específica
-  dos percentis em `src/eda/upper_threshold_analysis.ipynb`.
+  `src/eda/sensitivity/pipeline_sensitivity_analysis.ipynb` e a investigação específica
+  dos percentis em `src/eda/sensitivity/upper_threshold_analysis.ipynb`.
 - O estudo `artery_region_growing` de `pipeline_parameter_validation.py`
   mantém disponível somente a grade dos parâmetros ativos do primeiro RG.
   Estratégias descartadas estão registradas em
@@ -297,12 +297,12 @@ SPLITS=val USE_GPU=1 \
 
 Os resultados ficam em `output/segmentation/runs/mid_res/aorta_segmentation_experiments/{split}/ostia_localization/`, separados por variante.
 
-Uma quarta variante opcional, `lower100_pad3`, amplia o padding para 3 voxels.
+Uma variante opcional, `lower100_pad3`, amplia o padding para 3 voxels.
 Use `DRY_RUN=1` para conferir as configuracoes sem processar imagens e
 `SAVE_VISUALS=1` para gerar os HTMLs. Os runs historicos com lower_fraction=1
 excluiam a ultima fatia; os novos incluem toda a superficie.
 
-### Mapa de vasos e seleção com pad3
+### Validação dos óstios em 270 exames
 
 Para confirmar na validacao completa (270 exames), use
 `VAL_SPLIT_CONFIG=config/imagecas_splits.json`. Sem essa variavel, o runner
@@ -318,31 +318,6 @@ bash src/experiments/runners/run_ostia_localization_filter_envelope.sh
 O comando executa tres runs sequenciais com a mesma aorta (filtro + envelope),
 variando a superficie de busca dos ostios. Selecione apenas um nome em
 `VARIANTS` para executar cada run separadamente.
-
-`ostia_pad3_sensitivity.json` define 14 configurações: as 11 da triagem inicial
-e três refinamentos de suavização (0.2, 0.3 e 0.4). Contém
-variações individuais de sigmas, beta, suavização, distância mínima entre
-candidatos e distância axial máxima. Todas usam lower_fraction=1, padding=3,
-geometria 4.8/8 e a configuração de aorta do filtro com envelope.
-
-```bash
-SPLITS=train,val USE_GPU=1 SAVE_VISUALS=0 \
-VARIANTS=pad3_smooth_0_2,pad3_smooth_0_3,pad3_smooth_0_4 \
-VARIANTS_FILE=src/experiments/ostia_pad3_sensitivity.json \
-RUN_FAMILY=ostia_pad3_sensitivity \
-bash src/experiments/runners/run_ostia_localization_filter_envelope.sh
-```
-
-O comando seleciona apenas os três refinamentos: 30 imagens de treino e 60 de
-validação por configuração, em seis runs sequenciais (270 execuções por imagem).
-Compare com a referência e smooth=0.5 já salvos. Suavização é aplicada antes
-do Frangi. A rodada de 0.5 melhorou Dice, mas perdeu sucessos dos óstios;
-inspecione especialmente 854 no treino e 187, 227, 307 e 907 na validação.
-Sem `VARIANTS`, todas as 14 configurações são executadas.
-Os CSVs e configurações efetivas ficam
-em `output/segmentation/runs/mid_res/aorta_segmentation_experiments/{split}/ostia_pad3_sensitivity/`.
-`VARIANTS` permite selecionar nomes do JSON; `DRY_RUN=1` verifica as configurações.
-`SAVE_VISUALS=1` salva HTMLs no disco externo, configurável por `VISUAL_OUTPUT_DIR`.
 
 ### Confirmacao final nos 700 exames de teste
 
