@@ -15,8 +15,8 @@ from ..project.dataframe import (
     require_series_column,
     to_numeric_series,
 )
-from ..project.result_paths import results_filename
-from ..project.results_schema import normalize_ostia_status
+from utils.project.results.paths import results_filename
+from utils.project.results.schema import normalize_ostia_status
 
 
 AORTA_REVIEW_ID_FIELDS = (

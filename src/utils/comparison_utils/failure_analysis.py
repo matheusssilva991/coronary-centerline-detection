@@ -7,7 +7,7 @@ from collections.abc import Mapping
 import numpy as np
 import pandas as pd
 
-from ..project.results_schema import normalize_ostia_status
+from utils.project.results.schema import normalize_ostia_status
 
 DEFAULT_VARIANTS = {
     "normal_rg": "normal_rg",

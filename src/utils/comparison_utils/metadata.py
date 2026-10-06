@@ -50,8 +50,8 @@ def build_split_resolution_summary(
     relatem coleções incompletas sem lógica especial de carregamento.
     """
     from .bad_cases import filter_correct_ostia_cases
-    from ..project.results_schema import summarize_results_df
-    from ..project.results_timing import summarize_batch_timing_records
+    from utils.project.results.schema import summarize_results_df
+    from utils.project.results.timing import summarize_batch_timing_records
     from .io import load_split_batch_timings, load_split_results
 
     rows = []
@@ -164,7 +164,7 @@ def summarize_split_results(
     subset_name,
 ):
     """Calcula sob demanda os agregados antes persistidos em summary/metadata."""
-    from ..project.results_schema import summarize_results_df
+    from utils.project.results.schema import summarize_results_df
     from .io import load_split_results
 
     results = load_split_results(

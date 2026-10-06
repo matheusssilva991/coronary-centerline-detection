@@ -38,11 +38,14 @@ from .ostia_detection import (
     find_aorta_surface,
     find_ostia,
 )
-from .pipeline_detection import (
+from utils.segmentation.pipeline.detection import (
     locate_aorta_circles,
     segment_aorta,
 )
-from .pipeline_preprocessing import compute_vesselness, load_and_preprocess_image
+from utils.segmentation.pipeline.preprocessing import (
+    compute_vesselness,
+    load_and_preprocess_image,
+)
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]

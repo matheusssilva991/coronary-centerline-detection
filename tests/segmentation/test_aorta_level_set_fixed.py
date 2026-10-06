@@ -4,10 +4,10 @@ import unittest
 
 import numpy as np
 
-from utils.segmentation.aorta_segmentation import (
+from utils.segmentation.aorta.segmentation import (
     classify_aorta_segmentation_feedback,
 )
-from utils.segmentation.pipeline_detection import segment_aorta_with_diagnostics
+from utils.segmentation.pipeline.detection import segment_aorta_with_diagnostics
 
 
 class FixedAortaLevelSetTests(unittest.TestCase):

@@ -17,7 +17,7 @@ from utils.project.results import (
     merge_batch_results,
     select_per_image_result_columns,
 )
-from utils.project.run_summary import (
+from utils.project.results.summary import (
     ResultIntegrityError,
     build_run_summary_row,
     effective_config_sha256,

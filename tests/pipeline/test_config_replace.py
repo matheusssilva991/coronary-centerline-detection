@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 import segmentation_pipeline as pipeline
 from utils.project.config import serialize_config_for_json
-from utils.segmentation.pipeline_cli import build_parser, parse_pipeline_args
+from utils.segmentation.pipeline.cli import build_parser, parse_pipeline_args
 
 
 class ConfigReplaceTests(TestCase):

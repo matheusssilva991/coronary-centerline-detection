@@ -15,7 +15,6 @@ from nibabel.nifti1 import Nifti1Image
 
 from experiments.mmwhs_test_aorta import (
     evaluate_with_wine,
-    parse_dice_lo,
     load_run_config,
     predict_aorta,
     restore_native_mask,
@@ -24,7 +23,14 @@ from experiments.mmwhs_test_aorta import (
     validate_saved_prediction,
     verify_run_result,
 )
-from utils.project.mmwhs_official_aorta import AortaPrediction
+from utils.project.evaluation.mmwhs_official_aorta import (
+    AortaPrediction,
+    OFFICIAL_AORTA_METHOD,
+    parse_dice_lo,
+    parse_aorta_dice,
+    parse_label_dice_output,
+    aorta_dice_result_path,
+)
 
 
 class MmwhsTestAortaTest(unittest.TestCase):
@@ -76,10 +82,14 @@ class MmwhsTestAortaTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "encontrados 0"):
                 select_test_record(self.root, "ct_test_2002")
 
-    @patch("utils.project.mmwhs_official_aorta.segment_aorta_with_diagnostics")
-    @patch("utils.project.mmwhs_official_aorta.locate_and_filter_aorta_circles")
-    @patch("utils.project.mmwhs_official_aorta.preprocess_ccta_volume")
-    @patch("utils.project.mmwhs_official_aorta.load_ccta_volume")
+    @patch(
+        "utils.project.evaluation.mmwhs_official_aorta.segment_aorta_with_diagnostics"
+    )
+    @patch(
+        "utils.project.evaluation.mmwhs_official_aorta.locate_and_filter_aorta_circles"
+    )
+    @patch("utils.project.evaluation.mmwhs_official_aorta.preprocess_ccta_volume")
+    @patch("utils.project.evaluation.mmwhs_official_aorta.load_ccta_volume")
     def test_reuses_batch_aorta_steps(self, load_volume, preprocess, locate, segment):
         load_volume.return_value = np.ones((4, 4, 2), dtype=np.float32)
         preprocess.return_value = {
@@ -186,13 +196,14 @@ class MmwhsTestAortaTest(unittest.TestCase):
             parse_dice_lo(path, "ct_test_2001")
 
     @patch(
-        "utils.project.mmwhs_official_aorta._wine_path",
+        "utils.project.evaluation.mmwhs_official_aorta._wine_path",
         side_effect=lambda path: str(path),
     )
     @patch(
-        "utils.project.mmwhs_official_aorta.shutil.which", return_value="/usr/bin/wine"
+        "utils.project.evaluation.mmwhs_official_aorta.shutil.which",
+        return_value="/usr/bin/wine",
     )
-    @patch("utils.project.mmwhs_official_aorta.subprocess.run")
+    @patch("utils.project.evaluation.mmwhs_official_aorta.subprocess.run")
     def test_wine_command_uses_encrypted_label_and_aorta_result(
         self, run_command, _which, _wine_path
     ):
@@ -208,26 +219,92 @@ class MmwhsTestAortaTest(unittest.TestCase):
             if "zxhtransform.exe" in command[1]:
                 (self.root / "ct_test_2001_label_1mm.nii.gz").touch()
             else:
-                (self.root / "ct_test_2001_dice.xls").write_text(
-                    "0\t0\t0\t0\t0\t0.632263\t0\t0.076495\t\tct2001\t--decodeseg2\t\n"
-                )
+                return SimpleNamespace(stdout="success: open image\n0.804026\t\n")
 
         run_command.side_effect = make_outputs
         result = evaluate_with_wine(
             prediction, "ct_test_2001", evaluator_dir, self.root
         )
 
-        self.assertEqual(result.name, "ct_test_2001_dice.xls")
+        self.assertEqual(result.name, "ct_test_2001_aorta_dice.json")
+        self.assertEqual(parse_aorta_dice(result, "ct_test_2001"), 0.804026)
         self.assertEqual(run_command.call_count, 2)
         transform_args = run_command.call_args_list[0].args[0]
         evaluate_args = run_command.call_args_list[1].args[0]
         self.assertIn("-nearest", transform_args)
         self.assertIn("--decodeseg2", evaluate_args)
-        self.assertIn("ct2001", evaluate_args)
+        self.assertEqual(evaluate_args[2:5], ["-label", "820", "820"])
+        self.assertNotIn("ALL", evaluate_args)
         self.assertIn(
             str(evaluator_dir / "nii/ct_test_2001_label_encrypt_1mm.nii.gz"),
             evaluate_args,
         )
+
+    def test_scalar_output_rejects_invalid_or_multiple_scores(self):
+        self.assertEqual(
+            parse_label_dice_output("success: open image\n1.000000\t\n"), 1
+        )
+        for output in (
+            "",
+            "garbage",
+            "nan",
+            "inf",
+            "-1.#IND00",
+            "-0.1",
+            "1.1",
+            "0.2\n0.3",
+        ):
+            with self.subTest(output=output), self.assertRaises(ValueError):
+                parse_label_dice_output(output)
+
+    def test_json_validates_identity_protocol_label_and_score(self):
+        path = aorta_dice_result_path(self.root, "ct_test_2001")
+        valid = {
+            "exam_id": "ct_test_2001",
+            "method": OFFICIAL_AORTA_METHOD,
+            "label": 820,
+            "dice": 0.804026,
+        }
+        path.write_text(json.dumps(valid))
+        self.assertEqual(parse_aorta_dice(path, "ct_test_2001"), 0.804026)
+        for key, value in (
+            ("exam_id", "ct_test_2002"),
+            ("method", "mmwhs_official_1mm_wine"),
+            ("label", 850),
+            ("dice", True),
+            ("dice", None),
+            ("dice", float("nan")),
+            ("dice", 2),
+        ):
+            path.write_text(json.dumps({**valid, key: value}))
+            with self.subTest(key=key, value=value), self.assertRaises(ValueError):
+                parse_aorta_dice(path, "ct_test_2001")
+
+    @patch("utils.project.evaluation.mmwhs_official_aorta.preflight_evaluator")
+    @patch("utils.project.evaluation.mmwhs_official_aorta._wine_path", side_effect=str)
+    @patch("utils.project.evaluation.mmwhs_official_aorta.subprocess.run")
+    def test_legacy_is_not_cached_new_result_is_atomic_and_reused(
+        self, run_command, _path, _preflight
+    ):
+        exam_id = "ct_test_2001"
+        legacy = self.root / f"{exam_id}_dice.xls"
+        legacy.write_text("legacy result")
+        (self.root / f"{exam_id}_label_1mm.nii.gz").touch()
+        run_command.return_value = SimpleNamespace(stdout="invalid score")
+        target = aorta_dice_result_path(self.root, exam_id)
+        with self.assertRaises(ValueError):
+            evaluate_with_wine(
+                self.root / "native.nii.gz", exam_id, self.root, self.root
+            )
+        self.assertFalse(target.exists())
+        self.assertEqual(legacy.read_text(), "legacy result")
+        run_command.return_value = SimpleNamespace(stdout="0.804026\n")
+        evaluate_with_wine(self.root / "native.nii.gz", exam_id, self.root, self.root)
+        self.assertEqual(parse_aorta_dice(target, exam_id), 0.804026)
+        self.assertEqual(list(self.root.glob("*.tmp")), [])
+        run_command.reset_mock()
+        evaluate_with_wine(self.root / "native.nii.gz", exam_id, self.root, self.root)
+        run_command.assert_not_called()
 
 
 if __name__ == "__main__":

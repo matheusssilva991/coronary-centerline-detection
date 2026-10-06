@@ -23,20 +23,20 @@ from utils.experiments.sweep_common import (
     set_nested,
 )
 from utils.project.config import load_config_json
-from utils.project.results_columns import ARTERY_BRANCH_COLUMNS
+from utils.project.results.columns import ARTERY_BRANCH_COLUMNS
 from utils.processing.preprocessing import build_lcc_image_from_mask, downscale_image
-from utils.segmentation.fuzzy_connectedness import segment_artery_fuzzy_connectedness
-from utils.segmentation.fuzzy_threshold import fuzzy_threshold_outputs
+from utils.segmentation.fuzzy.connectedness import segment_artery_fuzzy_connectedness
+from utils.segmentation.fuzzy.threshold import fuzzy_threshold_outputs
 from utils.segmentation.lower_threshold import resolve_lower_threshold
-from utils.segmentation.pipeline_arteries import segment_arteries_from_vesselness
-from utils.segmentation.pipeline_detection import (
+from utils.segmentation.pipeline.arteries import segment_arteries_from_vesselness
+from utils.segmentation.pipeline.detection import (
     detect_and_evaluate_ostia,
     filter_located_aorta_circles,
     locate_aorta_circles,
     segment_aorta,
 )
-from utils.segmentation.pipeline_preprocessing import compute_vesselness
-from utils.segmentation.pipeline_visuals import save_segmentation_visual
+from utils.segmentation.pipeline.preprocessing import compute_vesselness
+from utils.segmentation.pipeline.visuals import save_segmentation_visual
 from utils.utils.metrics import dice_score
 from utils.utils.nifti_io import load_raw_img_and_label
 

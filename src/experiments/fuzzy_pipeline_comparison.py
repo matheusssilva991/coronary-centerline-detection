@@ -41,7 +41,7 @@ from utils.experiments.sweep_common import (  # noqa: E402
     write_json,
 )
 from utils.project.config import scale_config_to_resolution  # noqa: E402
-from utils.project.notebook_env import resolve_imagecas_base_path  # noqa: E402
+from utils.project.runtime.notebook_env import resolve_imagecas_base_path  # noqa: E402
 
 
 DEFAULT_OUTPUT_ROOT = (

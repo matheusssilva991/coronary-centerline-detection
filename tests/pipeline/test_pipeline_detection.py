@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 import numpy as np
 
-from utils.segmentation.pipeline_detection import (
+from utils.segmentation.pipeline.detection import (
     detect_ostia,
     locate_and_filter_aorta_circles,
     locate_aorta_circles,
@@ -13,8 +13,8 @@ from utils.segmentation.pipeline_detection import (
 
 
 class AortaCircleDetectionTest(TestCase):
-    @patch("utils.segmentation.pipeline_detection.filter_located_aorta_circles")
-    @patch("utils.segmentation.pipeline_detection.locate_aorta_circles")
+    @patch("utils.segmentation.pipeline.detection.filter_located_aorta_circles")
+    @patch("utils.segmentation.pipeline.detection.locate_aorta_circles")
     def test_locates_and_filters_circles_in_one_shared_stage(
         self,
         locate_circles,
@@ -44,7 +44,7 @@ class AortaCircleDetectionTest(TestCase):
             {"trajectory_filter": {}},
         )
 
-    @patch("utils.segmentation.pipeline_detection.detect_aorta_circles")
+    @patch("utils.segmentation.pipeline.detection.detect_aorta_circles")
     def test_locates_circles_with_scaled_spacing(self, detect_circles):
         expected = [{"slice_index": 2, "center": (4, 4), "radius": 2}]
         detect_circles.return_value = expected
@@ -72,7 +72,7 @@ class AortaCircleDetectionTest(TestCase):
         self.assertEqual(result, expected)
         detect_circles.assert_called_once()
 
-    @patch("utils.segmentation.pipeline_detection.find_ostia")
+    @patch("utils.segmentation.pipeline.detection.find_ostia")
     def test_detects_ostia_without_reference_label(self, find_ostia):
         find_ostia.return_value = ((1, 2, 3), (4, 5, 6))
         config = {

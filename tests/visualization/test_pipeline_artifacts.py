@@ -5,7 +5,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 
-from utils.visualization.pipeline_artifacts import (
+from utils.visualization.pipeline.pipeline_artifacts import (
     STAGE_VIEW_FILENAMES,
     save_detected_circles_figure,
     save_stage_views,

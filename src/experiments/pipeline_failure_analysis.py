@@ -19,7 +19,9 @@ from utils.comparison_utils.failure_analysis import (  # noqa: E402
     select_focused_failure_cohort,
     summarize_failure_categories,
 )
-from utils.visualization.variant_comparison import load_variant_results  # noqa: E402
+from utils.comparison_utils.variant_comparison import (  # noqa: E402
+    load_variant_results,
+)
 
 
 DEFAULT_RESULTS = REPO_ROOT / "output/segmentation/runs/mid_res/fuzzy_comparison"

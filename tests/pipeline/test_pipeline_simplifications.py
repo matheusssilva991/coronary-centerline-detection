@@ -13,11 +13,11 @@ import numpy as np
 import pandas as pd
 
 import segmentation_pipeline
-from utils.segmentation.pipeline_cli import (
+from utils.segmentation.pipeline.cli import (
     _parse_rg_comparison_window,
     build_parser,
 )
-from utils.segmentation.pipeline_orchestration import (
+from utils.segmentation.pipeline.orchestration import (
     _circle_result_fields,
     _ostia_result_fields,
     _preprocessing_result_fields,
@@ -27,12 +27,12 @@ from utils.segmentation.pipeline_orchestration import (
     summarize_aorta_circles,
     summarize_aorta_volume,
 )
-from utils.segmentation.pipeline_preprocessing import (
+from utils.segmentation.pipeline.preprocessing import (
     compute_vesselness,
     load_and_preprocess_image,
     preprocess_ccta_volume,
 )
-from utils.segmentation.pipeline_reporting import print_split_summary
+from utils.segmentation.pipeline.reporting import print_split_summary
 
 
 class _FakeNifti:
@@ -63,13 +63,13 @@ def _preprocessing_config(method):
 
 class PipelineSimplificationTests(TestCase):
     @patch(
-        "utils.segmentation.pipeline_orchestration.detect_and_evaluate_ostia",
+        "utils.segmentation.pipeline.orchestration.detect_and_evaluate_ostia",
         side_effect=ValueError("Nenhum óstio encontrado"),
     )
-    @patch("utils.segmentation.pipeline_orchestration.segment_aorta_with_diagnostics")
-    @patch("utils.segmentation.pipeline_orchestration.locate_and_filter_aorta_circles")
-    @patch("utils.segmentation.pipeline_orchestration.compute_vesselness")
-    @patch("utils.segmentation.pipeline_orchestration.load_and_preprocess_image")
+    @patch("utils.segmentation.pipeline.orchestration.segment_aorta_with_diagnostics")
+    @patch("utils.segmentation.pipeline.orchestration.locate_and_filter_aorta_circles")
+    @patch("utils.segmentation.pipeline.orchestration.compute_vesselness")
+    @patch("utils.segmentation.pipeline.orchestration.load_and_preprocess_image")
     def test_imagecas_summary_keeps_original_circle_trajectory(
         self,
         load_image,
@@ -260,12 +260,12 @@ class PipelineSimplificationTests(TestCase):
         self.assertEqual(_parse_rg_comparison_window("-1"), -1)
         self.assertEqual(_parse_rg_comparison_window("5"), 5)
 
-    @patch("utils.segmentation.pipeline_preprocessing.downscale_image_ndi")
-    @patch("utils.segmentation.pipeline_preprocessing.largest_connected_component")
-    @patch("utils.segmentation.pipeline_preprocessing.threshold_image_with_offset")
-    @patch("utils.segmentation.pipeline_preprocessing.resolve_lower_threshold")
-    @patch("utils.segmentation.pipeline_preprocessing.downscale_image_opencv")
-    @patch("utils.segmentation.pipeline_preprocessing.load_raw_img_and_label")
+    @patch("utils.segmentation.pipeline.preprocessing.downscale_image_ndi")
+    @patch("utils.segmentation.pipeline.preprocessing.largest_connected_component")
+    @patch("utils.segmentation.pipeline.preprocessing.threshold_image_with_offset")
+    @patch("utils.segmentation.pipeline.preprocessing.resolve_lower_threshold")
+    @patch("utils.segmentation.pipeline.preprocessing.downscale_image_opencv")
+    @patch("utils.segmentation.pipeline.preprocessing.load_raw_img_and_label")
     def test_normal_threshold_downscales_intensity_once(
         self,
         load_raw,
@@ -302,12 +302,12 @@ class PipelineSimplificationTests(TestCase):
             expected_upper_hu,
         )
 
-    @patch("utils.segmentation.pipeline_preprocessing.downscale_image_ndi")
-    @patch("utils.segmentation.pipeline_preprocessing.build_lcc_image_from_mask")
-    @patch("utils.segmentation.pipeline_preprocessing.fuzzy_threshold_from_config")
-    @patch("utils.segmentation.pipeline_preprocessing.resolve_lower_threshold")
-    @patch("utils.segmentation.pipeline_preprocessing.downscale_image_opencv")
-    @patch("utils.segmentation.pipeline_preprocessing.load_raw_img_and_label")
+    @patch("utils.segmentation.pipeline.preprocessing.downscale_image_ndi")
+    @patch("utils.segmentation.pipeline.preprocessing.build_lcc_image_from_mask")
+    @patch("utils.segmentation.pipeline.preprocessing.fuzzy_threshold_from_config")
+    @patch("utils.segmentation.pipeline.preprocessing.resolve_lower_threshold")
+    @patch("utils.segmentation.pipeline.preprocessing.downscale_image_opencv")
+    @patch("utils.segmentation.pipeline.preprocessing.load_raw_img_and_label")
     def test_fuzzy_threshold_downscales_intensity_once(
         self,
         load_raw,
@@ -511,7 +511,7 @@ class PipelineSimplificationTests(TestCase):
             10.5,
         )
 
-    @patch("utils.segmentation.pipeline_preprocessing.get_vesselness")
+    @patch("utils.segmentation.pipeline.preprocessing.get_vesselness")
     def test_vesselness_computation_forwards_config(self, get_vesselness):
         expected = np.ones((2, 2, 2), dtype=np.float32)
         get_vesselness.return_value = expected
@@ -562,10 +562,10 @@ class PipelineSimplificationTests(TestCase):
         self.assertIn("Total sucesso (<= 7.0mm):   2 (100.0%)", text)
         self.assertIn("Dice médio após a morfologia:   0.7000", text)
 
-    @patch("utils.segmentation.pipeline_orchestration.summarize_batch_timing_records")
-    @patch("utils.segmentation.pipeline_orchestration.load_batch_timing_records")
-    @patch("utils.segmentation.pipeline_orchestration._process_and_save_batch")
-    @patch("utils.segmentation.pipeline_orchestration._load_previous_batches")
+    @patch("utils.segmentation.pipeline.orchestration.summarize_batch_timing_records")
+    @patch("utils.segmentation.pipeline.orchestration.load_batch_timing_records")
+    @patch("utils.segmentation.pipeline.orchestration._process_and_save_batch")
+    @patch("utils.segmentation.pipeline.orchestration._load_previous_batches")
     def test_resume_processes_requested_batch_and_later_batches(
         self,
         load_previous,

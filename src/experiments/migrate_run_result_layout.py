@@ -17,7 +17,7 @@ REPO_ROOT = SRC_DIR.parent
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from utils.project.result_paths import (  # noqa: E402
+from utils.project.results.paths import (  # noqa: E402
     batch_result_number,
     batch_results_filename,
     batch_timings_filename,
@@ -26,14 +26,14 @@ from utils.project.result_paths import (  # noqa: E402
     results_filename,
     summary_filename,
 )
-from utils.project.results_columns import RESULT_CONFIGURATION_COLUMNS  # noqa: E402
-from utils.project.results_metadata import (  # noqa: E402
+from utils.project.results.columns import RESULT_CONFIGURATION_COLUMNS  # noqa: E402
+from utils.project.results.metadata import (  # noqa: E402
     build_metadata,
     effective_config_sha256,
     make_json_safe,
 )
-from utils.project.results_schema import select_per_image_result_columns  # noqa: E402
-from utils.project.run_summary import (  # noqa: E402
+from utils.project.results.schema import select_per_image_result_columns  # noqa: E402
+from utils.project.results.summary import (  # noqa: E402
     ResultIntegrityError,
     validate_result_integrity,
 )

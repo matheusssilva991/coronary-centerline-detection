@@ -6,9 +6,13 @@ from pathlib import Path
 
 import pandas as pd
 
-from utils.project.external_ccta_results import (
+from utils.project.results.external import (
     load_mmwhs_train_aorta_dice,
     load_mmwhs_test_aorta_dice,
+)
+from utils.project.evaluation.mmwhs_official_aorta import (
+    OFFICIAL_AORTA_METHOD,
+    LEGACY_WHS_METHOD,
 )
 
 
@@ -73,6 +77,23 @@ class ExternalCctaResultsTest(unittest.TestCase):
         self.assertEqual(result.index.tolist(), ["ct_test_2001", "ct_test_2002"])
         self.assertAlmostEqual(result.loc["ct_test_2001"], 0.632263)
         self.assertTrue(pd.isna(result.loc["ct_test_2002"]))
+        self.assertEqual(result.attrs["aorta_evaluation_method"], LEGACY_WHS_METHOD)
+        self.assertIn("Legado", result.attrs["aorta_evaluation_label"])
+
+    def test_new_protocol_is_identified_and_mixed_results_rejected(self):
+        frame = self._valid_frame()
+        frame["aorta_evaluation_method"] = [None, None, OFFICIAL_AORTA_METHOD]
+        frame["aorta_evaluation_status"] = [None, None, "success"]
+        frame.loc[2, "aorta_dice"] = 0.804026
+        self._write_results(frame)
+        result = load_mmwhs_test_aorta_dice(self.results_path)
+        self.assertEqual(result.attrs["aorta_evaluation_method"], OFFICIAL_AORTA_METHOD)
+        extra = frame.iloc[[2]].copy()
+        extra.loc[:, "exam_id"] = "ct_test_2002"
+        extra.loc[:, "aorta_evaluation_method"] = LEGACY_WHS_METHOD
+        self._write_results(pd.concat([frame, extra], ignore_index=True))
+        with self.assertRaisesRegex(ValueError, "protocolos misturados"):
+            load_mmwhs_test_aorta_dice(self.results_path)
 
     def test_rejects_official_test_dice_with_error_status(self):
         frame = self._valid_frame()

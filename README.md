@@ -36,26 +36,35 @@ coronary-centerline-detection/
 │   ├── main.ipynb                  # Notebook de execução principal
 │   ├── external_ccta_pipeline.ipynb # Pipeline interativo OrCaScore/MM-WHS
 │   ├── eda/                        # Notebooks de análise exploratória
-│   │   ├── README.md                        # Catálogo e instruções de execução
-│   │   ├── image_intensity_eda.ipynb        # Intensidades HU e percentis
-│   │   ├── preprocessing_visualization.ipynb # Fatias, pré-processamento, Hough e vesselness
-│   │   ├── segmentation_results_eda.ipynb   # Resultados de segmentação
-│   │   ├── split_resolution_analysis.ipynb  # Comparação de splits/resoluções
-│   │   ├── ia_vs_pipeline_analysis.ipynb    # IA versus pipeline matemático
-│   │   ├── bad_cases_results_analysis.ipynb # Casos ruins quantitativos
-│   │   ├── segmentation_method_comparison.ipynb # Threshold normal/fuzzy e RG/FC
-│   │   ├── pipeline_sensitivity_analysis.ipynb # Sensibilidade OFAT
-│   │   ├── upper_threshold_analysis.ipynb # Percentis e thresholds HU
-│   │   ├── aorta_circle_slice_analysis.ipynb # Círculos e extensão axial da máscara
+│   │   ├── README.md               # Catálogo único das análises
+│   │   ├── images/                 # Imagens, datasets e pré-processamento
+│   │   ├── intensity/              # Intensidades HU e limiares
+│   │   ├── results/                # Resultados gerais e avaliações visuais
+│   │   ├── comparisons/            # Métodos, variantes e resoluções
+│   │   ├── aorta/                  # Círculos, volume e qualidade da aorta
+│   │   └── sensitivity/            # Sensibilidade e thresholds
 │   └── utils/                      # Módulos utilitários
-│       ├── preprocessing.py        # Pré-processamento de imagens
-│       ├── frangi.py              # Filtro de Frangi para detecção de vasos
-│       ├── aorta_localization.py  # Localização da aorta ascendente
-│       ├── aorta_segmentation.py  # Segmentação da aorta
-│       ├── ostia_detection.py     # Detecção de óstios coronarianos
-│       ├── artery_segmentation.py # Segmentação das artérias
-│       ├── plots.py               # Funções de visualização
-│       └── utils.py               # Utilitários gerais
+│       ├── project/
+│       │   ├── datasets/           # Descoberta, carregamento e splits
+│       │   ├── results/            # Schemas, persistência e metadata
+│       │   ├── analysis/           # Cálculos e validações das EDAs
+│       │   ├── evaluation/         # Avaliação oficial MM-WHS
+│       │   ├── runtime/            # Ambiente, caminhos, logs e avisos
+│       │   ├── config.py           # Configuração compartilhada
+│       │   └── dataframe.py        # Acesso tipado a dados tabulares
+│       ├── segmentation/
+│       │   ├── aorta/              # Localização, segmentação e diagnósticos
+│       │   ├── fuzzy/              # Limiarização e conectividade fuzzy
+│       │   ├── pipeline/           # Etapas e coordenação dos pipelines
+│       │   └── *.py                # Artérias, óstios, limiar inferior e backends
+│       ├── processing/             # Pré-processamento, Frangi e GPU
+│       ├── visualization/          # Visualizações genéricas 2D/3D
+│       │   ├── images/             # Fatias, volumes e intensidades
+│       │   ├── pipeline/           # Etapas intermediárias e artefatos
+│       │   └── results/            # Gráficos e rótulos de resultados
+│       ├── comparison_utils/       # Leitura, resumos e comparação de resultados
+│       ├── experiments/            # Helpers dos experimentos
+│       └── utils/                  # NIfTI, JSON, métricas e ROI
 └── output/                     # Resultados e visualizações
     ├── segmentation/
     │   ├── runs/               # Execuções completas por resolução/timestamp

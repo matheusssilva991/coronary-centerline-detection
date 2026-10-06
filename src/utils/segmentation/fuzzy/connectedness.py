@@ -1,0 +1,576 @@
+"""Segmentação coronária por fuzzy connectedness em volumes 3D.
+
+Este módulo reúne a implementação reutilizável do experimento de fuzzy
+connectedness para substituir/contrastar o crescimento de região arterial.
+A abordagem usa os óstios detectados como sementes, combina similaridade de
+vesselness e de intensidade HU para formar afinidades fuzzy entre voxels
+vizinhos, propaga conectividade pelo critério max-min e gera uma máscara
+binária a partir de um limiar de conectividade.
+
+Fluxo principal:
+1. normalizar o mapa de vesselness;
+2. restringir a propagação a uma região candidata;
+3. refinar sementes locais ao redor dos óstios;
+4. propagar fuzzy connectedness;
+5. pós-processar a máscara arterial com as mesmas operações do pipeline.
+"""
+
+from __future__ import annotations
+
+import heapq
+import math
+from typing import Any, Iterable, Sequence
+
+import numpy as np
+from numpy.typing import NDArray
+
+from utils.segmentation.pipeline.arteries import postprocess_artery_mask
+from utils.utils.normalization import normalize_vesselness
+
+
+# =============================================================================
+# Funções auxiliares
+# =============================================================================
+
+
+def neighbor_offsets_3d(neighborhood: int) -> tuple[tuple[int, int, int], ...]:
+    """Retorna offsets 3D para vizinhança 6, 18 ou 26."""
+    if neighborhood not in {6, 18, 26}:
+        raise ValueError("neighborhood must be one of: 6, 18, 26")
+
+    # Monta todos os deslocamentos ao redor do voxel central.
+    offsets = []
+    for dy in (-1, 0, 1):
+        for dx in (-1, 0, 1):
+            for dz in (-1, 0, 1):
+                if (dy, dx, dz) == (0, 0, 0):
+                    continue
+                manhattan = abs(dy) + abs(dx) + abs(dz)
+                if neighborhood == 6 and manhattan != 1:
+                    continue
+                if neighborhood == 18 and manhattan > 2:
+                    continue
+                offsets.append((dy, dx, dz))
+    return tuple(offsets)
+
+
+def vesselness_affinity(
+    current_vessel: float,
+    neighbor_vessel: float,
+    floor: float = 0.0,
+) -> float:
+    """Calcula a afinidade geométrica de vesselness entre voxels vizinhos.
+
+    Argumentos:        current_vessel: Valor normalizado de vesselness do voxel atual.
+        neighbor_vessel: Valor normalizado de vesselness do voxel vizinho.
+        floor: Piso mínimo suave para evitar afinidades exatamente nulas.
+
+    Retorna:        Afinidade no intervalo [0, 1].
+    """
+    current_vessel = float(np.clip(current_vessel, 0.0, 1.0))
+    neighbor_vessel = float(np.clip(neighbor_vessel, 0.0, 1.0))
+
+    affinity = math.sqrt(current_vessel * neighbor_vessel)
+
+    # O piso evita que pequenas falhas do vesselness quebrem totalmente o caminho.
+    floor = float(np.clip(floor, 0.0, 1.0))
+    affinity = floor + (1.0 - floor) * affinity
+    return float(np.clip(affinity, 0.0, 1.0))
+
+
+def edge_affinity(
+    mu_vessel: float,
+    mu_hu: float,
+    vesselness_weight: float = 0.9,
+) -> float:
+    """Combina vesselness e similaridade HU pelo produto ponderado validado."""
+    mu_vessel = float(np.clip(mu_vessel, 0.0, 1.0))
+    mu_hu = float(np.clip(mu_hu, 0.0, 1.0))
+    weight = float(np.clip(vesselness_weight, 0.0, 1.0))
+
+    return float(np.power(mu_vessel, weight) * np.power(mu_hu, 1.0 - weight))
+
+
+def valid_seed(
+    seed: Sequence[int] | None,
+    shape: Sequence[int],
+    candidate_mask: NDArray[Any] | None = None,
+) -> tuple[int, int, int] | None:
+    """Valida uma semente e, opcionalmente, inclui o voxel na máscara candidata."""
+    if seed is None:
+        return None
+
+    y, x, z = map(int, seed)
+    if not (0 <= y < shape[0] and 0 <= x < shape[1] and 0 <= z < shape[2]):
+        return None
+
+    if candidate_mask is not None:
+        candidate_mask[y, x, z] = True
+    return (y, x, z)
+
+
+def limit_candidate_mask_by_vesselness(
+    candidate_mask: NDArray[Any],
+    vesselness_norm: NDArray[Any],
+    max_candidate_voxels: int | None,
+    min_candidate_vesselness: float = 0.01,
+) -> tuple[NDArray[np.bool_], dict[str, Any]]:
+    """Limita a propagação aos voxels candidatos com maior vesselness.
+
+    Argumentos:        candidate_mask: Máscara binária da região onde a FC pode crescer.
+        vesselness_norm: Vesselness já normalizado para [0, 1].
+        max_candidate_voxels: Número máximo de voxels permitidos na região
+            candidata. Se `None`, não limita.
+        min_candidate_vesselness: Corte mínimo usado antes da limitação.
+
+    Retorna:        Tupla com a máscara candidata final e metadados do corte aplicado.
+    """
+    candidate_mask = np.asarray(candidate_mask, dtype=bool)
+    initial_voxels = int(candidate_mask.sum())
+
+    # Se a região já está pequena o bastante, preserva todos os candidatos.
+    if max_candidate_voxels is None or initial_voxels <= int(max_candidate_voxels):
+        return candidate_mask, {
+            "candidate_voxels_initial": initial_voxels,
+            "candidate_voxels_final": initial_voxels,
+            "candidate_vesselness_cutoff": float(min_candidate_vesselness),
+        }
+
+    # Mantém apenas os voxels com maior vesselness até atingir o limite desejado.
+    values = np.asarray(vesselness_norm)[candidate_mask]
+    kth = max(values.size - int(max_candidate_voxels), 0)
+    cutoff = float(np.partition(values, kth)[kth])
+    limited_mask = candidate_mask & (vesselness_norm >= cutoff)
+    return limited_mask.astype(bool), {
+        "candidate_voxels_initial": initial_voxels,
+        "candidate_voxels_final": int(limited_mask.sum()),
+        "candidate_vesselness_cutoff": cutoff,
+    }
+
+
+def collect_local_object_seeds(
+    seeds: Iterable[Sequence[int] | None],
+    vesselness_norm: NDArray[Any],
+    candidate_mask: NDArray[Any],
+    search_radius: int,
+    max_seeds_per_ostium: int,
+    min_seed_vesselness: float,
+    min_seed_distance_voxels: float = 0.0,
+) -> tuple[list[tuple[int, int, int]], dict[str, Any]]:
+    """Seleciona sementes locais de alto vesselness ao redor dos óstios.
+
+    A função procura em uma janela cúbica ao redor de cada óstio e mantém os
+    melhores voxels candidatos. Isso reduz a dependência de uma única semente,
+    especialmente quando o óstio detectado cai em borda ou em voxel ruidoso.
+    """
+    selected: list[tuple[int, int, int]] = []
+    per_ostium_counts = []
+    dims = vesselness_norm.shape
+    radius = max(int(search_radius), 0)
+    max_per_ostium = max(int(max_seeds_per_ostium), 1)
+    min_score = float(min_seed_vesselness)
+    min_distance = float(min_seed_distance_voxels)
+
+    for seed in seeds:
+        # Cada óstio contribui com uma pequena nuvem local de sementes refinadas.
+        coord = valid_seed(seed, dims, candidate_mask=candidate_mask)
+        if coord is None:
+            per_ostium_counts.append(0)
+            continue
+
+        y, x, z = coord
+        y0, y1 = max(0, y - radius), min(dims[0], y + radius + 1)
+        x0, x1 = max(0, x - radius), min(dims[1], x + radius + 1)
+        z0, z1 = max(0, z - radius), min(dims[2], z + radius + 1)
+
+        # Busca as melhores sementes em uma vizinhança pequena do óstio.
+        local_mask = candidate_mask[y0:y1, x0:x1, z0:z1]
+        local_scores = vesselness_norm[y0:y1, x0:x1, z0:z1]
+        candidate_indices = np.argwhere(local_mask & (local_scores >= min_score))
+        if candidate_indices.size == 0:
+            selected.append(coord)
+            per_ostium_counts.append(1)
+            continue
+
+        # Ordena os candidatos por vesselness para iniciar no centro provável do vaso.
+        candidate_scores = local_scores[tuple(candidate_indices.T)]
+        order = np.argsort(candidate_scores)[::-1]
+        local_selected: list[tuple[int, int, int]] = []
+
+        for idx in order:
+            ly, lx, lz = candidate_indices[idx]
+            candidate = (int(y0 + ly), int(x0 + lx), int(z0 + lz))
+
+            # Evita sementes quase duplicadas quando há muitos voxels bons no mesmo vaso.
+            if min_distance > 0 and local_selected:
+                candidate_arr = np.asarray(candidate, dtype=np.float32)
+                selected_arr = np.asarray(local_selected, dtype=np.float32)
+                distances = np.sqrt(np.sum((selected_arr - candidate_arr) ** 2, axis=1))
+                if np.any(distances < min_distance):
+                    continue
+
+            local_selected.append(candidate)
+            if len(local_selected) >= max_per_ostium:
+                break
+
+        selected.extend(local_selected)
+        per_ostium_counts.append(len(local_selected))
+
+    selected = list(dict.fromkeys(selected))
+    return selected, {
+        "object_seed_count": len(selected),
+        "object_seed_counts_per_ostium": per_ostium_counts,
+    }
+
+
+def fuzzy_connectedness_map(
+    image: NDArray[Any],
+    vesselness: NDArray[Any],
+    seeds: Iterable[Sequence[int] | None],
+    *,
+    sigma_hu: float,
+    neighborhood: int = 26,
+    candidate_mask: NDArray[Any] | None = None,
+    max_processed_voxels: int | None = None,
+    min_connectivity_to_process: float = 0.0,
+    vesselness_floor: float = 0.0,
+    vesselness_weight: float = 0.9,
+) -> tuple[NDArray[np.float32], dict[str, Any]]:
+    """Propaga conectividade fuzzy max-min a partir das sementes do objeto.
+
+    Cada voxel recebe a maior conectividade possível entre ele e alguma semente,
+    onde a força de um caminho é o mínimo das afinidades ao longo do caminho. A
+    fila de prioridade processa primeiro os voxels com maior conectividade, de
+    modo semelhante a um crescimento best-first.
+
+    Argumentos:        image: Volume 3D em HU ou imagem pré-processada usada na similaridade HU.
+        vesselness: Mapa de vesselness arterial com o mesmo shape de `image`.
+        seeds: Sementes do objeto em coordenadas `(y, x, z)`.
+        sigma_hu: Escala da similaridade Gaussiana de intensidade.
+        neighborhood: Conectividade espacial 6, 18 ou 26.
+        candidate_mask: Região permitida para a propagação.
+        max_processed_voxels: Limite de segurança para evitar expansão excessiva.
+        min_connectivity_to_process: Menor conectividade que ainda entra na fila.
+        vesselness_floor: Piso suave da afinidade de vesselness.
+        vesselness_weight: Peso do vesselness na combinação ponderada.
+
+    Retorna:        Mapa de conectividade e metadados da propagação.
+    """
+    if image.shape != vesselness.shape:
+        raise ValueError(
+            f"image and vesselness must have the same shape: {image.shape} vs {vesselness.shape}"
+        )
+    if sigma_hu <= 0:
+        raise ValueError("sigma_hu must be positive")
+
+    # Normaliza entradas e cria estruturas de estado para a busca best-first.
+    image = np.asarray(image, dtype=np.float32)
+    vesselness_norm = normalize_vesselness(vesselness)
+    candidate_mask = (
+        np.ones(image.shape, dtype=bool)
+        if candidate_mask is None
+        else np.asarray(candidate_mask, dtype=bool).copy()
+    )
+    connectivity = np.zeros(image.shape, dtype=np.float32)
+    finalized = np.zeros(image.shape, dtype=bool)
+    queue: list[tuple[float, tuple[int, int, int]]] = []
+
+    # Inicializa a fila de prioridade com conectividade máxima nas sementes.
+    valid_seeds = []
+    for seed in seeds:
+        coord = valid_seed(seed, image.shape, candidate_mask=candidate_mask)
+        if coord is None:
+            continue
+        valid_seeds.append(coord)
+        connectivity[coord] = 1.0
+        heapq.heappush(queue, (-1.0, coord))
+
+    if not valid_seeds:
+        return connectivity, {
+            "valid_seed_count": 0,
+            "processed_voxels": 0,
+            "max_connectivity": 0.0,
+        }
+
+    offsets = neighbor_offsets_3d(neighborhood)
+    sigma_term = 2.0 * float(sigma_hu) ** 2
+    dims = image.shape
+    processed_voxels = 0
+
+    # Processa sempre o voxel com maior conectividade conhecida até o momento.
+    while queue:
+        neg_priority, current = heapq.heappop(queue)
+        current_connectivity = -float(neg_priority)
+        if finalized[current]:
+            continue
+        if current_connectivity < float(connectivity[current]) - 1e-7:
+            continue
+
+        finalized[current] = True
+        processed_voxels += 1
+        if max_processed_voxels is not None and processed_voxels > max_processed_voxels:
+            break
+
+        # A expansão local combina intensidade HU e evidência tubular do Frangi.
+        cy, cx, cz = current
+        current_hu = float(image[current])
+        current_vessel = float(vesselness_norm[current])
+
+        # Expande primeiro pelos vizinhos com maior conectividade acumulada.
+        for dy, dx, dz in offsets:
+            ny, nx, nz = cy + dy, cx + dx, cz + dz
+            if not (0 <= ny < dims[0] and 0 <= nx < dims[1] and 0 <= nz < dims[2]):
+                continue
+
+            neighbor = (ny, nx, nz)
+            if finalized[neighbor] or not candidate_mask[neighbor]:
+                continue
+
+            # Afinidade local: compatibilidade de vaso + similaridade HU.
+            mu_vessel = vesselness_affinity(
+                current_vessel,
+                float(vesselness_norm[neighbor]),
+                floor=vesselness_floor,
+            )
+            hu_diff = current_hu - float(image[neighbor])
+            mu_hu = math.exp(-((hu_diff * hu_diff) / sigma_term))
+            affinity = edge_affinity(
+                mu_vessel,
+                mu_hu,
+                vesselness_weight=vesselness_weight,
+            )
+            # Critério max-min: a força do caminho é limitada pela pior aresta.
+            new_connectivity = min(current_connectivity, affinity)
+            if new_connectivity < float(min_connectivity_to_process):
+                continue
+
+            if new_connectivity > float(connectivity[neighbor]):
+                connectivity[neighbor] = new_connectivity
+                heapq.heappush(queue, (-new_connectivity, neighbor))
+
+    return connectivity, {
+        "valid_seed_count": len(valid_seeds),
+        "processed_voxels": processed_voxels,
+        "max_connectivity": float(connectivity.max()),
+        "vesselness_floor": float(vesselness_floor),
+        "vesselness_weight": float(vesselness_weight),
+    }
+
+
+def fuzzy_connectedness_segmentation(
+    image: NDArray[Any],
+    vesselness: NDArray[Any],
+    object_seeds: Iterable[Sequence[int] | None],
+    *,
+    alpha: float,
+    sigma_hu: float,
+    neighborhood: int,
+    candidate_mask: NDArray[Any],
+    max_processed_voxels: int | None = None,
+    vesselness_floor: float = 0.0,
+    vesselness_weight: float = 0.9,
+) -> dict[str, Any]:
+    """Executa fuzzy connectedness e aplica o limiar absoluto ``alpha``.
+
+    Retorna:        Dicionário com:
+        - `connectivity`: mapa de conectividade do objeto;
+        - `mask`: máscara binária antes do pós-processamento;
+        - `details`: metadados da propagação e dos parâmetros efetivos.
+    """
+    # Calcula o mapa de conectividade a partir das sementes do objeto.
+    object_connectivity, object_details = fuzzy_connectedness_map(
+        image,
+        vesselness,
+        object_seeds,
+        sigma_hu=sigma_hu,
+        neighborhood=neighborhood,
+        candidate_mask=candidate_mask,
+        max_processed_voxels=max_processed_voxels,
+        min_connectivity_to_process=float(alpha),
+        vesselness_floor=vesselness_floor,
+        vesselness_weight=vesselness_weight,
+    )
+    mask = object_connectivity >= float(alpha)
+
+    return {
+        "connectivity": object_connectivity,
+        "mask": mask.astype(np.uint8),
+        "details": {
+            **object_details,
+            "alpha": float(alpha),
+            "sigma_hu": float(sigma_hu),
+            "neighborhood": int(neighborhood),
+            "vesselness_floor": float(vesselness_floor),
+            "vesselness_weight": float(vesselness_weight),
+            "effective_alpha": float(alpha),
+        },
+    }
+
+
+def segment_artery_fuzzy_connectedness(
+    image: NDArray[Any],
+    vesselness_artery: NDArray[Any],
+    ostia_seeds: Iterable[Sequence[int] | None],
+    lcc_mask: NDArray[Any],
+    config: dict[str, Any],
+    *,
+    params: dict[str, Any],
+    max_candidate_voxels: int | None = 500_000,
+    max_processed_voxels: int | None = 500_000,
+    apply_postprocessing: bool = True,
+) -> dict[str, Any]:
+    """Segmenta artérias com parâmetros externos de fuzzy connectedness.
+
+    Esta é a função de mais alto nível do módulo. Ela recebe o volume já
+    reduzido/pré-processado, o vesselness arterial, os óstios detectados e a
+    máscara da maior componente conectada. Em seguida, monta a região candidata,
+    refina as sementes, executa fuzzy connectedness e aplica o pós-processamento
+    final.
+
+    Argumentos:        image: Volume 3D usado na similaridade HU.
+        vesselness_artery: Mapa de vesselness arterial.
+        ostia_seeds: Óstios detectados em coordenadas `(y, x, z)`.
+        lcc_mask: Máscara da maior componente conectada usada como limite
+            anatômico/candidato.
+        config: Configuração do pipeline, principalmente `POSTPROCESSING`.
+        params: Parâmetros da abordagem. No momento, os valores de referência
+            ficam no notebook experimental e futuramente podem ir para
+            `pipeline_config.json`.
+        max_candidate_voxels: Limite máximo da região candidata.
+        max_processed_voxels: Limite máximo de voxels processados pela FC.
+        apply_postprocessing: Quando verdadeiro, aplica a morfologia arterial
+            configurada. Experimentos podem desabilitá-la para reutilizar a
+            mesma máscara bruta em diferentes pós-processamentos.
+
+    Retorna:        Dicionário com máscara bruta, máscara pós-processada, mapa de
+        conectividade e metadados úteis para análise.
+    """
+    params = dict(params)
+
+    # Normaliza vesselness antes de definir região candidata e sementes.
+    vesselness_norm = normalize_vesselness(vesselness_artery)
+    candidate_min = float(params.get("candidate_min_vesselness", 0.02))
+
+    # Restringe a FC à LCC e aos voxels com vesselness mínimo.
+    candidate_mask = (np.asarray(lcc_mask) > 0) & (vesselness_norm >= candidate_min)
+    candidate_mask, candidate_details = limit_candidate_mask_by_vesselness(
+        candidate_mask,
+        vesselness_norm,
+        max_candidate_voxels,
+        min_candidate_vesselness=candidate_min,
+    )
+
+    seed_groups = list(ostia_seeds)
+    grow_separately = bool(params.get("grow_each_ostium_separately", False))
+    search_radius = int(params.get("seed_search_radius", 2))
+    max_seeds = int(params.get("max_seeds_per_ostium", 4))
+    min_seed_vesselness = float(params.get("seed_min_vesselness", 0.02))
+    min_seed_distance = float(params.get("min_seed_distance_voxels", 1.0))
+
+    def run_connectivity(local_seeds: list[tuple[int, int, int]]) -> dict[str, Any]:
+        return fuzzy_connectedness_segmentation(
+            image,
+            vesselness_artery,
+            local_seeds,
+            alpha=float(params["alpha"]),
+            sigma_hu=float(params["sigma_hu"]),
+            neighborhood=int(params["neighborhood"]),
+            candidate_mask=candidate_mask,
+            max_processed_voxels=max_processed_voxels,
+            vesselness_floor=float(params.get("vesselness_floor", 0.02)),
+            vesselness_weight=float(params.get("vesselness_weight", 0.90)),
+        )
+
+    if grow_separately:
+        # Propaga cada ramo a partir do seu próprio óstio e une os resultados.
+        connectivity = np.zeros(np.asarray(image).shape, dtype=np.float32)
+        raw_mask = np.zeros(np.asarray(image).shape, dtype=np.uint8)
+        processed_voxels = 0
+        object_seed_counts: list[int] = []
+        object_seed_count = 0
+
+        for ostium_seed in seed_groups:
+            local_seeds, local_seed_details = collect_local_object_seeds(
+                [ostium_seed],
+                vesselness_norm,
+                candidate_mask,
+                search_radius=search_radius,
+                max_seeds_per_ostium=max_seeds,
+                min_seed_vesselness=min_seed_vesselness,
+                min_seed_distance_voxels=min_seed_distance,
+            )
+            local_count = int(local_seed_details["object_seed_count"])
+            object_seed_counts.append(local_count)
+            object_seed_count += local_count
+            if not local_seeds:
+                continue
+
+            local_result = run_connectivity(local_seeds)
+            connectivity = np.maximum(connectivity, local_result["connectivity"])
+            raw_mask |= local_result["mask"].astype(np.uint8)
+            processed_voxels += int(local_result["details"]["processed_voxels"])
+
+        fc_details = {
+            "valid_seed_count": object_seed_count,
+            "processed_voxels": processed_voxels,
+            "max_connectivity": float(connectivity.max()),
+            "alpha": float(params["alpha"]),
+            "sigma_hu": float(params["sigma_hu"]),
+            "neighborhood": int(params["neighborhood"]),
+            "vesselness_floor": float(params.get("vesselness_floor", 0.02)),
+            "vesselness_weight": float(params.get("vesselness_weight", 0.90)),
+            "effective_alpha": float(params["alpha"]),
+        }
+        seed_details = {
+            "object_seed_count": object_seed_count,
+            "object_seed_counts_per_ostium": object_seed_counts,
+        }
+    else:
+        # Caminho validado: todas as sementes participam da mesma propagação.
+        object_seeds, seed_details = collect_local_object_seeds(
+            seed_groups,
+            vesselness_norm,
+            candidate_mask,
+            search_radius=search_radius,
+            max_seeds_per_ostium=max_seeds,
+            min_seed_vesselness=min_seed_vesselness,
+            min_seed_distance_voxels=min_seed_distance,
+        )
+        fc_result = run_connectivity(object_seeds)
+        connectivity = fc_result["connectivity"]
+        raw_mask = fc_result["mask"].astype(np.uint8)
+        fc_details = fc_result["details"]
+
+    # O pipeline usa a morfologia padrão; sweeps podem avaliar essa etapa fora.
+    artery_mask = (
+        postprocess_artery_mask(raw_mask, config)
+        if apply_postprocessing
+        else raw_mask.copy()
+    )
+    details = {
+        **fc_details,
+        **candidate_details,
+        **seed_details,
+        "grow_each_ostium_separately": grow_separately,
+        "raw_artery_voxels": int(raw_mask.sum()),
+        "artery_voxels": int(artery_mask.sum()),
+    }
+    return {
+        "raw_mask": raw_mask,
+        "artery_mask": artery_mask,
+        "connectivity": connectivity,
+        "details": details,
+    }
+
+
+__all__ = [
+    "collect_local_object_seeds",
+    "edge_affinity",
+    "fuzzy_connectedness_map",
+    "fuzzy_connectedness_segmentation",
+    "limit_candidate_mask_by_vesselness",
+    "neighbor_offsets_3d",
+    "segment_artery_fuzzy_connectedness",
+    "valid_seed",
+    "vesselness_affinity",
+]

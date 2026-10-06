@@ -6,12 +6,17 @@ import unittest
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from utils.visualization.variant_comparison import (
+from utils.comparison_utils.variant_comparison import (
     build_pair_curve_auc,
     load_variant_run,
-    plot_pair_delta_by_image,
-    plot_pair_dice_by_image,
 )
+
+
+from tests.notebook_helpers import load_presentation_helpers
+
+_presentation = load_presentation_helpers("segmentation_method_comparison")
+plot_pair_delta_by_image = _presentation["plot_pair_delta_by_image"]
+plot_pair_dice_by_image = _presentation["plot_pair_dice_by_image"]
 
 
 class VariantComparisonCurveTests(unittest.TestCase):

@@ -7,12 +7,12 @@ from unittest.mock import patch
 import matplotlib.image as mpimg
 import numpy as np
 
-from utils.visualization.image_slices import (
+from utils.visualization.images.image_slices import (
     plot_volume_slice,
     save_volume_slice_figure,
 )
-from utils.visualization.preprocessing_views import plot_preprocessing_grid
-from utils.visualization.vesselness import plot_vesselness_mip_grid
+from utils.visualization.pipeline.preprocessing_views import plot_preprocessing_grid
+from utils.visualization.pipeline.vesselness import plot_vesselness_mip_grid
 
 
 class SaveVolumeSliceFigureTest(TestCase):

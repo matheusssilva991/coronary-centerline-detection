@@ -3,7 +3,7 @@ from pathlib import Path
 import pandas as pd
 
 from ..project.results import add_internal_result_aliases
-from ..project.result_paths import (
+from utils.project.results.paths import (
     batch_timings_candidates,
     metadata_candidates,
     result_candidates,

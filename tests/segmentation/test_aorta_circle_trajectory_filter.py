@@ -4,14 +4,14 @@ import unittest
 from pathlib import Path
 
 import numpy as np
-from utils.segmentation.aorta_localization import (
+from utils.segmentation.aorta.localization import (
     filter_aorta_circle_trajectory,
 )
-from utils.segmentation.aorta_segmentation import (
+from utils.segmentation.aorta.segmentation import (
     build_circle_trajectory_envelope,
     calculate_circle_mask_profile,
 )
-from utils.segmentation.pipeline_cli import build_parser
+from utils.segmentation.pipeline.cli import build_parser
 
 
 def _circle(slice_index, *, center_x=20.0, center_y=20.0, radius=20.0, accum=0.6):

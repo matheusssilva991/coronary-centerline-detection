@@ -5,11 +5,11 @@ from pathlib import Path
 from unittest import TestCase
 from unittest.mock import patch
 
-from utils.project.run_notification import notify_run_completion
+from utils.project.runtime.run_notification import notify_run_completion
 
 
 class RunNotificationTests(TestCase):
-    @patch("utils.project.run_notification.subprocess.run")
+    @patch("utils.project.runtime.run_notification.subprocess.run")
     def test_complete_run_uses_desktop_and_success_sound(self, run_command):
         run_command.return_value = subprocess.CompletedProcess([], 0, "", "")
 
@@ -29,7 +29,7 @@ class RunNotificationTests(TestCase):
         self.assertIn("Saída: /runs/example", desktop[-1])
         self.assertEqual(sound, ["canberra-gtk-play", "--id=complete"])
 
-    @patch("utils.project.run_notification.subprocess.run")
+    @patch("utils.project.runtime.run_notification.subprocess.run")
     def test_warning_and_failure_use_distinct_sounds(self, run_command):
         run_command.return_value = subprocess.CompletedProcess([], 0, "", "")
 
@@ -55,11 +55,13 @@ class RunNotificationTests(TestCase):
                     ["canberra-gtk-play", f"--id={sound_id}"],
                 )
 
-    @patch("utils.project.run_notification.subprocess.run")
+    @patch("utils.project.runtime.run_notification.subprocess.run")
     def test_unavailable_desktop_and_sound_do_not_raise(self, run_command):
         run_command.side_effect = FileNotFoundError("comando indisponível")
 
-        with self.assertLogs("utils.project.run_notification", level="WARNING") as logs:
+        with self.assertLogs(
+            "utils.project.runtime.run_notification", level="WARNING"
+        ) as logs:
             notify_run_completion(
                 pipeline="OrCaScore",
                 split="all",
@@ -71,14 +73,14 @@ class RunNotificationTests(TestCase):
         self.assertEqual(run_command.call_count, 2)
         self.assertEqual(len(logs.output), 2)
 
-    @patch("utils.project.run_notification.subprocess.run")
+    @patch("utils.project.runtime.run_notification.subprocess.run")
     def test_nonzero_exit_and_timeout_are_only_warnings(self, run_command):
         run_command.side_effect = [
             subprocess.CompletedProcess([], 1, "", "sem sessão gráfica"),
             subprocess.TimeoutExpired(["canberra-gtk-play"], 5),
         ]
 
-        with self.assertLogs("utils.project.run_notification", level="WARNING"):
+        with self.assertLogs("utils.project.runtime.run_notification", level="WARNING"):
             notify_run_completion(
                 pipeline="ImageCAS",
                 split="val",

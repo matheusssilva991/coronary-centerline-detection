@@ -3,7 +3,7 @@
 A API pública permanece disponível por ``utils.utils``.
 """
 
-from .json_io import load_json_file, save_json_file
+from .json_io import load_json_file, make_json_safe, save_json_atomic, save_json_file
 from .metrics import dice_score
 from .nifti_io import (
     load_img_and_label,
@@ -25,6 +25,8 @@ __all__ = [
     "robust_normalize",
     "load_json_file",
     "save_json_file",
+    "make_json_safe",
+    "save_json_atomic",
     "load_img_and_label",
     "load_raw_img_and_label",
     "save_nii_image",

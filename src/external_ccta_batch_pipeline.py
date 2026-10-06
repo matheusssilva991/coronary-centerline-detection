@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import json
 import logging
 import os
 import sys
@@ -22,56 +21,65 @@ import pandas as pd
 from utils.processing.gpu_utils import use_gpu
 from utils.project.config import load_config_json, save_config_json
 from utils.project.dataframe import require_series_column
-from utils.project.ccta_datasets import (
+from utils.project.datasets.ccta import (
     align_ccta_volume_to_imagecas_view,
     discover_ccta_dataset,
     load_ccta_aorta_ground_truth,
     load_ccta_volume,
 )
-from utils.project.mmwhs_official_aorta import (
+from utils.project.evaluation.mmwhs_official_aorta import (
     EVALUATOR_FOLDER,
     OFFICIAL_AORTA_METHOD,
     AortaPrediction,
-    evaluate_with_wine,
     has_aorta_mask,
-    parse_dice_lo,
-    predict_aorta,
     preflight_evaluator,
     restore_native_mask,
-    verify_run_result,
     save_prediction,
     validate_saved_prediction,
 )
-from utils.project.notebook_env import load_notebook_pipeline_config
-from utils.project.run_notification import notify_run_completion
-from utils.project.results import make_json_safe
-from utils.segmentation.fuzzy_threshold import normalize_threshold_mode
-from utils.segmentation.aorta_segmentation import (
+from utils.project.runtime.notebook_env import load_notebook_pipeline_config
+from utils.project.runtime.run_notification import notify_run_completion
+from utils.utils.json_io import load_json_file, save_json_atomic
+from utils.project.runtime.run_logging import add_run_file_handler
+from utils.project.results.external import (
+    external_result_key,
+    upsert_external_result,
+    save_numeric_results,
+    load_existing_results,
+    build_external_metadata,
+    is_terminal_external_result,
+)
+from utils.project.evaluation.mmwhs_aorta_evaluation import (
+    evaluate_test_aorta_result,
+    official_evaluation_complete,
+)
+from utils.segmentation.fuzzy.threshold import normalize_threshold_mode
+from utils.segmentation.aorta.segmentation import (
     classify_aorta_segmentation_feedback,
 )
-from utils.segmentation.pipeline_arteries import (
+from utils.segmentation.pipeline.arteries import (
     segment_artery_masks_from_vesselness,
 )
-from utils.segmentation.pipeline_detection import (
+from utils.segmentation.pipeline.detection import (
     detect_ostia,
     locate_and_filter_aorta_circles,
     segment_aorta_with_diagnostics,
 )
-from utils.segmentation.pipeline_orchestration import (
+from utils.segmentation.aorta.diagnostics import (
     summarize_aorta_circles,
     summarize_aorta_volume,
 )
-from utils.segmentation.pipeline_preprocessing import (
+from utils.segmentation.pipeline.preprocessing import (
     compute_vesselness,
     preprocess_ccta_volume,
 )
-from utils.segmentation.pipeline_visuals import save_segmentation_visual_to_path
+from utils.segmentation.pipeline.visuals import save_segmentation_visual_to_path
 from utils.utils.metrics import dice_score
-from utils.visualization.pipeline_artifacts import (
+from utils.visualization.pipeline.pipeline_artifacts import (
     save_detected_circles_figure,
     save_stage_views,
 )
-from utils.visualization.volume import visualize_binary_masks_comparison
+from utils.visualization.images.volume import visualize_binary_masks_comparison
 
 
 LOGGER = logging.getLogger("external_ccta_batch_pipeline")
@@ -216,7 +224,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--test-aorta-dice",
         dest="evaluate_mmwhs_test_aorta",
         action="store_true",
-        help="Avalia a aorta do MM-WHS test com o avaliador oficial via Wine.",
+        help="Calcula Dice isolado do label 820 do MM-WHS test em 1 mm via Wine.",
     )
     parser.add_argument(
         "--evaluate-mmwhs-test-aorta",
@@ -330,30 +338,6 @@ def select_inventory(
     return selected.reset_index(drop=True)
 
 
-def _save_json_atomic(payload: Mapping[str, Any], path: Path) -> None:
-    """Salva um objeto JSON por substituição atômica."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_suffix(path.suffix + ".tmp")
-    temporary.write_text(
-        json.dumps(make_json_safe(dict(payload)), indent=2, ensure_ascii=False),
-        encoding="utf-8",
-    )
-    temporary.replace(path)
-
-
-def _load_json(path: Path) -> dict[str, Any]:
-    """Carrega um objeto JSON persistido."""
-    return json.loads(path.read_text(encoding="utf-8"))
-
-
-def _save_dataframe_atomic(dataframe: pd.DataFrame, path: Path) -> None:
-    """Salva um DataFrame em CSV por substituição atômica."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_suffix(path.suffix + ".tmp")
-    dataframe.to_csv(temporary, index=False)
-    temporary.replace(path)
-
-
 def _coordinates_to_fields(prefix: str, coordinates: Any) -> dict[str, int | None]:
     """Converte uma coordenada opcional em campos escalares nomeados."""
     values = (
@@ -364,28 +348,6 @@ def _coordinates_to_fields(prefix: str, coordinates: Any) -> dict[str, int | Non
         f"{prefix}_x": values[1] if len(values) > 1 else None,
         f"{prefix}_z": values[2] if len(values) > 2 else None,
     }
-
-
-def _save_combined_visual(
-    output_path: Path,
-    *,
-    exam_label: str,
-    aorta_mask: Any,
-    ostia_left: Any,
-    ostia_right: Any,
-    artery_mask: Any,
-    spacing: Sequence[float],
-) -> None:
-    """Salva a visualização 3D conjunta das estruturas segmentadas."""
-    save_segmentation_visual_to_path(
-        output_path,
-        plot_name=f"{exam_label}: aorta, óstios e artérias",
-        aorta_mask=aorta_mask,
-        ostia_left=ostia_left,
-        ostia_right=ostia_right,
-        artery_mask=artery_mask,
-        spacing=spacing,
-    )
 
 
 def _save_aorta_ground_truth_visual(
@@ -479,10 +441,13 @@ def process_external_exam(
                 f"{native_image.shape} != {native_aorta_ground_truth.shape}."
             )
         result["aorta_ground_truth_available"] = native_aorta_ground_truth is not None
-        spacing = tuple(
-            float(_record_value(record, column))
-            for column in ("spacing_x_mm", "spacing_y_mm", "spacing_z_mm")
-        )
+        spacing_values: list[float] = []
+        for column in ("spacing_x_mm", "spacing_y_mm", "spacing_z_mm"):
+            value = record.get(column)
+            if value is None:
+                raise TypeError(f"Espaçamento ausente no inventário: {column}.")
+            spacing_values.append(float(value))
+        spacing = tuple(spacing_values)
         image = native_image
         flipped_axes: tuple[int, ...] = ()
         if align_orcascore:
@@ -723,9 +688,9 @@ def process_external_exam(
             result["error"] = str(error)
             vesselness_ostia = None
             if exam_dir is not None:
-                _save_combined_visual(
+                save_segmentation_visual_to_path(
                     exam_dir / "aorta_ostia_artery.html",
-                    exam_label=f"{dataset} {exam_id}",
+                    plot_name=f"{dataset} {exam_id}: aorta, óstios e artérias",
                     aorta_mask=aorta_mask,
                     ostia_left=None,
                     ostia_right=None,
@@ -799,9 +764,9 @@ def process_external_exam(
             }
         )
         if exam_dir is not None:
-            _save_combined_visual(
+            save_segmentation_visual_to_path(
                 exam_dir / "aorta_ostia_artery.html",
-                exam_label=f"{dataset} {exam_id}",
+                plot_name=f"{dataset} {exam_id}: aorta, óstios e artérias",
                 aorta_mask=aorta_mask,
                 ostia_left=ostia_left,
                 ostia_right=ostia_right,
@@ -819,246 +784,8 @@ def process_external_exam(
     finally:
         result["execution_time_seconds"] = float(time.perf_counter() - started)
         if exam_dir is not None:
-            _save_json_atomic(result, exam_dir / "result.json")
+            save_json_atomic(result, exam_dir / "result.json")
     return result
-
-
-def _result_key(row: Mapping[str, Any]) -> tuple[str, str]:
-    """Retorna a chave única de banco e exame de um resultado."""
-    return str(row["subset"]), str(row["exam_id"])
-
-
-def _result_sort_key(row: Mapping[str, Any]) -> tuple[int, str]:
-    """Retorna a chave determinística de ordenação de um resultado."""
-    subset_order = {"train": 0, "test": 1}
-    return subset_order.get(str(row["subset"]), 2), str(row["exam_id"])
-
-
-def _upsert_result(
-    rows: list[dict[str, Any]],
-    result: dict[str, Any],
-) -> list[dict[str, Any]]:
-    """Insere ou substitui um resultado preservando a ordem determinística."""
-    key = _result_key(result)
-    updated = [row for row in rows if _result_key(row) != key]
-    updated.append(result)
-    return sorted(updated, key=_result_sort_key)
-
-
-def _record_value(record: Mapping[str, Any] | pd.Series, key: str) -> Any:
-    """Obtém um valor escalar de um registro tabular ou mapeamento."""
-    return record.get(key)
-
-
-def save_numeric_results(rows: list[dict[str, Any]], numeric_dir: Path) -> None:
-    """Salva resultados consolidados e por subset de forma atômica."""
-    dataframe = pd.DataFrame(rows)
-    if dataframe.empty:
-        return
-    subset_values = require_series_column(dataframe, "subset")
-    subset_order = subset_values.map(
-        lambda value: {"train": 0, "test": 1}.get(str(value))
-    ).fillna(2)
-    dataframe = (
-        dataframe.assign(_subset_order=subset_order)
-        .sort_values(["_subset_order", "exam_id"], kind="stable")
-        .drop(columns="_subset_order")
-    )
-    _save_dataframe_atomic(dataframe, numeric_dir / "results_all.csv")
-    for subset, subset_frame in dataframe.groupby("subset", sort=False):
-        _save_dataframe_atomic(
-            subset_frame.reset_index(drop=True),
-            numeric_dir / f"results_{subset}.csv",
-        )
-
-
-def load_existing_results(numeric_dir: Path) -> list[dict[str, Any]]:
-    """Carrega resultados já persistidos para permitir retomadas."""
-    path = numeric_dir / "results_all.csv"
-    if not path.is_file():
-        return []
-    records = pd.read_csv(path).where(pd.notna, None).to_dict(orient="records")
-    return [{str(key): value for key, value in record.items()} for record in records]
-
-
-def evaluate_test_aorta_result(
-    row: Mapping[str, Any],
-    record: pd.Series,
-    config: dict[str, Any],
-    run_dir: Path,
-    evaluator_dir: Path,
-    *,
-    rebuild_mask: bool,
-    align_volume: bool = True,
-) -> dict[str, Any]:
-    """Avalia a aorta sem alterar o resultado científico do exame."""
-    updated = dict(row)
-    exam_id = str(record["exam_id"])
-    updated["aorta_evaluation_method"] = OFFICIAL_AORTA_METHOD
-    updated["aorta_ground_truth_available"] = True
-    updated["aorta_evaluation_error"] = None
-    if not has_aorta_mask(row):
-        updated["aorta_evaluation_status"] = "unavailable"
-        updated["aorta_ground_truth_evaluated"] = False
-        updated["aorta_dice"] = None
-        return updated
-
-    output_dir = run_dir / "evaluation" / "aorta" / "test" / exam_id
-    prediction_path = output_dir / f"{exam_id}_label.nii.gz"
-    try:
-        reference_path = Path(str(record["path"]))
-        if prediction_path.exists():
-            validate_saved_prediction(reference_path, prediction_path)
-        elif rebuild_mask:
-            prediction = predict_aorta(
-                record, {**config, "USE_GPU": False}, align_volume=align_volume
-            )
-            verify_run_result(run_dir, exam_id, prediction)
-            native_mask = restore_native_mask(prediction)
-            save_prediction(reference_path, native_mask, prediction_path)
-            del native_mask, prediction
-        else:
-            raise FileNotFoundError(f"Predição da aorta ausente: {prediction_path}")
-        dice_path = evaluate_with_wine(
-            prediction_path, exam_id, evaluator_dir, output_dir
-        )
-        updated["aorta_dice"] = parse_dice_lo(dice_path, exam_id)
-        updated["aorta_ground_truth_evaluated"] = True
-        updated["aorta_evaluation_status"] = "success"
-    except Exception as error:
-        LOGGER.exception("Falha na avaliação oficial da aorta de %s", exam_id)
-        updated["aorta_dice"] = None
-        updated["aorta_ground_truth_evaluated"] = False
-        updated["aorta_evaluation_status"] = "error"
-        updated["aorta_evaluation_error"] = str(error)
-    return updated
-
-
-def _official_evaluation_complete(row: Mapping[str, Any], run_dir: Path) -> bool:
-    """Confere que o Dice persistido corresponde ao arquivo oficial do exame."""
-    if row.get("aorta_evaluation_status") != "success" or not _has_valid_aorta_dice(
-        row
-    ):
-        return False
-    exam_id = str(row["exam_id"])
-    dice_path = (
-        run_dir / "evaluation" / "aorta" / "test" / exam_id / f"{exam_id}_dice.xls"
-    )
-    if not dice_path.is_file():
-        return False
-    saved_dice = parse_dice_lo(dice_path, exam_id)
-    if not np.isclose(saved_dice, float(row["aorta_dice"]), rtol=0, atol=1e-6):
-        raise ValueError(f"Dice do CSV diverge do arquivo oficial: {exam_id}")
-    return True
-
-
-def _metadata_payload(
-    *,
-    dataset: str,
-    resolution: str,
-    subset: str,
-    rows: list[dict[str, Any]],
-    started_at: datetime,
-    state: str,
-) -> dict[str, Any]:
-    """Monta o metadata compacto da execução externa."""
-    status_counts = pd.Series(
-        [row.get("status", "unknown") for row in rows]
-    ).value_counts()
-    total_seconds = sum(float(row.get("execution_time_seconds") or 0.0) for row in rows)
-    aorta_dice_values = [
-        float(value)
-        for row in rows
-        if str(row.get("subset")) == "train"
-        if isinstance(
-            value := row.get("aorta_dice"),
-            (int, float, np.integer, np.floating),
-        )
-        and np.isfinite(float(value))
-    ]
-    official_test_rows = [
-        row
-        for row in rows
-        if str(row.get("subset")) == "test"
-        and row.get("aorta_evaluation_method") == OFFICIAL_AORTA_METHOD
-    ]
-    official_test_dice = [
-        float(row["aorta_dice"])
-        for row in official_test_rows
-        if _has_valid_aorta_dice(row)
-        and row.get("aorta_evaluation_status") == "success"
-    ]
-    return {
-        "schema_version": 3,
-        "dataset": dataset,
-        "resolution": resolution,
-        "selected_subset": subset,
-        "state": state,
-        "started_at": started_at.isoformat(),
-        "updated_at": datetime.now(timezone.utc).isoformat(),
-        "processed_exam_count": len(rows),
-        "status_counts": {str(key): int(value) for key, value in status_counts.items()},
-        "execution_time": {
-            "seconds": total_seconds,
-            "minutes": total_seconds / 60.0,
-            "hours": total_seconds / 3600.0,
-        },
-        "ground_truth_metrics": {
-            "aorta": {
-                "available_exam_count": sum(
-                    str(row.get("subset")) == "train"
-                    and row.get("aorta_ground_truth_available") is True
-                    for row in rows
-                ),
-                "evaluated_exam_count": len(aorta_dice_values),
-                "dice_mean": (
-                    float(np.mean(aorta_dice_values)) if aorta_dice_values else None
-                ),
-                "test_official": {
-                    "available_exam_count": len(official_test_rows),
-                    "evaluated_exam_count": len(official_test_dice),
-                    "unavailable_exam_count": sum(
-                        row.get("aorta_evaluation_status") == "unavailable"
-                        for row in official_test_rows
-                    ),
-                    "error_exam_count": sum(
-                        row.get("aorta_evaluation_status") == "error"
-                        for row in official_test_rows
-                    ),
-                    "dice_mean": (
-                        float(np.mean(official_test_dice))
-                        if official_test_dice
-                        else None
-                    ),
-                },
-            },
-            "ostia_accuracy": None,
-            "coronary_reason": (
-                "Os bancos externos não possuem referência coronariana compatível."
-            ),
-        },
-    }
-
-
-def _has_valid_aorta_dice(row: Mapping[str, Any]) -> bool:
-    """Verifica se um resultado possui Dice da aorta finito e normalizado."""
-    value = row.get("aorta_dice")
-    return (
-        isinstance(value, (int, float, np.integer, np.floating))
-        and np.isfinite(float(value))
-        and 0.0 <= float(value) <= 1.0
-    )
-
-
-def _is_terminal_result(
-    row: Mapping[str, Any],
-    aorta_ground_truth_keys: set[tuple[str, str]],
-) -> bool:
-    """Valida conclusão do exame, exigindo Dice quando há referência."""
-    if str(row.get("status")) not in {"success", "ostia_not_found"}:
-        return False
-    key = _result_key(row)
-    return key not in aorta_ground_truth_keys or _has_valid_aorta_dice(row)
 
 
 def _configure_logging(logs_dir: Path, verbose: bool) -> None:
@@ -1073,9 +800,7 @@ def _configure_logging(logs_dir: Path, verbose: bool) -> None:
         stream = logging.StreamHandler()
         stream.setFormatter(formatter)
         root.addHandler(stream)
-    file_handler = logging.FileHandler(logs_dir / "pipeline.log", encoding="utf-8")
-    file_handler.setFormatter(formatter)
-    root.addHandler(file_handler)
+    add_run_file_handler(logs_dir / "pipeline.log", formatter=formatter)
 
 
 def run(args: argparse.Namespace) -> RunPaths:
@@ -1138,7 +863,7 @@ def run(args: argparse.Namespace) -> RunPaths:
                 "Run retomado não possui effective_pipeline_config.json e "
                 "run_manifest.json."
             )
-        manifest = _load_json(manifest_path)
+        manifest = load_json_file(manifest_path)
         expected_identity = (args.dataset, args.resolution, args.subset)
         saved_identity = (
             manifest.get("dataset"),
@@ -1190,7 +915,7 @@ def run(args: argparse.Namespace) -> RunPaths:
             config_source = str(args.config_file.resolve().relative_to(REPO_ROOT))
         except ValueError:
             config_source = args.config_file.name
-        _save_json_atomic(
+        save_json_atomic(
             {
                 "schema_version": 1,
                 "dataset": args.dataset,
@@ -1206,7 +931,7 @@ def run(args: argparse.Namespace) -> RunPaths:
 
     rows = load_existing_results(paths.numeric_dir)
     if evaluation_only:
-        existing_by_key = {_result_key(row): row for row in rows}
+        existing_by_key = {external_result_key(row): row for row in rows}
         if len(existing_by_key) != len(rows):
             raise ValueError("O CSV do run contém IDs duplicados.")
         missing = [
@@ -1224,20 +949,24 @@ def run(args: argparse.Namespace) -> RunPaths:
                     "aorta_evaluation_status"
                 )
                 == "unavailable"
+                and existing_by_key[
+                    (str(record["subset"]), str(record["exam_id"]))
+                ].get("aorta_evaluation_method")
+                == OFFICIAL_AORTA_METHOD
                 and not has_aorta_mask(
                     existing_by_key[(str(record["subset"]), str(record["exam_id"]))]
                 )
             )
-            and not _official_evaluation_complete(
+            and not official_evaluation_complete(
                 existing_by_key[(str(record["subset"]), str(record["exam_id"]))],
                 paths.run_dir,
             )
         ]
     else:
         completed = {
-            _result_key(row)
+            external_result_key(row)
             for row in rows
-            if _is_terminal_result(row, aorta_ground_truth_keys)
+            if is_terminal_external_result(row, aorta_ground_truth_keys)
         }
         pending_records = [
             record
@@ -1256,11 +985,11 @@ def run(args: argparse.Namespace) -> RunPaths:
 
     metadata_path = paths.run_dir / "metadata.json"
     if args.resume_dir is not None and metadata_path.is_file():
-        previous_started_at = _load_json(metadata_path).get("started_at")
+        previous_started_at = load_json_file(metadata_path).get("started_at")
         if isinstance(previous_started_at, str):
             started_at = datetime.fromisoformat(previous_started_at)
-    _save_json_atomic(
-        _metadata_payload(
+    save_json_atomic(
+        build_external_metadata(
             dataset=args.dataset,
             resolution=args.resolution,
             subset=args.subset,
@@ -1312,10 +1041,10 @@ def run(args: argparse.Namespace) -> RunPaths:
                     rebuild_mask=False,
                     align_volume=args.align_orcascore,
                 )
-        rows = _upsert_result(rows, result)
+        rows = upsert_external_result(rows, result)
         save_numeric_results(rows, paths.numeric_dir)
-        _save_json_atomic(
-            _metadata_payload(
+        save_json_atomic(
+            build_external_metadata(
                 dataset=args.dataset,
                 resolution=args.resolution,
                 subset=args.subset,
@@ -1331,11 +1060,11 @@ def run(args: argparse.Namespace) -> RunPaths:
             )
 
     terminal_keys = {
-        _result_key(row)
+        external_result_key(row)
         for row in rows
-        if _is_terminal_result(row, aorta_ground_truth_keys)
+        if is_terminal_external_result(row, aorta_ground_truth_keys)
     }
-    attempted_keys = {_result_key(row) for row in rows}
+    attempted_keys = {external_result_key(row) for row in rows}
     all_attempted = selected_keys.issubset(attempted_keys)
     all_terminal = selected_keys.issubset(terminal_keys)
     final_state = (
@@ -1345,8 +1074,8 @@ def run(args: argparse.Namespace) -> RunPaths:
         if all_attempted
         else "incomplete"
     )
-    _save_json_atomic(
-        _metadata_payload(
+    save_json_atomic(
+        build_external_metadata(
             dataset=args.dataset,
             resolution=args.resolution,
             subset=args.subset,
@@ -1363,7 +1092,7 @@ def run(args: argparse.Namespace) -> RunPaths:
 def _notify_external_result(args: argparse.Namespace, paths: RunPaths) -> None:
     """Lê o metadata final e diferencia falhas científicas das avaliações."""
     try:
-        metadata = _load_json(paths.run_dir / "metadata.json")
+        metadata = load_json_file(paths.run_dir / "metadata.json")
         state = str(metadata.get("state") or "incomplete")
         if state not in {"complete", "complete_with_errors", "incomplete"}:
             state = "incomplete"

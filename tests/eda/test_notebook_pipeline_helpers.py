@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 import numpy as np
 
-from utils.project.notebook_env import load_notebook_pipeline_config
+from utils.project.runtime.notebook_env import load_notebook_pipeline_config
 from utils.utils.metrics import (
     binary_segmentation_metrics,
     print_segmentation_metrics,
@@ -50,8 +50,8 @@ class NotebookPipelineHelperTests(TestCase):
         self.assertIn("Dice: 0.5000", output)
         self.assertIn("Valor preditivo positivo: 0.5000", output)
 
-    @patch("utils.project.notebook_env.scale_config_to_resolution")
-    @patch("utils.project.notebook_env.load_config_json")
+    @patch("utils.project.runtime.notebook_env.scale_config_to_resolution")
+    @patch("utils.project.runtime.notebook_env.load_config_json")
     def test_loads_high_resolution_config_in_original_order(
         self,
         load_config,

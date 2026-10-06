@@ -3,7 +3,7 @@ import unittest
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from utils.visualization.intensity import (
+from utils.visualization.images.intensity import (
     calculate_binned_intensity_mean_median,
     plot_binned_intensity_histogram,
 )

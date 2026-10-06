@@ -25,7 +25,7 @@ if str(SRC_DIR) not in sys.path:
 # Protege máquinas com uma GPU quando o ambiente não seleciona um dispositivo.
 os.environ.setdefault("CUDA_VISIBLE_DEVICES", "0")
 
-from utils.project.dataset import get_data_splits  # noqa: E402
+from utils.project.datasets.imagecas import get_data_splits  # noqa: E402
 from utils.project.results import make_json_safe  # noqa: E402
 
 

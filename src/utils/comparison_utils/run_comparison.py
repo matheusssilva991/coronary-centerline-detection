@@ -9,7 +9,7 @@ from typing import Any
 import pandas as pd
 
 from ..project.dataframe import require_series_column, to_numeric_series
-from ..project.results_schema import (
+from utils.project.results.schema import (
     add_internal_result_aliases,
     normalize_ostia_status,
     summarize_results_df,

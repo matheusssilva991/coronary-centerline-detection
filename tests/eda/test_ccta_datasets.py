@@ -9,7 +9,7 @@ from nibabel.loadsave import save as save_nifti
 from nibabel.nifti1 import Nifti1Image
 from nibabel.spatialimages import SpatialImage
 
-from utils.project.ccta_datasets import (
+from utils.project.datasets.ccta import (
     align_ccta_volume_to_imagecas_view,
     discover_ccta_dataset,
     discover_ccta_volumes,

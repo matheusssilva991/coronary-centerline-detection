@@ -11,7 +11,7 @@ import pandas as pd
 
 import external_ccta_batch_pipeline as external
 import segmentation_pipeline as imagecas
-from utils.segmentation.pipeline_cli import build_parser as build_imagecas_parser
+from utils.segmentation.pipeline.cli import build_parser as build_imagecas_parser
 
 
 class ImagecasNotificationTests(TestCase):

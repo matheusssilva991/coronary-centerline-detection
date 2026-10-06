@@ -2,16 +2,13 @@
 
 import json
 import os
-from typing import Any, Dict
+import tempfile
+from pathlib import Path
+from typing import Any, Dict, Mapping
 
 
-def load_json_file(path: str) -> Dict[str, Any]:
-    """Carrega um arquivo JSON com validação e mensagens de erro claras.
-
-    Argumentos:        path: Caminho para o arquivo JSON.
-
-    Retorna:        Dicionário representando o conteúdo JSON.
-    """
+def load_json_file(path: str | Path) -> Dict[str, Any]:
+    """Carrega um objeto JSON e rejeita conteúdo inválido ou de outro tipo."""
     if not os.path.exists(path):
         raise FileNotFoundError(f"Arquivo JSON não encontrado: {path}")
     if os.path.isdir(path):
@@ -37,6 +34,48 @@ def load_json_file(path: str) -> Dict[str, Any]:
     return data
 
 
+def make_json_safe(value: Any) -> Any:
+    """Converte valores comuns de pandas/numpy/pathlib para JSON nativo."""
+    if isinstance(value, dict):
+        return {str(key): make_json_safe(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [make_json_safe(item) for item in value]
+    if hasattr(value, "as_posix"):
+        return value.as_posix()
+    if hasattr(value, "tolist"):
+        return make_json_safe(value.tolist())
+    if hasattr(value, "item"):
+        try:
+            return value.item()
+        except ValueError:
+            pass
+    return value
+
+
+def save_json_atomic(payload: Mapping[str, Any], path: str | Path) -> None:
+    """Salva JSON por substituição atômica e remove temporários após falhas."""
+    destination = Path(path)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    temporary: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            dir=destination.parent,
+            prefix=f".{destination.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as stream:
+            temporary = Path(stream.name)
+            json.dump(
+                make_json_safe(dict(payload)), stream, indent=2, ensure_ascii=False
+            )
+        temporary.replace(destination)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+
+
 def save_json_file(
     data: Dict[str, Any], path: str, indent: int = 2, ensure_ascii: bool = False
 ) -> None:
@@ -57,5 +96,7 @@ def save_json_file(
 
 __all__ = [
     "load_json_file",
+    "make_json_safe",
+    "save_json_atomic",
     "save_json_file",
 ]

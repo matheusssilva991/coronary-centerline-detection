@@ -5,11 +5,16 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 import pandas as pd
 
-from utils.visualization.segmentation_eda import (
+from utils.comparison_utils.segmentation_eda import (
     build_success_status_summary_by_subset,
-    plot_status_distribution_by_subset,
-    plot_success_error_by_subset,
 )
+
+
+from tests.notebook_helpers import load_presentation_helpers
+
+_presentation = load_presentation_helpers("segmentation_results_eda")
+plot_status_distribution_by_subset = _presentation["plot_status_distribution_by_subset"]
+plot_success_error_by_subset = _presentation["plot_success_error_by_subset"]
 
 
 class SegmentationEdaSuccessTests(unittest.TestCase):

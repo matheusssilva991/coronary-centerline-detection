@@ -12,33 +12,34 @@ import pandas as pd
 # Usa GPU 0 por padrão quando a variável não for definida externamente.
 os.environ.setdefault("CUDA_VISIBLE_DEVICES", "0")
 
+from utils.utils.json_io import save_json_atomic
+from utils.project.runtime.run_logging import add_run_file_handler
 from utils.processing.gpu_utils import use_gpu
 from utils.project.config import (
     load_config_json,
     scale_config_to_resolution,
 )
-from utils.project.dataset import get_data_splits, list_dataset_image_ids
-from utils.project.run_notification import notify_run_completion
+from utils.project.datasets.imagecas import get_data_splits, list_dataset_image_ids
+from utils.project.runtime.run_notification import notify_run_completion
 from utils.project.results import (
     ResultIntegrityError,
     batch_result_number,
     create_timestamped_output_dir,
     list_batch_result_files,
     load_batch_timing_records,
-    make_json_safe,
     merge_batch_results,
     save_metadata,
     summarize_batch_timing_records,
     validate_result_integrity,
 )
-from utils.project.result_paths import (
+from utils.project.results.paths import (
     integrity_filename,
     metadata_candidates,
     metadata_filename,
 )
-from utils.segmentation.pipeline_cli import parse_pipeline_args
-from utils.segmentation.pipeline_orchestration import run_pipeline
-from utils.segmentation.pipeline_reporting import print_split_summary, print_statistics
+from utils.segmentation.pipeline.cli import parse_pipeline_args
+from utils.segmentation.pipeline.orchestration import run_pipeline
+from utils.segmentation.pipeline.reporting import print_split_summary, print_statistics
 
 # ============================================================================
 # CONFIGURAÇÕES GLOBAIS
@@ -451,10 +452,9 @@ def setup_file_logging(logs_dir):
     """Adiciona um arquivo de log dentro do diretório da execução."""
     try:
         fh_path = Path(logs_dir) / "pipeline.log"
-        fh = logging.FileHandler(fh_path, encoding="utf-8")
-        fh.setLevel(logging.DEBUG)
-        fh.setFormatter(logging.Formatter(LOG_FORMAT))
-        logging.getLogger().addHandler(fh)
+        add_run_file_handler(
+            fh_path, formatter=logging.Formatter(LOG_FORMAT), level=logging.DEBUG
+        )
         logger.info("Logs também serão gravados em: %s", fh_path)
     except Exception:
         logger.warning("Não foi possível criar arquivo de log no diretório de saída.")
@@ -472,8 +472,7 @@ def save_run_snapshots(
     config_dir.mkdir(parents=True, exist_ok=True)
 
     config_path = config_dir / "effective_pipeline_config.json"
-    with config_path.open("w", encoding="utf-8") as file_handle:
-        json.dump(make_json_safe(config), file_handle, indent=2, ensure_ascii=False)
+    save_json_atomic(config, config_path)
 
     if image_ids is not None:
         split_payload = {
@@ -481,13 +480,7 @@ def save_run_snapshots(
             "splits": {split_name: image_ids},
         }
         split_path = config_dir / "split_ids.json"
-        with split_path.open("w", encoding="utf-8") as file_handle:
-            json.dump(
-                make_json_safe(split_payload),
-                file_handle,
-                indent=2,
-                ensure_ascii=False,
-            )
+        save_json_atomic(split_payload, split_path)
 
 
 def build_split_to_run(args, base_path):
@@ -590,12 +583,7 @@ def _record_incomplete_integrity(output_dir, split_name, error):
     ):
         (output_dir / stale_name).unlink(missing_ok=True)
     marker = output_dir / integrity_filename(split_name)
-    temporary = marker.with_suffix(".json.tmp")
-    temporary.write_text(
-        json.dumps(make_json_safe(error.report), indent=2, ensure_ascii=False),
-        encoding="utf-8",
-    )
-    temporary.replace(marker)
+    save_json_atomic(error.report, marker)
 
 
 def _pipeline_error_count(results):

@@ -6,9 +6,9 @@ from pathlib import Path
 
 import pandas as pd
 
-from utils.project.external_aorta_assessment import attach_aorta_feedback
-from utils.project.external_visual_assessment import summarize_visual_status
-from utils.project.external_aorta_assessment import AORTA_FEEDBACK_ORDER
+from utils.project.analysis.external_aorta_assessment import attach_aorta_feedback
+from utils.project.analysis.external_visual_assessment import summarize_visual_status
+from utils.project.analysis.external_aorta_assessment import AORTA_FEEDBACK_ORDER
 
 
 class ExternalAortaAssessmentTest(unittest.TestCase):

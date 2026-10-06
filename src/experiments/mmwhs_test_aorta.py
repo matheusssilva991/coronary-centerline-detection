@@ -14,13 +14,13 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from utils.project.ccta_datasets import discover_ccta_dataset  # noqa: E402
+from utils.project.datasets.ccta import discover_ccta_dataset  # noqa: E402
 from utils.project.config import load_config_json  # noqa: E402
 from utils.project.dataframe import require_series_column  # noqa: E402
-from utils.project.mmwhs_official_aorta import (  # noqa: E402
+from utils.project.evaluation.mmwhs_official_aorta import (  # noqa: E402
     EVALUATOR_FOLDER,
     evaluate_with_wine,
-    parse_dice_lo,
+    parse_aorta_dice,
     predict_aorta,
     restore_native_mask,
     save_prediction,
@@ -52,7 +52,7 @@ def build_parser() -> argparse.ArgumentParser:
     mode.add_argument(
         "--evaluate",
         action="store_true",
-        help="Exporta a máscara e chama o avaliador oficial pelo Wine.",
+        help="Exporta a máscara e avalia somente o label 820 pelo Wine.",
     )
     mode.add_argument(
         "--evaluate-existing",
@@ -150,9 +150,9 @@ def main(argv: list[str] | None = None) -> int:
         dice_path = evaluate_with_wine(
             prediction_path, args.exam_id, evaluator_dir, output_dir
         )
-        print(f"Avaliação oficial salva em: {dice_path}")
+        print(f"Avaliação da aorta isolada salva em: {dice_path}")
         print(
-            f"DiceLO (aorta, label 820): {parse_dice_lo(dice_path, args.exam_id):.6f}"
+            f"Dice da aorta (label 820, 1 mm): {parse_aorta_dice(dice_path, args.exam_id):.6f}"
         )
     return 0
 

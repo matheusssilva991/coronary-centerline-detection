@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from utils.project.external_visual_assessment import (
+from utils.project.analysis.external_visual_assessment import (
     AORTA_ARTERY_STATUS_ORDER,
     attach_assessment_subsets,
     load_assessment_subset_lookup,

@@ -53,8 +53,8 @@ from utils.project.config import (  # noqa: E402
     RESOLUTION_SCALING_GROUPS,
     scale_config_to_resolution,
 )
-from utils.project.notebook_env import resolve_imagecas_base_path  # noqa: E402
-from utils.segmentation.pipeline_preprocessing import compute_vesselness  # noqa: E402
+from utils.project.runtime.notebook_env import resolve_imagecas_base_path  # noqa: E402
+from utils.segmentation.pipeline.preprocessing import compute_vesselness  # noqa: E402
 
 
 DEFAULT_CONFIG_PATH = REPO_ROOT / "config/article_cbeb_sensitivity.json"

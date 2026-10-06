@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 import numpy as np
 
-from utils.visualization.volume import (
+from utils.visualization.images.volume import (
     visualize_arteries_comparison,
     visualize_binary_masks_comparison,
     visualize_label_map_3d,
@@ -21,8 +21,8 @@ class _FakePlot:
 
 
 class LabelMapVisualizationTests(unittest.TestCase):
-    @patch("utils.visualization.volume._add_mask_mesh")
-    @patch("utils.visualization.volume.create_plot")
+    @patch("utils.visualization.images.volume._add_mask_mesh")
+    @patch("utils.visualization.images.volume.create_plot")
     def test_adds_only_present_labels_with_physical_spacing(
         self,
         create_plot,
@@ -63,9 +63,9 @@ class LabelMapVisualizationTests(unittest.TestCase):
         )
         self.assertEqual(plot.display_count, 1)
 
-    @patch("utils.visualization.volume.save_k3d_plot_html")
-    @patch("utils.visualization.volume._add_mask_mesh")
-    @patch("utils.visualization.volume.create_plot")
+    @patch("utils.visualization.images.volume.save_k3d_plot_html")
+    @patch("utils.visualization.images.volume._add_mask_mesh")
+    @patch("utils.visualization.images.volume.create_plot")
     def test_saves_html_optionally_without_displaying(
         self,
         create_plot,
@@ -88,7 +88,7 @@ class LabelMapVisualizationTests(unittest.TestCase):
         save_k3d_plot_html.assert_called_once_with(plot, output_path)
         self.assertEqual(plot.display_count, 0)
 
-    @patch("utils.visualization.volume.create_plot")
+    @patch("utils.visualization.images.volume.create_plot")
     def test_rejects_selection_without_present_labels(self, create_plot):
         label_map = np.ones((2, 2, 2), dtype=np.uint8)
 
@@ -128,8 +128,8 @@ class LabelMapVisualizationTests(unittest.TestCase):
 
 
 class BinaryMaskComparisonTests(unittest.TestCase):
-    @patch("utils.visualization.volume._add_mask_mesh")
-    @patch("utils.visualization.volume.create_plot")
+    @patch("utils.visualization.images.volume._add_mask_mesh")
+    @patch("utils.visualization.images.volume.create_plot")
     def test_builds_named_reference_and_prediction_meshes(
         self,
         create_plot,
@@ -179,7 +179,7 @@ class BinaryMaskComparisonTests(unittest.TestCase):
                 display_plot=False,
             )
 
-    @patch("utils.visualization.volume.visualize_binary_masks_comparison")
+    @patch("utils.visualization.images.volume.visualize_binary_masks_comparison")
     def test_artery_wrapper_preserves_legacy_labels(self, compare_masks):
         mask = np.ones((2, 2, 2), dtype=np.uint8)
         expected_plot = _FakePlot()

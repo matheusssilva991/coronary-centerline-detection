@@ -21,11 +21,11 @@ REPO_ROOT = SRC_DIR.parent
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from utils.project.results_columns import (  # noqa: E402
+from utils.project.results.columns import (  # noqa: E402
     OSTIA_STATUS_PORTUGUESE_LABELS,
     STATUS_PORTUGUESE_LABELS,
 )
-from utils.project.results_schema import (  # noqa: E402
+from utils.project.results.schema import (  # noqa: E402
     normalize_ostia_status,
     normalize_result_status,
 )

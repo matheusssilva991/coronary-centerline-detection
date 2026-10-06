@@ -4,7 +4,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from ..project.results_schema import normalize_ostia_status, normalize_result_status
+from utils.project.results.schema import normalize_ostia_status, normalize_result_status
 
 
 def _status_to_english(value):

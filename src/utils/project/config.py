@@ -2,9 +2,10 @@
 
 import copy
 import json
-import os
 
 import numpy as np
+
+from ..utils.json_io import save_json_atomic
 
 
 RESOLUTION_SCALING_GROUPS = frozenset(
@@ -97,11 +98,7 @@ def load_config_json(path, base_config):
 
 def save_config_json(config, path):
     """Salva configuração (normalizada) em arquivo JSON."""
-    save_dir = os.path.dirname(path)
-    if save_dir:
-        os.makedirs(save_dir, exist_ok=True)
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(serialize_config_for_json(config), f, indent=2, ensure_ascii=False)
+    save_json_atomic(serialize_config_for_json(config), path)
 
 
 def scale_config_to_resolution(

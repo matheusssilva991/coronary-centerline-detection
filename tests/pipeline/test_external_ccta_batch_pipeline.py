@@ -10,16 +10,18 @@ import numpy as np
 import pandas as pd
 
 from external_ccta_batch_pipeline import (
-    _metadata_payload,
     build_parser,
     create_run_paths,
-    load_existing_results,
     normalize_dataset_name,
     process_external_exam,
     run,
     select_inventory,
 )
-from utils.project.mmwhs_official_aorta import OFFICIAL_AORTA_METHOD
+from utils.project.results.external import (
+    build_external_metadata,
+    load_existing_results,
+)
+from utils.project.evaluation.mmwhs_official_aorta import OFFICIAL_AORTA_METHOD
 
 
 class ExternalCctaBatchPipelineTest(unittest.TestCase):
@@ -90,7 +92,7 @@ class ExternalCctaBatchPipelineTest(unittest.TestCase):
             self.assertTrue(paths.logs_dir.is_dir())
 
     def test_metadata_aggregates_only_valid_aorta_dice(self):
-        metadata = _metadata_payload(
+        metadata = build_external_metadata(
             dataset="mmwhs",
             resolution="mid",
             subset="train",
@@ -121,6 +123,13 @@ class ExternalCctaBatchPipelineTest(unittest.TestCase):
                     "aorta_ground_truth_available": True,
                     "aorta_dice": 0.5,
                 },
+                {
+                    "subset": "test",
+                    "status": "success",
+                    "aorta_evaluation_method": "mmwhs_official_1mm_wine",
+                    "aorta_evaluation_status": "success",
+                    "aorta_dice": 0.99,
+                },
             ],
             started_at=datetime.now(timezone.utc),
             state="complete",
@@ -133,6 +142,8 @@ class ExternalCctaBatchPipelineTest(unittest.TestCase):
         self.assertAlmostEqual(aorta["dice_mean"], 0.7)
         self.assertEqual(aorta["test_official"]["evaluated_exam_count"], 1)
         self.assertAlmostEqual(aorta["test_official"]["dice_mean"], 0.5)
+        self.assertEqual(aorta["test_official"]["legacy_exam_count"], 1)
+        self.assertEqual(aorta["test_official"]["method"], OFFICIAL_AORTA_METHOD)
 
     @patch("external_ccta_batch_pipeline.use_gpu", return_value=False)
     @patch(
@@ -302,7 +313,7 @@ class ExternalCctaBatchPipelineTest(unittest.TestCase):
         self.assertEqual(refreshed.loc[0, "aorta_dice"], 0.75)
 
     @patch("external_ccta_batch_pipeline._save_aorta_ground_truth_visual")
-    @patch("external_ccta_batch_pipeline._save_combined_visual")
+    @patch("external_ccta_batch_pipeline.save_segmentation_visual_to_path")
     @patch("external_ccta_batch_pipeline.save_detected_circles_figure")
     @patch("external_ccta_batch_pipeline._save_stage")
     @patch("external_ccta_batch_pipeline.segment_artery_masks_from_vesselness")

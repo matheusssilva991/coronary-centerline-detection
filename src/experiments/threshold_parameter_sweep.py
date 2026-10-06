@@ -31,7 +31,7 @@ from typing import Any
 
 import pandas as pd
 
-from utils.project.results_schema import normalize_ostia_status
+from utils.project.results.schema import normalize_ostia_status
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
