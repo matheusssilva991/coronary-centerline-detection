@@ -52,16 +52,16 @@ export IMAGECAS_BASE_PATH=/caminho/para/ImageCAS/1-1000
 | Notebook | Objetivo | Entrada principal | Saída | Custo |
 |---|---|---|---|---|
 | [external_ccta_visual_assessment.ipynb](results/external_ccta_visual_assessment.ipynb) | Comparar avaliações visuais mid/high por treino e teste no MM-WHS e OrCaScore e Dice da aorta no treino e teste MM-WHS | `avaliacao_visual.xlsx` e `results_all.csv` dos quatro runs | Visão geral por split, distribuições por etapa e Dice separado por protocolo, geral e por exame | Baixo |
-| [segmentation_results_eda.ipynb](results/segmentation_results_eda.ipynb) | Status dos óstios, distâncias e Dice por split | Resultados canônicos | `analysis/segmentation_results/` | Baixo |
-| [split_resolution_analysis.ipynb](results/split_resolution_analysis.ipynb) | Comparar train/val/test entre mid e high | Resultados canônicos | Tabelas e gráficos exibidos | Baixo |
-| [bad_cases_results_analysis.ipynb](results/bad_cases_results_analysis.ipynb) | Quantificar casos ruins em mid e high | Summaries canônicos | `analysis/bad_cases/` | Baixo |
+| [segmentation_results_eda.ipynb](results/segmentation_results_eda.ipynb) | Status dos óstios, distâncias e Dice por split | Runs completos do pipeline refinado | `analysis/segmentation_results/` | Baixo |
+| [split_resolution_analysis.ipynb](results/split_resolution_analysis.ipynb) | Comparar train/val/test entre mid e high | Runs completos do pipeline refinado | Tabelas e gráficos exibidos | Baixo |
+| [bad_cases_results_analysis.ipynb](results/bad_cases_results_analysis.ipynb) | Quantificar casos ruins em mid e high | Runs completos do pipeline refinado | `analysis/bad_cases/` | Baixo |
 
 ### Comparações de métodos e variantes — `comparisons/`
 
 | Notebook | Objetivo | Entrada principal | Saída | Custo |
 |---|---|---|---|---|
 | [resolution_filter_envelope_dice_comparison.ipynb](comparisons/resolution_filter_envelope_dice_comparison.ipynb) | Comparar o Dice em mid/high antes e depois do padrão filtro + envelope/lower100/pad2 | Baselines canônicos e runs selecionados de train/val/test | Médias, deltas pareados, IC95%, Wilcoxon/Holm e gráficos exibidos | Baixo |
-| [ia_vs_pipeline_analysis.ipynb](comparisons/ia_vs_pipeline_analysis.ipynb) | Comparar IA e pipeline somente nos IDs comuns | `output/ia_results` e resultados canônicos | Tabelas e gráficos exibidos | Baixo |
+| [ia_vs_pipeline_analysis.ipynb](comparisons/ia_vs_pipeline_analysis.ipynb) | Comparar IA e pipeline somente nos IDs comuns | `output/ia_results` e runs completos do pipeline refinado | Tabelas e gráficos exibidos | Baixo |
 | [segmentation_method_comparison.ipynb](comparisons/segmentation_method_comparison.ipynb) | Resumir threshold normal/fuzzy e RG/FC; comparar a melhor variante com o baseline | Runs de comparação | Tabelas e gráficos pareados no notebook | Baixo |
 | [aorta_ostia_pipeline_comparison.ipynb](comparisons/aorta_ostia_pipeline_comparison.ipynb) | Comparar P99.9 puro, filtro + envelope e novo padrão lower100/pad2 | Treino 30, validação 270, teste 700; revisão visual histórica 30/60 | Dice geral/condicionado, sucesso dos óstios, Wilcoxon pareado com Holm e efeito rank-biserial; qualidade visual separada | Baixo |
 

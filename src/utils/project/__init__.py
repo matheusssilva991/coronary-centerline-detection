@@ -27,6 +27,7 @@ from utils.project.datasets.imagecas import get_data_splits
 from utils.project.runtime.notebook_env import (
     configure_notebook_environment,
     get_default_split_paths,
+    get_refined_pipeline_split_paths,
     load_notebook_pipeline_config,
     resolve_existing_path,
     resolve_imagecas_base_path,
@@ -41,6 +42,7 @@ __all__ = [
     "discover_orcascore_acquisitions",
     "get_data_splits",
     "get_default_split_paths",
+    "get_refined_pipeline_split_paths",
     "load_config_json",
     "load_ccta_aorta_ground_truth",
     "load_ccta_volume",

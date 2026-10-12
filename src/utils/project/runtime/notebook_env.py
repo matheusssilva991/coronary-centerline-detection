@@ -165,3 +165,56 @@ def get_default_split_paths(repo_root: Path) -> dict[str, dict[str, Path]]:
                 result[resolution][split] = resolved
 
     return result
+
+
+_REFINED_PIPELINE_RUNS = {
+    "mid_res": {
+        "train": (
+            "output/segmentation/runs/mid_res/aorta_segmentation_experiments/"
+            "train/ostia_localization/lower100_pad2/2026-09-06_08-08-25"
+        ),
+        "val": (
+            "output/segmentation/runs/mid_res/aorta_segmentation_experiments/"
+            "val/ostia_validation270/lower100_pad2/2026-09-07_07-15-15"
+        ),
+        "test": (
+            "output/segmentation/runs/mid_res/aorta_segmentation_experiments/"
+            "test/ostia_comparison/lower100_pad2/2026-09-07_10-37-38"
+        ),
+    },
+    "high_res": {
+        "train": (
+            "output/segmentation/runs/high_res/aorta_segmentation_experiments/"
+            "train/filter_envelope_lower100_pad2/2026-09-15_11-08-42"
+        ),
+        "val": (
+            "output/segmentation/runs/high_res/aorta_segmentation_experiments/"
+            "val/filter_envelope_lower100_pad2/2026-09-12_07-51-48"
+        ),
+        "test": (
+            "output/segmentation/runs/high_res/aorta_segmentation_experiments/"
+            "test/filter_envelope_lower100_pad2/2026-09-13_14-06-44"
+        ),
+    },
+}
+
+
+def get_refined_pipeline_split_paths(
+    repo_root: Path,
+) -> dict[str, dict[str, Path]]:
+    """Retorna os runs completos do pipeline refinado usados nas EDAs atuais.
+
+    Os caminhos identificam a configuração com filtro de trajetória, envelope,
+    ``lower_fraction=1.0`` e ``surface_padding_radius=2``. Entradas ausentes no
+    checkout são omitidas para que os notebooks possam informar a indisponibilidade.
+    """
+    result: dict[str, dict[str, Path]] = {
+        resolution: {} for resolution in _REFINED_PIPELINE_RUNS
+    }
+    for resolution, split_runs in _REFINED_PIPELINE_RUNS.items():
+        for split, relative_run_dir in split_runs.items():
+            numeric_dir = _numeric_result_dir(repo_root / relative_run_dir)
+            if (numeric_dir / results_filename(split)).is_file():
+                result[resolution][split] = numeric_dir
+
+    return result

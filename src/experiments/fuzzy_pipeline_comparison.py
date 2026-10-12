@@ -64,7 +64,6 @@ FC_PARAMS = {
 }
 
 FUZZY_PARAMS = {
-    "LOWER_THRESHOLD.percentile": 10.5,
     "fuzzy.soft_margin_hu": 100,
     "fuzzy.object_percentile": 99.8,
     "fuzzy.dense_percentile": 99.96,
@@ -98,8 +97,8 @@ def variant(
 
 def default_variants() -> list[dict[str, Any]]:
     """Retorna o conjunto compacto de comparações voltado ao artigo."""
-    normal_threshold = "P10.75 <= I <= P99.8"
-    fuzzy_threshold = "P10.5 + fuzzy object argmax (P99.8/P99.96)"
+    normal_threshold = "configured lower/upper HU interval"
+    fuzzy_threshold = "configured lower HU limit + fuzzy object argmax (P99.8/P99.96)"
     no_weight = "no vesselness weighting"
 
     return [
@@ -151,8 +150,10 @@ def default_variants() -> list[dict[str, Any]]:
 def failure_correction_variants() -> list[dict[str, Any]]:
     """Retorna correções focadas e interpretáveis dos padrões atuais."""
     variants = default_variants()
-    normal_threshold = "P10.75 <= I <= P99.8"
-    fuzzy_dense_threshold = "P10.5 + fuzzy object argmax (P99.8/P99.98)"
+    normal_threshold = "configured lower/upper HU interval"
+    fuzzy_dense_threshold = (
+        "configured lower HU limit + fuzzy object argmax (P99.8/P99.98)"
+    )
     no_weight = "no vesselness weighting"
 
     variants.extend(
@@ -214,7 +215,10 @@ def failure_correction_variants() -> list[dict[str, Any]]:
                     "fc.seed_search_radius": 4,
                     "fc.max_seeds_per_ostium": 8,
                 },
-                threshold_rule="P10.5 + fuzzy object argmax (P99.8/P99.96)",
+                threshold_rule=(
+                    "configured lower HU limit + fuzzy object argmax "
+                    "(P99.8/P99.96)"
+                ),
                 vesselness_rule=no_weight,
             ),
             variant(
