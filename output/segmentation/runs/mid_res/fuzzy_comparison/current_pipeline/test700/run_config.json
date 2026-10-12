@@ -1,0 +1,3761 @@
+{
+  "split": "test",
+  "split_sizes": null,
+  "sample_size": 700,
+  "start_index": 0,
+  "ids": [
+    568,
+    762,
+    765,
+    693,
+    469,
+    709,
+    662,
+    560,
+    872,
+    220,
+    829,
+    167,
+    671,
+    975,
+    943,
+    908,
+    350,
+    894,
+    784,
+    386,
+    593,
+    255,
+    432,
+    573,
+    288,
+    31,
+    19,
+    987,
+    910,
+    951,
+    41,
+    223,
+    658,
+    548,
+    431,
+    277,
+    717,
+    624,
+    91,
+    151,
+    394,
+    185,
+    38,
+    976,
+    368,
+    348,
+    930,
+    64,
+    494,
+    852,
+    611,
+    890,
+    333,
+    619,
+    119,
+    125,
+    654,
+    107,
+    298,
+    837,
+    365,
+    147,
+    587,
+    287,
+    642,
+    721,
+    695,
+    879,
+    161,
+    588,
+    195,
+    542,
+    63,
+    766,
+    361,
+    359,
+    686,
+    133,
+    629,
+    375,
+    71,
+    158,
+    346,
+    159,
+    385,
+    592,
+    998,
+    741,
+    777,
+    393,
+    442,
+    504,
+    569,
+    295,
+    807,
+    491,
+    787,
+    178,
+    155,
+    842,
+    743,
+    414,
+    941,
+    329,
+    670,
+    679,
+    598,
+    962,
+    25,
+    924,
+    574,
+    84,
+    986,
+    833,
+    176,
+    488,
+    264,
+    98,
+    58,
+    363,
+    901,
+    481,
+    740,
+    332,
+    311,
+    601,
+    623,
+    5,
+    88,
+    819,
+    638,
+    863,
+    337,
+    995,
+    575,
+    148,
+    206,
+    292,
+    120,
+    163,
+    138,
+    320,
+    748,
+    351,
+    902,
+    921,
+    828,
+    318,
+    839,
+    388,
+    678,
+    240,
+    979,
+    485,
+    946,
+    514,
+    377,
+    726,
+    152,
+    895,
+    634,
+    79,
+    683,
+    684,
+    878,
+    70,
+    367,
+    719,
+    381,
+    378,
+    423,
+    53,
+    198,
+    99,
+    536,
+    425,
+    327,
+    331,
+    820,
+    708,
+    543,
+    701,
+    438,
+    572,
+    86,
+    221,
+    418,
+    427,
+    947,
+    773,
+    952,
+    845,
+    69,
+    278,
+    290,
+    466,
+    398,
+    286,
+    650,
+    169,
+    124,
+    580,
+    724,
+    60,
+    851,
+    635,
+    247,
+    925,
+    544,
+    840,
+    157,
+    225,
+    931,
+    843,
+    689,
+    397,
+    697,
+    322,
+    915,
+    736,
+    373,
+    76,
+    977,
+    142,
+    905,
+    100,
+    589,
+    413,
+    912,
+    581,
+    408,
+    994,
+    531,
+    616,
+    128,
+    126,
+    306,
+    966,
+    271,
+    399,
+    1000,
+    282,
+    561,
+    818,
+    374,
+    197,
+    486,
+    168,
+    174,
+    356,
+    172,
+    991,
+    809,
+    903,
+    457,
+    39,
+    566,
+    923,
+    929,
+    102,
+    757,
+    517,
+    186,
+    338,
+    42,
+    880,
+    817,
+    440,
+    667,
+    441,
+    54,
+    204,
+    909,
+    323,
+    57,
+    106,
+    275,
+    641,
+    171,
+    803,
+    627,
+    816,
+    313,
+    36,
+    289,
+    744,
+    421,
+    502,
+    302,
+    954,
+    950,
+    815,
+    55,
+    516,
+    424,
+    52,
+    940,
+    484,
+    104,
+    238,
+    586,
+    495,
+    532,
+    479,
+    8,
+    953,
+    4,
+    617,
+    94,
+    609,
+    633,
+    576,
+    621,
+    735,
+    501,
+    506,
+    303,
+    415,
+    754,
+    29,
+    17,
+    231,
+    370,
+    664,
+    799,
+    554,
+    406,
+    535,
+    739,
+    218,
+    731,
+    379,
+    749,
+    665,
+    1,
+    383,
+    734,
+    591,
+    884,
+    578,
+    528,
+    462,
+    253,
+    210,
+    453,
+    477,
+    596,
+    911,
+    18,
+    944,
+    261,
+    345,
+    904,
+    160,
+    360,
+    216,
+    369,
+    480,
+    392,
+    228,
+    48,
+    620,
+    22,
+    503,
+    246,
+    123,
+    795,
+    272,
+    448,
+    866,
+    250,
+    733,
+    224,
+    254,
+    103,
+    77,
+    529,
+    164,
+    918,
+    830,
+    312,
+    229,
+    811,
+    309,
+    297,
+    93,
+    549,
+    217,
+    990,
+    796,
+    265,
+    135,
+    725,
+    196,
+    628,
+    149,
+    463,
+    497,
+    780,
+    997,
+    12,
+    519,
+    584,
+    577,
+    655,
+    723,
+    932,
+    402,
+    144,
+    555,
+    563,
+    927,
+    801,
+    336,
+    834,
+    738,
+    712,
+    848,
+    565,
+    500,
+    114,
+    742,
+    533,
+    61,
+    489,
+    429,
+    173,
+    153,
+    673,
+    343,
+    355,
+    422,
+    417,
+    509,
+    349,
+    109,
+    262,
+    43,
+    892,
+    652,
+    3,
+    613,
+    972,
+    687,
+    59,
+    622,
+    669,
+    257,
+    698,
+    704,
+    625,
+    885,
+    452,
+    245,
+    321,
+    67,
+    896,
+    700,
+    436,
+    47,
+    165,
+    20,
+    637,
+    964,
+    45,
+    192,
+    200,
+    474,
+    571,
+    51,
+    467,
+    181,
+    936,
+    179,
+    400,
+    989,
+    928,
+    939,
+    643,
+    632,
+    649,
+    183,
+    108,
+    455,
+    579,
+    137,
+    136,
+    395,
+    249,
+    546,
+    888,
+    636,
+    78,
+    189,
+    482,
+    259,
+    499,
+    473,
+    882,
+    893,
+    710,
+    258,
+    454,
+    919,
+    812,
+    963,
+    714,
+    443,
+    96,
+    775,
+    33,
+    583,
+    40,
+    111,
+    390,
+    781,
+    299,
+    26,
+    984,
+    118,
+    419,
+    699,
+    874,
+    404,
+    487,
+    595,
+    849,
+    281,
+    666,
+    182,
+    600,
+    16,
+    659,
+    354,
+    859,
+    49,
+    236,
+    166,
+    756,
+    50,
+    268,
+    342,
+    310,
+    537,
+    203,
+    948,
+    56,
+    841,
+    630,
+    211,
+    202,
+    524,
+    722,
+    15,
+    876,
+    92,
+    430,
+    34,
+    14,
+    412,
+    274,
+    999,
+    85,
+    761,
+    335,
+    498,
+    706,
+    372,
+    405,
+    969,
+    232,
+    21,
+    806,
+    143,
+    416,
+    933,
+    226,
+    521,
+    458,
+    661,
+    387,
+    115,
+    827,
+    81,
+    826,
+    465,
+    582,
+    657,
+    132,
+    256,
+    319,
+    844,
+    7,
+    778,
+    871,
+    237,
+    357,
+    640,
+    610,
+    768,
+    113,
+    212,
+    389,
+    328,
+    690,
+    967,
+    27,
+    201,
+    653,
+    644,
+    260,
+    37,
+    782,
+    74,
+    75,
+    715,
+    980,
+    564,
+    985,
+    139,
+    917,
+    24,
+    865,
+    252,
+    112,
+    559,
+    141,
+    973,
+    945,
+    562,
+    956,
+    530,
+    353,
+    745,
+    889,
+    300,
+    121,
+    958,
+    492,
+    955,
+    426,
+    304,
+    131,
+    968,
+    435,
+    520,
+    97,
+    864,
+    732,
+    856,
+    273,
+    868,
+    877,
+    551,
+    971,
+    846,
+    62,
+    970,
+    244,
+    916,
+    235,
+    82,
+    993,
+    779,
+    199,
+    301,
+    718,
+    191,
+    478,
+    476,
+    774,
+    626,
+    800,
+    703,
+    205,
+    146,
+    234,
+    461,
+    95,
+    285,
+    691,
+    858,
+    785,
+    105,
+    825,
+    130,
+    505,
+    685,
+    326,
+    371,
+    770,
+    612,
+    66,
+    758,
+    900,
+    334,
+    648,
+    366,
+    471,
+    233
+  ],
+  "ids_file": null,
+  "image_items": [
+    {
+      "split": "test",
+      "IMG_ID": 568
+    },
+    {
+      "split": "test",
+      "IMG_ID": 762
+    },
+    {
+      "split": "test",
+      "IMG_ID": 765
+    },
+    {
+      "split": "test",
+      "IMG_ID": 693
+    },
+    {
+      "split": "test",
+      "IMG_ID": 469
+    },
+    {
+      "split": "test",
+      "IMG_ID": 709
+    },
+    {
+      "split": "test",
+      "IMG_ID": 662
+    },
+    {
+      "split": "test",
+      "IMG_ID": 560
+    },
+    {
+      "split": "test",
+      "IMG_ID": 872
+    },
+    {
+      "split": "test",
+      "IMG_ID": 220
+    },
+    {
+      "split": "test",
+      "IMG_ID": 829
+    },
+    {
+      "split": "test",
+      "IMG_ID": 167
+    },
+    {
+      "split": "test",
+      "IMG_ID": 671
+    },
+    {
+      "split": "test",
+      "IMG_ID": 975
+    },
+    {
+      "split": "test",
+      "IMG_ID": 943
+    },
+    {
+      "split": "test",
+      "IMG_ID": 908
+    },
+    {
+      "split": "test",
+      "IMG_ID": 350
+    },
+    {
+      "split": "test",
+      "IMG_ID": 894
+    },
+    {
+      "split": "test",
+      "IMG_ID": 784
+    },
+    {
+      "split": "test",
+      "IMG_ID": 386
+    },
+    {
+      "split": "test",
+      "IMG_ID": 593
+    },
+    {
+      "split": "test",
+      "IMG_ID": 255
+    },
+    {
+      "split": "test",
+      "IMG_ID": 432
+    },
+    {
+      "split": "test",
+      "IMG_ID": 573
+    },
+    {
+      "split": "test",
+      "IMG_ID": 288
+    },
+    {
+      "split": "test",
+      "IMG_ID": 31
+    },
+    {
+      "split": "test",
+      "IMG_ID": 19
+    },
+    {
+      "split": "test",
+      "IMG_ID": 987
+    },
+    {
+      "split": "test",
+      "IMG_ID": 910
+    },
+    {
+      "split": "test",
+      "IMG_ID": 951
+    },
+    {
+      "split": "test",
+      "IMG_ID": 41
+    },
+    {
+      "split": "test",
+      "IMG_ID": 223
+    },
+    {
+      "split": "test",
+      "IMG_ID": 658
+    },
+    {
+      "split": "test",
+      "IMG_ID": 548
+    },
+    {
+      "split": "test",
+      "IMG_ID": 431
+    },
+    {
+      "split": "test",
+      "IMG_ID": 277
+    },
+    {
+      "split": "test",
+      "IMG_ID": 717
+    },
+    {
+      "split": "test",
+      "IMG_ID": 624
+    },
+    {
+      "split": "test",
+      "IMG_ID": 91
+    },
+    {
+      "split": "test",
+      "IMG_ID": 151
+    },
+    {
+      "split": "test",
+      "IMG_ID": 394
+    },
+    {
+      "split": "test",
+      "IMG_ID": 185
+    },
+    {
+      "split": "test",
+      "IMG_ID": 38
+    },
+    {
+      "split": "test",
+      "IMG_ID": 976
+    },
+    {
+      "split": "test",
+      "IMG_ID": 368
+    },
+    {
+      "split": "test",
+      "IMG_ID": 348
+    },
+    {
+      "split": "test",
+      "IMG_ID": 930
+    },
+    {
+      "split": "test",
+      "IMG_ID": 64
+    },
+    {
+      "split": "test",
+      "IMG_ID": 494
+    },
+    {
+      "split": "test",
+      "IMG_ID": 852
+    },
+    {
+      "split": "test",
+      "IMG_ID": 611
+    },
+    {
+      "split": "test",
+      "IMG_ID": 890
+    },
+    {
+      "split": "test",
+      "IMG_ID": 333
+    },
+    {
+      "split": "test",
+      "IMG_ID": 619
+    },
+    {
+      "split": "test",
+      "IMG_ID": 119
+    },
+    {
+      "split": "test",
+      "IMG_ID": 125
+    },
+    {
+      "split": "test",
+      "IMG_ID": 654
+    },
+    {
+      "split": "test",
+      "IMG_ID": 107
+    },
+    {
+      "split": "test",
+      "IMG_ID": 298
+    },
+    {
+      "split": "test",
+      "IMG_ID": 837
+    },
+    {
+      "split": "test",
+      "IMG_ID": 365
+    },
+    {
+      "split": "test",
+      "IMG_ID": 147
+    },
+    {
+      "split": "test",
+      "IMG_ID": 587
+    },
+    {
+      "split": "test",
+      "IMG_ID": 287
+    },
+    {
+      "split": "test",
+      "IMG_ID": 642
+    },
+    {
+      "split": "test",
+      "IMG_ID": 721
+    },
+    {
+      "split": "test",
+      "IMG_ID": 695
+    },
+    {
+      "split": "test",
+      "IMG_ID": 879
+    },
+    {
+      "split": "test",
+      "IMG_ID": 161
+    },
+    {
+      "split": "test",
+      "IMG_ID": 588
+    },
+    {
+      "split": "test",
+      "IMG_ID": 195
+    },
+    {
+      "split": "test",
+      "IMG_ID": 542
+    },
+    {
+      "split": "test",
+      "IMG_ID": 63
+    },
+    {
+      "split": "test",
+      "IMG_ID": 766
+    },
+    {
+      "split": "test",
+      "IMG_ID": 361
+    },
+    {
+      "split": "test",
+      "IMG_ID": 359
+    },
+    {
+      "split": "test",
+      "IMG_ID": 686
+    },
+    {
+      "split": "test",
+      "IMG_ID": 133
+    },
+    {
+      "split": "test",
+      "IMG_ID": 629
+    },
+    {
+      "split": "test",
+      "IMG_ID": 375
+    },
+    {
+      "split": "test",
+      "IMG_ID": 71
+    },
+    {
+      "split": "test",
+      "IMG_ID": 158
+    },
+    {
+      "split": "test",
+      "IMG_ID": 346
+    },
+    {
+      "split": "test",
+      "IMG_ID": 159
+    },
+    {
+      "split": "test",
+      "IMG_ID": 385
+    },
+    {
+      "split": "test",
+      "IMG_ID": 592
+    },
+    {
+      "split": "test",
+      "IMG_ID": 998
+    },
+    {
+      "split": "test",
+      "IMG_ID": 741
+    },
+    {
+      "split": "test",
+      "IMG_ID": 777
+    },
+    {
+      "split": "test",
+      "IMG_ID": 393
+    },
+    {
+      "split": "test",
+      "IMG_ID": 442
+    },
+    {
+      "split": "test",
+      "IMG_ID": 504
+    },
+    {
+      "split": "test",
+      "IMG_ID": 569
+    },
+    {
+      "split": "test",
+      "IMG_ID": 295
+    },
+    {
+      "split": "test",
+      "IMG_ID": 807
+    },
+    {
+      "split": "test",
+      "IMG_ID": 491
+    },
+    {
+      "split": "test",
+      "IMG_ID": 787
+    },
+    {
+      "split": "test",
+      "IMG_ID": 178
+    },
+    {
+      "split": "test",
+      "IMG_ID": 155
+    },
+    {
+      "split": "test",
+      "IMG_ID": 842
+    },
+    {
+      "split": "test",
+      "IMG_ID": 743
+    },
+    {
+      "split": "test",
+      "IMG_ID": 414
+    },
+    {
+      "split": "test",
+      "IMG_ID": 941
+    },
+    {
+      "split": "test",
+      "IMG_ID": 329
+    },
+    {
+      "split": "test",
+      "IMG_ID": 670
+    },
+    {
+      "split": "test",
+      "IMG_ID": 679
+    },
+    {
+      "split": "test",
+      "IMG_ID": 598
+    },
+    {
+      "split": "test",
+      "IMG_ID": 962
+    },
+    {
+      "split": "test",
+      "IMG_ID": 25
+    },
+    {
+      "split": "test",
+      "IMG_ID": 924
+    },
+    {
+      "split": "test",
+      "IMG_ID": 574
+    },
+    {
+      "split": "test",
+      "IMG_ID": 84
+    },
+    {
+      "split": "test",
+      "IMG_ID": 986
+    },
+    {
+      "split": "test",
+      "IMG_ID": 833
+    },
+    {
+      "split": "test",
+      "IMG_ID": 176
+    },
+    {
+      "split": "test",
+      "IMG_ID": 488
+    },
+    {
+      "split": "test",
+      "IMG_ID": 264
+    },
+    {
+      "split": "test",
+      "IMG_ID": 98
+    },
+    {
+      "split": "test",
+      "IMG_ID": 58
+    },
+    {
+      "split": "test",
+      "IMG_ID": 363
+    },
+    {
+      "split": "test",
+      "IMG_ID": 901
+    },
+    {
+      "split": "test",
+      "IMG_ID": 481
+    },
+    {
+      "split": "test",
+      "IMG_ID": 740
+    },
+    {
+      "split": "test",
+      "IMG_ID": 332
+    },
+    {
+      "split": "test",
+      "IMG_ID": 311
+    },
+    {
+      "split": "test",
+      "IMG_ID": 601
+    },
+    {
+      "split": "test",
+      "IMG_ID": 623
+    },
+    {
+      "split": "test",
+      "IMG_ID": 5
+    },
+    {
+      "split": "test",
+      "IMG_ID": 88
+    },
+    {
+      "split": "test",
+      "IMG_ID": 819
+    },
+    {
+      "split": "test",
+      "IMG_ID": 638
+    },
+    {
+      "split": "test",
+      "IMG_ID": 863
+    },
+    {
+      "split": "test",
+      "IMG_ID": 337
+    },
+    {
+      "split": "test",
+      "IMG_ID": 995
+    },
+    {
+      "split": "test",
+      "IMG_ID": 575
+    },
+    {
+      "split": "test",
+      "IMG_ID": 148
+    },
+    {
+      "split": "test",
+      "IMG_ID": 206
+    },
+    {
+      "split": "test",
+      "IMG_ID": 292
+    },
+    {
+      "split": "test",
+      "IMG_ID": 120
+    },
+    {
+      "split": "test",
+      "IMG_ID": 163
+    },
+    {
+      "split": "test",
+      "IMG_ID": 138
+    },
+    {
+      "split": "test",
+      "IMG_ID": 320
+    },
+    {
+      "split": "test",
+      "IMG_ID": 748
+    },
+    {
+      "split": "test",
+      "IMG_ID": 351
+    },
+    {
+      "split": "test",
+      "IMG_ID": 902
+    },
+    {
+      "split": "test",
+      "IMG_ID": 921
+    },
+    {
+      "split": "test",
+      "IMG_ID": 828
+    },
+    {
+      "split": "test",
+      "IMG_ID": 318
+    },
+    {
+      "split": "test",
+      "IMG_ID": 839
+    },
+    {
+      "split": "test",
+      "IMG_ID": 388
+    },
+    {
+      "split": "test",
+      "IMG_ID": 678
+    },
+    {
+      "split": "test",
+      "IMG_ID": 240
+    },
+    {
+      "split": "test",
+      "IMG_ID": 979
+    },
+    {
+      "split": "test",
+      "IMG_ID": 485
+    },
+    {
+      "split": "test",
+      "IMG_ID": 946
+    },
+    {
+      "split": "test",
+      "IMG_ID": 514
+    },
+    {
+      "split": "test",
+      "IMG_ID": 377
+    },
+    {
+      "split": "test",
+      "IMG_ID": 726
+    },
+    {
+      "split": "test",
+      "IMG_ID": 152
+    },
+    {
+      "split": "test",
+      "IMG_ID": 895
+    },
+    {
+      "split": "test",
+      "IMG_ID": 634
+    },
+    {
+      "split": "test",
+      "IMG_ID": 79
+    },
+    {
+      "split": "test",
+      "IMG_ID": 683
+    },
+    {
+      "split": "test",
+      "IMG_ID": 684
+    },
+    {
+      "split": "test",
+      "IMG_ID": 878
+    },
+    {
+      "split": "test",
+      "IMG_ID": 70
+    },
+    {
+      "split": "test",
+      "IMG_ID": 367
+    },
+    {
+      "split": "test",
+      "IMG_ID": 719
+    },
+    {
+      "split": "test",
+      "IMG_ID": 381
+    },
+    {
+      "split": "test",
+      "IMG_ID": 378
+    },
+    {
+      "split": "test",
+      "IMG_ID": 423
+    },
+    {
+      "split": "test",
+      "IMG_ID": 53
+    },
+    {
+      "split": "test",
+      "IMG_ID": 198
+    },
+    {
+      "split": "test",
+      "IMG_ID": 99
+    },
+    {
+      "split": "test",
+      "IMG_ID": 536
+    },
+    {
+      "split": "test",
+      "IMG_ID": 425
+    },
+    {
+      "split": "test",
+      "IMG_ID": 327
+    },
+    {
+      "split": "test",
+      "IMG_ID": 331
+    },
+    {
+      "split": "test",
+      "IMG_ID": 820
+    },
+    {
+      "split": "test",
+      "IMG_ID": 708
+    },
+    {
+      "split": "test",
+      "IMG_ID": 543
+    },
+    {
+      "split": "test",
+      "IMG_ID": 701
+    },
+    {
+      "split": "test",
+      "IMG_ID": 438
+    },
+    {
+      "split": "test",
+      "IMG_ID": 572
+    },
+    {
+      "split": "test",
+      "IMG_ID": 86
+    },
+    {
+      "split": "test",
+      "IMG_ID": 221
+    },
+    {
+      "split": "test",
+      "IMG_ID": 418
+    },
+    {
+      "split": "test",
+      "IMG_ID": 427
+    },
+    {
+      "split": "test",
+      "IMG_ID": 947
+    },
+    {
+      "split": "test",
+      "IMG_ID": 773
+    },
+    {
+      "split": "test",
+      "IMG_ID": 952
+    },
+    {
+      "split": "test",
+      "IMG_ID": 845
+    },
+    {
+      "split": "test",
+      "IMG_ID": 69
+    },
+    {
+      "split": "test",
+      "IMG_ID": 278
+    },
+    {
+      "split": "test",
+      "IMG_ID": 290
+    },
+    {
+      "split": "test",
+      "IMG_ID": 466
+    },
+    {
+      "split": "test",
+      "IMG_ID": 398
+    },
+    {
+      "split": "test",
+      "IMG_ID": 286
+    },
+    {
+      "split": "test",
+      "IMG_ID": 650
+    },
+    {
+      "split": "test",
+      "IMG_ID": 169
+    },
+    {
+      "split": "test",
+      "IMG_ID": 124
+    },
+    {
+      "split": "test",
+      "IMG_ID": 580
+    },
+    {
+      "split": "test",
+      "IMG_ID": 724
+    },
+    {
+      "split": "test",
+      "IMG_ID": 60
+    },
+    {
+      "split": "test",
+      "IMG_ID": 851
+    },
+    {
+      "split": "test",
+      "IMG_ID": 635
+    },
+    {
+      "split": "test",
+      "IMG_ID": 247
+    },
+    {
+      "split": "test",
+      "IMG_ID": 925
+    },
+    {
+      "split": "test",
+      "IMG_ID": 544
+    },
+    {
+      "split": "test",
+      "IMG_ID": 840
+    },
+    {
+      "split": "test",
+      "IMG_ID": 157
+    },
+    {
+      "split": "test",
+      "IMG_ID": 225
+    },
+    {
+      "split": "test",
+      "IMG_ID": 931
+    },
+    {
+      "split": "test",
+      "IMG_ID": 843
+    },
+    {
+      "split": "test",
+      "IMG_ID": 689
+    },
+    {
+      "split": "test",
+      "IMG_ID": 397
+    },
+    {
+      "split": "test",
+      "IMG_ID": 697
+    },
+    {
+      "split": "test",
+      "IMG_ID": 322
+    },
+    {
+      "split": "test",
+      "IMG_ID": 915
+    },
+    {
+      "split": "test",
+      "IMG_ID": 736
+    },
+    {
+      "split": "test",
+      "IMG_ID": 373
+    },
+    {
+      "split": "test",
+      "IMG_ID": 76
+    },
+    {
+      "split": "test",
+      "IMG_ID": 977
+    },
+    {
+      "split": "test",
+      "IMG_ID": 142
+    },
+    {
+      "split": "test",
+      "IMG_ID": 905
+    },
+    {
+      "split": "test",
+      "IMG_ID": 100
+    },
+    {
+      "split": "test",
+      "IMG_ID": 589
+    },
+    {
+      "split": "test",
+      "IMG_ID": 413
+    },
+    {
+      "split": "test",
+      "IMG_ID": 912
+    },
+    {
+      "split": "test",
+      "IMG_ID": 581
+    },
+    {
+      "split": "test",
+      "IMG_ID": 408
+    },
+    {
+      "split": "test",
+      "IMG_ID": 994
+    },
+    {
+      "split": "test",
+      "IMG_ID": 531
+    },
+    {
+      "split": "test",
+      "IMG_ID": 616
+    },
+    {
+      "split": "test",
+      "IMG_ID": 128
+    },
+    {
+      "split": "test",
+      "IMG_ID": 126
+    },
+    {
+      "split": "test",
+      "IMG_ID": 306
+    },
+    {
+      "split": "test",
+      "IMG_ID": 966
+    },
+    {
+      "split": "test",
+      "IMG_ID": 271
+    },
+    {
+      "split": "test",
+      "IMG_ID": 399
+    },
+    {
+      "split": "test",
+      "IMG_ID": 1000
+    },
+    {
+      "split": "test",
+      "IMG_ID": 282
+    },
+    {
+      "split": "test",
+      "IMG_ID": 561
+    },
+    {
+      "split": "test",
+      "IMG_ID": 818
+    },
+    {
+      "split": "test",
+      "IMG_ID": 374
+    },
+    {
+      "split": "test",
+      "IMG_ID": 197
+    },
+    {
+      "split": "test",
+      "IMG_ID": 486
+    },
+    {
+      "split": "test",
+      "IMG_ID": 168
+    },
+    {
+      "split": "test",
+      "IMG_ID": 174
+    },
+    {
+      "split": "test",
+      "IMG_ID": 356
+    },
+    {
+      "split": "test",
+      "IMG_ID": 172
+    },
+    {
+      "split": "test",
+      "IMG_ID": 991
+    },
+    {
+      "split": "test",
+      "IMG_ID": 809
+    },
+    {
+      "split": "test",
+      "IMG_ID": 903
+    },
+    {
+      "split": "test",
+      "IMG_ID": 457
+    },
+    {
+      "split": "test",
+      "IMG_ID": 39
+    },
+    {
+      "split": "test",
+      "IMG_ID": 566
+    },
+    {
+      "split": "test",
+      "IMG_ID": 923
+    },
+    {
+      "split": "test",
+      "IMG_ID": 929
+    },
+    {
+      "split": "test",
+      "IMG_ID": 102
+    },
+    {
+      "split": "test",
+      "IMG_ID": 757
+    },
+    {
+      "split": "test",
+      "IMG_ID": 517
+    },
+    {
+      "split": "test",
+      "IMG_ID": 186
+    },
+    {
+      "split": "test",
+      "IMG_ID": 338
+    },
+    {
+      "split": "test",
+      "IMG_ID": 42
+    },
+    {
+      "split": "test",
+      "IMG_ID": 880
+    },
+    {
+      "split": "test",
+      "IMG_ID": 817
+    },
+    {
+      "split": "test",
+      "IMG_ID": 440
+    },
+    {
+      "split": "test",
+      "IMG_ID": 667
+    },
+    {
+      "split": "test",
+      "IMG_ID": 441
+    },
+    {
+      "split": "test",
+      "IMG_ID": 54
+    },
+    {
+      "split": "test",
+      "IMG_ID": 204
+    },
+    {
+      "split": "test",
+      "IMG_ID": 909
+    },
+    {
+      "split": "test",
+      "IMG_ID": 323
+    },
+    {
+      "split": "test",
+      "IMG_ID": 57
+    },
+    {
+      "split": "test",
+      "IMG_ID": 106
+    },
+    {
+      "split": "test",
+      "IMG_ID": 275
+    },
+    {
+      "split": "test",
+      "IMG_ID": 641
+    },
+    {
+      "split": "test",
+      "IMG_ID": 171
+    },
+    {
+      "split": "test",
+      "IMG_ID": 803
+    },
+    {
+      "split": "test",
+      "IMG_ID": 627
+    },
+    {
+      "split": "test",
+      "IMG_ID": 816
+    },
+    {
+      "split": "test",
+      "IMG_ID": 313
+    },
+    {
+      "split": "test",
+      "IMG_ID": 36
+    },
+    {
+      "split": "test",
+      "IMG_ID": 289
+    },
+    {
+      "split": "test",
+      "IMG_ID": 744
+    },
+    {
+      "split": "test",
+      "IMG_ID": 421
+    },
+    {
+      "split": "test",
+      "IMG_ID": 502
+    },
+    {
+      "split": "test",
+      "IMG_ID": 302
+    },
+    {
+      "split": "test",
+      "IMG_ID": 954
+    },
+    {
+      "split": "test",
+      "IMG_ID": 950
+    },
+    {
+      "split": "test",
+      "IMG_ID": 815
+    },
+    {
+      "split": "test",
+      "IMG_ID": 55
+    },
+    {
+      "split": "test",
+      "IMG_ID": 516
+    },
+    {
+      "split": "test",
+      "IMG_ID": 424
+    },
+    {
+      "split": "test",
+      "IMG_ID": 52
+    },
+    {
+      "split": "test",
+      "IMG_ID": 940
+    },
+    {
+      "split": "test",
+      "IMG_ID": 484
+    },
+    {
+      "split": "test",
+      "IMG_ID": 104
+    },
+    {
+      "split": "test",
+      "IMG_ID": 238
+    },
+    {
+      "split": "test",
+      "IMG_ID": 586
+    },
+    {
+      "split": "test",
+      "IMG_ID": 495
+    },
+    {
+      "split": "test",
+      "IMG_ID": 532
+    },
+    {
+      "split": "test",
+      "IMG_ID": 479
+    },
+    {
+      "split": "test",
+      "IMG_ID": 8
+    },
+    {
+      "split": "test",
+      "IMG_ID": 953
+    },
+    {
+      "split": "test",
+      "IMG_ID": 4
+    },
+    {
+      "split": "test",
+      "IMG_ID": 617
+    },
+    {
+      "split": "test",
+      "IMG_ID": 94
+    },
+    {
+      "split": "test",
+      "IMG_ID": 609
+    },
+    {
+      "split": "test",
+      "IMG_ID": 633
+    },
+    {
+      "split": "test",
+      "IMG_ID": 576
+    },
+    {
+      "split": "test",
+      "IMG_ID": 621
+    },
+    {
+      "split": "test",
+      "IMG_ID": 735
+    },
+    {
+      "split": "test",
+      "IMG_ID": 501
+    },
+    {
+      "split": "test",
+      "IMG_ID": 506
+    },
+    {
+      "split": "test",
+      "IMG_ID": 303
+    },
+    {
+      "split": "test",
+      "IMG_ID": 415
+    },
+    {
+      "split": "test",
+      "IMG_ID": 754
+    },
+    {
+      "split": "test",
+      "IMG_ID": 29
+    },
+    {
+      "split": "test",
+      "IMG_ID": 17
+    },
+    {
+      "split": "test",
+      "IMG_ID": 231
+    },
+    {
+      "split": "test",
+      "IMG_ID": 370
+    },
+    {
+      "split": "test",
+      "IMG_ID": 664
+    },
+    {
+      "split": "test",
+      "IMG_ID": 799
+    },
+    {
+      "split": "test",
+      "IMG_ID": 554
+    },
+    {
+      "split": "test",
+      "IMG_ID": 406
+    },
+    {
+      "split": "test",
+      "IMG_ID": 535
+    },
+    {
+      "split": "test",
+      "IMG_ID": 739
+    },
+    {
+      "split": "test",
+      "IMG_ID": 218
+    },
+    {
+      "split": "test",
+      "IMG_ID": 731
+    },
+    {
+      "split": "test",
+      "IMG_ID": 379
+    },
+    {
+      "split": "test",
+      "IMG_ID": 749
+    },
+    {
+      "split": "test",
+      "IMG_ID": 665
+    },
+    {
+      "split": "test",
+      "IMG_ID": 1
+    },
+    {
+      "split": "test",
+      "IMG_ID": 383
+    },
+    {
+      "split": "test",
+      "IMG_ID": 734
+    },
+    {
+      "split": "test",
+      "IMG_ID": 591
+    },
+    {
+      "split": "test",
+      "IMG_ID": 884
+    },
+    {
+      "split": "test",
+      "IMG_ID": 578
+    },
+    {
+      "split": "test",
+      "IMG_ID": 528
+    },
+    {
+      "split": "test",
+      "IMG_ID": 462
+    },
+    {
+      "split": "test",
+      "IMG_ID": 253
+    },
+    {
+      "split": "test",
+      "IMG_ID": 210
+    },
+    {
+      "split": "test",
+      "IMG_ID": 453
+    },
+    {
+      "split": "test",
+      "IMG_ID": 477
+    },
+    {
+      "split": "test",
+      "IMG_ID": 596
+    },
+    {
+      "split": "test",
+      "IMG_ID": 911
+    },
+    {
+      "split": "test",
+      "IMG_ID": 18
+    },
+    {
+      "split": "test",
+      "IMG_ID": 944
+    },
+    {
+      "split": "test",
+      "IMG_ID": 261
+    },
+    {
+      "split": "test",
+      "IMG_ID": 345
+    },
+    {
+      "split": "test",
+      "IMG_ID": 904
+    },
+    {
+      "split": "test",
+      "IMG_ID": 160
+    },
+    {
+      "split": "test",
+      "IMG_ID": 360
+    },
+    {
+      "split": "test",
+      "IMG_ID": 216
+    },
+    {
+      "split": "test",
+      "IMG_ID": 369
+    },
+    {
+      "split": "test",
+      "IMG_ID": 480
+    },
+    {
+      "split": "test",
+      "IMG_ID": 392
+    },
+    {
+      "split": "test",
+      "IMG_ID": 228
+    },
+    {
+      "split": "test",
+      "IMG_ID": 48
+    },
+    {
+      "split": "test",
+      "IMG_ID": 620
+    },
+    {
+      "split": "test",
+      "IMG_ID": 22
+    },
+    {
+      "split": "test",
+      "IMG_ID": 503
+    },
+    {
+      "split": "test",
+      "IMG_ID": 246
+    },
+    {
+      "split": "test",
+      "IMG_ID": 123
+    },
+    {
+      "split": "test",
+      "IMG_ID": 795
+    },
+    {
+      "split": "test",
+      "IMG_ID": 272
+    },
+    {
+      "split": "test",
+      "IMG_ID": 448
+    },
+    {
+      "split": "test",
+      "IMG_ID": 866
+    },
+    {
+      "split": "test",
+      "IMG_ID": 250
+    },
+    {
+      "split": "test",
+      "IMG_ID": 733
+    },
+    {
+      "split": "test",
+      "IMG_ID": 224
+    },
+    {
+      "split": "test",
+      "IMG_ID": 254
+    },
+    {
+      "split": "test",
+      "IMG_ID": 103
+    },
+    {
+      "split": "test",
+      "IMG_ID": 77
+    },
+    {
+      "split": "test",
+      "IMG_ID": 529
+    },
+    {
+      "split": "test",
+      "IMG_ID": 164
+    },
+    {
+      "split": "test",
+      "IMG_ID": 918
+    },
+    {
+      "split": "test",
+      "IMG_ID": 830
+    },
+    {
+      "split": "test",
+      "IMG_ID": 312
+    },
+    {
+      "split": "test",
+      "IMG_ID": 229
+    },
+    {
+      "split": "test",
+      "IMG_ID": 811
+    },
+    {
+      "split": "test",
+      "IMG_ID": 309
+    },
+    {
+      "split": "test",
+      "IMG_ID": 297
+    },
+    {
+      "split": "test",
+      "IMG_ID": 93
+    },
+    {
+      "split": "test",
+      "IMG_ID": 549
+    },
+    {
+      "split": "test",
+      "IMG_ID": 217
+    },
+    {
+      "split": "test",
+      "IMG_ID": 990
+    },
+    {
+      "split": "test",
+      "IMG_ID": 796
+    },
+    {
+      "split": "test",
+      "IMG_ID": 265
+    },
+    {
+      "split": "test",
+      "IMG_ID": 135
+    },
+    {
+      "split": "test",
+      "IMG_ID": 725
+    },
+    {
+      "split": "test",
+      "IMG_ID": 196
+    },
+    {
+      "split": "test",
+      "IMG_ID": 628
+    },
+    {
+      "split": "test",
+      "IMG_ID": 149
+    },
+    {
+      "split": "test",
+      "IMG_ID": 463
+    },
+    {
+      "split": "test",
+      "IMG_ID": 497
+    },
+    {
+      "split": "test",
+      "IMG_ID": 780
+    },
+    {
+      "split": "test",
+      "IMG_ID": 997
+    },
+    {
+      "split": "test",
+      "IMG_ID": 12
+    },
+    {
+      "split": "test",
+      "IMG_ID": 519
+    },
+    {
+      "split": "test",
+      "IMG_ID": 584
+    },
+    {
+      "split": "test",
+      "IMG_ID": 577
+    },
+    {
+      "split": "test",
+      "IMG_ID": 655
+    },
+    {
+      "split": "test",
+      "IMG_ID": 723
+    },
+    {
+      "split": "test",
+      "IMG_ID": 932
+    },
+    {
+      "split": "test",
+      "IMG_ID": 402
+    },
+    {
+      "split": "test",
+      "IMG_ID": 144
+    },
+    {
+      "split": "test",
+      "IMG_ID": 555
+    },
+    {
+      "split": "test",
+      "IMG_ID": 563
+    },
+    {
+      "split": "test",
+      "IMG_ID": 927
+    },
+    {
+      "split": "test",
+      "IMG_ID": 801
+    },
+    {
+      "split": "test",
+      "IMG_ID": 336
+    },
+    {
+      "split": "test",
+      "IMG_ID": 834
+    },
+    {
+      "split": "test",
+      "IMG_ID": 738
+    },
+    {
+      "split": "test",
+      "IMG_ID": 712
+    },
+    {
+      "split": "test",
+      "IMG_ID": 848
+    },
+    {
+      "split": "test",
+      "IMG_ID": 565
+    },
+    {
+      "split": "test",
+      "IMG_ID": 500
+    },
+    {
+      "split": "test",
+      "IMG_ID": 114
+    },
+    {
+      "split": "test",
+      "IMG_ID": 742
+    },
+    {
+      "split": "test",
+      "IMG_ID": 533
+    },
+    {
+      "split": "test",
+      "IMG_ID": 61
+    },
+    {
+      "split": "test",
+      "IMG_ID": 489
+    },
+    {
+      "split": "test",
+      "IMG_ID": 429
+    },
+    {
+      "split": "test",
+      "IMG_ID": 173
+    },
+    {
+      "split": "test",
+      "IMG_ID": 153
+    },
+    {
+      "split": "test",
+      "IMG_ID": 673
+    },
+    {
+      "split": "test",
+      "IMG_ID": 343
+    },
+    {
+      "split": "test",
+      "IMG_ID": 355
+    },
+    {
+      "split": "test",
+      "IMG_ID": 422
+    },
+    {
+      "split": "test",
+      "IMG_ID": 417
+    },
+    {
+      "split": "test",
+      "IMG_ID": 509
+    },
+    {
+      "split": "test",
+      "IMG_ID": 349
+    },
+    {
+      "split": "test",
+      "IMG_ID": 109
+    },
+    {
+      "split": "test",
+      "IMG_ID": 262
+    },
+    {
+      "split": "test",
+      "IMG_ID": 43
+    },
+    {
+      "split": "test",
+      "IMG_ID": 892
+    },
+    {
+      "split": "test",
+      "IMG_ID": 652
+    },
+    {
+      "split": "test",
+      "IMG_ID": 3
+    },
+    {
+      "split": "test",
+      "IMG_ID": 613
+    },
+    {
+      "split": "test",
+      "IMG_ID": 972
+    },
+    {
+      "split": "test",
+      "IMG_ID": 687
+    },
+    {
+      "split": "test",
+      "IMG_ID": 59
+    },
+    {
+      "split": "test",
+      "IMG_ID": 622
+    },
+    {
+      "split": "test",
+      "IMG_ID": 669
+    },
+    {
+      "split": "test",
+      "IMG_ID": 257
+    },
+    {
+      "split": "test",
+      "IMG_ID": 698
+    },
+    {
+      "split": "test",
+      "IMG_ID": 704
+    },
+    {
+      "split": "test",
+      "IMG_ID": 625
+    },
+    {
+      "split": "test",
+      "IMG_ID": 885
+    },
+    {
+      "split": "test",
+      "IMG_ID": 452
+    },
+    {
+      "split": "test",
+      "IMG_ID": 245
+    },
+    {
+      "split": "test",
+      "IMG_ID": 321
+    },
+    {
+      "split": "test",
+      "IMG_ID": 67
+    },
+    {
+      "split": "test",
+      "IMG_ID": 896
+    },
+    {
+      "split": "test",
+      "IMG_ID": 700
+    },
+    {
+      "split": "test",
+      "IMG_ID": 436
+    },
+    {
+      "split": "test",
+      "IMG_ID": 47
+    },
+    {
+      "split": "test",
+      "IMG_ID": 165
+    },
+    {
+      "split": "test",
+      "IMG_ID": 20
+    },
+    {
+      "split": "test",
+      "IMG_ID": 637
+    },
+    {
+      "split": "test",
+      "IMG_ID": 964
+    },
+    {
+      "split": "test",
+      "IMG_ID": 45
+    },
+    {
+      "split": "test",
+      "IMG_ID": 192
+    },
+    {
+      "split": "test",
+      "IMG_ID": 200
+    },
+    {
+      "split": "test",
+      "IMG_ID": 474
+    },
+    {
+      "split": "test",
+      "IMG_ID": 571
+    },
+    {
+      "split": "test",
+      "IMG_ID": 51
+    },
+    {
+      "split": "test",
+      "IMG_ID": 467
+    },
+    {
+      "split": "test",
+      "IMG_ID": 181
+    },
+    {
+      "split": "test",
+      "IMG_ID": 936
+    },
+    {
+      "split": "test",
+      "IMG_ID": 179
+    },
+    {
+      "split": "test",
+      "IMG_ID": 400
+    },
+    {
+      "split": "test",
+      "IMG_ID": 989
+    },
+    {
+      "split": "test",
+      "IMG_ID": 928
+    },
+    {
+      "split": "test",
+      "IMG_ID": 939
+    },
+    {
+      "split": "test",
+      "IMG_ID": 643
+    },
+    {
+      "split": "test",
+      "IMG_ID": 632
+    },
+    {
+      "split": "test",
+      "IMG_ID": 649
+    },
+    {
+      "split": "test",
+      "IMG_ID": 183
+    },
+    {
+      "split": "test",
+      "IMG_ID": 108
+    },
+    {
+      "split": "test",
+      "IMG_ID": 455
+    },
+    {
+      "split": "test",
+      "IMG_ID": 579
+    },
+    {
+      "split": "test",
+      "IMG_ID": 137
+    },
+    {
+      "split": "test",
+      "IMG_ID": 136
+    },
+    {
+      "split": "test",
+      "IMG_ID": 395
+    },
+    {
+      "split": "test",
+      "IMG_ID": 249
+    },
+    {
+      "split": "test",
+      "IMG_ID": 546
+    },
+    {
+      "split": "test",
+      "IMG_ID": 888
+    },
+    {
+      "split": "test",
+      "IMG_ID": 636
+    },
+    {
+      "split": "test",
+      "IMG_ID": 78
+    },
+    {
+      "split": "test",
+      "IMG_ID": 189
+    },
+    {
+      "split": "test",
+      "IMG_ID": 482
+    },
+    {
+      "split": "test",
+      "IMG_ID": 259
+    },
+    {
+      "split": "test",
+      "IMG_ID": 499
+    },
+    {
+      "split": "test",
+      "IMG_ID": 473
+    },
+    {
+      "split": "test",
+      "IMG_ID": 882
+    },
+    {
+      "split": "test",
+      "IMG_ID": 893
+    },
+    {
+      "split": "test",
+      "IMG_ID": 710
+    },
+    {
+      "split": "test",
+      "IMG_ID": 258
+    },
+    {
+      "split": "test",
+      "IMG_ID": 454
+    },
+    {
+      "split": "test",
+      "IMG_ID": 919
+    },
+    {
+      "split": "test",
+      "IMG_ID": 812
+    },
+    {
+      "split": "test",
+      "IMG_ID": 963
+    },
+    {
+      "split": "test",
+      "IMG_ID": 714
+    },
+    {
+      "split": "test",
+      "IMG_ID": 443
+    },
+    {
+      "split": "test",
+      "IMG_ID": 96
+    },
+    {
+      "split": "test",
+      "IMG_ID": 775
+    },
+    {
+      "split": "test",
+      "IMG_ID": 33
+    },
+    {
+      "split": "test",
+      "IMG_ID": 583
+    },
+    {
+      "split": "test",
+      "IMG_ID": 40
+    },
+    {
+      "split": "test",
+      "IMG_ID": 111
+    },
+    {
+      "split": "test",
+      "IMG_ID": 390
+    },
+    {
+      "split": "test",
+      "IMG_ID": 781
+    },
+    {
+      "split": "test",
+      "IMG_ID": 299
+    },
+    {
+      "split": "test",
+      "IMG_ID": 26
+    },
+    {
+      "split": "test",
+      "IMG_ID": 984
+    },
+    {
+      "split": "test",
+      "IMG_ID": 118
+    },
+    {
+      "split": "test",
+      "IMG_ID": 419
+    },
+    {
+      "split": "test",
+      "IMG_ID": 699
+    },
+    {
+      "split": "test",
+      "IMG_ID": 874
+    },
+    {
+      "split": "test",
+      "IMG_ID": 404
+    },
+    {
+      "split": "test",
+      "IMG_ID": 487
+    },
+    {
+      "split": "test",
+      "IMG_ID": 595
+    },
+    {
+      "split": "test",
+      "IMG_ID": 849
+    },
+    {
+      "split": "test",
+      "IMG_ID": 281
+    },
+    {
+      "split": "test",
+      "IMG_ID": 666
+    },
+    {
+      "split": "test",
+      "IMG_ID": 182
+    },
+    {
+      "split": "test",
+      "IMG_ID": 600
+    },
+    {
+      "split": "test",
+      "IMG_ID": 16
+    },
+    {
+      "split": "test",
+      "IMG_ID": 659
+    },
+    {
+      "split": "test",
+      "IMG_ID": 354
+    },
+    {
+      "split": "test",
+      "IMG_ID": 859
+    },
+    {
+      "split": "test",
+      "IMG_ID": 49
+    },
+    {
+      "split": "test",
+      "IMG_ID": 236
+    },
+    {
+      "split": "test",
+      "IMG_ID": 166
+    },
+    {
+      "split": "test",
+      "IMG_ID": 756
+    },
+    {
+      "split": "test",
+      "IMG_ID": 50
+    },
+    {
+      "split": "test",
+      "IMG_ID": 268
+    },
+    {
+      "split": "test",
+      "IMG_ID": 342
+    },
+    {
+      "split": "test",
+      "IMG_ID": 310
+    },
+    {
+      "split": "test",
+      "IMG_ID": 537
+    },
+    {
+      "split": "test",
+      "IMG_ID": 203
+    },
+    {
+      "split": "test",
+      "IMG_ID": 948
+    },
+    {
+      "split": "test",
+      "IMG_ID": 56
+    },
+    {
+      "split": "test",
+      "IMG_ID": 841
+    },
+    {
+      "split": "test",
+      "IMG_ID": 630
+    },
+    {
+      "split": "test",
+      "IMG_ID": 211
+    },
+    {
+      "split": "test",
+      "IMG_ID": 202
+    },
+    {
+      "split": "test",
+      "IMG_ID": 524
+    },
+    {
+      "split": "test",
+      "IMG_ID": 722
+    },
+    {
+      "split": "test",
+      "IMG_ID": 15
+    },
+    {
+      "split": "test",
+      "IMG_ID": 876
+    },
+    {
+      "split": "test",
+      "IMG_ID": 92
+    },
+    {
+      "split": "test",
+      "IMG_ID": 430
+    },
+    {
+      "split": "test",
+      "IMG_ID": 34
+    },
+    {
+      "split": "test",
+      "IMG_ID": 14
+    },
+    {
+      "split": "test",
+      "IMG_ID": 412
+    },
+    {
+      "split": "test",
+      "IMG_ID": 274
+    },
+    {
+      "split": "test",
+      "IMG_ID": 999
+    },
+    {
+      "split": "test",
+      "IMG_ID": 85
+    },
+    {
+      "split": "test",
+      "IMG_ID": 761
+    },
+    {
+      "split": "test",
+      "IMG_ID": 335
+    },
+    {
+      "split": "test",
+      "IMG_ID": 498
+    },
+    {
+      "split": "test",
+      "IMG_ID": 706
+    },
+    {
+      "split": "test",
+      "IMG_ID": 372
+    },
+    {
+      "split": "test",
+      "IMG_ID": 405
+    },
+    {
+      "split": "test",
+      "IMG_ID": 969
+    },
+    {
+      "split": "test",
+      "IMG_ID": 232
+    },
+    {
+      "split": "test",
+      "IMG_ID": 21
+    },
+    {
+      "split": "test",
+      "IMG_ID": 806
+    },
+    {
+      "split": "test",
+      "IMG_ID": 143
+    },
+    {
+      "split": "test",
+      "IMG_ID": 416
+    },
+    {
+      "split": "test",
+      "IMG_ID": 933
+    },
+    {
+      "split": "test",
+      "IMG_ID": 226
+    },
+    {
+      "split": "test",
+      "IMG_ID": 521
+    },
+    {
+      "split": "test",
+      "IMG_ID": 458
+    },
+    {
+      "split": "test",
+      "IMG_ID": 661
+    },
+    {
+      "split": "test",
+      "IMG_ID": 387
+    },
+    {
+      "split": "test",
+      "IMG_ID": 115
+    },
+    {
+      "split": "test",
+      "IMG_ID": 827
+    },
+    {
+      "split": "test",
+      "IMG_ID": 81
+    },
+    {
+      "split": "test",
+      "IMG_ID": 826
+    },
+    {
+      "split": "test",
+      "IMG_ID": 465
+    },
+    {
+      "split": "test",
+      "IMG_ID": 582
+    },
+    {
+      "split": "test",
+      "IMG_ID": 657
+    },
+    {
+      "split": "test",
+      "IMG_ID": 132
+    },
+    {
+      "split": "test",
+      "IMG_ID": 256
+    },
+    {
+      "split": "test",
+      "IMG_ID": 319
+    },
+    {
+      "split": "test",
+      "IMG_ID": 844
+    },
+    {
+      "split": "test",
+      "IMG_ID": 7
+    },
+    {
+      "split": "test",
+      "IMG_ID": 778
+    },
+    {
+      "split": "test",
+      "IMG_ID": 871
+    },
+    {
+      "split": "test",
+      "IMG_ID": 237
+    },
+    {
+      "split": "test",
+      "IMG_ID": 357
+    },
+    {
+      "split": "test",
+      "IMG_ID": 640
+    },
+    {
+      "split": "test",
+      "IMG_ID": 610
+    },
+    {
+      "split": "test",
+      "IMG_ID": 768
+    },
+    {
+      "split": "test",
+      "IMG_ID": 113
+    },
+    {
+      "split": "test",
+      "IMG_ID": 212
+    },
+    {
+      "split": "test",
+      "IMG_ID": 389
+    },
+    {
+      "split": "test",
+      "IMG_ID": 328
+    },
+    {
+      "split": "test",
+      "IMG_ID": 690
+    },
+    {
+      "split": "test",
+      "IMG_ID": 967
+    },
+    {
+      "split": "test",
+      "IMG_ID": 27
+    },
+    {
+      "split": "test",
+      "IMG_ID": 201
+    },
+    {
+      "split": "test",
+      "IMG_ID": 653
+    },
+    {
+      "split": "test",
+      "IMG_ID": 644
+    },
+    {
+      "split": "test",
+      "IMG_ID": 260
+    },
+    {
+      "split": "test",
+      "IMG_ID": 37
+    },
+    {
+      "split": "test",
+      "IMG_ID": 782
+    },
+    {
+      "split": "test",
+      "IMG_ID": 74
+    },
+    {
+      "split": "test",
+      "IMG_ID": 75
+    },
+    {
+      "split": "test",
+      "IMG_ID": 715
+    },
+    {
+      "split": "test",
+      "IMG_ID": 980
+    },
+    {
+      "split": "test",
+      "IMG_ID": 564
+    },
+    {
+      "split": "test",
+      "IMG_ID": 985
+    },
+    {
+      "split": "test",
+      "IMG_ID": 139
+    },
+    {
+      "split": "test",
+      "IMG_ID": 917
+    },
+    {
+      "split": "test",
+      "IMG_ID": 24
+    },
+    {
+      "split": "test",
+      "IMG_ID": 865
+    },
+    {
+      "split": "test",
+      "IMG_ID": 252
+    },
+    {
+      "split": "test",
+      "IMG_ID": 112
+    },
+    {
+      "split": "test",
+      "IMG_ID": 559
+    },
+    {
+      "split": "test",
+      "IMG_ID": 141
+    },
+    {
+      "split": "test",
+      "IMG_ID": 973
+    },
+    {
+      "split": "test",
+      "IMG_ID": 945
+    },
+    {
+      "split": "test",
+      "IMG_ID": 562
+    },
+    {
+      "split": "test",
+      "IMG_ID": 956
+    },
+    {
+      "split": "test",
+      "IMG_ID": 530
+    },
+    {
+      "split": "test",
+      "IMG_ID": 353
+    },
+    {
+      "split": "test",
+      "IMG_ID": 745
+    },
+    {
+      "split": "test",
+      "IMG_ID": 889
+    },
+    {
+      "split": "test",
+      "IMG_ID": 300
+    },
+    {
+      "split": "test",
+      "IMG_ID": 121
+    },
+    {
+      "split": "test",
+      "IMG_ID": 958
+    },
+    {
+      "split": "test",
+      "IMG_ID": 492
+    },
+    {
+      "split": "test",
+      "IMG_ID": 955
+    },
+    {
+      "split": "test",
+      "IMG_ID": 426
+    },
+    {
+      "split": "test",
+      "IMG_ID": 304
+    },
+    {
+      "split": "test",
+      "IMG_ID": 131
+    },
+    {
+      "split": "test",
+      "IMG_ID": 968
+    },
+    {
+      "split": "test",
+      "IMG_ID": 435
+    },
+    {
+      "split": "test",
+      "IMG_ID": 520
+    },
+    {
+      "split": "test",
+      "IMG_ID": 97
+    },
+    {
+      "split": "test",
+      "IMG_ID": 864
+    },
+    {
+      "split": "test",
+      "IMG_ID": 732
+    },
+    {
+      "split": "test",
+      "IMG_ID": 856
+    },
+    {
+      "split": "test",
+      "IMG_ID": 273
+    },
+    {
+      "split": "test",
+      "IMG_ID": 868
+    },
+    {
+      "split": "test",
+      "IMG_ID": 877
+    },
+    {
+      "split": "test",
+      "IMG_ID": 551
+    },
+    {
+      "split": "test",
+      "IMG_ID": 971
+    },
+    {
+      "split": "test",
+      "IMG_ID": 846
+    },
+    {
+      "split": "test",
+      "IMG_ID": 62
+    },
+    {
+      "split": "test",
+      "IMG_ID": 970
+    },
+    {
+      "split": "test",
+      "IMG_ID": 244
+    },
+    {
+      "split": "test",
+      "IMG_ID": 916
+    },
+    {
+      "split": "test",
+      "IMG_ID": 235
+    },
+    {
+      "split": "test",
+      "IMG_ID": 82
+    },
+    {
+      "split": "test",
+      "IMG_ID": 993
+    },
+    {
+      "split": "test",
+      "IMG_ID": 779
+    },
+    {
+      "split": "test",
+      "IMG_ID": 199
+    },
+    {
+      "split": "test",
+      "IMG_ID": 301
+    },
+    {
+      "split": "test",
+      "IMG_ID": 718
+    },
+    {
+      "split": "test",
+      "IMG_ID": 191
+    },
+    {
+      "split": "test",
+      "IMG_ID": 478
+    },
+    {
+      "split": "test",
+      "IMG_ID": 476
+    },
+    {
+      "split": "test",
+      "IMG_ID": 774
+    },
+    {
+      "split": "test",
+      "IMG_ID": 626
+    },
+    {
+      "split": "test",
+      "IMG_ID": 800
+    },
+    {
+      "split": "test",
+      "IMG_ID": 703
+    },
+    {
+      "split": "test",
+      "IMG_ID": 205
+    },
+    {
+      "split": "test",
+      "IMG_ID": 146
+    },
+    {
+      "split": "test",
+      "IMG_ID": 234
+    },
+    {
+      "split": "test",
+      "IMG_ID": 461
+    },
+    {
+      "split": "test",
+      "IMG_ID": 95
+    },
+    {
+      "split": "test",
+      "IMG_ID": 285
+    },
+    {
+      "split": "test",
+      "IMG_ID": 691
+    },
+    {
+      "split": "test",
+      "IMG_ID": 858
+    },
+    {
+      "split": "test",
+      "IMG_ID": 785
+    },
+    {
+      "split": "test",
+      "IMG_ID": 105
+    },
+    {
+      "split": "test",
+      "IMG_ID": 825
+    },
+    {
+      "split": "test",
+      "IMG_ID": 130
+    },
+    {
+      "split": "test",
+      "IMG_ID": 505
+    },
+    {
+      "split": "test",
+      "IMG_ID": 685
+    },
+    {
+      "split": "test",
+      "IMG_ID": 326
+    },
+    {
+      "split": "test",
+      "IMG_ID": 371
+    },
+    {
+      "split": "test",
+      "IMG_ID": 770
+    },
+    {
+      "split": "test",
+      "IMG_ID": 612
+    },
+    {
+      "split": "test",
+      "IMG_ID": 66
+    },
+    {
+      "split": "test",
+      "IMG_ID": 758
+    },
+    {
+      "split": "test",
+      "IMG_ID": 900
+    },
+    {
+      "split": "test",
+      "IMG_ID": 334
+    },
+    {
+      "split": "test",
+      "IMG_ID": 648
+    },
+    {
+      "split": "test",
+      "IMG_ID": 366
+    },
+    {
+      "split": "test",
+      "IMG_ID": 471
+    },
+    {
+      "split": "test",
+      "IMG_ID": 233
+    }
+  ],
+  "resolution": "mid",
+  "variant_set": "article",
+  "config_path": "config/pipeline_config.json",
+  "base_path": "/data04/home/mpmaia/ImageCAS/database/1-1000",
+  "use_gpu": true,
+  "variants": [
+    {
+      "name": "normal_rg",
+      "description": "Normal threshold + region growing baseline.",
+      "threshold_rule": "P10.75 <= I <= P99.8",
+      "vesselness_rule": "no vesselness weighting",
+      "overrides": {
+        "threshold_mode": "normal",
+        "artery_method": "region_growing"
+      }
+    },
+    {
+      "name": "fuzzy_threshold_rg",
+      "description": "Fuzzy threshold + region growing.",
+      "threshold_rule": "P10.5 + fuzzy object argmax (P99.8/P99.96)",
+      "vesselness_rule": "no vesselness weighting",
+      "overrides": {
+        "threshold_mode": "fuzzy",
+        "LOWER_THRESHOLD.percentile": 10.5,
+        "fuzzy.soft_margin_hu": 100,
+        "fuzzy.object_percentile": 99.8,
+        "fuzzy.dense_percentile": 99.96,
+        "fuzzy.smooth_radius": 0,
+        "fuzzy.smooth_mode": "mean",
+        "artery_method": "region_growing"
+      }
+    },
+    {
+      "name": "normal_threshold_fc",
+      "description": "Normal threshold + fuzzy connectedness.",
+      "threshold_rule": "P10.75 <= I <= P99.8",
+      "vesselness_rule": "no vesselness weighting",
+      "overrides": {
+        "threshold_mode": "normal",
+        "artery_method": "fuzzy_connectedness",
+        "fc.alpha": 0.16,
+        "fc.sigma_hu": 100,
+        "fc.neighborhood": 26,
+        "fc.candidate_min_vesselness": 0.018,
+        "fc.seed_search_radius": 2,
+        "fc.max_seeds_per_ostium": 4,
+        "fc.seed_min_vesselness": 0.018,
+        "fc.min_seed_distance_voxels": 1.0,
+        "fc.vesselness_floor": 0.018,
+        "fc.vesselness_weight": 0.9
+      }
+    },
+    {
+      "name": "fuzzy_threshold_fc",
+      "description": "Fuzzy threshold + fuzzy connectedness.",
+      "threshold_rule": "P10.5 + fuzzy object argmax (P99.8/P99.96)",
+      "vesselness_rule": "no vesselness weighting",
+      "overrides": {
+        "threshold_mode": "fuzzy",
+        "LOWER_THRESHOLD.percentile": 10.5,
+        "fuzzy.soft_margin_hu": 100,
+        "fuzzy.object_percentile": 99.8,
+        "fuzzy.dense_percentile": 99.96,
+        "fuzzy.smooth_radius": 0,
+        "fuzzy.smooth_mode": "mean",
+        "artery_method": "fuzzy_connectedness",
+        "fc.alpha": 0.16,
+        "fc.sigma_hu": 100,
+        "fc.neighborhood": 26,
+        "fc.candidate_min_vesselness": 0.018,
+        "fc.seed_search_radius": 2,
+        "fc.max_seeds_per_ostium": 4,
+        "fc.seed_min_vesselness": 0.018,
+        "fc.min_seed_distance_voxels": 1.0,
+        "fc.vesselness_floor": 0.018,
+        "fc.vesselness_weight": 0.9
+      }
+    }
+  ],
+  "effective_base_config": {
+    "USE_GPU": true,
+    "DOWNSCALE_METHOD": "opencv",
+    "OPENCV_INTERPOLATION": "linear",
+    "DOWNSCALE_FACTORS": [
+      2,
+      2,
+      1
+    ],
+    "MIN_THRESHOLD": -300,
+    "MAX_THRESHOLD_PERCENTILE": 99.9,
+    "LOWER_THRESHOLD": {
+      "method": "fixed",
+      "fixed_hu": -300,
+      "percentile": 10.75,
+      "clip_min_hu": -700.0,
+      "clip_max_hu": 500.0
+    },
+    "THRESHOLDING": {
+      "method": "normal",
+      "fuzzy": {
+        "lower_percentile": 10.5,
+        "soft_margin_hu": 100,
+        "object_percentile": 99.8,
+        "dense_percentile": 99.96,
+        "smooth_radius": 0,
+        "smooth_mode": "mean"
+      }
+    },
+    "VESSELNESS_AORTA": {
+      "method": "normal",
+      "sigmas": [
+        2.5,
+        3.0
+      ],
+      "black_ridges": false,
+      "alpha": 0.5,
+      "beta": 1.0,
+      "gamma": 30,
+      "normalization": "none",
+      "smooth_sigma": 0.0
+    },
+    "VESSELNESS_ARTERY": {
+      "method": "normal",
+      "sigmas": [
+        1.5,
+        2.0,
+        2.5,
+        3.0
+      ],
+      "black_ridges": false,
+      "alpha": 0.5,
+      "beta": 0.5,
+      "gamma": 55,
+      "normalization": "none",
+      "smooth_sigma": 0.0
+    },
+    "CIRCLE_DETECTION": {
+      "radii_start_px": 18,
+      "radii_end_px": 30,
+      "radius_step_px": 1,
+      "tol_radius_mm": 9.0,
+      "tol_distance_mm": 20.0,
+      "quadrant_offset": [
+        30,
+        30
+      ],
+      "max_slice_miss_threshold": 5,
+      "neighbor_distance_threshold": 5,
+      "total_num_peaks_initial": 15,
+      "total_num_peaks": 15,
+      "canny_sigma": 3,
+      "use_local_roi": true,
+      "local_roi_padding": 30,
+      "interpolate_missed_circles": true,
+      "trajectory_filter": {
+        "method": "robust",
+        "max_radius_step_mm": 4.8,
+        "max_center_step_mm": 8.0,
+        "min_hough_accumulator": 0.408,
+        "reference_window": 5,
+        "persistence_window": 5,
+        "persistence_required": 4,
+        "min_tail_circles": 8,
+        "min_remaining_circles": 30,
+        "tail_search_start_fraction": 0.35,
+        "min_tail_coverage": 0.4,
+        "max_tail_trim_fraction": 0.4,
+        "synthetic_tail_slices": 5
+      }
+    },
+    "LEVEL_SET": {
+      "radius_reduction_factor": 0.1,
+      "num_iter": 26,
+      "balloon": 0.6,
+      "smoothing": 2,
+      "threshold": "auto",
+      "roi_margin": 10,
+      "use_roi": true,
+      "alpha": 1000,
+      "sigma": 2,
+      "leak_removal_radius": 2,
+      "trajectory_radius_factor": 2.25,
+      "trajectory_axial_margin_slices": 10,
+      "quality_feedback": {
+        "oversegmentation_area_ratio_p90": 3.0,
+        "oversegmentation_volume_fraction": 0.019,
+        "oversegmentation_paired_area_ratio_p90": 2.8,
+        "undersegmentation_circle_fill_q25": 0.8,
+        "undersegmentation_area_ratio_p90": 1.3,
+        "undersegmentation_volume_fraction": 0.008,
+        "undersegmentation_required_signals": 2
+      }
+    },
+    "OSTIA_DETECTION": {
+      "top_n": 2000,
+      "max_z_diff_mm": 40.0,
+      "lower_fraction": 1.0,
+      "min_center_distance_factor": 0.85,
+      "min_lateral_factor": 0.4,
+      "erosion_radius": 4,
+      "surface_padding_radius": 2
+    },
+    "OSTIA_VALIDATION": {
+      "distance_threshold_mm": 7.0
+    },
+    "ARTERY_SEGMENTATION": {
+      "method": "region_growing"
+    },
+    "REGION_GROWING": {
+      "max_volume": 100000,
+      "switch_at_voxels": 2000,
+      "min_vesselness_fraction": 0.078,
+      "threshold_divisor": 7,
+      "relaxed_floor_factor": 0.98,
+      "comparison_window": 1,
+      "smooth_relaxation": true,
+      "use_seed_refinement": true,
+      "use_multi_seed": true,
+      "grow_each_ostium_separately": true,
+      "seed_search_radius": 2,
+      "seed_candidate_radius": 1,
+      "max_seed_candidates": 6,
+      "seed_min_vesselness_fraction": 0.02,
+      "reference_scope": "global",
+      "reference_radius": 3,
+      "reference_percentile": 95.0,
+      "verbose": false
+    },
+    "FUZZY_CONNECTEDNESS": {
+      "alpha": 0.16,
+      "sigma_hu": 100,
+      "neighborhood": 26,
+      "candidate_min_vesselness": 0.018,
+      "max_candidate_voxels": 500000,
+      "max_processed_voxels": 500000,
+      "seed_search_radius": 2,
+      "max_seeds_per_ostium": 4,
+      "seed_min_vesselness": 0.018,
+      "min_seed_distance_voxels": 1.0,
+      "vesselness_floor": 0.018,
+      "vesselness_weight": 0.9,
+      "grow_each_ostium_separately": false
+    },
+    "POSTPROCESSING": {
+      "closing_radius": 3,
+      "dilation_radius": 2
+    },
+    "NUM_BATCHES": 5
+  },
+  "run_dir": "output/segmentation/runs/mid_res/fuzzy_comparison/current_pipeline/test700"
+}
