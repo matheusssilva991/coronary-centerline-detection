@@ -130,9 +130,14 @@ def build_bad_cases_export_df(df_bad_cases, subset_name, resolution):
     # Monta tabela padrão para exportação.
     if df_bad_cases is None or df_bad_cases.empty:
         # Sem linhas: devolve apenas cabeçalho padrão.
-        return pd.DataFrame(
-            columns=["image_id", "bad_case_status", "subset", "resolution"]
-        )
+        columns = ["image_id", "bad_case_status", "subset", "resolution"]
+        if df_bad_cases is not None:
+            columns += [
+                column
+                for column in ("source_run", "variant", "dice_artery", "status")
+                if column in df_bad_cases
+            ]
+        return pd.DataFrame(columns=columns)
 
     # Aceita IMG_ID e image_id para compatibilidade.
     image_id_col = "IMG_ID" if "IMG_ID" in df_bad_cases.columns else "image_id"
@@ -150,6 +155,10 @@ def build_bad_cases_export_df(df_bad_cases, subset_name, resolution):
             "resolution": resolution,
         }
     )
+    # Mantém a origem e as métricas quando fornecidas, sem alterar leitores antigos.
+    for column in ("source_run", "variant", "dice_artery", "status"):
+        if column in df_bad_cases:
+            export_df[column] = df_bad_cases[column]
     return export_df
 
 
@@ -184,6 +193,145 @@ def save_bad_cases_artifacts(df_bad_cases, output_dir, subset_name, resolution):
         "json_path": str(json_path),
         "num_bad_cases": int(export_df.shape[0]),
     }
+
+
+def analyze_bad_case_groups(
+    groups: dict[tuple[str, str], pd.DataFrame], dice_threshold: float = 0.30
+) -> dict[str, pd.DataFrame]:
+    """Resume falhas por grupo e compara resoluções somente nos IDs comuns.
+
+    As chaves são ``(resolução, conjunto)``. Não grava arquivos nem substitui
+    Dice ausente por zero. Sucessos com Dice ausente aparecem na visão geral,
+    mas não são classificados como Dice baixo.
+    """
+    if not 0 <= dice_threshold <= 1:
+        raise ValueError("dice_threshold deve estar entre zero e um.")
+    overview, reasons, failure_types, selected = [], [], [], []
+    ids_by_group, bad_ids_by_group = {}, {}
+    for (resolution, split), original in groups.items():
+        frame = original.copy()
+        if not {"IMG_ID", "dice_artery"}.issubset(frame.columns):
+            raise ValueError(f"{resolution}/{split}: IMG_ID e dice_artery obrigatórios")
+        ids = pd.to_numeric(frame["IMG_ID"], errors="raise")
+        if ids.isna().any() or ids.duplicated().any() or (ids % 1 != 0).any():
+            raise ValueError(
+                f"{resolution}/{split}: IDs ausentes, repetidos ou inválidos"
+            )
+        frame["IMG_ID"] = ids.astype(int)
+        bad = get_bad_cases(frame, dice_threshold=dice_threshold)
+        if "bad_case_status" not in bad:
+            bad["bad_case_status"] = pd.Series(index=bad.index, dtype="object")
+        success = _compute_success_mask(frame, ["both_correct", "both_tolerable"])
+        # O motivo de óstio tem precedência, evitando dupla contagem.
+        failed_ostia = int((~success).sum())
+        low_dice = len(bad) - failed_ostia
+        overview.append(
+            {
+                "resolution": resolution,
+                "subset": split,
+                "total_cases": len(frame),
+                "bad_cases": len(bad),
+                "bad_cases_percent": 100 * len(bad) / len(frame) if len(frame) else 0.0,
+                "missing_dice": int(
+                    pd.to_numeric(frame["dice_artery"], errors="coerce").isna().sum()
+                ),
+            }
+        )
+        for reason, count in (("ostia_failure", failed_ostia), ("low_dice", low_dice)):
+            reasons.append(
+                {
+                    "resolution": resolution,
+                    "subset": split,
+                    "reason": reason,
+                    "count": count,
+                }
+            )
+        bad["subset"], bad["resolution"] = split, resolution
+        bad["reason"] = np.where(
+            bad["bad_case_status"].eq("low_dice"), "low_dice", "ostia_failure"
+        )
+        # Preserva o código original e resume apenas os tipos reconhecidos.
+        known_types = (
+            "not_found",
+            "one_correct",
+            "none_correct",
+            "error",
+            "low_dice",
+            "unknown",
+        )
+        detail = bad["bad_case_status"].where(
+            bad["bad_case_status"].isin(known_types), "unknown"
+        )
+        counts = detail.value_counts()
+        for failure_type in known_types:
+            count = int(counts.get(failure_type, 0))
+            failure_types.append(
+                {
+                    "resolution": resolution,
+                    "subset": split,
+                    "failure_type": failure_type,
+                    "count": count,
+                    "percent_of_exams": 100 * count / len(frame) if len(frame) else 0.0,
+                }
+            )
+        selected.append(bad)
+        ids_by_group[resolution, split] = set(frame["IMG_ID"])
+        bad_ids_by_group[resolution, split] = set(bad["IMG_ID"])
+
+    paired = []
+    for split in ("train", "val", "test"):
+        mid_key, high_key = ("mid_res", split), ("high_res", split)
+        if mid_key not in groups or high_key not in groups:
+            continue
+        mid_ids, high_ids = ids_by_group[mid_key], ids_by_group[high_key]
+        common = mid_ids & high_ids
+        mid_bad = bad_ids_by_group[mid_key] & common
+        high_bad = bad_ids_by_group[high_key] & common
+        paired.append(
+            {
+                "subset": split,
+                "common_ids": len(common),
+                "bad_both": len(mid_bad & high_bad),
+                "bad_mid_only": len(mid_bad - high_bad),
+                "bad_high_only": len(high_bad - mid_bad),
+                "good_both": len(common - mid_bad - high_bad),
+                "unpaired_mid": len(mid_ids - high_ids),
+                "unpaired_high": len(high_ids - mid_ids),
+            }
+        )
+    return {
+        "overview": pd.DataFrame(overview),
+        "reasons": pd.DataFrame(reasons),
+        "failure_types": pd.DataFrame(failure_types),
+        "paired": pd.DataFrame(paired),
+        "bad_cases": pd.concat(selected, ignore_index=True)
+        if selected
+        else pd.DataFrame(),
+    }
+
+
+def export_bad_case_groups(
+    analysis: dict[str, pd.DataFrame],
+    output_dir: str | Path,
+    *,
+    enabled: bool = False,
+) -> list[dict]:
+    """Exporta somente os grupos presentes quando explicitamente habilitado."""
+    if not enabled:
+        return []
+    bad_cases = analysis["bad_cases"]
+    return [
+        save_bad_cases_artifacts(
+            bad_cases.loc[
+                bad_cases["resolution"].eq(row.resolution)
+                & bad_cases["subset"].eq(row.subset)
+            ],
+            output_dir,
+            row.subset,
+            row.resolution,
+        )
+        for row in analysis["overview"].itertuples(index=False)
+    ]
 
 
 def prepare_bad_cases_for_subset(

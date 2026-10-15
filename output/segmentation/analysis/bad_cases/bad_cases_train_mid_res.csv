@@ -1,4 +1,2 @@
 image_id,bad_case_status,subset,resolution
-752,no ostium correct,train,mid_res
-447,one ostium correct,train,mid_res
-603,one ostium correct,train,mid_res
+428,one_correct,train,mid_res

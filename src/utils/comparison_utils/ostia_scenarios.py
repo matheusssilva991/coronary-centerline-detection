@@ -19,14 +19,16 @@ def load_math_results_for_ostia_scenario(math_paths, scenario):
             split_items = [("test", resolution_paths)]
 
         for split_name, summary_path in split_items:
-            summary_path = Path(summary_path)
-            if not summary_path.exists():
-                missing_math_files.append(
-                    f"Arquivo nao encontrado: {summary_path} ({target_resolution}/{split_name})"
-                )
-                continue
-
-            df_math = add_internal_result_aliases(pd.read_csv(summary_path))
+            if isinstance(summary_path, pd.DataFrame):
+                df_math = add_internal_result_aliases(summary_path.copy())
+            else:
+                summary_path = Path(summary_path)
+                if not summary_path.exists():
+                    missing_math_files.append(
+                        f"Arquivo nao encontrado: {summary_path} ({target_resolution}/{split_name})"
+                    )
+                    continue
+                df_math = add_internal_result_aliases(pd.read_csv(summary_path))
             if scenario == "correct":
                 df_math = filter_correct_ostia_cases(df_math)
             elif scenario == "incorrect":
@@ -40,7 +42,7 @@ def load_math_results_for_ostia_scenario(math_paths, scenario):
 
             if "IMG_ID" not in df_math.columns or "dice_artery" not in df_math.columns:
                 missing_math_files.append(
-                    f"Schema inesperado em {summary_path} ({target_resolution}/{split_name})"
+                    f"Schema inesperado em {target_resolution}/{split_name}"
                 )
                 continue
 

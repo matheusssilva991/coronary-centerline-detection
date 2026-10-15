@@ -42,6 +42,7 @@ _SYMBOL_TO_MODULE = {
     "select_qualitative_pair_cases": "variant_comparison",
     "yes_no_to_bool": "variant_comparison",
     # io
+    "load_experiment_variant_results": "io",
     "load_split_metadata": "io",
     "load_split_batch_timings": "io",
     "load_split_results": "io",

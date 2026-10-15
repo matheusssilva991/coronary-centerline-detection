@@ -1,0 +1,4 @@
+image_id,bad_case_status,subset,resolution
+315,none_correct,train,high_res
+428,one_correct,train,high_res
+344,none_correct,train,high_res

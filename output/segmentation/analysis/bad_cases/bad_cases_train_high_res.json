@@ -1,0 +1,20 @@
+[
+  {
+    "image_id": 315,
+    "bad_case_status": "none_correct",
+    "subset": "train",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 428,
+    "bad_case_status": "one_correct",
+    "subset": "train",
+    "resolution": "high_res"
+  },
+  {
+    "image_id": 344,
+    "bad_case_status": "none_correct",
+    "subset": "train",
+    "resolution": "high_res"
+  }
+]

@@ -34,6 +34,7 @@ from utils.segmentation.pipeline.detection import (
     filter_located_aorta_circles,
     locate_aorta_circles,
     segment_aorta,
+    segment_aorta_without_level_set,
 )
 from utils.segmentation.pipeline.preprocessing import compute_vesselness
 from utils.segmentation.pipeline.visuals import save_segmentation_visual
@@ -313,10 +314,20 @@ def prepare_image_context(
     )
     spacing = case["scaled_spacing"]
 
-    # O mapa da aorta alimenta tanto o rastreamento quanto a seleção dos óstios.
+    vesselness_mode = experiment.get("vesselness_mode", "dual")
+    aorta_mode = experiment.get("aorta_segmentation_mode", "level_set")
+    if vesselness_mode not in {"dual", "single_artery"}:
+        raise ValueError(f"Modo de vesselness inválido: {vesselness_mode}")
+    if aorta_mode not in {"level_set", "initial_mask", "circle_mask"}:
+        raise ValueError(f"Modo de segmentação da aorta inválido: {aorta_mode}")
+    # Na ablação, a parametrização arterial também alimenta a busca dos óstios.
     vesselness_ostios = compute_vesselness(
         lcc_image,
-        vesselness_config=config["VESSELNESS_AORTA"],
+        vesselness_config=config[
+            "VESSELNESS_ARTERY"
+            if vesselness_mode == "single_artery"
+            else "VESSELNESS_AORTA"
+        ],
         use_gpu=config.get("USE_GPU", False),
     )
     detected_circles = locate_aorta_circles(
@@ -332,21 +343,36 @@ def prepare_image_context(
         int(case["down_image"].shape[2]),
         config["CIRCLE_DETECTION"],
     )
-    aorta_mask = segment_aorta(
-        lcc_image,
-        detected_circles,
-        config["LEVEL_SET"],
-        use_gpu=config.get("USE_GPU", False),
-    )
+    if aorta_mode == "circle_mask":
+        aorta_mask = segment_aorta_without_level_set(
+            lcc_image,
+            detected_circles,
+            config["LEVEL_SET"],
+            radius_factor=experiment.get("aorta_circle_radius_factor", 1.0),
+        )
+    elif aorta_mode == "initial_mask":
+        aorta_mask = segment_aorta_without_level_set(
+            lcc_image, detected_circles, config["LEVEL_SET"]
+        )
+    else:
+        aorta_mask = segment_aorta(
+            lcc_image,
+            detected_circles,
+            config["LEVEL_SET"],
+            use_gpu=config.get("USE_GPU", False),
+        )
 
     # Em sweeps exclusivos de óstios, evita o mapa arterial e toda a etapa RG/FC.
     vesselness_artery = None
     if compute_artery_map and not experiment.get("ostia_only", False):
-        vesselness_artery = compute_vesselness(
-            lcc_image,
-            vesselness_config=config["VESSELNESS_ARTERY"],
-            use_gpu=config.get("USE_GPU", False),
-        )
+        if vesselness_mode == "single_artery":
+            vesselness_artery = vesselness_ostios
+        else:
+            vesselness_artery = compute_vesselness(
+                lcc_image,
+                vesselness_config=config["VESSELNESS_ARTERY"],
+                use_gpu=config.get("USE_GPU", False),
+            )
     volume_voxels = int(case["down_image"].size)
     aorta_voxels = int(np.sum(aorta_mask))
     return {

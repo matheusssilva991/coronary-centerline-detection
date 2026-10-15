@@ -12,9 +12,8 @@ class LocalPresentationTest(unittest.TestCase):
     def tearDown(self):
         plt.close("all")
 
-    def test_all_six_notebooks_load_without_dataset_access(self):
+    def test_notebooks_load_without_dataset_access(self):
         for name in (
-            "bad_cases_results_analysis",
             "split_resolution_analysis",
             "segmentation_results_eda",
             "ia_vs_pipeline_analysis",
@@ -52,9 +51,9 @@ class LocalPresentationTest(unittest.TestCase):
             [tick.get_text() for tick in axis.get_xticklabels()], ["Treino", "Teste"]
         )
 
-    @patch("matplotlib.pyplot.show")
-    def test_bad_cases_intersection_remains_paired_by_id(self, _show):
-        helpers = load_presentation_helpers("bad_cases_results_analysis")
+    def test_bad_cases_intersection_remains_paired_by_id(self):
+        from utils.comparison_utils.bad_cases import analyze_bad_case_groups
+
         mid = pd.DataFrame(
             {
                 "IMG_ID": [1, 2, 3],
@@ -63,9 +62,11 @@ class LocalPresentationTest(unittest.TestCase):
             }
         )
         high = mid.iloc[::-1].copy()
-        result = helpers["compare_shared_bad_cases"](mid, high, "Teste")
-        self.assertEqual(result["ids_low_both"], {1, 3})
-        self.assertEqual(result["status_intersections"]["Erro em ambos"], {1})
+        result = analyze_bad_case_groups(
+            {("mid_res", "test"): mid, ("high_res", "test"): high}
+        )
+        self.assertEqual(result["paired"].iloc[0]["bad_both"], 2)
+        self.assertEqual(result["paired"].iloc[0]["common_ids"], 3)
 
     @patch("matplotlib.pyplot.show")
     def test_ia_comparison_keeps_means_by_method(self, _show):

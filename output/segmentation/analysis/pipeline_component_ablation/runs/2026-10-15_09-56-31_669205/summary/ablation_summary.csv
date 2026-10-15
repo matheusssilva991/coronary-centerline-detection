@@ -1,0 +1,2 @@
+variant,images,planned_images,complete,ostia_success_n,ostia_success_percent,mean_dice_end_to_end,mean_dice_conditional,valid_dice_n,error_count,runtime_seconds,mean_seconds_per_volume,peak_ram_bytes,peak_vram_bytes
+no_level_set,10,700,False,0,0.0,0.17397865587845354,,10,0,314.84098119800365,31.484098119800365,,

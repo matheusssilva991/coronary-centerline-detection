@@ -146,6 +146,36 @@ def _initialize_level_set_from_circles(
     return init_level_set
 
 
+def initialize_level_set_mask(
+    volume_shape: Sequence[int],
+    detected_circles: Sequence[Dict[str, Any]],
+    *,
+    radius_reduction_factor: float,
+    roi_margin: int = 10,
+    use_roi: bool = True,
+) -> NDArray[np.uint8]:
+    """Reconstrói as sementes na geometria completa, sem calcular gradientes."""
+    if not detected_circles:
+        return np.zeros(volume_shape, dtype=np.uint8)
+    bounds = (
+        _calculate_roi_bounds(detected_circles, volume_shape, roi_margin)
+        if use_roi
+        else None
+    )
+    if bounds is None:
+        shape = volume_shape
+        circles = detected_circles
+    else:
+        shape = (
+            bounds["y_max"] - bounds["y_min"],
+            bounds["x_max"] - bounds["x_min"],
+            bounds["z_max"] - bounds["z_min"],
+        )
+        circles = _adjust_circles_to_roi(detected_circles, bounds)
+    seeds = _initialize_level_set_from_circles(shape, circles, radius_reduction_factor)
+    return _restore_level_set_mask(seeds, volume_shape, bounds)
+
+
 def _prepare_level_set_inputs(
     volume_ccta: NDArray[Any],
     detected_circles: Sequence[Dict[str, Any]],

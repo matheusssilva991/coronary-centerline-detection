@@ -156,20 +156,21 @@ def load_math_results_for_comparison(
             split_items = [("test", resolution_paths)]
 
         for split_name, summary_path in split_items:
-            summary_path = Path(summary_path)
-            if not summary_path.exists():
-                # Arquivo faltante: registra e continua.
-                missing_math_files.append(
-                    f"Arquivo nao encontrado: {summary_path} ({target_resolution}/{split_name})"
-                )
-                continue
-
-            # Valida colunas mínimas do summary matemático.
-            df_math = add_internal_result_aliases(pd.read_csv(summary_path))
+            if isinstance(summary_path, pd.DataFrame):
+                # Sweeps já normalizados podem ser usados sem gerar novos CSVs.
+                df_math = add_internal_result_aliases(summary_path.copy())
+            else:
+                summary_path = Path(summary_path)
+                if not summary_path.exists():
+                    missing_math_files.append(
+                        f"Arquivo nao encontrado: {summary_path} ({target_resolution}/{split_name})"
+                    )
+                    continue
+                df_math = add_internal_result_aliases(pd.read_csv(summary_path))
             if "IMG_ID" not in df_math.columns or "dice_artery" not in df_math.columns:
                 # Schema inválido: não entra no comparativo.
                 missing_math_files.append(
-                    f"Schema inesperado em {summary_path} ({target_resolution}/{split_name})"
+                    f"Schema inesperado em {target_resolution}/{split_name}"
                 )
                 continue
 

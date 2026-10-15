@@ -136,22 +136,18 @@ def _resolve_split_result_dir(
     resolution: str,
     split: str,
 ) -> Path | None:
-    """Resolve um split priorizando runs canônicos e padrão."""
+    """Resolve somente a referência canônica, sem recorrer a outro run."""
     canonical_parent = repo_root / "output/segmentation/canonical" / resolution / split
-    canonical_result = _latest_split_result_dir(canonical_parent, split)
-    if canonical_result is not None:
-        return canonical_result
-
-    # Inspeciona apenas runs datados diretos, sem entrar em experimentos.
-    runs_parent = repo_root / "output/segmentation/runs" / resolution
-    return _latest_split_result_dir(runs_parent, split)
+    return _latest_split_result_dir(canonical_parent, split)
 
 
 def get_default_split_paths(repo_root: Path) -> dict[str, dict[str, Path]]:
     """Retorna pastas de resultados consolidados usadas pelas EDAs.
 
     Pastas canônicas podem conter um nível de data entre o split e ``numeric``.
-    Combinações ausentes de resolução e split são omitidas.
+    Combinações ausentes de resolução e split são omitidas, sem substituição
+    por runs fora de canonical. A escolha oficial pertence aos arquivos/links
+    de canonical, não a uma lista duplicada em código.
     """
     result: dict[str, dict[str, Path]] = {"mid_res": {}, "high_res": {}}
     for resolution in result:
@@ -167,54 +163,8 @@ def get_default_split_paths(repo_root: Path) -> dict[str, dict[str, Path]]:
     return result
 
 
-_REFINED_PIPELINE_RUNS = {
-    "mid_res": {
-        "train": (
-            "output/segmentation/runs/mid_res/aorta_segmentation_experiments/"
-            "train/ostia_localization/lower100_pad2/2026-09-06_08-08-25"
-        ),
-        "val": (
-            "output/segmentation/runs/mid_res/aorta_segmentation_experiments/"
-            "val/ostia_validation270/lower100_pad2/2026-09-07_07-15-15"
-        ),
-        "test": (
-            "output/segmentation/runs/mid_res/aorta_segmentation_experiments/"
-            "test/ostia_comparison/lower100_pad2/2026-09-07_10-37-38"
-        ),
-    },
-    "high_res": {
-        "train": (
-            "output/segmentation/runs/high_res/aorta_segmentation_experiments/"
-            "train/filter_envelope_lower100_pad2/2026-09-15_11-08-42"
-        ),
-        "val": (
-            "output/segmentation/runs/high_res/aorta_segmentation_experiments/"
-            "val/filter_envelope_lower100_pad2/2026-09-12_07-51-48"
-        ),
-        "test": (
-            "output/segmentation/runs/high_res/aorta_segmentation_experiments/"
-            "test/filter_envelope_lower100_pad2/2026-09-13_14-06-44"
-        ),
-    },
-}
-
-
 def get_refined_pipeline_split_paths(
     repo_root: Path,
 ) -> dict[str, dict[str, Path]]:
-    """Retorna os runs completos do pipeline refinado usados nas EDAs atuais.
-
-    Os caminhos identificam a configuração com filtro de trajetória, envelope,
-    ``lower_fraction=1.0`` e ``surface_padding_radius=2``. Entradas ausentes no
-    checkout são omitidas para que os notebooks possam informar a indisponibilidade.
-    """
-    result: dict[str, dict[str, Path]] = {
-        resolution: {} for resolution in _REFINED_PIPELINE_RUNS
-    }
-    for resolution, split_runs in _REFINED_PIPELINE_RUNS.items():
-        for split, relative_run_dir in split_runs.items():
-            numeric_dir = _numeric_result_dir(repo_root / relative_run_dir)
-            if (numeric_dir / results_filename(split)).is_file():
-                result[resolution][split] = numeric_dir
-
-    return result
+    """Alias público para a referência oficial, sem lista própria de runs."""
+    return get_default_split_paths(repo_root)

@@ -347,3 +347,102 @@ SPLIT=train bash src/experiments/runners/run_aorta_trajectory_geometry_sweep.sh
 `VARIANTS` aceita uma lista separada por vírgulas para executar apenas parte
 do sweep. Os visuais ficam desativados por padrão; use `SAVE_VISUALS=1` para
 salvá-los no disco externo configurado por `VISUAL_OUTPUT_DIR`.
+
+## Ablação do pipeline refinado: Level Set e mapa único
+
+`pipeline_component_ablation.py` executa três variantes na resolução reduzida:
+
+- `full_pipeline`: controle com o pipeline refinado completo.
+- `no_level_set`: usa os círculos detectados com raio completo (fator 1,0),
+  mantendo abertura morfológica, envelope e maior componente; não calcula
+  gradientes nem executa a evolução Level Set.
+- `single_vesselness`: calcula Frangi apenas uma vez com os parâmetros de
+  `VESSELNESS_ARTERY` e usa o mesmo mapa nos óstios e no Region Growing.
+
+A configuração congelada `config/article_cbeb_ablation.json` corresponde a
+`effective_base_config` do run refinado `fuzzy_comparison/current_pipeline/test700`.
+A variante de referência usa threshold normal e Region Growing. Os modos
+experimentais são salvos separadamente da configuração científica. Não há
+compartilhamento de intermediários entre variantes nem ajuste de parâmetros pelo
+conjunto de teste.
+
+A variante sem Level Set foi corrigida para não usar as sementes contraídas
+(fator 0,10), cuja expansão dependia da evolução removida. Essa comparação agora
+usa a aproximação geométrica dos círculos no lugar do refinamento Level Set,
+sem alterar o pós-processamento. O manifesto registra `circle_mask` e
+`aorta_circle_radius_factor=1.0`. Runs antigos com `initial_mask` são preservados;
+a validação de retomada rejeita misturá-los com a variante corrigida. Execute a
+nova definição em uma pasta nova. O fator 1,0 corresponde diretamente ao raio
+medido pela Hough; não foi escolhido por ganho no conjunto de teste.
+
+Os comandos abaixo devem ser executados na raiz do repositório. Defina
+`IMAGECAS_BASE_PATH` com a pasta contendo os arquivos `ID.img.nii.gz` e
+`ID.label.nii.gz`, ou forneça `--base-path`. O padrão usa os 700 IDs de teste de
+`config/imagecas_splits.json`. `--split train` e `--split val` usam, respectivamente,
+30 e 270 IDs. `--ids` aceita somente IDs do split escolhido. `--sample-size` e
+`--start-index` permitem pilotos, sem alterar a configuração.
+
+Inspeção sem carregar imagens nem criar arquivos:
+
+```bash
+uv run python src/experiments/pipeline_component_ablation.py --dry-run
+```
+
+Controle e ambas as ablações no teste completo:
+
+```bash
+uv run python src/experiments/pipeline_component_ablation.py --gpu
+```
+
+Teste sem Level Set, com controle no mesmo run:
+
+```bash
+uv run python src/experiments/pipeline_component_ablation.py --gpu --variants full_pipeline,no_level_set
+```
+
+Teste com mapa único, com controle no mesmo run:
+
+```bash
+uv run python src/experiments/pipeline_component_ablation.py --gpu --variants full_pipeline,single_vesselness
+```
+
+Para executar apenas a ablação, use `--variants no_level_set` ou
+`--variants single_vesselness`. Para um piloto sintético/operacional com imagens
+reais de treino, use `--split train --sample-size 3`. `--no-gpu` solicita CPU;
+se GPU for solicitada mas indisponível, os helpers existentes usam CPU e essa
+condição fica registrada em `runtime_environment.json`.
+
+Os runs são criados em uma pasta nova dentro de
+`output/segmentation/analysis/pipeline_component_ablation/runs/`, com nome único.
+`--output-root` e `--run-name` permitem escolher o destino; pastas existentes nunca
+são sobrescritas como uma nova execução. Os resultados são salvos após cada exame:
+
+- `results/image_results.csv`: Dice observado, status dos óstios, erros e tempo por
+  par variante/exame; falhas sem saída preservam Dice ausente.
+- `summary/ablation_summary.csv` e `summary/ablation_table.md`: número concluído e
+  planejado, sucesso dos óstios, Dice global, Dice condicionado e tempo médio.
+- `run_config.json`, `config/split_ids.json` e `config/{variante}.json`: coorte,
+  configuração efetiva, hash e modos experimentais.
+- `runtime_environment.json`: ambiente e disponibilidade de GPU. Picos de RAM e
+  VRAM não são medidos e permanecem vazios, não zero.
+
+O resumo end-to-end inclui todos os exames concluídos; atribui zero somente aos
+Dice ausentes acompanhados de erro explícito. Inicialização incorreta com saída
+mantém seu Dice observado. O Dice condicionado usa a mesma regra operacional no
+subconjunto de inicializações aceitas. Uma tabela parcial indica
+`images/planned_images`; não deve ser apresentada como resultado do teste completo.
+O cronômetro inclui carregamento e etapas completas, sincronizando CUDA quando
+ativa; não inclui a gravação dos CSVs após cada exame.
+
+Para retomar, repita as opções de seleção/configuração da execução original e
+informe a pasta retornada pelo script:
+
+```bash
+uv run python src/experiments/pipeline_component_ablation.py --gpu --resume-dir output/segmentation/analysis/pipeline_component_ablation/runs/NOME_DO_RUN
+```
+
+Se o run contém somente duas variantes, repita também seu `--variants`. Retomadas
+validam configuração, modos, dataset, split e IDs; pares já registrados, inclusive
+falhas explícitas, não são reexecutados. O CSV por exame é a referência para
+retomar; tabelas agregadas são reconstruídas. Não execute dois processos na mesma
+pasta de retomada.

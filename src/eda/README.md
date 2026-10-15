@@ -37,6 +37,7 @@ export IMAGECAS_BASE_PATH=/caminho/para/ImageCAS/1-1000
 |---|---|---|---|---|
 | [ccta_dataset_analysis.ipynb](images/ccta_dataset_analysis.ipynb) | Caracterizar e visualizar volumes CCTA do ImageCAS, OrCaScore e MM-WHS | CCTA dos três bancos e pares CTI/CTAI do OrCaScore | Inventário, orientação, geometria, comparação da amostragem do OrCaScore, amostra HU e vistas axiais | Médio ao carregar dez volumes |
 | [mmwhs_heart_label_visualization.ipynb](images/mmwhs_heart_label_visualization.ipynb) | Inspecionar os sete rótulos cardíacos do MM-WHS em 2D e 3D | Imagem e rótulo NIfTI de um exame MM-WHS | Corte axial central e cena K3D multirrótulo | Baixo para 2D; médio para a malha 3D |
+| [totalsegmentator_label_visualization.ipynb](images/totalsegmentator_label_visualization.ipynb) | Inspecionar CT e máscaras selecionáveis de aorta, coração e outras estruturas do TotalSegmentator | Um exame com `ct.nii.gz` e `segmentations/`; caminho por `TOTALSEGMENTATOR_BASE_PATH` ou descoberta nos discos montados | Fatias completas axiais, coronais e sagitais; resumo volumétrico e 3D opcional | Baixo/médio para 2D; médio para 3D |
 | [preprocessing_visualization.ipynb](images/preprocessing_visualization.ipynb) | Fatias axiais completas, MIP, downscale, threshold, LCC, Hough e vesselness | ImageCAS e `pipeline_config.json` | Figuras exibidas no notebook | Baixo para fatias; médio, ou alto com vesselness |
 
 ### Intensidades HU — `intensity/`
@@ -52,17 +53,16 @@ export IMAGECAS_BASE_PATH=/caminho/para/ImageCAS/1-1000
 | Notebook | Objetivo | Entrada principal | Saída | Custo |
 |---|---|---|---|---|
 | [external_ccta_visual_assessment.ipynb](results/external_ccta_visual_assessment.ipynb) | Comparar avaliações visuais mid/high por treino e teste no MM-WHS e OrCaScore e Dice da aorta no treino e teste MM-WHS | `avaliacao_visual.xlsx` e `results_all.csv` dos quatro runs | Visão geral por split, distribuições por etapa e Dice separado por protocolo, geral e por exame | Baixo |
-| [segmentation_results_eda.ipynb](results/segmentation_results_eda.ipynb) | Status dos óstios, distâncias e Dice por split | Runs completos do pipeline refinado | `analysis/segmentation_results/` | Baixo |
-| [split_resolution_analysis.ipynb](results/split_resolution_analysis.ipynb) | Comparar train/val/test entre mid e high | Runs completos do pipeline refinado | Tabelas e gráficos exibidos | Baixo |
-| [bad_cases_results_analysis.ipynb](results/bad_cases_results_analysis.ipynb) | Quantificar casos ruins em mid e high | Runs completos do pipeline refinado | `analysis/bad_cases/` | Baixo |
+| [segmentation_results_eda.ipynb](results/segmentation_results_eda.ipynb) | Status dos óstios, distâncias, Dice e casos ruins, incluindo comparação mid/high nos IDs comuns | Referências oficiais de `canonical`, por split | Tabelas e gráficos; catálogo de falhas opcional em `analysis/bad_cases/` | Baixo |
+| [split_resolution_analysis.ipynb](results/split_resolution_analysis.ipynb) | Comparar train/val/test entre mid e high | Referências oficiais de `canonical` | Tabelas e gráficos; tempos ausentes permanecem indisponíveis | Baixo |
 
 ### Comparações de métodos e variantes — `comparisons/`
 
 | Notebook | Objetivo | Entrada principal | Saída | Custo |
 |---|---|---|---|---|
 | [resolution_filter_envelope_dice_comparison.ipynb](comparisons/resolution_filter_envelope_dice_comparison.ipynb) | Comparar o Dice em mid/high antes e depois do padrão filtro + envelope/lower100/pad2 | Baselines canônicos e runs selecionados de train/val/test | Médias, deltas pareados, IC95%, Wilcoxon/Holm e gráficos exibidos | Baixo |
-| [ia_vs_pipeline_analysis.ipynb](comparisons/ia_vs_pipeline_analysis.ipynb) | Comparar IA e pipeline somente nos IDs comuns | `output/ia_results` e runs completos do pipeline refinado | Tabelas e gráficos exibidos | Baixo |
-| [segmentation_method_comparison.ipynb](comparisons/segmentation_method_comparison.ipynb) | Resumir threshold normal/fuzzy e RG/FC; comparar a melhor variante com o baseline | Runs de comparação | Tabelas e gráficos pareados no notebook | Baixo |
+| [ia_vs_pipeline_analysis.ipynb](comparisons/ia_vs_pipeline_analysis.ipynb) | Comparar IA e referência oficial nos IDs comuns, com Wilcoxon e Holm | Resultados IA e `canonical` mid/high | Tabelas e gráficos exibidos | Baixo |
+| [segmentation_method_comparison.ipynb](comparisons/segmentation_method_comparison.ipynb) | Comparar normal/fuzzy e RG/FC no pipeline refinado, por conjunto, com Wilcoxon e Holm | Runs atuais train30_val60 e test700 | Tabelas, gráficos pareados e estatísticas no notebook | Baixo |
 | [aorta_ostia_pipeline_comparison.ipynb](comparisons/aorta_ostia_pipeline_comparison.ipynb) | Comparar P99.9 puro, filtro + envelope e novo padrão lower100/pad2 | Treino 30, validação 270, teste 700; revisão visual histórica 30/60 | Dice geral/condicionado, sucesso dos óstios, Wilcoxon pareado com Holm e efeito rank-biserial; qualidade visual separada | Baixo |
 
 ### Diagnósticos da aorta — `aorta/`
@@ -76,7 +76,7 @@ export IMAGECAS_BASE_PATH=/caminho/para/ImageCAS/1-1000
 
 | Notebook | Objetivo | Entrada principal | Saída | Custo |
 |---|---|---|---|---|
-| [pipeline_sensitivity_analysis.ipynb](sensitivity/pipeline_sensitivity_analysis.ipynb) | Análise OFAT: Dice, sucesso dos óstios, efeitos relativos e amplitude por parâmetro no split `val` | Runs de `pipeline_parameter_validation.py` | Tabelas e gráficos exibidos no notebook | Baixo |
+| [pipeline_sensitivity_analysis.ipynb](sensitivity/pipeline_sensitivity_analysis.ipynb) | Análise OFAT do pipeline refinado: Dice, óstios e amplitude por parâmetro nas 270 imagens de validação | Run sensitivity_refined_pipeline_val270 | Tabelas e gráficos exibidos no notebook | Baixo |
 | [upper_threshold_analysis.ipynb](sensitivity/upper_threshold_analysis.ipynb) | Comparar P99.9, P99.7 e P99.5; investigar thresholds HU e histogramas de quatro casos representativos | Mesmos runs de validação e, opcionalmente, volumes ImageCAS | Tabelas e gráficos exibidos no notebook | Baixo; moderado ao carregar intensidades |
 
 Os caminhos de saída da tabela são relativos a
@@ -84,8 +84,15 @@ Os caminhos de saída da tabela são relativos a
 
 ## Casos ruins
 
-[`results/bad_cases_results_analysis.ipynb`](results/bad_cases_results_analysis.ipynb) compara quantitativamente as frequências,
-o Dice e os casos ruins compartilhados entre resoluções.
+O detalhamento de falhas foi incorporado a
+[`results/segmentation_results_eda.ipynb`](results/segmentation_results_eda.ipynb).
+A seção identifica falha dos óstios ou Dice < 0,30, apresenta tipos de erro,
+interseções entre resoluções e IDs para inspeção. `EXPORT_BAD_CASES = False`
+preserva os catálogos históricos; habilite a opção somente para atualizá-los.
+
+As análises do baseline atual usam `canonical`, sem buscar outro run quando
+uma referência falta. Comparações históricas, fuzzy e de sensibilidade mantêm
+fontes explícitas para não alterar o significado dos experimentos.
 
 ## Convenções
 

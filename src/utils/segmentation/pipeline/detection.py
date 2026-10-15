@@ -12,6 +12,7 @@ from utils.segmentation.aorta.localization import (
 from utils.segmentation.aorta.segmentation import (
     calculate_circle_mask_metrics,
     calculate_slice_area_jump_p95,
+    initialize_level_set_mask,
     prepare_level_set_evolution,
     remove_leaks_morphology,
     restrict_mask_to_circle_trajectory,
@@ -212,6 +213,35 @@ def segment_aorta_with_diagnostics(
     """Segmenta a aorta e retorna métricas da evolução fixa."""
     del use_gpu  # MorphGAC e pós-processamento permanecem na CPU.
     return _fixed_level_set_result(lcc_image, detected_circles, level_set_config)
+
+
+def segment_aorta_without_level_set(
+    lcc_image: Any,
+    detected_circles: List[Dict[str, Any]],
+    level_set_config: Dict[str, Any],
+    *,
+    radius_factor: float | None = None,
+) -> np.ndarray:
+    """Usa círculos sem evolução, preservando o pós-processamento da aorta.
+
+    ``None`` preserva as sementes reduzidas do experimento legado. O fator
+    explícito 1.0 usa o raio detectado completo como aproximação da aorta.
+    """
+    factor = (
+        level_set_config["radius_reduction_factor"]
+        if radius_factor is None
+        else float(radius_factor)
+    )
+    if not np.isfinite(factor) or not 0 < factor <= 1:
+        raise ValueError("O fator do raio dos círculos deve estar em (0, 1].")
+    initial = initialize_level_set_mask(
+        np.asarray(lcc_image).shape,
+        detected_circles,
+        radius_reduction_factor=factor,
+        roi_margin=level_set_config.get("roi_margin", 10),
+        use_roi=level_set_config.get("use_roi", True),
+    )
+    return _postprocess_aorta_mask(initial, detected_circles, level_set_config)
 
 
 def segment_aorta(

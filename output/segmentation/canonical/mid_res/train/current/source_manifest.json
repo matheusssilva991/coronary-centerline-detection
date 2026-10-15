@@ -1,0 +1,53 @@
+{
+  "artifact_kind": "consolidation_of_existing_results",
+  "source_run": "output/segmentation/runs/mid_res/fuzzy_comparison/current_pipeline/train30_val60",
+  "source_csv": "output/segmentation/runs/mid_res/fuzzy_comparison/current_pipeline/train30_val60/results/image_results.csv",
+  "source_csv_sha256": "c7f1d065d8b22242c2492c82f3ca43374967c5472a0d93e7055c70f821e5010e",
+  "source_config_sha256": "ee85df500d703d31119cd4625daa1cf59f447d05cef7f996b74e74db5182df98",
+  "variant": "normal_rg",
+  "split": "train",
+  "exam_count": 30,
+  "exam_ids": [
+    13,
+    28,
+    44,
+    90,
+    129,
+    175,
+    194,
+    305,
+    315,
+    330,
+    344,
+    380,
+    428,
+    447,
+    518,
+    538,
+    550,
+    603,
+    608,
+    631,
+    676,
+    696,
+    752,
+    760,
+    793,
+    836,
+    854,
+    887,
+    937,
+    965
+  ],
+  "recorded_variant": {
+    "name": "normal_rg",
+    "description": "Normal threshold + region growing baseline.",
+    "threshold_rule": "P10.75 <= I <= P99.8",
+    "vesselness_rule": "no vesselness weighting",
+    "overrides": {
+      "threshold_mode": "normal",
+      "artery_method": "region_growing"
+    }
+  },
+  "timing_note": "Sem manifest de batches equivalente; tempos não consolidados."
+}

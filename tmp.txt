@@ -1,0 +1,14 @@
+# completo
+
+wine "/run/media/matheus/HD/DatasetsCCTA/MM-WHS-2017-Dataset/MMWHS_evaluation_testdata_label_encrypt_1mm_forpublic/zxhCardWhsEvaluate.exe" \
+  "$(winepath -w "/run/media/matheus/HD/Results_dataset_ccta/mmwhs/mid_res/2026-10-06_07-53-03/evaluation/aorta/test/ct_test_2013/ct_test_2013_label_1mm.nii.gz")" \
+  "$(winepath -w "/run/media/matheus/HD/DatasetsCCTA/MM-WHS-2017-Dataset/MMWHS_evaluation_testdata_label_encrypt_1mm_forpublic/nii/ct_test_2013_label_encrypt_1mm.nii.gz")" \
+  0 ALL 1 --decodeseg2
+
+# aorta
+
+wine "/run/media/matheus/HD/DatasetsCCTA/MM-WHS-2017-Dataset/MMWHS_evaluation_testdata_label_encrypt_1mm_forpublic/zxhCardWhsEvaluate.exe" \
+  -label 820 820 \
+  "$(winepath -w "/run/media/matheus/HD/Results_dataset_ccta/mmwhs/mid_res/2026-10-06_07-53-03/evaluation/aorta/test/ct_test_2013/ct_test_2013_label_1mm.nii.gz")" \
+  "$(winepath -w "/run/media/matheus/HD/DatasetsCCTA/MM-WHS-2017-Dataset/MMWHS_evaluation_testdata_label_encrypt_1mm_forpublic/nii/ct_test_2013_label_encrypt_1mm.nii.gz")" \
+  0 1 --decodeseg2

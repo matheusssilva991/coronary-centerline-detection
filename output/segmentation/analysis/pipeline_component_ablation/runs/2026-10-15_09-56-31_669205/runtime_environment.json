@@ -1,0 +1,9 @@
+{
+  "python": "3.13.11",
+  "platform": "Linux-7.0.0-38-generic-x86_64-desconhecido-with-glibc2.43",
+  "hostname": "matheus-ssilva",
+  "gpu_requested": true,
+  "gpu_available": true,
+  "peak_ram_measured": false,
+  "peak_vram_measured": false
+}
