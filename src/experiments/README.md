@@ -350,7 +350,7 @@ salvá-los no disco externo configurado por `VISUAL_OUTPUT_DIR`.
 
 ## Ablação do pipeline refinado: Level Set e mapa único
 
-`pipeline_component_ablation.py` executa três variantes na resolução reduzida:
+`pipeline_component_ablation.py` executa por padrão três variantes na resolução reduzida:
 
 - `full_pipeline`: controle com o pipeline refinado completo.
 - `no_level_set`: usa os círculos detectados com raio completo (fator 1,0),
@@ -358,6 +358,23 @@ salvá-los no disco externo configurado por `VISUAL_OUTPUT_DIR`.
   gradientes nem executa a evolução Level Set.
 - `single_vesselness`: calcula Frangi apenas uma vez com os parâmetros de
   `VESSELNESS_ARTERY` e usa o mesmo mapa nos óstios e no Region Growing.
+
+A variante adicional `no_downsampling` deve ser selecionada explicitamente. Ela
+altera somente `DOWNSCALE_FACTORS` de `[2, 2, 1]` para `[1, 1, 1]`, sem chamar
+`scale_config_to_resolution`: raios em pixels, sigmas, 26 iterações de Level Set,
+limites do Region Growing e demais parâmetros continuam numericamente idênticos.
+As escalas físicas correspondentes aos valores em voxels mudam com a resolução;
+esta é uma ablação sem reajuste, não o pipeline high-resolution otimizado.
+O snapshot `config/no_downsampling.json` salva a configuração efetiva original.
+
+```bash
+uv run python src/experiments/pipeline_component_ablation.py --gpu --variants no_downsampling --split test
+```
+
+O comando usa `IMAGECAS_BASE_PATH`; alternativamente, acrescente `--base-path`.
+Para executar o controle e essa ablação juntos, use
+`--variants full_pipeline,no_downsampling`. A seleção padrão das três variantes
+anteriores permanece inalterada.
 
 A configuração congelada `config/article_cbeb_ablation.json` corresponde a
 `effective_base_config` do run refinado `fuzzy_comparison/current_pipeline/test700`.

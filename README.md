@@ -1,20 +1,20 @@
 # Coronary Centerline Detection
 
-Sistema automatizado para detecção e extração de linhas centrais de artérias coronárias a partir de imagens de angiografia por tomografia computadorizada (CCTA).
+Pipeline de pesquisa para localização da aorta e dos óstios e segmentação de artérias coronárias em angiografia por tomografia computadorizada (CCTA). A extração de linhas centrais é uma extensão planejada.
 
 ## 📋 Descrição
 
-Este projeto implementa um pipeline completo para segmentação e extração de linhas centrais de artérias coronárias a partir de imagens 3D de CCTA. O sistema utiliza técnicas avançadas de processamento de imagens médicas, incluindo:
+Este projeto implementa um pipeline de segmentação a partir de volumes 3D de CCTA. O fluxo atual inclui:
 
-- **Filtro de Frangi modificado** para realce de estruturas vasculares
+- **Filtro de Frangi multiescala** para realce de estruturas vasculares
 - **Transformada de Hough** para detecção da aorta ascendente
 - **Segmentação por contorno ativo** (Level Set) para delimitar a aorta
 - **Detecção automática de óstios coronarianos** (esquerdo e direito)
-- **Crescimento de região 3D** para segmentação das artérias coronárias
+- **Crescimento de região 3D** ou **fuzzy connectedness** para segmentação das artérias coronárias
 
 ## 🎯 Objetivos
 
-O objetivo principal é automatizar a extração das linhas centrais das principais artérias coronárias (LCA - Left Coronary Artery e RCA - Right Coronary Artery), facilitando:
+O objetivo de longo prazo é automatizar a extração das linhas centrais das principais artérias coronárias (LCA - Left Coronary Artery e RCA - Right Coronary Artery), facilitando:
 
 - Análise quantitativa de vasos coronários
 - Planejamento de procedimentos intervencionistas
@@ -28,6 +28,7 @@ coronary-centerline-detection/
 ├── pyproject.toml              # Configuração e dependências do projeto
 ├── README.md                   # Este arquivo
 ├── doc/                        # Documentação detalhada
+│   ├── manual_pipeline/        # Manual de uso das funções, organizado por etapa
 │   ├── Fluxograma das etapas centerline.md
 │   └── Relatorio das etapas realizadas.md
 ├── src/                        # Código fonte
@@ -75,202 +76,44 @@ coronary-centerline-detection/
     └── tmp/                    # Experimentos temporários
 ```
 
+## 📖 Manual para desenvolvedores
+
+O [manual do pipeline](doc/manual_pipeline/README.md) apresenta preparação do
+ambiente, convenções de dados e um exemplo integrado de inferência sem referência.
+Cada etapa documenta funções, imports, assinaturas, parâmetros, exemplos e saídas:
+
+1. [Pré-processamento](doc/manual_pipeline/01_preprocessamento/README.md): carregamento, downsampling, threshold normal/fuzzy e LCC.
+2. [Mapa de vasos](doc/manual_pipeline/02_mapa_vasos/README.md): Frangi, normalização e CPU/GPU.
+3. [Localização da aorta](doc/manual_pipeline/03_localizacao_aorta/README.md): Hough e filtro de trajetória.
+4. [Segmentação da aorta](doc/manual_pipeline/04_segmentacao_aorta/README.md): level set, envelope e diagnósticos.
+5. [Localização dos óstios](doc/manual_pipeline/05_localizacao_ostios/README.md): superfície, candidatos e avaliação opcional.
+6. [Segmentação coronariana](doc/manual_pipeline/06_segmentacao_coronarias/README.md): crescimento de região e fuzzy connectedness.
+7. [Pós-processamento e avaliação](doc/manual_pipeline/07_posprocessamento_avaliacao/README.md): estágios morfológicos e métricas.
+
 ## 🔬 Metodologia
 
-O pipeline de processamento segue as seguintes etapas:
+O padrão em [pipeline_config.json](config/pipeline_config.json) é definido para
+mid, com fatores de redução `(2, 2, 1)`. O pré-processamento usa OpenCV linear,
+limiar inferior fixo de -300 HU, teto no percentil 99.9 e maior componente
+conectada por fatia. Os modos fuzzy e sem corte HU são alternativas configuráveis.
 
-### 1. Pré-processamento
+A Hough recebe a imagem pré-processada e acompanha círculos a partir da última
+fatia, com raios de 18 a 29 pixels em mid (fim exclusivo 30). A trajetória passa
+por filtro robusto e inicializa o level set com 10% do raio detectado. A evolução
+usa 26 iterações e balloon 0.6, seguida de abertura, envelope da trajetória e
+seleção da maior componente 3D.
 
-#### 1.1 Downsampling
+O mapa `VESSELNESS_AORTA`, calculado por Frangi, seleciona candidatos de óstios
+na superfície da aorta. A configuração atual busca em toda a extensão segmentada,
+com erosão de raio 4 e padding 2. O mapa `VESSELNESS_ARTERY` alimenta a segmentação
+coronariana por crescimento de região, ou por fuzzy connectedness quando selecionado.
+O pós-processamento arterial padrão aplica fechamento de raio 3 e dilatação de
+raio 2, em voxels da resolução de trabalho.
 
-- Redução da imagem por fator 2 usando **interpolação cúbica** (order=3)
-- Fatores de redução: `(2, 2, 1)` - reduz x e y, mantém z
-- Objetivo: reduzir custo computacional mantendo qualidade
-
-#### 1.2 Threshold Dinâmico Adaptativo
-
-Aplicação de **threshold baseado em percentis** para remover artefatos:
-
-- **Limite inferior**: `-300 HU` (remove ar e tecidos de baixa densidade)
-- **Limite superior**: **percentil 99.7** da imagem (adaptativo, remove calcificações, stents e ossos)
-
-**Vantagem**: O threshold superior adaptativo se ajusta automaticamente à distribuição de intensidades de cada imagem, sendo mais robusto que valores fixos.
-
-Máscara aplicada:
-$$M(x, y, z) = \begin{cases} 1, & \text{se } -300 \leq I(x,y,z) \leq P_{99.7} \\ 0, & \text{caso contrário} \end{cases}$$
-
-onde $P_{99.7}$ é o percentil 99.7 da imagem.
-
-#### 1.3 Extração do Maior Componente Conectado (LCC)
-
-- Aplicação **slice-by-slice** (2D) para cada fatia axial
-- Remove regiões isoladas, pulmões e vasos pulmonares
-- Mantém apenas a maior estrutura conectada (coração e grandes vasos)
-- Isolamento da região de interesse (ROI)
-
-### 2. Cálculo do Mapa de Vesselness (Filtro de Frangi)
-
-Aplicação do **Filtro de Frangi modificado** para realce de estruturas tubulares vasculares.
-
-**Funcionamento**:
-
-- Análise dos autovalores da **matriz Hessiana** para cada voxel
-- Detecção de estruturas tubulares em múltiplas escalas
-- Valores próximos a **1**: alta probabilidade de vaso
-- Valores próximos a **0**: baixa probabilidade
-
-**Parâmetros utilizados (1ª passada - detecção de aorta)**:
-
-```python
-sigmas = np.arange(2.5, 3.5, 1)  # Escalas para detecção
-alpha = 0.5    # Distinção entre estrutura tubular (vaso) e plana
-beta = 1.0     # Distinção entre tubo (comprido) e blob (esférico)
-gamma = 30     # Sensibilidade ao contraste (estrutura vs ruído)
-```
-
-**Parâmetros utilizados (2ª passada - segmentação de artérias)**:
-
-```python
-sigmas = np.arange(1.5, 2.5, 0.5)  # Escalas menores para artérias finas
-alpha = 0.5
-beta = 0.5
-gamma = 55     # Maior sensibilidade para capturar artérias menores
-```
-
-**Melhorias implementadas**:
-
-- Normalização robusta usando percentis (ignora outliers extremos)
-- Medida de *grayness* (Gf) baseada no desvio da intensidade média
-- Medida de gradiente (Gd) para reforçar bordas vasculares
-
-### 3. Localização da Aorta Ascendente
-
-Utilização da **Transformada de Hough para detecção de círculos** em fatias axiais:
-
-**Processo**:
-
-1. **Detecção de bordas**: Aplicação do filtro Canny (sigma=3) em cada fatia
-2. **Transformada de Hough**: Busca por círculos nas bordas detectadas
-3. **Raios testados**: 36-62 mm (convertidos para pixels após downsampling)
-4. **Seleção de círculos**: Baseada em proximidade espacial entre fatias consecutivas
-
-**Critérios de parada**:
-
-- Variação de raio > 9 mm entre fatias consecutivas
-- Variação de distância entre centros > 18 mm
-- Ausência de círculos por mais de 5 fatias consecutivas
-
-**Estratégias implementadas**:
-
-- **Abordagem C** (mais eficaz): Busca restrita ao **primeiro quadrante** da imagem
-- Seleção do círculo mais próximo do detectado na fatia anterior
-- Múltiplos picos analisados (10-15 círculos candidatos por fatia)
-
-**Saída**: Lista de círculos detectados com coordenadas `(center_x, center_y, radius, slice_index)`
-
-### 4. Segmentação da Aorta (Level Set)
-
-**Morphological Geodesic Active Contour (MGAC)**:
-
-1. **Inicialização**: Círculos detectados desenhados como discos preenchidos
-   - Raio reduzido por fator 0.15 (85% do raio original)
-   - Cada círculo vira uma "semente" na respectiva fatia
-
-2. **Cálculo do *edge indicator***:
-   - Transformação usando gradiente Gaussiano inverso
-   - Guia o contorno para bordas da aorta
-
-3. **Evolução iterativa** (31 iterações):
-   - `balloon = 0.8`: força de expansão do contorno
-   - `smoothing = 2`: suavização da curva
-   - Contorno evolui adaptando-se às bordas reais
-
-4. **Pós-processamento morfológico**:
-   - Remoção de vazamentos usando operação de **abertura** (radius=2)
-   - Extração do maior componente conectado
-   - Máscara binária final da aorta
-
-**Resultado**: Segmentação 3D precisa da aorta ascendente
-
-### 5. Detecção de Óstios Coronarianos
-
-Identificação automática dos pontos de origem das artérias coronárias (esquerda e direita):
-
-**Estratégia**:
-
-1. **Extração da superfície da aorta**:
-   - Erosão da máscara da aorta (radius=4)
-   - Subtração para obter apenas a casca/superfície
-
-2. **Região de busca**:
-   - **80% inferior** da aorta em z (onde óstios anatomicamente se localizam)
-   - Restrição espacial reduz falsos positivos
-
-3. **Seleção de candidatos**:
-   - Top 2000 voxels com **maior vesselness** na superfície
-   - Filtrados por diferença máxima em z (52 voxels)
-
-4. **Separação esquerdo/direito**:
-   - **Critério anatômico**: óstio esquerdo mais à esquerda (menor x)
-   - Distância mínima entre óstios: 70% do raio médio da aorta
-   - Separação lateral mínima: 50% do raio médio
-
-5. **Validação**:
-   - Distância do centro da aorta
-   - Posição relativa entre os dois óstios
-   - Coordenadas anatômicas compatíveis
-
-**Saída**: Coordenadas `(y, x, z)` dos óstios esquerdo e direito
-
-### 6. Segmentação das Artérias (Region Growing 3D)
-
-**Crescimento de região adaptativo** a partir dos óstios detectados:
-
-**Algoritmo**:
-
-1. **Inicialização**:
-   - Sementes: coordenadas dos óstios esquerdo e direito
-   - Vesselness map da 2ª passada (escalas menores para artérias finas)
-
-2. **Critérios de crescimento**:
-   - `threshold = (max - min) / 5`: diferença máxima de vesselness
-   - `min_vesselness = max * 0.078`: piso mínimo de qualidade vascular
-   - `max_volume = 100000`: limite para evitar vazamento
-
-3. **Estratégia adaptativa**:
-   - Primeiros 2000 voxels: critério rígido
-   - Após 2000 voxels: relaxamento do threshold (fator 0.97)
-   - Janela de comparação ajustável
-
-4. **Validação de vizinhos** (26-conectividade):
-   - Avalia todos os vizinhos 3D de cada voxel adicionado
-   - Adiciona se vesselness dentro dos critérios
-   - Atualiza média da região iterativamente
-
-5. **Execução separada**:
-   - Artéria esquerda (LCA) e direita (RCA) segmentadas independentemente
-   - Máscaras combinadas ao final
-
-**Resultado**: Segmentação 3D das principais artérias coronárias
-
-### 7. Pós-processamento Morfológico
-
-Refinamento final das máscaras arteriais:
-
-1. **Fechamento morfológico** (ball, radius=3):
-   - Preenche pequenos buracos
-   - Conecta pequenas descontinuidades
-
-2. **Dilatação** (ball, radius=2):
-   - Recupera bordas que possam ter sido perdidas
-   - Suaviza contornos
-
-3. **Máscara binária final**: Artérias coronárias segmentadas
-
-**Avaliação**:
-
-- **Dice Score**: comparação com segmentação manual (ground truth)
-- **Contagem de voxels**: volume total das artérias segmentadas
+Esses valores são os do JSON de referência em mid. O ajuste de resolução altera
+parâmetros espaciais e heurísticas em high; consulte a configuração efetiva do
+run. As funções de baixo nível podem ter defaults diferentes dos valores do JSON.
+O manual detalha essas diferenças e as convenções de coordenadas/spacing.
 
 ## 🚀 Instalação
 
@@ -295,30 +138,43 @@ pip install -e .
 
 ### Dependências Principais
 
-- `scikit-image`: Processamento de imagens
+- `scikit-image`: Frangi, Hough e contorno ativo morfológico
 - `nibabel`: Leitura de arquivos NIfTI
-- `opencv-python`: Transformada de Hough
-- `morphsnakes`: Segmentação por contorno ativo
+- `opencv-python`: Redimensionamento de imagens
+- `scipy`: Interpolação, componentes conectados e operações morfológicas
 - `matplotlib`, `plotly`, `seaborn`: Visualização
 - `pandas`: Análise de dados
 - `scikit-learn`: Divisão train/test
 
 ## 💻 Uso
 
-### Pipeline Completo
+### Um exame ImageCAS pela API
 
+Execute a partir da raiz com `PYTHONPATH=src uv run python seu_script.py`.
+Defina `IMAGECAS_BASE_PATH` para a pasta dos pares `<id>.img.nii.gz` e
+`<id>.label.nii.gz`, e `IMAGECAS_EXAM_ID` para o ID desejado. Este exemplo depende
+de dataset real e não foi executado na validação do manual.
+
+<!-- example: dataset -->
 ```python
-from segmentation_pipeline import process_image
+import os
+from utils.project.config import load_config_json, scale_config_to_resolution
+from utils.segmentation.pipeline.orchestration import process_image
 
-# Processar uma imagem específica
-result = process_image(IMG_ID=1)
-
-# Resultado contém:
-# - ostia_left: coordenadas (y, x, z) do óstio esquerdo
-# - ostia_right: coordenadas (y, x, z) do óstio direito
-# - dice_artery: score Dice para avaliação da segmentação
-# - artery_voxels: número de voxels segmentados
+config = load_config_json("config/pipeline_config.json", {})
+config["USE_GPU"] = False
+config = scale_config_to_resolution(config)
+result = process_image(
+    img_id=os.environ["IMAGECAS_EXAM_ID"],
+    config=config,
+    base_path=os.environ["IMAGECAS_BASE_PATH"],
+)
+print(result.get("error"), result.get("skip_reason"), result.get("dice_artery"))
 ```
+
+`process_image` retorna métricas e estados do exame, e pode registrar falhas no
+próprio resultado. Para obter as máscaras intermediárias/finais e processar um
+volume sem referência, use as [funções por etapa](doc/manual_pipeline/README.md).
 
 ### Processamento em Lote
 
@@ -335,16 +191,26 @@ em `config/pipeline_config.json`, use `--config-file <snapshot.json>` junto de
 `--config-replace`. As opções explícitas da CLI, como `--downscale-method`, ainda
 prevalecem sobre o snapshot.
 
+Para a API de lote, reutilize a configuração e a variável `os` do exemplo
+anterior. O diretório de saída é obrigatório. Este exemplo inicia processamento
+de exames quando executado; não foi executado na validação do manual.
+
+<!-- example: dataset -->
 ```python
-from segmentation_pipeline import run_pipeline
+from utils.segmentation.pipeline.orchestration import run_pipeline
 
-# Processar múltiplas imagens
-ids = [1, 2, 3, 4, 134, 195]
-results = run_pipeline(ids, split_name="train")
-
-# O pipeline divide automaticamente os IDs em num_batches lotes
-# (padrão: num_batches=5)
+results = run_pipeline(
+    ids=[1, 2, 3],
+    split_name="train",
+    config=config,
+    base_path=os.environ["IMAGECAS_BASE_PATH"],
+    output_dir="output/segmentation/manual_example/numeric",
+)
+print(len(results["details"]), results["batches_processed"])
 ```
+
+O número solicitado de lotes é configurado por `NUM_BATCHES` (5 no JSON de
+referência); o planejamento considera a quantidade de exames selecionados.
 
 ### Notebooks Jupyter
 
@@ -408,11 +274,12 @@ resolução, subset, `--exam-ids` e `--limit`:
 uv run python src/external_ccta_batch_pipeline.py \
   --dataset orcascore \
   --resolution mid \
-  --resume-dir /run/media/matheus/HD/Results_dataset_ccta/orcascore/mid_res/<timestamp>
+  --resume-dir "${CCTA_RESULTS_ROOT}/orcascore/mid_res/<timestamp>"
 ```
 
-A raiz padrão é `/run/media/matheus/HD/Results_dataset_ccta`, configurável por
-`CCTA_RESULTS_ROOT` ou `--output-root`. A hierarquia é:
+Defina `CCTA_RESULTS_ROOT` ou informe `--output-root` para escolher a raiz de
+resultados em seu ambiente. Os exemplos de retomada pressupõem essa variável
+definida. A hierarquia é:
 
 ```text
 Results_dataset_ccta/
@@ -463,7 +330,7 @@ use os mesmos filtros da seleção original (por exemplo, `--subset all`):
 ```bash
 uv run python src/external_ccta_batch_pipeline.py \
   --dataset mmwhs --resolution high --subset all \
-  --resume-dir /run/media/matheus/HD/Results_dataset_ccta/mmwhs/high_res/<run> \
+  --resume-dir "${CCTA_RESULTS_ROOT}/mmwhs/high_res/<run>" \
   --test-aorta-dice --aorta-eval-only
 ```
 
@@ -507,35 +374,26 @@ Os resultados são salvos em:
 - `output/segmentation/runs/<resolution>_res/<timestamp>/config/`: config efetiva e IDs usados
 - `output/segmentation/analysis/`: análises derivadas dos notebooks
 - `output/segmentation/8.final_results/`: resultados legados mantidos como referência
-- `/run/media/matheus/HD/Results_dataset_ccta/`: artefatos volumosos dos três bancos
+- `CCTA_RESULTS_ROOT` ou `--output-root`: artefatos dos bancos externos
 
 ## 🔧 Configuração
 
 ### Parâmetros Principais
 
-Edite [config/pipeline_config.json](config/pipeline_config.json) para ajustar:
+Use [config/pipeline_config.json](config/pipeline_config.json) e sua
+[referência de parâmetros](config/README.md). Os blocos principais são:
 
-```text
-Os ajustes mais importantes agora são:
+- `USE_GPU`, `DOWNSCALE_METHOD` e `DOWNSCALE_FACTORS`: backend e resolução.
+- `THRESHOLDING` e `LOWER_THRESHOLD`: seleção de candidatos no pré-processamento.
+- `VESSELNESS_AORTA` e `VESSELNESS_ARTERY`: parâmetros dos mapas de vasos.
+- `CIRCLE_DETECTION`, `LEVEL_SET` e `OSTIA_DETECTION`: aorta e óstios.
+- `ARTERY_SEGMENTATION`, `REGION_GROWING` e `FUZZY_CONNECTEDNESS`: método arterial.
+- `POSTPROCESSING`: fechamento e dilatação finais.
+- `NUM_BATCHES`: divisão do conjunto em lotes.
 
-- `NUM_BATCHES`: número de lotes em que o conjunto é dividido; o padrão é `5`
-- `USE_GPU`: ativa/desativa uso de GPU
-- `DOWNSCALE_METHOD` e `DOWNSCALE_FACTORS`: controle do pré-processamento
-- `CIRCLE_DETECTION`, `LEVEL_SET`, `OSTIA_DETECTION`, `REGION_GROWING`: hiperparâmetros das etapas do pipeline
-- `POSTPROCESSING`: refinamento final da máscara
-
-Se precisar ajustar os valores técnicos com mais detalhe, altere apenas o JSON e mantenha o código do pipeline estável.
-```
-
-### Exemplo rápido de lote
-
-```python
-from segmentation_pipeline import run_pipeline
-
-ids = [1, 2, 3, 4, 134, 195]
-results = run_pipeline(ids, split_name="train")
-# O número de lotes é definido em config/pipeline_config.json via NUM_BATCHES
-```
+Na API Python, carregue e normalize o JSON e aplique o ajuste de resolução uma
+única vez, conforme o [manual](doc/manual_pipeline/README.md). A configuração
+efetiva deve acompanhar os resultados para reprodução da execução.
 
 ## 📈 Estado Atual do Projeto
 
@@ -548,6 +406,7 @@ results = run_pipeline(ids, split_name="train")
 - [x] Detecção de óstios coronarianos
 - [x] Segmentação inicial das artérias (Region Growing)
 - [x] Avaliação quantitativa (Dice, distâncias)
+- [x] Visualizações 3D interativas da aorta, óstios e artérias
 
 ### 🚧 Próximos Passos
 
@@ -556,7 +415,6 @@ results = run_pipeline(ids, split_name="train")
 - [ ] Otimização de hiperparâmetros
 - [ ] Validação em conjunto completo de teste
 - [ ] Tratamento de casos edge (aorta fora do 1º quadrante)
-- [ ] Implementação de visualizações 3D interativas
 
 ## 🔍 Limitações Conhecidas
 

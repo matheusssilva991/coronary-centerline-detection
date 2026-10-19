@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import copy
 import hashlib
 import json
 import os
@@ -52,13 +53,31 @@ VARIANTS = {
         "aorta_segmentation_mode": "level_set",
         "vesselness_mode": "single_artery",
     },
+    "no_downsampling": {
+        "threshold_mode": "normal",
+        "artery_method": "region_growing",
+        "aorta_segmentation_mode": "level_set",
+        "vesselness_mode": "dual",
+        "downscale_factors": [1, 1, 1],
+    },
 }
+DEFAULT_VARIANTS = ("full_pipeline", "no_level_set", "single_vesselness")
+
+
+def effective_variant_config(
+    base_config: dict[str, Any], experiment: dict[str, Any]
+) -> dict[str, Any]:
+    """Altera somente a redução espacial, sem reescalar parâmetros científicos."""
+    config = copy.deepcopy(base_config)
+    if "downscale_factors" in experiment:
+        config["DOWNSCALE_FACTORS"] = list(experiment["downscale_factors"])
+    return config
 
 
 def build_parser() -> argparse.ArgumentParser:
     """Cria as opções do experimento; o padrão cobre todo o teste fixo."""
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--variants", default=",".join(VARIANTS))
+    parser.add_argument("--variants", default=",".join(DEFAULT_VARIANTS))
     parser.add_argument("--split", choices=["train", "val", "test"], default="test")
     parser.add_argument(
         "--ids", help="IDs separados por vírgula, pertencentes ao split."
@@ -132,7 +151,13 @@ def prepare_manifest(args: argparse.Namespace) -> dict[str, Any]:
     return {
         "schema_version": 1,
         "split": args.split,
-        "resolution": "mid",
+        "resolution": (
+            "high"
+            if names == ["no_downsampling"]
+            else "mixed"
+            if "no_downsampling" in names
+            else "mid"
+        ),
         "ids": select_image_ids(args),
         "base_path": base_path,
         "config_sha256": digest,
@@ -327,7 +352,12 @@ def execute(args: argparse.Namespace) -> Path | None:
         for name, experiment in manifest["variants"].items():
             write_json(
                 run_dir / f"config/{name}.json",
-                {"pipeline": manifest["effective_config"], "experiment": experiment},
+                {
+                    "pipeline": effective_variant_config(
+                        manifest["effective_config"], experiment
+                    ),
+                    "experiment": experiment,
+                },
             )
         write_json(
             run_dir / "runtime_environment.json",
@@ -342,8 +372,8 @@ def execute(args: argparse.Namespace) -> Path | None:
             },
         )
     done = {(row["variant"], int(row["IMG_ID"])) for row in rows}
-    config = manifest["effective_config"]
     for name, experiment in manifest["variants"].items():
+        config = effective_variant_config(manifest["effective_config"], experiment)
         for image_id in manifest["ids"]:
             if (name, image_id) in done:
                 continue

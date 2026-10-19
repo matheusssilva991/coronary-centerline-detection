@@ -248,7 +248,25 @@ class DriverTests(TestCase):
         expected = json.loads(driver.DEFAULT_SPLITS.read_text())["splits"]["test"]
         self.assertEqual(manifest["ids"], expected)
         self.assertEqual(manifest["effective_config"]["LEVEL_SET"]["num_iter"], 26)
-        self.assertEqual(list(manifest["variants"]), list(driver.VARIANTS))
+        self.assertEqual(list(manifest["variants"]), list(driver.DEFAULT_VARIANTS))
+
+    def test_no_downsampling_changes_only_factors_without_scaling(self):
+        manifest = driver.prepare_manifest(self.args("--variants", "no_downsampling"))
+        baseline = manifest["effective_config"]
+        config = driver.effective_variant_config(
+            baseline, manifest["variants"]["no_downsampling"]
+        )
+        self.assertEqual(manifest["resolution"], "high")
+        self.assertEqual(config["DOWNSCALE_FACTORS"], [1, 1, 1])
+        self.assertEqual(baseline["DOWNSCALE_FACTORS"], [2, 2, 1])
+        self.assertEqual(
+            [key for key in baseline if baseline[key] != config[key]],
+            ["DOWNSCALE_FACTORS"],
+        )
+        self.assertEqual(config["LEVEL_SET"]["num_iter"], 26)
+        self.assertEqual(config["REGION_GROWING"], baseline["REGION_GROWING"])
+        config["LEVEL_SET"]["num_iter"] = 999
+        self.assertEqual(baseline["LEVEL_SET"]["num_iter"], 26)
 
     def test_rejects_duplicate_foreign_and_conflicting_ids(self):
         ids = driver.prepare_manifest(self.args())["ids"]
