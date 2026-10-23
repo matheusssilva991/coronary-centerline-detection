@@ -1,0 +1,106 @@
+{
+  "metadata_schema_version": 3,
+  "run": {
+    "split": "train",
+    "resolution": "high"
+  },
+  "configuration": {
+    "source": "effective_pipeline_config",
+    "sha256": "0b809c1a54acde1d293f50ab11932efef5354e6e38d2f856c3bf7c4440eb3314",
+    "snapshot_file": "../config/effective_pipeline_config.json",
+    "use_gpu": true,
+    "downscale_method": "opencv",
+    "downscale_factors": [
+      1,
+      1,
+      1
+    ],
+    "min_threshold_hu": -300,
+    "max_threshold_percentile": 99.9,
+    "threshold_method": "normal",
+    "artery_segmentation_method": "region_growing",
+    "resource_monitoring": {
+      "enabled": true,
+      "sampling_interval_seconds": 0.5,
+      "scope": "current_process_pid_per_exam_including_enabled_visuals",
+      "ram_method": "observed_resident_set_size_from_linux_proc_statm",
+      "vram_method": "observed_pid_allocations_nvidia_smi_all_devices",
+      "units": "bytes",
+      "query_timeout_seconds": 1.0,
+      "limitations": "Amostragem pode perder picos; inclui memória retida entre exames, não consumo incremental.",
+      "environments": {
+        "98843e6540ab6a4c": {
+          "host": "matheus-ssilva",
+          "platform": "Linux-7.0.0-38-generic-x86_64-desconhecido-with-glibc2.43",
+          "python": "3.13.11",
+          "machine": "x86_64",
+          "cpu_count": 12,
+          "cuda_visible_devices": "0",
+          "physical_ram_bytes": 16147111936,
+          "cpu_model": "AMD Ryzen 5 5500X3D 6-Core Processor"
+        }
+      },
+      "gpu_device_uuids": [
+        "GPU-2529d060-d0eb-4850-6f4c-4ac25f032429"
+      ],
+      "errors_by_exam": {},
+      "metadata_error": null
+    }
+  },
+  "results": {
+    "execution_time": {
+      "seconds": 5206.965447664261,
+      "minutes": 86.78275746107101,
+      "hours": 1.4463792910178503
+    },
+    "dice": {
+      "before_morphology": {
+        "mean": 0.3032012992551686,
+        "valid_exam_count": 30
+      },
+      "after_morphology": {
+        "mean": 0.5720437964032011,
+        "valid_exam_count": 30
+      }
+    },
+    "ostia": {
+      "processed_exam_count": 30,
+      "success": {
+        "count": 27,
+        "percent": 90.0
+      },
+      "types": {
+        "both_correct": {
+          "count": 10,
+          "percent": 33.33333333333333
+        },
+        "both_tolerable": {
+          "count": 17,
+          "percent": 56.666666666666664
+        },
+        "found_but_incorrect": {
+          "count": 3,
+          "percent": 10.0
+        },
+        "not_found": {
+          "count": 0,
+          "percent": 0.0
+        },
+        "not_evaluated_or_error": {
+          "count": 0,
+          "percent": 0.0
+        }
+      },
+      "sides": {
+        "left_correct": {
+          "count": 18,
+          "percent": 60.0
+        },
+        "right_correct": {
+          "count": 18,
+          "percent": 60.0
+        }
+      }
+    }
+  }
+}

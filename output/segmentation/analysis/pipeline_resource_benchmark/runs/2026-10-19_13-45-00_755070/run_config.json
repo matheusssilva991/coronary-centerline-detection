@@ -1,0 +1,20 @@
+{
+  "image_id": 642,
+  "base_path": "/run/media/matheus/HD/DatasetsCCTA/ImageCAS/1-1000",
+  "resolutions": [
+    "mid",
+    "high"
+  ],
+  "config_file": "/home/matheus/workspace/coronary-centerline-detection/config/article_cbeb_ablation.json",
+  "config_sha256": "c7d0f5b896a7135175c58c056be95d5fff1ea752364ec6a51d2047a392d5d788",
+  "hostname": "matheus-ssilva",
+  "platform": "Linux-7.0.0-38-generic-x86_64-desconhecido-with-glibc2.43",
+  "python": "3.13.11",
+  "gpu_uuid": "GPU-2529d060-d0eb-4850-6f4c-4ac25f032429",
+  "gpu_name": "NVIDIA GeForce RTX 5060 Ti",
+  "driver_version": "595.99.02",
+  "gpu_total_mib": 16311.0,
+  "vram_sampling_interval_seconds": 0.1,
+  "vram_metric": "máximo observado de VRAM por PID via nvidia-smi; não memória total da GPU",
+  "time_boundary": "process_image: I/O, pré-processamento, aorta, óstios, artérias e métricas; sem imports"
+}

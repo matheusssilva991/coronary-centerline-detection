@@ -11,6 +11,11 @@ from pathlib import Path
 import pandas as pd
 from tqdm import tqdm
 
+from utils.project.runtime.resource_monitor import (
+    ResourceMonitor,
+    persist_resource_diagnostics,
+)
+
 from utils.segmentation.aorta.diagnostics import (
     summarize_aorta_circles as summarize_aorta_circles,
     summarize_aorta_volume as summarize_aorta_volume,
@@ -223,6 +228,8 @@ def process_image(img_id, config, base_path, visual_output_dir=None):
     5. segmenta as artérias a partir dos óstios.
     """
     result = _new_image_result(img_id)
+    monitor = ResourceMonitor(config)
+    monitor.start()
     try:
         # Carrega imagem/label e gera o volume pré-processado (LCC).
         image_data = load_and_preprocess_image(img_id, base_path, config)
@@ -348,6 +355,8 @@ def process_image(img_id, config, base_path, visual_output_dir=None):
 
     except Exception as exc:
         result["error"] = str(exc)
+    finally:
+        monitor.finish(result)
 
     return result
 
@@ -427,14 +436,19 @@ def _process_and_save_batch(
     )
 
     # Processa todas as imagens antes de persistir o lote de forma atômica.
-    batch_results = [
-        process_image(img_id, config, base_path, visual_output_dir=visual_output_dir)
-        for img_id in tqdm(
-            batch_ids,
-            desc=f"Lote {batch_number}/{num_batches}",
-            leave=False,
+    batch_results = []
+    for img_id in tqdm(
+        batch_ids, desc=f"Lote {batch_number}/{num_batches}", leave=False
+    ):
+        image_result = process_image(
+            img_id, config, base_path, visual_output_dir=visual_output_dir
         )
-    ]
+        persist_resource_diagnostics(
+            image_result,
+            Path(output_dir) / f"resource_monitoring_{split_name}.json",
+            str(img_id),
+        )
+        batch_results.append(image_result)
     batch_output_path = save_results(
         batch_results,
         f"{split_name}_lote_{batch_number}",

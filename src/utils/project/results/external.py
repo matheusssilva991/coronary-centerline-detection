@@ -176,6 +176,7 @@ def build_external_metadata(
     rows: list[dict[str, Any]],
     started_at: datetime,
     state: str,
+    resource_monitoring: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Monta o metadata compacto da execução externa."""
     status_counts = pd.Series(
@@ -205,6 +206,11 @@ def build_external_metadata(
     ]
     return {
         "schema_version": 3,
+        **(
+            {"resource_monitoring": resource_monitoring}
+            if resource_monitoring is not None
+            else {}
+        ),
         "dataset": dataset,
         "resolution": resolution,
         "selected_subset": subset,

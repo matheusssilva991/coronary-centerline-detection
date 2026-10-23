@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from utils.project.runtime.resource_monitor import RESOURCE_COLUMNS
+
 ARTERY_BRANCH_COLUMNS = [
     "artery_left_raw_voxels",
     "artery_right_raw_voxels",
@@ -9,6 +11,7 @@ ARTERY_BRANCH_COLUMNS = [
 
 RESULT_COLUMNS: list[str] = [
     "IMG_ID",
+    *RESOURCE_COLUMNS,
     "dice_artery",
     "dice_artery_before_morphology",
     "dice_artery_after_morphology",

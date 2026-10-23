@@ -14,6 +14,7 @@ os.environ.setdefault("CUDA_VISIBLE_DEVICES", "0")
 
 from utils.utils.json_io import save_json_atomic
 from utils.project.runtime.run_logging import add_run_file_handler
+from utils.project.runtime.resource_monitor import apply_resource_monitoring_options
 from utils.processing.gpu_utils import use_gpu
 from utils.project.config import (
     load_config_json,
@@ -130,6 +131,7 @@ def select_resolution_config(args):
 
 def _apply_execution_overrides(config, args):
     """Aplica opções operacionais da CLI à configuração efetiva."""
+    apply_resource_monitoring_options(config, args)
     # Configurações antigas podem conter opções de cache já removidas.
     config.pop("SAVE_CACHE", None)
     config.pop("LOAD_CACHE", None)

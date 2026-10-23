@@ -1,0 +1,286 @@
+{
+  "environments": {
+    "98843e6540ab6a4c": {
+      "host": "matheus-ssilva",
+      "platform": "Linux-7.0.0-38-generic-x86_64-desconhecido-with-glibc2.43",
+      "python": "3.13.11",
+      "machine": "x86_64",
+      "cpu_count": 12,
+      "cuda_visible_devices": "0",
+      "physical_ram_bytes": 16147111936,
+      "cpu_model": "AMD Ryzen 5 5500X3D 6-Core Processor"
+    }
+  },
+  "exams": {
+    "28": {
+      "pid": 189310,
+      "sampling_interval_seconds": 0.5,
+      "gpu_device_uuids": [
+        "GPU-2529d060-d0eb-4850-6f4c-4ac25f032429"
+      ],
+      "errors": {},
+      "environment_id": "98843e6540ab6a4c"
+    },
+    "380": {
+      "pid": 189310,
+      "sampling_interval_seconds": 0.5,
+      "gpu_device_uuids": [
+        "GPU-2529d060-d0eb-4850-6f4c-4ac25f032429"
+      ],
+      "errors": {},
+      "environment_id": "98843e6540ab6a4c"
+    },
+    "854": {
+      "pid": 189310,
+      "sampling_interval_seconds": 0.5,
+      "gpu_device_uuids": [
+        "GPU-2529d060-d0eb-4850-6f4c-4ac25f032429"
+      ],
+      "errors": {},
+      "environment_id": "98843e6540ab6a4c"
+    },
+    "937": {
+      "pid": 189310,
+      "sampling_interval_seconds": 0.5,
+      "gpu_device_uuids": [
+        "GPU-2529d060-d0eb-4850-6f4c-4ac25f032429"
+      ],
+      "errors": {},
+      "environment_id": "98843e6540ab6a4c"
+    },
+    "315": {
+      "pid": 189310,
+      "sampling_interval_seconds": 0.5,
+      "gpu_device_uuids": [
+        "GPU-2529d060-d0eb-4850-6f4c-4ac25f032429"
+      ],
+      "errors": {},
+      "environment_id": "98843e6540ab6a4c"
+    },
+    "428": {
+      "pid": 189310,
+      "sampling_interval_seconds": 0.5,
+      "gpu_device_uuids": [
+        "GPU-2529d060-d0eb-4850-6f4c-4ac25f032429"
+      ],
+      "errors": {},
+      "environment_id": "98843e6540ab6a4c"
+    },
+    "752": {
+      "pid": 189310,
+      "sampling_interval_seconds": 0.5,
+      "gpu_device_uuids": [
+        "GPU-2529d060-d0eb-4850-6f4c-4ac25f032429"
+      ],
+      "errors": {},
+      "environment_id": "98843e6540ab6a4c"
+    },
+    "13": {
+      "pid": 189310,
+      "sampling_interval_seconds": 0.5,
+      "gpu_device_uuids": [
+        "GPU-2529d060-d0eb-4850-6f4c-4ac25f032429"
+      ],
+      "errors": {},
+      "environment_id": "98843e6540ab6a4c"
+    },
+    "538": {
+      "pid": 189310,
+      "sampling_interval_seconds": 0.5,
+      "gpu_device_uuids": [
+        "GPU-2529d060-d0eb-4850-6f4c-4ac25f032429"
+      ],
+      "errors": {},
+      "environment_id": "98843e6540ab6a4c"
+    },
+    "965": {
+      "pid": 189310,
+      "sampling_interval_seconds": 0.5,
+      "gpu_device_uuids": [
+        "GPU-2529d060-d0eb-4850-6f4c-4ac25f032429"
+      ],
+      "errors": {},
+      "environment_id": "98843e6540ab6a4c"
+    },
+    "447": {
+      "pid": 189310,
+      "sampling_interval_seconds": 0.5,
+      "gpu_device_uuids": [
+        "GPU-2529d060-d0eb-4850-6f4c-4ac25f032429"
+      ],
+      "errors": {},
+      "environment_id": "98843e6540ab6a4c"
+    },
+    "836": {
+      "pid": 189310,
+      "sampling_interval_seconds": 0.5,
+      "gpu_device_uuids": [
+        "GPU-2529d060-d0eb-4850-6f4c-4ac25f032429"
+      ],
+      "errors": {},
+      "environment_id": "98843e6540ab6a4c"
+    },
+    "603": {
+      "pid": 189310,
+      "sampling_interval_seconds": 0.5,
+      "gpu_device_uuids": [
+        "GPU-2529d060-d0eb-4850-6f4c-4ac25f032429"
+      ],
+      "errors": {},
+      "environment_id": "98843e6540ab6a4c"
+    },
+    "676": {
+      "pid": 189310,
+      "sampling_interval_seconds": 0.5,
+      "gpu_device_uuids": [
+        "GPU-2529d060-d0eb-4850-6f4c-4ac25f032429"
+      ],
+      "errors": {},
+      "environment_id": "98843e6540ab6a4c"
+    },
+    "44": {
+      "pid": 189310,
+      "sampling_interval_seconds": 0.5,
+      "gpu_device_uuids": [
+        "GPU-2529d060-d0eb-4850-6f4c-4ac25f032429"
+      ],
+      "errors": {},
+      "environment_id": "98843e6540ab6a4c"
+    },
+    "129": {
+      "pid": 189310,
+      "sampling_interval_seconds": 0.5,
+      "gpu_device_uuids": [
+        "GPU-2529d060-d0eb-4850-6f4c-4ac25f032429"
+      ],
+      "errors": {},
+      "environment_id": "98843e6540ab6a4c"
+    },
+    "518": {
+      "pid": 189310,
+      "sampling_interval_seconds": 0.5,
+      "gpu_device_uuids": [
+        "GPU-2529d060-d0eb-4850-6f4c-4ac25f032429"
+      ],
+      "errors": {},
+      "environment_id": "98843e6540ab6a4c"
+    },
+    "793": {
+      "pid": 189310,
+      "sampling_interval_seconds": 0.5,
+      "gpu_device_uuids": [
+        "GPU-2529d060-d0eb-4850-6f4c-4ac25f032429"
+      ],
+      "errors": {},
+      "environment_id": "98843e6540ab6a4c"
+    },
+    "550": {
+      "pid": 189310,
+      "sampling_interval_seconds": 0.5,
+      "gpu_device_uuids": [
+        "GPU-2529d060-d0eb-4850-6f4c-4ac25f032429"
+      ],
+      "errors": {},
+      "environment_id": "98843e6540ab6a4c"
+    },
+    "631": {
+      "pid": 189310,
+      "sampling_interval_seconds": 0.5,
+      "gpu_device_uuids": [
+        "GPU-2529d060-d0eb-4850-6f4c-4ac25f032429"
+      ],
+      "errors": {},
+      "environment_id": "98843e6540ab6a4c"
+    },
+    "330": {
+      "pid": 189310,
+      "sampling_interval_seconds": 0.5,
+      "gpu_device_uuids": [
+        "GPU-2529d060-d0eb-4850-6f4c-4ac25f032429"
+      ],
+      "errors": {},
+      "environment_id": "98843e6540ab6a4c"
+    },
+    "90": {
+      "pid": 189310,
+      "sampling_interval_seconds": 0.5,
+      "gpu_device_uuids": [
+        "GPU-2529d060-d0eb-4850-6f4c-4ac25f032429"
+      ],
+      "errors": {},
+      "environment_id": "98843e6540ab6a4c"
+    },
+    "608": {
+      "pid": 189310,
+      "sampling_interval_seconds": 0.5,
+      "gpu_device_uuids": [
+        "GPU-2529d060-d0eb-4850-6f4c-4ac25f032429"
+      ],
+      "errors": {},
+      "environment_id": "98843e6540ab6a4c"
+    },
+    "887": {
+      "pid": 189310,
+      "sampling_interval_seconds": 0.5,
+      "gpu_device_uuids": [
+        "GPU-2529d060-d0eb-4850-6f4c-4ac25f032429"
+      ],
+      "errors": {},
+      "environment_id": "98843e6540ab6a4c"
+    },
+    "175": {
+      "pid": 189310,
+      "sampling_interval_seconds": 0.5,
+      "gpu_device_uuids": [
+        "GPU-2529d060-d0eb-4850-6f4c-4ac25f032429"
+      ],
+      "errors": {},
+      "environment_id": "98843e6540ab6a4c"
+    },
+    "760": {
+      "pid": 189310,
+      "sampling_interval_seconds": 0.5,
+      "gpu_device_uuids": [
+        "GPU-2529d060-d0eb-4850-6f4c-4ac25f032429"
+      ],
+      "errors": {},
+      "environment_id": "98843e6540ab6a4c"
+    },
+    "696": {
+      "pid": 189310,
+      "sampling_interval_seconds": 0.5,
+      "gpu_device_uuids": [
+        "GPU-2529d060-d0eb-4850-6f4c-4ac25f032429"
+      ],
+      "errors": {},
+      "environment_id": "98843e6540ab6a4c"
+    },
+    "194": {
+      "pid": 189310,
+      "sampling_interval_seconds": 0.5,
+      "gpu_device_uuids": [
+        "GPU-2529d060-d0eb-4850-6f4c-4ac25f032429"
+      ],
+      "errors": {},
+      "environment_id": "98843e6540ab6a4c"
+    },
+    "305": {
+      "pid": 189310,
+      "sampling_interval_seconds": 0.5,
+      "gpu_device_uuids": [
+        "GPU-2529d060-d0eb-4850-6f4c-4ac25f032429"
+      ],
+      "errors": {},
+      "environment_id": "98843e6540ab6a4c"
+    },
+    "344": {
+      "pid": 189310,
+      "sampling_interval_seconds": 0.5,
+      "gpu_device_uuids": [
+        "GPU-2529d060-d0eb-4850-6f4c-4ac25f032429"
+      ],
+      "errors": {},
+      "environment_id": "98843e6540ab6a4c"
+    }
+  }
+}

@@ -38,6 +38,14 @@ from utils.project.evaluation.mmwhs_official_aorta import (
     validate_saved_prediction,
 )
 from utils.project.runtime.notebook_env import load_notebook_pipeline_config
+from utils.project.runtime.resource_monitor import (
+    ResourceMonitor,
+    add_resource_monitoring_arguments,
+    apply_resource_monitoring_options,
+    persist_resource_diagnostics,
+    read_resource_diagnostics,
+    resource_metadata,
+)
 from utils.project.runtime.run_notification import notify_run_completion
 from utils.utils.json_io import load_json_file, save_json_atomic
 from utils.project.runtime.run_logging import add_run_file_handler
@@ -248,6 +256,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Avisa no desktop e toca um som ao terminar o run.",
     )
     parser.add_argument("--verbose", action="store_true")
+    add_resource_monitoring_arguments(parser)
     return parser
 
 
@@ -428,6 +437,8 @@ def process_external_exam(
         "aorta_evaluation_status": None,
         "aorta_evaluation_error": None,
     }
+    monitor = ResourceMonitor(config)
+    monitor.start()
 
     try:
         native_image = load_ccta_volume(record).astype(np.float32, copy=False)
@@ -782,9 +793,17 @@ def process_external_exam(
             exam_dir.mkdir(parents=True, exist_ok=True)
             (exam_dir / "error.txt").write_text(str(error), encoding="utf-8")
     finally:
+        monitor.finish(result)
         result["execution_time_seconds"] = float(time.perf_counter() - started)
         if exam_dir is not None:
-            save_json_atomic(result, exam_dir / "result.json")
+            save_json_atomic(
+                {
+                    key: value
+                    for key, value in result.items()
+                    if key != "_resource_monitor_details"
+                },
+                exam_dir / "result.json",
+            )
     return result
 
 
@@ -909,6 +928,7 @@ def run(args: argparse.Namespace) -> RunPaths:
         if requested_gpu and not gpu_available:
             LOGGER.warning("GPU solicitada, mas indisponível; execução seguirá em CPU.")
 
+    apply_resource_monitoring_options(config, args)
     if args.resume_dir is None:
         save_config_json(config, str(config_path))
         try:
@@ -925,6 +945,7 @@ def run(args: argparse.Namespace) -> RunPaths:
                 "orcascore_visual_alignment": bool(args.align_orcascore),
                 "config_source": config_source,
                 "selected_exams": selected_exam_records,
+                "resource_monitoring": resource_metadata(config),
             },
             manifest_path,
         )
@@ -984,6 +1005,7 @@ def run(args: argparse.Namespace) -> RunPaths:
     )
 
     metadata_path = paths.run_dir / "metadata.json"
+    resource_path = paths.numeric_dir / "resource_monitoring_all.json"
     if args.resume_dir is not None and metadata_path.is_file():
         previous_started_at = load_json_file(metadata_path).get("started_at")
         if isinstance(previous_started_at, str):
@@ -996,6 +1018,9 @@ def run(args: argparse.Namespace) -> RunPaths:
             rows=rows,
             started_at=started_at,
             state="running",
+            resource_monitoring=resource_metadata(
+                config, read_resource_diagnostics(resource_path)
+            ),
         ),
         metadata_path,
     )
@@ -1041,6 +1066,9 @@ def run(args: argparse.Namespace) -> RunPaths:
                     rebuild_mask=False,
                     align_volume=args.align_orcascore,
                 )
+        persist_resource_diagnostics(
+            result, resource_path, f"{record['subset']}/{record['exam_id']}"
+        )
         rows = upsert_external_result(rows, result)
         save_numeric_results(rows, paths.numeric_dir)
         save_json_atomic(
@@ -1051,6 +1079,9 @@ def run(args: argparse.Namespace) -> RunPaths:
                 rows=rows,
                 started_at=started_at,
                 state="running",
+                resource_monitoring=resource_metadata(
+                    config, read_resource_diagnostics(resource_path)
+                ),
             ),
             metadata_path,
         )
@@ -1082,6 +1113,9 @@ def run(args: argparse.Namespace) -> RunPaths:
             rows=rows,
             started_at=started_at,
             state=final_state,
+            resource_monitoring=resource_metadata(
+                config, read_resource_diagnostics(resource_path)
+            ),
         ),
         metadata_path,
     )

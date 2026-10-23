@@ -463,3 +463,48 @@ validam configuração, modos, dataset, split e IDs; pares já registrados, incl
 falhas explícitas, não são reexecutados. O CSV por exame é a referência para
 retomar; tabelas agregadas são reconstruídas. Não execute dois processos na mesma
 pasta de retomada.
+
+## RAM e VRAM em um único exame: Mid versus High
+
+`pipeline_resource_benchmark.py` executa o pipeline completo em processos
+independentes e sequenciais. Por padrão, usa o exame 642: 275 fatias, óstios aceitos e Dice histórico 0,7497 em Mid e 0,7261 em High. O caso
+foi escolhido entre os exames de teste com Dice >= 0,65 nas duas resoluções,
+priorizando o número de fatias e, nos empates, o menor Dice entre as resoluções.
+É o máximo de fatias nesse grupo de boa segmentação; o banco completo também
+contém um caso de 277 fatias, cujo Dice High é 0,4272. Não representa o pior
+consumo de memória de todo o banco.
+
+```bash
+uv run python src/experiments/pipeline_resource_benchmark.py \
+  --image-id 642 \
+  --base-path /run/media/matheus/HD/DatasetsCCTA/ImageCAS/1-1000 \
+  --resolutions mid,high \
+  --gpu-index 0 \
+  --interval 0.1
+```
+
+No servidor, substitua `--base-path` pelo caminho do ImageCAS nesse equipamento.
+`--dry-run` verifica as entradas sem carregar os volumes. A GPU é obrigatória;
+falhas de CUDA não são tratadas como uma medição equivalente em CPU. A configuração
+base congelada é a mesma do artigo; em High aplicam-se os ajustes normais por
+resolução, inclusive 70 iterações Level Set. Não se trata de `no_downsampling`.
+
+- RAM: `ru_maxrss` do Linux, convertido de KiB para bytes. É o pico de memória
+  residente do worker, incluindo imports, contexto CUDA e buffers de imagem.
+- VRAM: máximo observado por PID via `nvidia-smi`, em intervalos de 0,1 s por
+  padrão. A memória total da placa ou de outros processos não entra nessa medida.
+  Picos menores que o intervalo de observação podem não ser capturados; o intervalo
+  efetivo depende também da duração da consulta ao driver.
+- Tempo: somente `process_image`, incluindo carregamento, pré-processamento,
+  aorta, óstios, artérias e métricas; sincroniza CUDA no começo e no fim. Imports
+  e inicialização do contexto CUDA ficam fora do cronômetro.
+
+Cada execução cria uma pasta nova em
+`output/segmentation/analysis/pipeline_resource_benchmark/runs/`, contendo
+`resource_summary.csv`, `results.json`, `mid.json`, `high.json`, logs e amostras de
+VRAM. As medidas originais ficam em bytes; a tabela também apresenta GiB (2³⁰
+bytes), explicitamente distintos de GB decimais. Configuração efetiva, GPU,
+UUID, driver, hostname, Dice e número de fatias acompanham a medição.
+
+Recursos de um exame em uma máquina não devem ser apresentados como média do
+banco nem combinados sem identificação com tempos de execução de outro servidor.

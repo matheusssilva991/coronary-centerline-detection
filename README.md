@@ -212,6 +212,41 @@ print(len(results["details"]), results["batches_processed"])
 O número solicitado de lotes é configurado por `NUM_BATCHES` (5 no JSON de
 referência); o planejamento considera a quantidade de exames selecionados.
 
+### Monitoramento opcional de RAM e VRAM
+
+As duas CLIs aceitam `--monitor-resources --resource-sampling-interval 0.5`:
+
+```bash
+uv run python src/segmentation_pipeline.py --split train --resolution mid --gpu \
+  --monitor-resources --resource-sampling-interval 0.5
+uv run python src/external_ccta_batch_pipeline.py --dataset mmwhs --resolution mid --gpu \
+  --monitor-resources --resource-sampling-interval 0.5
+```
+
+Os CSVs existentes recebem `ram_peak_observed_bytes`, `vram_peak_observed_bytes`,
+`ram_sample_count`, `vram_sample_count` e `resource_monitor_status`. A RAM é o RSS
+do PID atual, lido em `/proc`; a VRAM soma suas alocações reportadas pelo
+`nvidia-smi` em todas as GPUs, identificadas por UUID, sem mapear índices CUDA.
+Execuções CPU não consultam VRAM. Sem a opção, não há thread nem consultas de
+memória. `--no-monitor-resources` desativa uma configuração retomada.
+
+As amostras incluem início, fim e consultas periódicas com timeout de 1 segundo
+para `nvidia-smi`. O intervalo solicitado não é uma garantia de frequência:
+o tempo da consulta também conta. Valores indisponíveis ficam vazios; os estados
+são `disabled`, `ok`, `partial` ou `unavailable`. Falhas de coleta não são falhas
+da segmentação. Ambiente, protocolo e erros ficam nos metadados e em
+`numeric/resource_monitoring_<split>.json` (`all` para o batch externo).
+Na retomada, os resultados dos exames não reexecutados são preservados; dados
+antigos não recebem estimativas retrospectivas.
+
+São **máximos observados**, não picos exatos nem memória incremental exclusiva
+do exame: incluem pools/caches retidos entre exames e visuais habilitados.
+Nenhuma limpeza de memória é forçada. Para comparar métodos ou hardware,
+controle coorte, configuração e protocolo; o benchmark isolado em
+`src/experiments/pipeline_resource_benchmark.py` mantém seu worker independente,
+RSS máximo no ciclo de vida e seleção de GPU antes da inicialização CUDA.
+Seus números não são diretamente equivalentes aos deste monitor em lote.
+
 ### Notebooks Jupyter
 
 Execute os notebooks para análise exploratória e visualização:

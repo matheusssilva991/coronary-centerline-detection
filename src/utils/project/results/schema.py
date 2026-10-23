@@ -14,6 +14,7 @@ from utils.project.results.columns import (
     OSTIA_STATUS_PORTUGUESE_LABELS,
     READABLE_BOOL_COLUMNS,
     READABLE_COLUMN_NAMES,
+    RESOURCE_COLUMNS,
     RESULT_COLUMNS,
     STATUS_LABELS,
     STATUS_PORTUGUESE_LABELS,
@@ -265,6 +266,7 @@ def build_result_row(result: dict[str, Any]) -> dict[str, Any]:
     row = {
         # Métricas e diagnósticos da segmentação arterial.
         "IMG_ID": result.get("IMG_ID"),
+        **{column: _get_result_value(result, column) for column in RESOURCE_COLUMNS},
         "dice_artery": _get_result_value(result, "dice_artery"),
         "dice_artery_before_morphology": _get_result_value(
             result, "dice_artery_before_morphology"

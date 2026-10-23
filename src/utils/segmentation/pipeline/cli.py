@@ -5,6 +5,8 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+from utils.project.runtime.resource_monitor import add_resource_monitoring_arguments
+
 
 def _parse_rg_comparison_window(value: str) -> int:
     """Converte ``ALL`` ou um tamanho inteiro para a representação interna."""
@@ -435,6 +437,7 @@ def build_parser(default_base_path, default_output_dir):
         action="store_true",
         help="Avisa no desktop e toca um som ao terminar o run.",
     )
+    add_resource_monitoring_arguments(parser)
     return parser
 
 

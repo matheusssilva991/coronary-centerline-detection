@@ -16,6 +16,10 @@ from utils.utils.json_io import make_json_safe, save_json_atomic
 from utils.project.dataframe import require_series_column, to_numeric_series
 from utils.project.results.paths import metadata_filename
 from utils.project.results.schema import add_internal_result_aliases
+from utils.project.runtime.resource_monitor import (
+    read_resource_diagnostics,
+    resource_metadata,
+)
 
 
 METADATA_SCHEMA_VERSION = 3
@@ -302,6 +306,7 @@ def build_metadata(
     results: pd.DataFrame | None = None,
     batch_timings: Sequence[dict[str, Any]] = (),
     expected_batches: Sequence[int] | None = None,
+    resource_diagnostics: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Monta metadata portátil com configuração e resultados essenciais."""
     configuration = {
@@ -318,6 +323,10 @@ def build_metadata(
         ),
         **_compact_configuration(config, legacy_result_config),
     }
+    if "RESOURCE_MONITORING" in config or resource_diagnostics:
+        configuration["resource_monitoring"] = resource_metadata(
+            config, resource_diagnostics
+        )
     return {
         "metadata_schema_version": METADATA_SCHEMA_VERSION,
         "run": {
@@ -357,6 +366,9 @@ def save_metadata(
         results=results,
         batch_timings=batch_timings,
         expected_batches=expected_batches,
+        resource_diagnostics=read_resource_diagnostics(
+            Path(output_dir) / f"resource_monitoring_{split_name}.json"
+        ),
     )
 
     output_dir = Path(output_dir)
