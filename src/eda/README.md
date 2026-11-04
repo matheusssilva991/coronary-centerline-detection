@@ -35,6 +35,7 @@ export IMAGECAS_BASE_PATH=/caminho/para/ImageCAS/1-1000
 
 | Notebook | Objetivo | Entrada principal | Saída | Custo |
 |---|---|---|---|---|
+| [artery_volume_analysis.ipynb](images/artery_volume_analysis.ipynb) | Quantificar volumes em mL e relacioná-los ao Dice, óstios e volume predito em Mid/High | Máscaras ImageCAS, classe 1; canonical e configurações efetivas por split | CSV incremental em `imagecas_artery_volume/artery_volumes.csv`; figuras Plotly de distribuição, Dice/delta, faixas e predição × referência; análise de outliers | Médio na primeira execução; baixo com CSV |
 | [ccta_dataset_analysis.ipynb](images/ccta_dataset_analysis.ipynb) | Caracterizar e visualizar volumes CCTA do ImageCAS, OrCaScore e MM-WHS | CCTA dos três bancos e pares CTI/CTAI do OrCaScore | Inventário, orientação, geometria, comparação da amostragem do OrCaScore, amostra HU e vistas axiais | Médio ao carregar dez volumes |
 | [mmwhs_heart_label_visualization.ipynb](images/mmwhs_heart_label_visualization.ipynb) | Inspecionar os sete rótulos cardíacos do MM-WHS em 2D e 3D | Imagem e rótulo NIfTI de um exame MM-WHS | Corte axial central e cena K3D multirrótulo | Baixo para 2D; médio para a malha 3D |
 | [totalsegmentator_label_visualization.ipynb](images/totalsegmentator_label_visualization.ipynb) | Inspecionar CT e máscaras selecionáveis de aorta, coração e outras estruturas do TotalSegmentator | Um exame com `ct.nii.gz` e `segmentations/`; caminho por `TOTALSEGMENTATOR_BASE_PATH` ou descoberta nos discos montados | Fatias completas axiais, coronais e sagitais; resumo volumétrico e 3D opcional | Baixo/médio para 2D; médio para 3D |
@@ -103,5 +104,14 @@ fontes explícitas para não alterar o significado dos experimentos.
   `output/segmentation/analysis/`, persistem somente entradas compactas usadas
   por outras análises, como bad cases, métricas de círculos e runs de
   sensibilidade.
+- A análise de volume arterial também persiste o CSV compacto
+  `imagecas_artery_volume/artery_volumes.csv` após cada exame. Ela retoma arquivos
+  pendentes/com erro, sem reler máscaras concluídas. `FORCE_RECOMPUTE = True`
+  recalcula tudo; use-o quando as máscaras concluídas forem modificadas.
+  Sem o dataset montado, é possível consultar o CSV com aviso de verificação
+  incompleta. O volume usa somente `label == 1`, na geometria nativa.
+  `OUTLIER_METHOD` seleciona IQR (padrão: 1,5×) ou média ± DP (padrão: 2×).
+  A exclusão de outliers é apenas descritiva, usa os volumes de referência
+  disponíveis e não altera os CSVs nem as referências canônicas.
 - Seções com vesselness, segmentação completa ou visualização 3D são as mais
   demoradas e podem ser executadas isoladamente após o carregamento.

@@ -185,6 +185,7 @@ def _add_mask_mesh(
     color: int,
     opacity: float,
     name: str,
+    smoothing_iterations: int = 0,
 ) -> None:
     """Adiciona uma máscara 3D ao plot quando ela contém voxels."""
     mask_bool = np.asarray(mask) > 0
@@ -195,6 +196,18 @@ def _add_mask_mesh(
     verts, faces, _, _ = measure.marching_cubes(
         mask_bool.astype(float), level=0.5, spacing=spacing
     )
+    # Suaviza somente os vértices; a máscara de entrada permanece intacta.
+    if smoothing_iterations:
+        edges = np.concatenate((faces[:, [0, 1]], faces[:, [1, 2]], faces[:, [2, 0]]))
+        edges = np.unique(np.sort(edges, axis=1), axis=0)
+        source = np.concatenate((edges[:, 0], edges[:, 1]))
+        target = np.concatenate((edges[:, 1], edges[:, 0]))
+        degree = np.bincount(source, minlength=len(verts))
+        for _ in range(smoothing_iterations):
+            sums = np.zeros_like(verts)
+            np.add.at(sums, source, verts[target])
+            means = sums / np.maximum(degree[:, None], 1)
+            verts = verts + 0.15 * (means - verts)
     plot += k3d.mesh(
         verts.astype(np.float32),
         faces.astype(np.uint32),
@@ -386,9 +399,18 @@ def visualize_binary_masks_comparison(
     predicted_color: int = 0xFF0000,
     reference_opacity: float = 0.35,
     predicted_opacity: float = 0.35,
+    mesh_smoothing_iterations: int = 0,
+    camera: Sequence[float] | None = None,
 ) -> Any:
     """Renderiza duas máscaras binárias comparáveis no mesmo gráfico 3D."""
 
+    if (
+        mesh_smoothing_iterations < 0
+        or int(mesh_smoothing_iterations) != mesh_smoothing_iterations
+    ):
+        raise ValueError("mesh_smoothing_iterations deve ser um inteiro não negativo.")
+    if camera is not None and (len(camera) != 9 or not np.isfinite(camera).all()):
+        raise ValueError("camera deve conter nove valores finitos.")
     reference = np.asarray(reference_mask) > 0
     prediction = np.asarray(predicted_mask) > 0
     if reference.ndim != 3 or prediction.ndim != 3:
@@ -410,6 +432,10 @@ def visualize_binary_masks_comparison(
         create_plot(name=plot_name, height=800, grid_visible=True, axes=axes_labels),
     )
 
+    if camera is not None:
+        plot.camera_auto_fit = False
+        plot.camera = list(camera)
+
     _add_mask_mesh(
         plot,
         reference,
@@ -417,6 +443,7 @@ def visualize_binary_masks_comparison(
         color=reference_color,
         opacity=reference_opacity,
         name=reference_name,
+        smoothing_iterations=int(mesh_smoothing_iterations),
     )
     _add_mask_mesh(
         plot,
@@ -425,6 +452,7 @@ def visualize_binary_masks_comparison(
         color=predicted_color,
         opacity=predicted_opacity,
         name=predicted_name,
+        smoothing_iterations=int(mesh_smoothing_iterations),
     )
 
     if save_html_path is not None:

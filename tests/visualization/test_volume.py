@@ -128,6 +128,23 @@ class LabelMapVisualizationTests(unittest.TestCase):
 
 
 class BinaryMaskComparisonTests(unittest.TestCase):
+    def test_mesh_smoothing_preserves_input_masks_and_camera(self):
+        reference = np.zeros((8, 9, 10), dtype=np.uint8)
+        reference[2:6, 2:7, 2:8] = 1
+        original = reference.copy()
+        camera = [20, -20, 20, 4, 4, 5, 0, 0, 1]
+        plot = visualize_binary_masks_comparison(
+            reference,
+            reference.copy(),
+            display_plot=False,
+            mesh_smoothing_iterations=2,
+            camera=camera,
+        )
+        np.testing.assert_array_equal(reference, original)
+        self.assertEqual(list(plot.camera), camera)
+        self.assertFalse(plot.camera_auto_fit)
+        self.assertEqual(len(plot.objects), 2)
+
     @patch("utils.visualization.images.volume._add_mask_mesh")
     @patch("utils.visualization.images.volume.create_plot")
     def test_builds_named_reference_and_prediction_meshes(
