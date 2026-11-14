@@ -10,6 +10,10 @@ from typing import Any, Sequence
 
 import numpy as np
 import pandas as pd
+from utils.project.evaluation.artery_distances import (
+    distance_metric_metadata,
+    summarize_artery_distances,
+)
 
 from utils.utils.json_io import make_json_safe, save_json_atomic
 
@@ -22,7 +26,7 @@ from utils.project.runtime.resource_monitor import (
 )
 
 
-METADATA_SCHEMA_VERSION = 3
+METADATA_SCHEMA_VERSION = 4
 EFFECTIVE_CONFIG_RELATIVE_PATH = "../config/effective_pipeline_config.json"
 
 
@@ -269,9 +273,18 @@ def build_metadata_results(
     return make_json_safe(
         {
             "execution_time": _execution_time(batch_timings, expected_batches),
+            "artery_distances": summarize_artery_distances(dataframe),
             "dice": {
                 "before_morphology": _metric_summary(before_dice),
                 "after_morphology": _metric_summary(after_dice),
+                **{
+                    stage: _metric_summary(
+                        require_series_column(dataframe, f"dice_artery_{stage}")
+                        if f"dice_artery_{stage}" in dataframe.columns
+                        else empty_numeric
+                    )
+                    for stage in ("after_closing", "closing_delta", "dilation_delta")
+                },
             },
             "ostia": {
                 "processed_exam_count": total,
@@ -322,6 +335,7 @@ def build_metadata(
             else None
         ),
         **_compact_configuration(config, legacy_result_config),
+        "artery_distance_metrics": distance_metric_metadata(config),
     }
     if "RESOURCE_MONITORING" in config or resource_diagnostics:
         configuration["resource_monitoring"] = resource_metadata(

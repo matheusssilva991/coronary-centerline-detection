@@ -41,6 +41,10 @@ from utils.experiments.sweep_common import (  # noqa: E402
     write_json,
 )
 from utils.project.config import scale_config_to_resolution  # noqa: E402
+from utils.project.evaluation.artery_distances import (  # noqa: E402
+    add_distance_metric_arguments,
+    distance_metric_metadata,
+)
 from utils.project.runtime.notebook_env import resolve_imagecas_base_path  # noqa: E402
 
 
@@ -216,8 +220,7 @@ def failure_correction_variants() -> list[dict[str, Any]]:
                     "fc.max_seeds_per_ostium": 8,
                 },
                 threshold_rule=(
-                    "configured lower HU limit + fuzzy object argmax "
-                    "(P99.8/P99.96)"
+                    "configured lower HU limit + fuzzy object argmax (P99.8/P99.96)"
                 ),
                 vesselness_rule=no_weight,
             ),
@@ -401,6 +404,7 @@ def build_parser() -> argparse.ArgumentParser:
     gpu_group = parser.add_mutually_exclusive_group()
     gpu_group.add_argument("--gpu", dest="use_gpu", action="store_true", default=None)
     gpu_group.add_argument("--no-gpu", dest="use_gpu", action="store_false")
+    add_distance_metric_arguments(parser)
     parser.add_argument(
         "--dry-run",
         action="store_true",
@@ -444,6 +448,16 @@ def make_diagnostics(run_dir: Path, image_rows: list[dict[str, Any]]) -> None:
         "ostia_success",
         "artery_voxels",
     ]
+    result_columns.extend(
+        column
+        for column in (
+            "dice_artery_after_closing",
+            "dice_artery_closing_delta",
+            "dice_artery_dilation_delta",
+            "artery_voxels_after_closing",
+        )
+        if column in df.columns
+    )
 
     # Algumas imagens falham em todas as variantes e ficam apenas com Dice NaN;
     # elas são listadas separadamente para não interromper os diagnósticos.
@@ -573,6 +587,7 @@ def main() -> None:
         config_path=args.config_path,
         resolution=args.resolution,
         use_gpu=args.use_gpu,
+        distance_metrics=args.distance_metrics,
     )
     base_config = build_base_config(base_config_args)
     if args.ids and args.ids_file:
@@ -627,6 +642,7 @@ def main() -> None:
             "use_gpu": base_config.get("USE_GPU"),
             "variants": variants,
             "effective_base_config": base_config,
+            "artery_distance_metrics": distance_metric_metadata(base_config),
             "run_dir": str(run_dir),
         },
     )

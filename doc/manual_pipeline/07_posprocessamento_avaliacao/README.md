@@ -34,6 +34,90 @@ after = dice_score(stages["final_mask"], label)
 print({"before": before, "after": after, "delta": after - before})
 ```
 
+## Métricas salvas por estágio
+
+As novas execuções ImageCAS e as comparações RG/FC registram automaticamente as
+três etapas, sem repetir as operações nem salvar máscaras adicionais:
+
+| Coluna no CSV ImageCAS | Significado |
+|---|---|
+| `artery_dice_before_morphology` | Dice da segmentação bruta. |
+| `artery_dice_after_closing` | Dice após o fechamento. |
+| `artery_dice_after_morphology` | Dice final, após a dilatação. |
+| `artery_dice_closing_delta` | Dice após fechamento menos Dice bruto. |
+| `artery_dice_dilation_delta` | Dice final menos Dice após fechamento. |
+| `artery_dice_morphology_delta` | Ganho total: Dice final menos Dice bruto. |
+| `artery_voxel_count_after_closing` | Quantidade de voxels após fechamento. |
+
+Os deltas podem ser negativos. Por exame, o delta total corresponde à soma dos
+deltas do fechamento e da dilatação, salvo arredondamento numérico. As contagens
+pré/pós-morfologia e o Dice final já existentes permanecem inalterados.
+
+No código e nos CSVs fuzzy, os nomes internos são `dice_artery_*` e
+`artery_voxels_*`. Os resumos incluem média e quantidade de medidas disponíveis;
+as médias de deltas com coberturas diferentes não devem ser somadas como se
+representassem a mesma coorte.
+
+O batch externo registra `artery_voxels_after_closing` e
+`artery_volume_after_closing_ml`. O volume usa o espaçamento efetivo, em mm:
+`voxels × spacing_x × spacing_y × spacing_z / 1000`. Não calcula Dice arterial
+sem uma referência compatível.
+
+Runs antigos continuam legíveis, com os novos campos ausentes; nenhum valor é
+estimado retrospectivamente. A retomada preserva os exames concluídos e só mede
+novamente os exames explicitamente reexecutados. Falhas anteriores à segmentação
+não recebem Dice intermediário zero. Nenhum resultado histórico é migrado.
+
+## HD e AHD opcionais na máscara final
+
+Ative com `--distance-metrics` no pipeline ImageCAS ou na comparação fuzzy:
+
+```bash
+uv run python src/segmentation_pipeline.py --split train --resolution mid --gpu --distance-metrics
+uv run python src/experiments/fuzzy_pipeline_comparison.py --split train --sample-size 30 --resolution mid --gpu --distance-metrics
+```
+
+O padrão é `EVALUATION.distance_metrics=false`. `--no-distance-metrics` desativa
+explicitamente; sem flag, vale a configuração carregada. Apenas a máscara arterial
+final (após fechamento e dilatação) é avaliada, para RG e FC. Não há novas medidas
+da aorta externa ou das máscaras arteriais intermediárias.
+Na retomada sem `--config-file`, a opção é recuperada do snapshot original do
+run; uma flag explícita prevalece. Lotes concluídos não são recalculados, portanto
+uma retomada pode conter exames com e sem essas medidas.
+
+As superfícies são os centros dos voxels removidos por uma erosão com seis
+vizinhos, considerando o exterior do volume como fundo. Não há suavização,
+subamostragem ou descarte de componentes. As coordenadas usam o espaçamento
+efetivo da resolução, em mm, não o espaçamento original sem os fatores de escala.
+Para distâncias ao ponto mais próximo nos dois sentidos, `d(A,B)` e `d(B,A)`:
+
+- `HD = max(max(d(A,B)), max(d(B,A)))`;
+- `AHD = (mean(d(A,B)) + mean(d(B,A))) / 2`.
+
+Cada sentido tem o mesmo peso na AHD. Isso difere de concatenar todas as
+distâncias e tirar uma média ponderada pelo número de pontos. A convenção não
+deve ser considerada equivalente à avaliação da IA sem conferir seu código.
+
+Os CSVs incluem `artery_hd_mm`, `artery_ahd_mm`,
+`artery_distance_metrics_status` e `artery_distance_metrics_error`.
+Os status possíveis são `disabled`, `ok`, `prediction_empty`, `reference_empty`,
+`both_empty`, `not_evaluated` e `error`. Máscaras não vazias idênticas dão zero;
+qualquer máscara vazia deixa as distâncias indisponíveis, inclusive ambas vazias.
+Erros da avaliação não descartam a segmentação nem alteram seu Dice.
+
+Resumos apresentam média, DP amostral, mediana e N válido, além das contagens de
+status. Essas estatísticas são condicionadas às distâncias disponíveis: sempre
+informar a cobertura, especialmente quando houver falhas. Runs antigos ficam sem
+esses valores, sem imputação de zero. Nenhuma máscara adicional é salva.
+O cálculo usa CPU e aumenta o tempo/memória da avaliação; tempos com a opção
+ativada não são diretamente comparáveis a runs sem ela.
+
+O helper independente é `surface_distance_metrics(prediction, reference, spacing)`
+em `utils.utils.metrics`; exige máscaras 3D alinhadas e espaçamento válido.
+Os wrappers de segmentação aceitam `spacing=` opcional: ele é obrigatório para
+produzir distâncias em mm quando a avaliação está ativada. Os pipelines em lote
+passam esse espaçamento automaticamente.
+
 ## Referência das funções
 
 Os exemplos abaixo continuam o estado do exemplo sintético desta página, salvo indicação de entrada real. Os tipos `Any`, `NDArray` e `Sequence` reproduzem as anotações do código; os contratos de conteúdo estão nas tabelas.
@@ -68,6 +152,23 @@ custom = get_artery_postprocessing_stages(
     raw_mask, config, closing_radius=1, dilation_radius=0
 )
 assert np.array_equal(custom["closed_mask"], custom["final_mask"])
+```
+
+### `evaluate_artery_postprocessing_stages`
+
+Avalia máscaras binárias já produzidas, sem aplicar morfologia ou alterá-las.
+Recebe `raw_mask`, `closed_mask` e `final_mask`; `label_artery=None` desativa o
+cálculo de Dice e `spacing=None` desativa os volumes em mL.
+
+```python
+from utils.segmentation.pipeline.arteries import evaluate_artery_postprocessing_stages
+
+metrics = evaluate_artery_postprocessing_stages(
+    stages["raw_mask"], stages["closed_mask"], stages["final_mask"],
+    label_artery=label, spacing=(0.5, 0.5, 1.0)
+)
+print(metrics["dice_artery_after_closing"])
+print(metrics["dice_artery_closing_delta"], metrics["dice_artery_dilation_delta"])
 ```
 
 ### `postprocess_artery_mask`

@@ -483,7 +483,9 @@ def main() -> None:
                 continue
             config = spec["config"]
             experiment = spec["experiment"]
-            row = make_image_result_row(image_id, name, args.split, experiment)
+            row = make_image_result_row(
+                image_id, name, args.split, experiment, config=config
+            )
 
             load_key = spec["load_key"]
             if load_key not in case_cache and load_key not in case_errors:

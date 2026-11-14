@@ -191,7 +191,12 @@ evaluated = segment_arteries_from_vesselness(
 assert evaluated["dice_artery"] == evaluated["dice_artery_after_morphology"]
 ```
 
-O retorno inclui artery_voxels_before_morphology, artery_voxels_after_morphology e alias artery_voxels. FC acrescenta fc_processed_voxels, fc_effective_alpha, fc_object_seed_count e fc_candidate_voxels_final; valores não aplicáveis podem ser None.
+O retorno inclui artery_voxels_before_morphology, artery_voxels_after_closing,
+artery_voxels_after_morphology e alias artery_voxels. Também inclui
+dice_artery_after_closing, dice_artery_closing_delta e dice_artery_dilation_delta,
+separando os efeitos das operações. FC acrescenta fc_processed_voxels,
+fc_effective_alpha, fc_object_seed_count e fc_candidate_voxels_final; valores não
+aplicáveis podem ser None. Consulte a [avaliação por estágio](../07_posprocessamento_avaliacao/README.md#métricas-salvas-por-estágio).
 
 ### `segment_arteries_from_ostia`
 

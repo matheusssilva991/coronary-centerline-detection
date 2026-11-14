@@ -206,7 +206,11 @@ class ComponentBehaviorTests(TestCase):
             patch.object(
                 helpers,
                 "segment_arteries_from_vesselness",
-                return_value={"raw_artery_mask": label, "artery_mask": label},
+                return_value={
+                    "raw_artery_mask": label,
+                    "artery_mask": label,
+                    "dice_artery": 1.0,
+                },
             ) as arteries,
         ):
             rows = []

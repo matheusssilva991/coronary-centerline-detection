@@ -142,7 +142,7 @@ class RunSummaryTests(unittest.TestCase):
         self.assertEqual(row["image_slice_count_median"], 115)
         self.assertEqual(row["aorta_circle_count_mean"], 65)
         self.assertEqual(row["artery_voxel_count_mean"], 25)
-        self.assertEqual(row["summary_schema_version"], 2)
+        self.assertEqual(row["summary_schema_version"], 3)
         self.assertNotIn("IMG_ID", row)
         self.assertNotIn("config_sha256", row)
         self.assertNotIn("artery_segmentation_method", row)
@@ -203,7 +203,7 @@ class RunSummaryTests(unittest.TestCase):
             set(metadata),
             {"metadata_schema_version", "run", "configuration", "results"},
         )
-        self.assertEqual(metadata["metadata_schema_version"], 3)
+        self.assertEqual(metadata["metadata_schema_version"], 4)
         self.assertEqual(metadata["results"]["execution_time"]["seconds"], 15)
         self.assertAlmostEqual(
             metadata["results"]["dice"]["before_morphology"]["mean"], 0.45

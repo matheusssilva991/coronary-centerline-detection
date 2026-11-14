@@ -7,6 +7,10 @@ from typing import Any, cast
 
 import numpy as np
 import pandas as pd
+from utils.project.evaluation.artery_distances import (
+    DISTANCE_RESULT_COLUMNS,
+    summarize_artery_distances,
+)
 
 from utils.project.results.columns import (
     ARTERY_BRANCH_COLUMNS,
@@ -267,12 +271,25 @@ def build_result_row(result: dict[str, Any]) -> dict[str, Any]:
         # Métricas e diagnósticos da segmentação arterial.
         "IMG_ID": result.get("IMG_ID"),
         **{column: _get_result_value(result, column) for column in RESOURCE_COLUMNS},
+        **{
+            column: _get_result_value(result, column)
+            for column in DISTANCE_RESULT_COLUMNS
+        },
         "dice_artery": _get_result_value(result, "dice_artery"),
         "dice_artery_before_morphology": _get_result_value(
             result, "dice_artery_before_morphology"
         ),
         "dice_artery_after_morphology": _get_result_value(
             result, "dice_artery_after_morphology"
+        ),
+        "dice_artery_after_closing": _get_result_value(
+            result, "dice_artery_after_closing"
+        ),
+        "dice_artery_closing_delta": _get_result_value(
+            result, "dice_artery_closing_delta"
+        ),
+        "dice_artery_dilation_delta": _get_result_value(
+            result, "dice_artery_dilation_delta"
         ),
         "dice_artery_morphology_delta": _get_result_value(
             result, "dice_artery_morphology_delta"
@@ -283,6 +300,9 @@ def build_result_row(result: dict[str, Any]) -> dict[str, Any]:
         ),
         "artery_voxels_after_morphology": _get_result_value(
             result, "artery_voxels_after_morphology"
+        ),
+        "artery_voxels_after_closing": _get_result_value(
+            result, "artery_voxels_after_closing"
         ),
         "artery_segmentation_method": _get_result_value(
             result, "artery_segmentation_method", "region_growing"
@@ -662,6 +682,7 @@ def summarize_results_df(df: pd.DataFrame) -> dict[str, Any]:
         ("image_slice_count", True),
         ("artery_voxels", False),
         ("artery_voxels_before_morphology", False),
+        ("artery_voxels_after_closing", False),
         ("artery_voxels_after_morphology", False),
         ("threshold_voxels", False),
         ("lcc_voxels", False),
@@ -694,6 +715,26 @@ def summarize_results_df(df: pd.DataFrame) -> dict[str, Any]:
         if not valid_upper_thresholds.empty
         else None
     )
+
+    # Medidas intermediárias não usam o Dice final como fallback em runs antigos.
+    for column in (
+        "dice_artery_after_closing",
+        "dice_artery_closing_delta",
+        "dice_artery_dilation_delta",
+    ):
+        values = _numeric_series(df, column).dropna()
+        summary[f"{column}_count"] = int(len(values))
+        summary[f"{column}_mean"] = float(values.mean()) if len(values) else None
+
+    distances = summarize_artery_distances(df)
+    for column in ("artery_hd_mm", "artery_ahd_mm"):
+        summary.update(
+            {f"{column}_{key}": value for key, value in distances[column].items()}
+        )
+    summary["artery_distance_metrics_status_counts"] = distances["status_counts"]
+    summary["artery_distance_metrics_missing_status_count"] = distances[
+        "missing_status_count"
+    ]
 
     # Métricas de Dice permanecem nulas quando nenhuma artéria foi segmentada.
     if dice_series.notna().any():

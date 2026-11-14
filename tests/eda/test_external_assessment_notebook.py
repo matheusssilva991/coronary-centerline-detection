@@ -13,15 +13,17 @@ import pandas as pd
 
 NOTEBOOK = (
     Path(__file__).resolve().parents[2]
-    / "src/eda/results/external_ccta_visual_assessment.ipynb"
+    / "src/eda/results/external_aorta_assessment.ipynb"
 )
 
 
 class ExternalAssessmentNotebookTest(unittest.TestCase):
     def setUp(self):
         self.cells = nbformat.read(NOTEBOOK, as_version=4).cells
+        self.by_id = {cell.id: cell for cell in self.cells}
         self.scope = {
             "pd": pd,
+            "REPO_ROOT": NOTEBOOK.parents[3],
             "display": Mock(),
             "print": Mock(),
             "Path": Path,
@@ -34,12 +36,20 @@ class ExternalAssessmentNotebookTest(unittest.TestCase):
 
         self.scope["os"] = os
         with patch.object(Path, "is_file", return_value=False):
-            exec(self.cells[3].source, self.scope)
+            exec(self.by_id["configuration"].source, self.scope)
         self.assertFalse(self.scope["VISUAL_AVAILABLE"])
         self.assertFalse(self.scope["MMWHS_NUMERIC_AVAILABLE"])
         self.scope["load_assessment_subset_lookup"].assert_not_called()
-        for index in (5, 18, 20, 22, 24, 25, 26):
-            exec(self.cells[index].source, self.scope)
+        for cell_id in (
+            "feedback-load",
+            "dice-load",
+            "dice-overall",
+            "dice-case",
+            "dice-test-overall",
+            "dice-test-common",
+            "dice-test-case",
+        ):
+            exec(self.by_id[cell_id].source, self.scope)
         self.assertEqual(self.scope["QUALITATIVE_SUBSET"], "train")
         self.assertEqual(self.scope["QUALITATIVE_RESOLUTION"], "mid")
         self.assertEqual(self.scope["QUALITATIVE_EXAM_ID"], "ct_train_1007")
@@ -54,12 +64,12 @@ class ExternalAssessmentNotebookTest(unittest.TestCase):
             autospec=True,
             side_effect=lambda path: str(path).endswith("results_all.csv"),
         ):
-            exec(self.cells[3].source, self.scope)
+            exec(self.by_id["configuration"].source, self.scope)
         self.assertTrue(self.scope["MMWHS_NUMERIC_AVAILABLE"])
         self.assertFalse(self.scope["VISUAL_AVAILABLE"])
         loader = Mock(return_value=pd.Series([0.8], index=["ct_train_1001"]))
         self.scope["load_mmwhs_train_aorta_dice"] = loader
-        exec(self.cells[18].source, self.scope)
+        exec(self.by_id["dice-load"].source, self.scope)
         self.assertEqual(loader.call_count, 2)
         self.assertEqual(self.scope["dice_by_case"].shape, (1, 2))
 
@@ -72,7 +82,7 @@ class ExternalAssessmentNotebookTest(unittest.TestCase):
             load_mmwhs_test_aorta_dice=Mock(return_value=series),
         )
         with self.assertRaisesRegex(ValueError, "label 820"):
-            exec(self.cells[24].source, self.scope)
+            exec(self.by_id["dice-test-overall"].source, self.scope)
 
     def test_notebook_validates_and_compiles(self):
         nbformat.validate(nbformat.read(NOTEBOOK, as_version=4))
@@ -95,8 +105,8 @@ class ExternalAssessmentNotebookTest(unittest.TestCase):
             RUN_DIRS={r: {"MM-WHS": Path("unused")} for r in ("mid", "high")},
             load_mmwhs_test_aorta_dice=Mock(side_effect=[mid, high]),
         )
-        exec(self.cells[24].source, self.scope)
-        exec(self.cells[25].source, self.scope)
+        exec(self.by_id["dice-test-overall"].source, self.scope)
+        exec(self.by_id["dice-test-common"].source, self.scope)
         overall = self.scope["test_dice_overall"]
         common = self.scope["test_dice_common_summary"]
         self.assertEqual(overall.loc["mid", "Exames válidos"], 34)

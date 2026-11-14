@@ -204,6 +204,19 @@ def build_external_metadata(
         for row in official_test_rows
         if has_valid_aorta_dice(row) and row.get("aorta_evaluation_status") == "success"
     ]
+    # A contagem intermediária pode existir em runs antigos sem volume em mL.
+    intermediate_summary = {}
+    dataframe = pd.DataFrame(rows)
+    for column in ("artery_voxels_after_closing", "artery_volume_after_closing_ml"):
+        values = (
+            numeric_series(dataframe, column).dropna()
+            if column in dataframe.columns
+            else pd.Series(dtype=float)
+        )
+        intermediate_summary[column] = {
+            "mean": float(values.mean()) if not values.empty else None,
+            "valid_exam_count": int(len(values)),
+        }
     return {
         "schema_version": 3,
         **(
@@ -220,6 +233,7 @@ def build_external_metadata(
         "processed_exam_count": len(rows),
         "status_counts": {str(key): int(value) for key, value in status_counts.items()},
         "execution_time": duration_breakdown(total_seconds),
+        "artery_postprocessing": intermediate_summary,
         "ground_truth_metrics": {
             "aorta": {
                 "available_exam_count": sum(

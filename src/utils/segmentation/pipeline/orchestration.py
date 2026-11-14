@@ -30,6 +30,7 @@ from utils.project.results import (
     summarize_batch_timing_records,
 )
 from utils.segmentation.pipeline.arteries import segment_arteries_from_ostia
+from utils.project.evaluation.artery_distances import pending_artery_distance_metrics
 from utils.segmentation.aorta.segmentation import classify_aorta_segmentation_feedback
 from utils.segmentation.pipeline.detection import (
     detect_and_evaluate_ostia,
@@ -50,9 +51,13 @@ IMAGE_RESULT_DEFAULTS = {
     "ostia_right": None,
     "artery_voxels": None,
     "artery_voxels_before_morphology": None,
+    "artery_voxels_after_closing": None,
     "artery_voxels_after_morphology": None,
     "dice_artery": None,
     "dice_artery_before_morphology": None,
+    "dice_artery_after_closing": None,
+    "dice_artery_closing_delta": None,
+    "dice_artery_dilation_delta": None,
     "dice_artery_after_morphology": None,
     "dice_artery_morphology_delta": None,
     "ostia_found": False,
@@ -228,6 +233,7 @@ def process_image(img_id, config, base_path, visual_output_dir=None):
     5. segmenta as artérias a partir dos óstios.
     """
     result = _new_image_result(img_id)
+    result.update(pending_artery_distance_metrics(config))
     monitor = ResourceMonitor(config)
     monitor.start()
     try:
@@ -335,6 +341,7 @@ def process_image(img_id, config, base_path, visual_output_dir=None):
             ostia_eval["ostia_left"],
             ostia_eval["ostia_right"],
             config,
+            spacing=scaled_spacing,
         )
         if visual_output_dir is not None:
             save_segmentation_visual(

@@ -6,6 +6,7 @@ import argparse
 from pathlib import Path
 
 from utils.project.runtime.resource_monitor import add_resource_monitoring_arguments
+from utils.project.evaluation.artery_distances import add_distance_metric_arguments
 
 
 def _parse_rg_comparison_window(value: str) -> int:
@@ -438,6 +439,7 @@ def build_parser(default_base_path, default_output_dir):
         help="Avisa no desktop e toca um som ao terminar o run.",
     )
     add_resource_monitoring_arguments(parser)
+    add_distance_metric_arguments(parser)
     return parser
 
 

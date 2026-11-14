@@ -18,9 +18,27 @@ from utils.project.results.schema import (
 )
 
 
-SUMMARY_SCHEMA_VERSION = 2
+SUMMARY_SCHEMA_VERSION = 3
 
 SUMMARY_SCIENTIFIC_METRICS = (
+    *(
+        f"{column}_{stat}"
+        for column in ("artery_hd_mm", "artery_ahd_mm")
+        for stat in ("count", "mean", "std", "median")
+    ),
+    "artery_distance_metrics_missing_status_count",
+    *(
+        f"artery_distance_metrics_status_{status}_count"
+        for status in (
+            "disabled",
+            "ok",
+            "prediction_empty",
+            "reference_empty",
+            "both_empty",
+            "not_evaluated",
+            "error",
+        )
+    ),
     "dice_artery_mean",
     "dice_artery_std",
     "dice_artery_median",
@@ -29,6 +47,12 @@ SUMMARY_SCIENTIFIC_METRICS = (
     "dice_artery_valid_ostia_mean",
     "dice_artery_invalid_ostia_mean",
     "dice_artery_before_morphology_mean",
+    "dice_artery_after_closing_count",
+    "dice_artery_after_closing_mean",
+    "dice_artery_closing_delta_count",
+    "dice_artery_closing_delta_mean",
+    "dice_artery_dilation_delta_count",
+    "dice_artery_dilation_delta_mean",
     "dice_artery_after_morphology_mean",
     "dice_artery_morphology_delta_mean",
     "effective_upper_threshold_hu_count",
@@ -52,6 +76,8 @@ SUMMARY_SCIENTIFIC_METRICS = (
     "artery_voxel_count_max",
     "artery_voxel_count_before_morphology_count",
     "artery_voxel_count_before_morphology_mean",
+    "artery_voxel_count_after_closing_count",
+    "artery_voxel_count_after_closing_mean",
     "artery_voxel_count_after_morphology_count",
     "artery_voxel_count_after_morphology_mean",
     "threshold_voxel_count_count",
@@ -219,13 +245,26 @@ def build_run_summary_row(
     config_source: str | None = None,
     config_sha256: str | None = None,
 ) -> dict[str, Any]:
-    """Constrói o resumo v2 somente com identidade e resultados agregados.
+    """Constrói o resumo somente com identidade e resultados agregados.
 
     ``config`` e os argumentos ``config_*`` são aceitos temporariamente para
     compatibilidade de chamada, mas nunca são serializados no CSV.
     """
     del config, config_source, config_sha256
     metrics = summarize_results_df(add_internal_result_aliases(dataframe.copy()))
+    distance_statuses = metrics.pop("artery_distance_metrics_status_counts")
+    for status in (
+        "disabled",
+        "ok",
+        "prediction_empty",
+        "reference_empty",
+        "both_empty",
+        "not_evaluated",
+        "error",
+    ):
+        metrics[f"artery_distance_metrics_status_{status}_count"] = (
+            distance_statuses.get(status, 0)
+        )
     feedback = metrics.pop("aorta_segmentation_feedback_counts")
     total_processed = int(metrics.pop("total_processed"))
     row: dict[str, Any] = {

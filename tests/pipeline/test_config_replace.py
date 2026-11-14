@@ -8,6 +8,7 @@ from unittest.mock import patch
 
 import segmentation_pipeline as pipeline
 from utils.project.config import serialize_config_for_json
+from utils.project.evaluation.artery_distances import DISTANCE_PROTOCOL
 from utils.segmentation.pipeline.cli import build_parser, parse_pipeline_args
 
 
@@ -48,4 +49,5 @@ class ConfigReplaceTests(TestCase):
         self.assertNotIn("NEW_DEFAULT", replaced)
         expected = dict(snapshot)
         expected["DOWNSCALE_METHOD"] = "scipy"
+        expected["EVALUATION"]["distance_metrics_protocol"] = DISTANCE_PROTOCOL
         self.assertEqual(serialize_config_for_json(replaced), expected)

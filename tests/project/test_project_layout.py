@@ -102,7 +102,7 @@ class ProjectLayoutTest(unittest.TestCase):
     def test_all_notebooks_initialize_from_root_and_their_own_folder(self):
         root = find_repository_root(Path(__file__))
         notebooks = sorted((root / "src/eda").rglob("*.ipynb"))
-        self.assertEqual(len(notebooks), 19)
+        self.assertEqual(len(notebooks), 20)
         original_cwd = Path.cwd()
         original_sys_path = list(sys.path)
         try:
@@ -121,9 +121,15 @@ class ProjectLayoutTest(unittest.TestCase):
                             if entry != str(root / "src")
                         ]
                         namespace = {"__name__": "notebook_bootstrap"}
-                        with patch(
-                            "pandas.read_csv",
-                            side_effect=AssertionError("leitura de run"),
+                        with (
+                            patch(
+                                "pandas.read_csv",
+                                side_effect=AssertionError("leitura de run"),
+                            ),
+                            patch(
+                                "utils.project.runtime.notebook_env.resolve_existing_path",
+                                return_value=root / "synthetic-dataset",
+                            ),
                         ):
                             exec(compile(first.source, str(path), "exec"), namespace)
                         self.assertIn(str(root / "src"), sys.path)

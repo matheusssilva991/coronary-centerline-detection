@@ -4,13 +4,112 @@ from unittest.mock import patch
 import numpy as np
 
 from utils.segmentation.pipeline.arteries import (
+    evaluate_artery_postprocessing_stages,
     get_artery_postprocessing_stages,
     postprocess_artery_mask,
     segment_artery_masks_from_vesselness,
+    segment_arteries_from_vesselness,
 )
+from utils.utils.metrics import dice_score
 
 
 class ArteryPostprocessingTests(unittest.TestCase):
+    def test_measures_distinct_stages_and_negative_dilation_gain_without_mutation(self):
+        label = np.zeros((15, 15, 15), dtype=np.uint8)
+        label[5:10, 5:10, 5:10] = 1
+        raw = label.copy()
+        raw[7, 7, 7] = 0
+        stages = get_artery_postprocessing_stages(
+            raw, {"POSTPROCESSING": {"closing_radius": 1, "dilation_radius": 1}}
+        )
+        original = {name: mask.copy() for name, mask in stages.items()}
+        metrics = evaluate_artery_postprocessing_stages(
+            stages["raw_mask"],
+            stages["closed_mask"],
+            stages["final_mask"],
+            label_artery=label,
+        )
+        self.assertGreater(metrics["dice_artery_closing_delta"], 0)
+        self.assertLess(metrics["dice_artery_dilation_delta"], 0)
+        self.assertEqual(metrics["dice_artery_after_closing"], 1)
+        self.assertAlmostEqual(
+            metrics["dice_artery_morphology_delta"],
+            metrics["dice_artery_closing_delta"]
+            + metrics["dice_artery_dilation_delta"],
+        )
+        for name in stages:
+            np.testing.assert_array_equal(stages[name], original[name])
+
+    def test_empty_masks_keep_existing_dice_convention(self):
+        empty = np.zeros((5, 5, 5), dtype=np.uint8)
+        for reference in (empty, np.ones_like(empty)):
+            with self.subTest(reference_voxels=reference.sum()):
+                metrics = evaluate_artery_postprocessing_stages(
+                    empty, empty, empty, label_artery=reference
+                )
+                self.assertEqual(metrics["artery_voxels_after_closing"], 0)
+                self.assertEqual(
+                    metrics["dice_artery_after_closing"], dice_score(empty, reference)
+                )
+                self.assertEqual(metrics["dice_artery_closing_delta"], 0)
+                self.assertEqual(metrics["dice_artery_dilation_delta"], 0)
+
+    def test_unlabeled_anisotropic_volumes_do_not_invent_dice(self):
+        masks = [np.ones((count, 1, 1), dtype=np.uint8) for count in (2, 4, 8)]
+        metrics = evaluate_artery_postprocessing_stages(*masks, spacing=(0.5, 2.0, 3.0))
+        self.assertEqual(metrics["artery_volume_after_closing_ml"], 0.012)
+        self.assertEqual(metrics["artery_volume_before_morphology_ml"], 0.006)
+        self.assertEqual(metrics["artery_volume_after_morphology_ml"], 0.024)
+        self.assertFalse(any(key.startswith("dice_") for key in metrics))
+        for spacing in ((0, 1, 1), (1, 1), (1, np.nan, 1), (1, np.inf, 1)):
+            with self.subTest(spacing=spacing), self.assertRaises(ValueError):
+                evaluate_artery_postprocessing_stages(*masks, spacing=spacing)
+
+    def test_rg_and_fc_evaluation_preserve_masks_and_apply_morphology_once(self):
+        raw = np.zeros((15, 15, 15), dtype=np.uint8)
+        raw[5:10, 5:10, 5:10] = 1
+        label = raw.copy()
+        raw[7, 7, 7] = 0
+        for method in ("region_growing", "fuzzy_connectedness"):
+            with self.subTest(method=method):
+                config = {
+                    "ARTERY_SEGMENTATION": {"method": method},
+                    "POSTPROCESSING": {"closing_radius": 1, "dilation_radius": 1},
+                }
+                expected = get_artery_postprocessing_stages(raw, config)
+                with (
+                    patch(
+                        "utils.segmentation.pipeline.arteries._segment_with_region_growing",
+                        return_value=(raw, {}),
+                    ),
+                    patch(
+                        "utils.segmentation.pipeline.arteries._segment_with_fuzzy_connectedness",
+                        return_value=(raw, {}),
+                    ),
+                    patch(
+                        "utils.segmentation.pipeline.arteries.get_artery_postprocessing_stages",
+                        wraps=get_artery_postprocessing_stages,
+                    ) as postprocess,
+                ):
+                    result = segment_arteries_from_vesselness(
+                        raw, label, raw, (7, 7, 7), None, config
+                    )
+                postprocess.assert_called_once()
+                np.testing.assert_array_equal(
+                    result["artery_mask"], expected["final_mask"]
+                )
+                np.testing.assert_array_equal(result["raw_artery_mask"], raw)
+                self.assertEqual(
+                    result["dice_artery"], dice_score(expected["final_mask"], label)
+                )
+                self.assertEqual(
+                    result["dice_artery_before_morphology"], dice_score(raw, label)
+                )
+                self.assertEqual(
+                    result["artery_voxels_after_closing"],
+                    int(expected["closed_mask"].sum()),
+                )
+
     def test_stages_preserve_public_postprocessing_result(self):
         mask = np.zeros((9, 9, 9), dtype=np.uint8)
         mask[4, 4, 3:6] = 1

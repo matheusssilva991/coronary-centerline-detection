@@ -6,6 +6,9 @@ ficam em `output/segmentation/analysis/`.
 
 ## Scripts
 
+- `rebuild_canonical_metrics.py`: repete somente a referência de uma resolução e
+  subconjunto, com IDs/configuração efetiva salvos, HD/AHD habilitados,
+  checkpoints por exame e promoção canônica separada.
 - `fuzzy_pipeline_comparison.py`: compara threshold normal/fuzzy combinado com
   region growing ou fuzzy connectedness.
 - `compare_cpu_gpu.py`: compara resultados intermediários dos backends CPU e
@@ -50,6 +53,12 @@ CUDA_VISIBLE_DEVICES=1 bash src/experiments/runners/run_threshold_sweeps.sh
 ```
 
 ## Exemplos
+
+Na comparação fuzzy, `--distance-metrics` acrescenta HD/AHD em mm da máscara
+arterial final, com a mesma definição usada no pipeline principal. O cálculo é
+opcional e tem custo adicional; `--no-distance-metrics` o desativa. Os CSVs de
+resultados e resumos preservam valores ausentes e informam o N válido. A
+convenção completa está no [manual de avaliação](../../doc/manual_pipeline/07_posprocessamento_avaliacao/README.md#hd-e-ahd-opcionais-na-máscara-final).
 
 ```bash
 uv run python src/experiments/fuzzy_pipeline_comparison.py \
@@ -508,3 +517,76 @@ UUID, driver, hostname, Dice e número de fatias acompanham a medição.
 
 Recursos de um exame em uma máquina não devem ser apresentados como média do
 banco nem combinados sem identificação com tempos de execução de outro servidor.
+
+## Repetir as referências canônicas com métricas completas
+
+Para obter diagnósticos da aorta, Dice/volume em cada estágio morfológico e
+HD/AHD nas referências ImageCAS, repita somente estas seis coortes:
+
+| Resolução | Treino | Validação | Teste | Total |
+|---|---:|---:|---:|---:|
+| Mid | 30 | 270 | 700 | 1.000 |
+| High | 30 | 270 | 700 | 1.000 |
+
+São duas resoluções dos mesmos 1.000 exames, não 2.000 pacientes. Não é necessário
+repetir todas as variantes fuzzy, todos os parâmetros de sensibilidade ou os
+bancos externos. Para resolver somente o feedback ausente, bastaria mid; para
+incluir também as métricas recentes de morfologia e distâncias, repita ambas.
+
+O script lê `config/effective_pipeline_config.json` e os IDs de cada `current`.
+Não usa o config corrente e não escala parâmetros novamente. Habilita HD/AHD,
+mantém o fluxo compartilhado nos runs mid e o pipeline principal nos high.
+Os diagnósticos da aorta usam a mesma função de classificação nos dois fluxos.
+
+Na raiz do checkout atualizado no servidor, configure o caminho real dos volumes:
+
+```bash
+export IMAGECAS_BASE_PATH=/caminho/para/ImageCAS/1-1000
+
+# Somente confere IDs/configuração/destino; não carrega imagens nem escreve runs.
+uv run python src/experiments/rebuild_canonical_metrics.py \
+  --resolution mid --split train --run-name complete_metrics_v1 --dry-run
+
+# Comece pelos 30 exames de treino mid e confira os resultados.
+uv run python src/experiments/rebuild_canonical_metrics.py \
+  --resolution mid --split train --run-name complete_metrics_v1 --resume
+```
+
+Depois da conferência do treino, este laço executa as seis coortes em sequência.
+O treino já concluído será lido do checkpoint; não será repetido:
+
+```bash
+for resolution in mid high; do
+  for split in train val test; do
+    uv run python src/experiments/rebuild_canonical_metrics.py \
+      --resolution "$resolution" --split "$split" \
+      --run-name complete_metrics_v1 --resume || break 2
+  done
+done
+```
+
+Resultados em `output/segmentation/runs/canonical_metrics/complete_metrics_v1/`,
+separados por resolução/conjunto: CSV bruto incremental, CSV numérico legível,
+snapshot efetivo, plano com hashes/IDs e manifest de origem. `--resume` ignora
+todos os exames já registrados, inclusive falhas: não é uma opção de tentar
+novamente os casos com erro. O script rejeita retomadas com snapshots ou código
+modificados. Não edite os arquivos de um run em andamento.
+
+Somente depois de completar e revisar as seis coortes, promova as referências:
+
+```bash
+for resolution in mid high; do
+  for split in train val test; do
+    uv run python src/experiments/rebuild_canonical_metrics.py \
+      --resolution "$resolution" --split "$split" \
+      --run-name complete_metrics_v1 --promote-only || break 2
+  done
+done
+```
+
+A promoção não processa imagens: verifica IDs, colunas, status e integridade do
+CSV; preserva o `current` anterior em `before_complete_metrics_v1` e atualiza o
+link e o manifest canônicos. Execute as promoções em sequência. Métricas sem
+valor por falha de processamento, máscara vazia ou etapa não executada continuam
+ausentes, com o respectivo status; ter todas as colunas não significa ter medidas
+válidas para todos os exames. Tempos de batch não são sintetizados.

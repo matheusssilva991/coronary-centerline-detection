@@ -60,6 +60,23 @@ class CanonicalReferenceTests(unittest.TestCase):
             expected_count=count,
         )
 
+    def test_consolidation_keeps_aorta_distance_and_intermediate_metrics(self):
+        frame = pd.read_csv(self.csv)
+        frame["aorta_segmentation_feedback"] = "adequate"
+        frame["aorta_level_set_circle_fill_q25"] = 0.9
+        frame["dice_artery_after_closing"] = 0.6
+        frame["artery_hd_mm"] = 2.0
+        frame["future_metric"] = 42
+        frame.to_csv(self.csv, index=False)
+        self.consolidate()
+        actual = pd.read_csv(self.destination / "numeric/results_test.csv")
+        self.assertEqual(
+            actual["aorta_segmentation_feedback"].tolist(), ["adequate"] * 2
+        )
+        self.assertEqual(actual["artery_dice_after_closing"].tolist(), [0.6] * 2)
+        self.assertEqual(actual["artery_hd_mm"].tolist(), [2.0] * 2)
+        self.assertEqual(actual["future_metric"].tolist(), [42] * 2)
+
     def test_roundtrip_preserves_selected_ids_errors_and_source(self):
         before = self.csv.read_bytes()
         manifest = self.consolidate()

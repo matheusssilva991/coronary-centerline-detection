@@ -15,6 +15,7 @@ os.environ.setdefault("CUDA_VISIBLE_DEVICES", "0")
 from utils.utils.json_io import save_json_atomic
 from utils.project.runtime.run_logging import add_run_file_handler
 from utils.project.runtime.resource_monitor import apply_resource_monitoring_options
+from utils.project.evaluation.artery_distances import apply_distance_metric_options
 from utils.processing.gpu_utils import use_gpu
 from utils.project.config import (
     load_config_json,
@@ -132,6 +133,7 @@ def select_resolution_config(args):
 def _apply_execution_overrides(config, args):
     """Aplica opções operacionais da CLI à configuração efetiva."""
     apply_resource_monitoring_options(config, args)
+    apply_distance_metric_options(config, args)
     # Configurações antigas podem conter opções de cache já removidas.
     config.pop("SAVE_CACHE", None)
     config.pop("LOAD_CACHE", None)
@@ -283,6 +285,20 @@ def build_effective_config(args):
         base_config = {} if getattr(args, "config_replace", False) else effective_config
         effective_config = load_config_json(args.config_file, base_config)
         print(f"⚙️  Configuração carregada de: {args.config_file}")
+
+    # Recupera apenas a opção de avaliação em retomadas sem configuração explícita.
+    # Os parâmetros científicos continuam seguindo o fluxo de configuração atual.
+    resume_dir = getattr(args, "resume_dir", None)
+    if resume_dir and not args.config_file:
+        resume_root = Path(resume_dir)
+        if resume_root.name == "numeric":
+            resume_root = resume_root.parent
+        snapshot_path = resume_root / "config/effective_pipeline_config.json"
+        if snapshot_path.is_file():
+            snapshot = json.loads(snapshot_path.read_text(encoding="utf-8"))
+            effective_config["EVALUATION"] = copy.deepcopy(
+                snapshot.get("EVALUATION") or {"distance_metrics": False}
+            )
 
     # A resolução escolhida na CLI prevalece sobre fatores salvos em snapshots
     # de configuração produzidos originalmente para mid resolution.

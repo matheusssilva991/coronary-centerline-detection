@@ -151,5 +151,8 @@
     "closing_radius": 3,
     "dilation_radius": 2
   },
+  "EVALUATION": {
+    "distance_metrics": false
+  },
   "NUM_BATCHES": 5
 }

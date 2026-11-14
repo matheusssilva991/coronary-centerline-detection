@@ -66,6 +66,7 @@ from utils.segmentation.aorta.segmentation import (
     classify_aorta_segmentation_feedback,
 )
 from utils.segmentation.pipeline.arteries import (
+    evaluate_artery_postprocessing_stages,
     segment_artery_masks_from_vesselness,
 )
 from utils.segmentation.pipeline.detection import (
@@ -761,17 +762,15 @@ def process_external_exam(
             vmin=0.0,
             vmax=1.0,
         )
+        artery_metrics = evaluate_artery_postprocessing_stages(
+            raw_artery_mask, closed_mask, artery_mask, spacing=scaled_spacing
+        )
+        # O batch externo não possui referência coronariana compatível.
         result.update(
             {
-                "artery_voxels_before_morphology": int(raw_artery_mask.sum()),
-                "artery_voxels_after_closing": int(closed_mask.sum()),
-                "artery_voxels_after_morphology": int(artery_mask.sum()),
-                "artery_volume_before_morphology_ml": float(
-                    raw_artery_mask.sum() * voxel_volume_mm3 / 1000.0
-                ),
-                "artery_volume_after_morphology_ml": float(
-                    artery_mask.sum() * voxel_volume_mm3 / 1000.0
-                ),
+                key: value
+                for key, value in artery_metrics.items()
+                if key != "artery_voxels"
             }
         )
         if exam_dir is not None:

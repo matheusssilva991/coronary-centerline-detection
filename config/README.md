@@ -617,6 +617,21 @@ Trade-off:
 
 ---
 
+## 11) Avaliação opcional - `EVALUATION`
+
+`distance_metrics` (bool, padrão `false`) habilita HD e AHD em milímetros somente
+na máscara coronariana final, nos fluxos ImageCAS e comparação fuzzy. As CLIs
+aceitam `--distance-metrics` e `--no-distance-metrics`; a ausência da flag preserva
+a opção carregada. Não modifica segmentação, morfologia ou Dice.
+
+O snapshot efetivo registra `distance_metrics_protocol` com unidade, máscara
+avaliada, conectividade da superfície e definição da AHD. AHD é a média das duas
+médias direcionais, não a média conjunta de todos os pontos. O espaçamento
+efetivo é informado pelo pipeline, sem ajuste manual conforme Mid/High.
+
+Veja os status, política de máscaras vazias e resumos no
+[manual de avaliação](../doc/manual_pipeline/07_posprocessamento_avaliacao/README.md#hd-e-ahd-opcionais-na-máscara-final).
+
 ## Boas Praticas de Tuning
 
 1. Ajuste por bloco funcional, nao todos os parametros ao mesmo tempo.

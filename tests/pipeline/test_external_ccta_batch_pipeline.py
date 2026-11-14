@@ -429,6 +429,13 @@ class ExternalCctaBatchPipelineTest(unittest.TestCase):
         self.assertEqual(result["aorta_circle_count"], 1)
         self.assertEqual(result["ostia_left_z"], 1)
         self.assertGreater(result["artery_volume_after_morphology_ml"], 0)
+        self.assertAlmostEqual(result["artery_volume_after_closing_ml"], 0.018)
+        self.assertEqual(result["artery_voxels_after_closing"], 12)
+        self.assertFalse(any(key.startswith("dice_artery") for key in result))
+        self.assertEqual(
+            persisted["artery_volume_after_closing_ml"],
+            result["artery_volume_after_closing_ml"],
+        )
         self.assertTrue(result["aorta_ground_truth_available"])
         self.assertTrue(result["aorta_ground_truth_evaluated"])
         self.assertEqual(result["aorta_ground_truth_voxels"], int(mask.sum()))

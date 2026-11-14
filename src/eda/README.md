@@ -53,7 +53,7 @@ export IMAGECAS_BASE_PATH=/caminho/para/ImageCAS/1-1000
 
 | Notebook | Objetivo | Entrada principal | Saída | Custo |
 |---|---|---|---|---|
-| [external_ccta_visual_assessment.ipynb](results/external_ccta_visual_assessment.ipynb) | Comparar avaliações visuais mid/high por treino e teste no MM-WHS e OrCaScore e Dice da aorta no treino e teste MM-WHS | `avaliacao_visual.xlsx` e `results_all.csv` dos quatro runs | Visão geral por split, distribuições por etapa e Dice separado por protocolo, geral e por exame | Baixo |
+| [external_aorta_assessment.ipynb](results/external_aorta_assessment.ipynb) | Comparar avaliações visuais mid/high por treino e teste no MM-WHS e OrCaScore e Dice da aorta no treino e teste MM-WHS | `avaliacao_visual.xlsx` e `results_all.csv` dos quatro runs | Avaliação visual, Dice separado por protocolo e alertas contextualizados por exame; comparação automática no notebook dedicado | Baixo |
 | [segmentation_results_eda.ipynb](results/segmentation_results_eda.ipynb) | Status dos óstios, distâncias, Dice e casos ruins, incluindo comparação mid/high nos IDs comuns | Referências oficiais de `canonical`, por split | Tabelas e gráficos; catálogo de falhas opcional em `analysis/bad_cases/` | Baixo |
 | [split_resolution_analysis.ipynb](results/split_resolution_analysis.ipynb) | Comparar train/val/test entre mid e high | Referências oficiais de `canonical` | Tabelas e gráficos; tempos ausentes permanecem indisponíveis | Baixo |
 
@@ -70,6 +70,7 @@ export IMAGECAS_BASE_PATH=/caminho/para/ImageCAS/1-1000
 
 | Notebook | Objetivo | Entrada principal | Saída | Custo |
 |---|---|---|---|---|
+| [aorta_automatic_quality_assessment.ipynb](aorta/aorta_automatic_quality_assessment.ipynb) | Comparar alertas automáticos ImageCAS, MM-WHS e OrCaScore por subconjunto e resolução | CSVs canônicos ImageCAS, runs externos explícitos e histórico mid separado | Cobertura, contagens e percentuais, transições mid/high nos IDs comuns e tabela por exame com filtros; sem segmentações | Baixo |
 | [aorta_circle_slice_analysis.ipynb](aorta/aorta_circle_slice_analysis.ipynb) | Comparar a cobertura dos círculos com as fatias ocupadas pela máscara final e medir expansão ou recuo axial | Summary com métricas da aorta e rótulos visuais | Tabelas agregadas e valores por exame | Baixo |
 | [aorta_volume_quality_analysis.ipynb](aorta/aorta_volume_quality_analysis.ipynb) | Relacionar volume da máscara, sucesso dos óstios e avaliação visual da aorta; confirmar no `val` o corte exploratório obtido no `train` | Runs `mid_res` de treino e validação com métricas volumétricas e rótulos visuais | Tabelas separadas por coorte e comparação do corte no notebook | Baixo |
 

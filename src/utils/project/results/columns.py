@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from utils.project.runtime.resource_monitor import RESOURCE_COLUMNS
+from utils.project.evaluation.artery_distances import DISTANCE_RESULT_COLUMNS
 
 ARTERY_BRANCH_COLUMNS = [
     "artery_left_raw_voxels",
@@ -12,12 +13,17 @@ ARTERY_BRANCH_COLUMNS = [
 RESULT_COLUMNS: list[str] = [
     "IMG_ID",
     *RESOURCE_COLUMNS,
+    *DISTANCE_RESULT_COLUMNS,
     "dice_artery",
     "dice_artery_before_morphology",
+    "dice_artery_after_closing",
     "dice_artery_after_morphology",
+    "dice_artery_closing_delta",
+    "dice_artery_dilation_delta",
     "dice_artery_morphology_delta",
     "artery_voxels",
     "artery_voxels_before_morphology",
+    "artery_voxels_after_closing",
     "artery_voxels_after_morphology",
     *ARTERY_BRANCH_COLUMNS,
     "fc_processed_voxels",
@@ -100,12 +106,17 @@ RESULT_COLUMNS: list[str] = [
 ]
 
 READABLE_COLUMN_NAMES: dict[str, str] = {
+    **{column: column for column in DISTANCE_RESULT_COLUMNS},
     "dice_artery": "artery_dice",
     "dice_artery_before_morphology": "artery_dice_before_morphology",
+    "dice_artery_after_closing": "artery_dice_after_closing",
     "dice_artery_after_morphology": "artery_dice_after_morphology",
+    "dice_artery_closing_delta": "artery_dice_closing_delta",
+    "dice_artery_dilation_delta": "artery_dice_dilation_delta",
     "dice_artery_morphology_delta": "artery_dice_morphology_delta",
     "artery_voxels": "artery_voxel_count",
     "artery_voxels_before_morphology": "artery_voxel_count_before_morphology",
+    "artery_voxels_after_closing": "artery_voxel_count_after_closing",
     "artery_voxels_after_morphology": "artery_voxel_count_after_morphology",
     "artery_segmentation_method": "artery_segmentation_method",
     "fc_processed_voxels": "fc_processed_voxels",

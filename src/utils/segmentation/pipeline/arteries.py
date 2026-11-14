@@ -13,6 +13,7 @@ from skimage.morphology import ball
 
 from utils.processing.binary_operations import binary_closing, binary_dilation
 from utils.project.results.columns import ARTERY_BRANCH_COLUMNS
+from utils.project.evaluation.artery_distances import evaluate_artery_distances
 from utils.utils.metrics import dice_score
 from utils.segmentation.artery_segmentation import normal_region_growing_from_ostia
 from utils.segmentation.pipeline.preprocessing import compute_vesselness
@@ -104,6 +105,60 @@ def postprocess_artery_mask(
         dilation_radius=dilation_radius,
     )
     return stages["final_mask"]
+
+
+def evaluate_artery_postprocessing_stages(
+    raw_mask: Any,
+    closed_mask: Any,
+    final_mask: Any,
+    *,
+    label_artery: Any = None,
+    spacing: Optional[Sequence[float]] = None,
+) -> Dict[str, Any]:
+    """Mede os estágios já calculados, sem reaplicar a morfologia.
+
+    O Dice exige uma referência compatível; volumes em mL exigem o espaçamento
+    efetivo da resolução de trabalho, em milímetros.
+    """
+    masks = (raw_mask, closed_mask, final_mask)
+    counts = [int(np.sum(mask)) for mask in masks]
+    stages = ("before_morphology", "after_closing", "after_morphology")
+    metrics: Dict[str, Any] = {
+        f"artery_voxels_{stage}": count
+        for stage, count in zip(stages, counts, strict=True)
+    }
+    metrics["artery_voxels"] = counts[-1]
+    if spacing is not None:
+        spacing_array = np.asarray(spacing, dtype=float)
+        if (
+            spacing_array.shape != (3,)
+            or not np.isfinite(spacing_array).all()
+            or np.any(spacing_array <= 0)
+        ):
+            raise ValueError("O espaçamento deve conter três valores positivos em mm.")
+        voxel_volume_mm3 = float(np.prod(spacing_array))
+        metrics.update(
+            {
+                f"artery_volume_{stage}_ml": count * voxel_volume_mm3 / 1000.0
+                for stage, count in zip(stages, counts, strict=True)
+            }
+        )
+    if label_artery is not None:
+        before, closed, after = (
+            float(dice_score(mask, label_artery)) for mask in masks
+        )
+        metrics.update(
+            {
+                "dice_artery_before_morphology": before,
+                "dice_artery_after_closing": closed,
+                "dice_artery_after_morphology": after,
+                "dice_artery_closing_delta": closed - before,
+                "dice_artery_dilation_delta": after - closed,
+                "dice_artery_morphology_delta": after - before,
+                "dice_artery": after,
+            }
+        )
+    return metrics
 
 
 def _segment_with_region_growing(
@@ -211,6 +266,8 @@ def segment_arteries_from_ostia(
     ostia_left: Optional[Sequence[int]],
     ostia_right: Optional[Sequence[int]],
     config: Dict[str, Any],
+    *,
+    spacing: Optional[Sequence[float]] = None,
 ) -> Dict[str, Any]:
     """Calcula vesselness arterial, segmenta artérias e avalia Dice."""
     # Calcula o mapa de vasos usado pela segmentação arterial.
@@ -227,6 +284,7 @@ def segment_arteries_from_ostia(
         ostia_left,
         ostia_right,
         config,
+        spacing=spacing,
     )
 
 
@@ -237,6 +295,8 @@ def segment_arteries_from_vesselness(
     ostia_left: Optional[Sequence[int]],
     ostia_right: Optional[Sequence[int]],
     config: Dict[str, Any],
+    *,
+    spacing: Optional[Sequence[float]] = None,
 ) -> Dict[str, Any]:
     """Segmenta artérias reutilizando um mapa de vesselness já calculado.
 
@@ -257,25 +317,20 @@ def segment_arteries_from_vesselness(
     raw_artery_mask = segmentation.raw_mask
     details = segmentation.details
 
-    # Mede separadamente o método de crescimento e o efeito da morfologia final.
-    dice_before = float(dice_score(raw_artery_mask, label_artery))
-    dice_after = float(dice_score(artery_mask, label_artery))
-    raw_artery_voxels = int(np.sum(raw_artery_mask))
-    artery_voxels = int(np.sum(artery_mask))
+    metrics = evaluate_artery_postprocessing_stages(
+        raw_artery_mask,
+        segmentation.closed_mask,
+        artery_mask,
+        label_artery=label_artery,
+    )
 
     return {
         # As máscaras são removidas pela orquestração antes da persistência.
         **{column: details.get(column) for column in ARTERY_BRANCH_COLUMNS},
         "artery_mask": artery_mask,
         "raw_artery_mask": raw_artery_mask,
-        "artery_voxels_before_morphology": raw_artery_voxels,
-        "artery_voxels_after_morphology": artery_voxels,
-        "artery_voxels": artery_voxels,
-        "dice_artery_before_morphology": dice_before,
-        "dice_artery_after_morphology": dice_after,
-        "dice_artery_morphology_delta": dice_after - dice_before,
-        # Alias mantido para compatibilidade com relatórios antigos.
-        "dice_artery": dice_after,
+        **metrics,
+        **evaluate_artery_distances(artery_mask, label_artery, spacing, config),
         "artery_segmentation_method": segmentation.method,
         "fc_processed_voxels": details.get("processed_voxels"),
         "fc_effective_alpha": details.get("effective_alpha"),

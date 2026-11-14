@@ -64,3 +64,24 @@ Os links antigos foram substituídos, mas os runs reais continuam nos destinos:
 `references_manifest.json` registra as referências anteriores e as promovidas.
 Comparações históricas devem continuar apontando explicitamente para esses runs,
 em vez de seguir automaticamente a referência móvel de `canonical`.
+
+## Reexecução com todas as métricas atuais
+
+As referências acima continuam históricas até uma nova execução ser promovida.
+Os três CSVs mid não têm os diagnósticos completos da aorta; os seis CSVs não
+têm HD/AHD nem os estágios intermediários de morfologia acrescentados depois.
+Para preencher essas lacunas, consulte a seção de reexecução em
+`src/experiments/README.md` e use `rebuild_canonical_metrics.py`.
+
+O script usa os mesmos IDs e o snapshot **já escalonado** de cada referência,
+sem carregar o `pipeline_config.json` corrente nem escalar parâmetros outra vez.
+Somente a avaliação HD/AHD é habilitada adicionalmente. Mid mantém o fluxo dos
+experimentos compartilhados; high mantém o pipeline principal. Os resultados
+são novas medições, não preenchimento retroativo dos CSVs antigos.
+
+Uma promoção validada move `current` para `before_<run-name>` no mesmo diretório,
+cria um link para o novo run e atualiza `references_manifest.json`, preservando
+a referência anterior no histórico. Os notebooks canônicos passam a ler o novo
+run; comparações históricas com fontes explícitas continuam usando os runs antigos.
+Falhas e etapas não executadas preservam métricas ausentes e status explicativos.
+Não são fabricados tempos de batch, valores de distância ou métricas de falhas.
