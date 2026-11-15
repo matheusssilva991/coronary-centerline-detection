@@ -15,6 +15,7 @@ from utils.project.analysis.aorta_automatic_quality import (
     default_aorta_feedback_sources,
     load_aorta_feedback_sources,
     summarize_aorta_feedback,
+    summarize_aorta_feedback_comparison,
 )
 
 
@@ -244,7 +245,7 @@ class AortaAutomaticQualityTest(unittest.TestCase):
         self.assertEqual(coverage["status"].item(), "Coorte vazia")
         self.assertEqual(coverage["missing_count"].item(), 30)
 
-    def test_registry_keeps_canonical_gaps_and_selects_full_validation(self):
+    def test_registry_uses_only_canonical_imagecas_and_keeps_gaps(self):
         (self.root / "config").mkdir()
         (self.root / "config/imagecas_splits.json").write_text(
             json.dumps({"splits": {"train": [1], "val": [2, 3], "test": [4]}})
@@ -254,13 +255,14 @@ class AortaAutomaticQualityTest(unittest.TestCase):
             return_value={"mid_res": {}, "high_res": {}},
         ):
             sources = default_aorta_feedback_sources(self.root, self.root / "external")
-        self.assertEqual(len(sources), 21)
+            local_sources = default_aorta_feedback_sources(self.root)
+        self.assertEqual(len(sources), 18)
         self.assertTrue(all(s.path is None for s in sources[:6]))
-        history = next(
-            s for s in sources if s.reference == "Histórico" and s.subset == "val"
+        self.assertTrue(all(s.reference == "Atual" for s in sources))
+        validation = next(
+            s for s in sources if s.dataset == "ImageCAS" and s.subset == "val"
         )
-        self.assertIn("ostia_validation270", str(history.path))
-        self.assertEqual(history.expected_count, 2)
+        self.assertEqual(validation.expected_count, 2)
         self.assertEqual(sum(not s.applicable for s in sources), 4)
         mmwhs_mid = next(
             s
@@ -268,6 +270,164 @@ class AortaAutomaticQualityTest(unittest.TestCase):
             if s.dataset == "MM-WHS" and s.resolution == "mid" and s.subset == "test"
         )
         self.assertIn("2026-10-06_07-53-03", str(mmwhs_mid.path))
+        local_paths = {
+            (source.dataset, source.resolution): source.path
+            for source in local_sources
+            if source.dataset != "ImageCAS" and source.subset == "train"
+        }
+        expected_runs = {
+            ("MM-WHS", "mid"): "mid_res/external_ccta/mmwhs/2026-09-22_18-51-28",
+            ("MM-WHS", "high"): "high_res/external_ccta/mmwhs/2026-09-22_17-47-45",
+            ("OrCaScore", "mid"): "mid_res/external_ccta/orcascore/2026-09-19_10-23-50",
+            (
+                "OrCaScore",
+                "high",
+            ): "high_res/external_ccta/orcascore/2026-09-22_19-12-41",
+        }
+        for key, run in expected_runs.items():
+            self.assertEqual(
+                local_paths[key],
+                self.root
+                / "output/segmentation/runs"
+                / run
+                / "numeric/results_all.csv",
+            )
+        # A seleção explícita continua externa, mesmo com o caminho local definido.
+        self.assertTrue(mmwhs_mid.path.is_relative_to(self.root / "external"))
+
+    def test_overall_weights_exams_and_keeps_empty_feedback_in_denominator(self):
+        imagecas = self.source(
+            [
+                {
+                    "IMG_ID": i,
+                    "aorta_segmentation_feedback": "adequate" if i < 3 else None,
+                }
+                for i in range(4)
+            ],
+            expected_count=4,
+        )
+        mmwhs = self.source(
+            [
+                {
+                    "exam_id": str(i),
+                    "subset": "train",
+                    "aorta_segmentation_feedback": status,
+                }
+                for i, status in enumerate(
+                    ["suspected_undersegmentation", "insufficient_data"]
+                )
+            ],
+            dataset="MM-WHS",
+            expected_count=2,
+        )
+        records, coverage = load_aorta_feedback_sources([imagecas, mmwhs])
+        summary, coverage = summarize_aorta_feedback_comparison(records, coverage)
+        overall = summary.loc[summary["dataset"].eq("Geral")]
+        self.assertEqual(overall["total"].unique().tolist(), [6])
+        self.assertEqual(overall["count"].sum(), 6)
+        self.assertAlmostEqual(overall["percent"].sum(), 100)
+        self.assertEqual(
+            overall.loc[overall["status"].eq("Adequada"), "percent"].item(), 50
+        )
+        self.assertEqual(
+            overall.loc[overall["status"].eq("Sem feedback"), "count"].item(), 1
+        )
+        self.assertEqual(
+            overall.loc[
+                overall["status"].eq("Suspeita de sobresegmentação"), "count"
+            ].item(),
+            0,
+        )
+        general = coverage.loc[coverage["dataset"].eq("Geral")].iloc[0]
+        self.assertEqual(general["status"], "Disponível")
+        self.assertEqual(general["included_datasets"], "ImageCAS, MM-WHS")
+
+    def test_overall_marks_missing_column_and_file_as_partial(self):
+        sources = [
+            self.source([{"IMG_ID": 1}]),
+            self.source(
+                [
+                    {
+                        "exam_id": "x",
+                        "subset": "train",
+                        "aorta_segmentation_feedback": "adequate",
+                    }
+                ],
+                dataset="MM-WHS",
+                expected_count=2,
+            ),
+            AortaFeedbackSource(
+                "OrCaScore", "mid", "train", "Atual", None, expected_count=32
+            ),
+        ]
+        records, coverage = load_aorta_feedback_sources(sources)
+        summary, coverage = summarize_aorta_feedback_comparison(records, coverage)
+        general = coverage.loc[coverage["dataset"].eq("Geral")].iloc[0]
+        self.assertEqual(general["status"], "Parcial")
+        self.assertEqual(general["included_datasets"], "MM-WHS")
+        self.assertEqual(general["exam_count"], 1)
+        self.assertTrue(pd.isna(general["expected_count"]))
+        self.assertEqual(summary.loc[summary["dataset"].eq("Geral"), "count"].sum(), 1)
+
+    def test_overall_unavailable_has_no_fabricated_counts(self):
+        records, coverage = load_aorta_feedback_sources(
+            [
+                self.source([{"IMG_ID": 1}]),
+                AortaFeedbackSource("MM-WHS", "mid", "train", "Atual", None),
+            ]
+        )
+        summary, coverage = summarize_aorta_feedback_comparison(records, coverage)
+        self.assertTrue(summary.empty)
+        general = coverage.loc[coverage["dataset"].eq("Geral")].iloc[0]
+        self.assertEqual(general["status"], "Indisponível")
+        self.assertTrue(pd.isna(general["exam_count"]))
+
+    def test_overall_keeps_resolution_subset_and_not_applicable_separate(self):
+        sources = [
+            self.source(
+                [{"IMG_ID": 1, "aorta_segmentation_feedback": "adequate"}],
+                subset="val",
+                expected_count=1,
+            ),
+            self.source(
+                [
+                    {
+                        "IMG_ID": 1,
+                        "aorta_segmentation_feedback": "suspected_undersegmentation",
+                    }
+                ],
+                resolution="high",
+                subset="val",
+                expected_count=1,
+            ),
+            self.source(
+                [{"IMG_ID": 1, "aorta_segmentation_feedback": "insufficient_data"}],
+                subset="test",
+                expected_count=1,
+            ),
+            AortaFeedbackSource(
+                "MM-WHS", "mid", "val", "Atual", None, applicable=False
+            ),
+            AortaFeedbackSource(
+                "OrCaScore", "mid", "val", "Atual", None, applicable=False
+            ),
+        ]
+        records, coverage = load_aorta_feedback_sources(sources)
+        summary, coverage = summarize_aorta_feedback_comparison(records, coverage)
+        general = summary.loc[summary["dataset"].eq("Geral")]
+        self.assertEqual(general["count"].sum(), 3)
+        adequate = general.loc[general["status"].eq("Adequada")]
+        self.assertEqual(adequate["count"].tolist(), [1, 0, 0])
+        general_coverage = coverage.loc[coverage["dataset"].eq("Geral")]
+        self.assertTrue(general_coverage["status"].eq("Disponível").all())
+        self.assertTrue(general_coverage["expected_count"].eq(1).all())
+
+    def test_overall_rejects_duplicate_coverage(self):
+        records, coverage = load_aorta_feedback_sources([self.source([{"IMG_ID": 1}])])
+        with self.assertRaisesRegex(ValueError, "Coortes duplicadas"):
+            summarize_aorta_feedback_comparison(
+                records, pd.concat([coverage, coverage])
+            )
 
 
 class AortaAutomaticNotebookTest(unittest.TestCase):

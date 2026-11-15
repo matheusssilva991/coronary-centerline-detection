@@ -70,7 +70,7 @@ export IMAGECAS_BASE_PATH=/caminho/para/ImageCAS/1-1000
 
 | Notebook | Objetivo | Entrada principal | Saída | Custo |
 |---|---|---|---|---|
-| [aorta_automatic_quality_assessment.ipynb](aorta/aorta_automatic_quality_assessment.ipynb) | Comparar alertas automáticos ImageCAS, MM-WHS e OrCaScore por subconjunto e resolução | CSVs canônicos ImageCAS, runs externos explícitos e histórico mid separado | Cobertura, contagens e percentuais, transições mid/high nos IDs comuns e tabela por exame com filtros; sem segmentações | Baixo |
+| [aorta_automatic_quality_assessment.ipynb](aorta/aorta_automatic_quality_assessment.ipynb) | Comparar alertas automáticos ImageCAS, MM-WHS e OrCaScore por subconjunto e resolução | Somente CSVs canônicos ImageCAS e runs externos explícitos | Gráfico percentual e tabela n (%) dos três bancos e Geral por split/resolução; cobertura e transições mid/high; sem segmentações | Baixo |
 | [aorta_circle_slice_analysis.ipynb](aorta/aorta_circle_slice_analysis.ipynb) | Comparar a cobertura dos círculos com as fatias ocupadas pela máscara final e medir expansão ou recuo axial | Summary com métricas da aorta e rótulos visuais | Tabelas agregadas e valores por exame | Baixo |
 | [aorta_volume_quality_analysis.ipynb](aorta/aorta_volume_quality_analysis.ipynb) | Relacionar volume da máscara, sucesso dos óstios e avaliação visual da aorta; confirmar no `val` o corte exploratório obtido no `train` | Runs `mid_res` de treino e validação com métricas volumétricas e rótulos visuais | Tabelas separadas por coorte e comparação do corte no notebook | Baixo |
 

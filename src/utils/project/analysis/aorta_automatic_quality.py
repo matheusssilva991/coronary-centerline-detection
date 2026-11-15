@@ -39,9 +39,13 @@ class AortaFeedbackSource:
 
 
 def default_aorta_feedback_sources(
-    repo_root: Path, external_root: Path
+    repo_root: Path, external_root: Path | None = None
 ) -> list[AortaFeedbackSource]:
-    """Seleciona referências atuais e uma coorte histórica explicitamente separada."""
+    """Seleciona canônicos ImageCAS e os CSVs externos locais já produzidos.
+
+    Uma raiz externa explícita mantém a seleção dos runs externos corrigidos,
+    sem recorrer aos locais se o arquivo solicitado estiver ausente.
+    """
     canonical = get_default_split_paths(repo_root)
     splits = json.loads((repo_root / "config/imagecas_splits.json").read_text())[
         "splits"
@@ -66,6 +70,17 @@ def default_aorta_feedback_sources(
         ("OrCaScore", "mid"): "orcascore/mid_res/2026-09-19_10-23-50",
         ("OrCaScore", "high"): "orcascore/high_res/2026-09-22_19-12-41",
     }
+    if external_root is None:
+        external_root = repo_root / "output/segmentation/runs"
+        external_runs = {
+            ("MM-WHS", "mid"): "mid_res/external_ccta/mmwhs/2026-09-22_18-51-28",
+            ("MM-WHS", "high"): "high_res/external_ccta/mmwhs/2026-09-22_17-47-45",
+            ("OrCaScore", "mid"): "mid_res/external_ccta/orcascore/2026-09-19_10-23-50",
+            (
+                "OrCaScore",
+                "high",
+            ): "high_res/external_ccta/orcascore/2026-09-22_19-12-41",
+        }
     for (dataset, resolution), run in external_runs.items():
         for subset in ("train", "val", "test"):
             expected = (20 if dataset == "MM-WHS" else 32) if subset == "train" else 40
@@ -82,23 +97,6 @@ def default_aorta_feedback_sources(
                     applicable=subset != "val",
                 )
             )
-    historical = {
-        "train": "train/ostia_localization/lower100_pad2/2026-09-06_08-08-25",
-        "val": "val/ostia_validation270/lower100_pad2/2026-09-07_07-15-15",
-        "test": "test/ostia_comparison/lower100_pad2/2026-09-07_10-37-38",
-    }
-    base = repo_root / "output/segmentation/runs/mid_res/aorta_segmentation_experiments"
-    for subset, run in historical.items():
-        sources.append(
-            AortaFeedbackSource(
-                "ImageCAS",
-                "mid",
-                subset,
-                "Histórico",
-                base / run / f"numeric/results_{subset}.csv",
-                len(splits[subset]),
-            )
-        )
     return sources
 
 
@@ -245,6 +243,86 @@ def summarize_aorta_feedback(records: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(
         rows, columns=[*GROUP_COLUMNS, "status", "count", "total", "percent"]
     )
+
+
+def summarize_aorta_feedback_comparison(
+    records: pd.DataFrame, coverage: pd.DataFrame
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Acrescenta o Geral pela soma dos exames, sem misturar splits/resoluções.
+
+    Fontes sem coluna de diagnóstico não entram no agregado. O Geral fica
+    parcial quando algum banco aplicável não contribui; registros com feedback
+    vazio continuam no denominador como 'Sem feedback'. Exames ausentes do CSV
+    são descritos separadamente pela contagem esperada.
+    """
+    if coverage.duplicated(GROUP_COLUMNS).any():
+        raise ValueError("Coortes duplicadas na cobertura.")
+    if coverage["dataset"].eq("Geral").any() or records["dataset"].eq("Geral").any():
+        raise ValueError("A entrada já contém um agregado Geral.")
+    summary = summarize_aorta_feedback(records)
+    totals = summary.drop_duplicates(GROUP_COLUMNS)
+    known = set(map(tuple, coverage[GROUP_COLUMNS].to_numpy()))
+    if not set(map(tuple, totals[GROUP_COLUMNS].to_numpy())).issubset(known):
+        raise ValueError("Há diagnósticos sem identificação na cobertura.")
+    aggregate_rows = []
+    aggregate_coverage = []
+    keys = ["reference", "resolution", "subset"]
+    for key, cohort in coverage.groupby(keys, sort=False):
+        group = dict(zip(keys, key, strict=True))
+        applicable = cohort.loc[cohort["status"].ne("Não se aplica")]
+        selection = summary
+        for column, value in group.items():
+            selection = selection.loc[selection[column].eq(value)]
+        selection = selection.loc[selection["dataset"].isin(applicable["dataset"])]
+        included = selection["dataset"].drop_duplicates().tolist()
+        contributing = selection.drop_duplicates("dataset")
+        total = int(contributing["total"].sum())
+        available = total > 0
+        complete = available and set(included) == set(applicable["dataset"])
+        expected = applicable["expected_count"]
+        aggregate_coverage.append(
+            {
+                **group,
+                "dataset": "Geral",
+                "source_path": "",
+                "source_run": "",
+                "exam_count": total if available else pd.NA,
+                "expected_count": int(expected.sum())
+                if expected.notna().all()
+                else pd.NA,
+                "missing_count": pd.NA,
+                "with_feedback": pd.NA,
+                "status": "Disponível"
+                if complete
+                else "Parcial"
+                if available
+                else "Indisponível",
+                "included_datasets": ", ".join(included),
+                "applicable_datasets": ", ".join(applicable["dataset"]),
+            }
+        )
+        if available:
+            counts = selection.groupby("status")["count"].sum()
+            for status in AORTA_FEEDBACK_ORDER:
+                count = int(counts.get(status, 0))
+                aggregate_rows.append(
+                    {
+                        **group,
+                        "dataset": "Geral",
+                        "status": status,
+                        "count": count,
+                        "total": total,
+                        "percent": 100 * count / total,
+                    }
+                )
+    comparison = pd.concat(
+        [summary, pd.DataFrame(aggregate_rows, columns=summary.columns)],
+        ignore_index=True,
+    )
+    compared_coverage = pd.concat(
+        [coverage, pd.DataFrame(aggregate_coverage)], ignore_index=True
+    )
+    return comparison, compared_coverage
 
 
 def compare_aorta_resolutions(
