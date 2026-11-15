@@ -1,0 +1,4 @@
+{
+  "threshold_mode": "normal",
+  "artery_method": "region_growing"
+}
