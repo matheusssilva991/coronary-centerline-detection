@@ -1,13 +1,16 @@
 # Referências oficiais do pipeline
 
 `canonical/` é a fonte única das análises do baseline atual, por resolução e
-conjunto. Somente resultados completos e verificados são promovidos. A promoção
-atual consolida resultados existentes: **não representa novas execuções**.
+conjunto. Somente resultados completos e verificados são promovidos. Em
+15/11/2026, mid foi atualizado para as reexecuções `complete_metrics_v1`, com
+diagnósticos completos da aorta, estágios morfológicos e HD/AHD. High mantém as
+referências anteriores.
 
 ```text
 canonical/
   references_manifest.json
-  mid_res/{train,val,test}/current/
+  mid_res/{train,val,test}/current -> runs/canonical_metrics/complete_metrics_v1/...
+  mid_res/{train,val,test}/before_complete_metrics_v1/
     numeric/results_<split>.csv
     config/effective_pipeline_config.json
     config/experiment_settings.json
@@ -19,9 +22,9 @@ canonical/
 
 | Resolução | Conjunto | N | Origem | Variante | Dice geral |
 |---|---|---:|---|---|---:|
-| Mid | Train | 30 | `runs/mid_res/fuzzy_comparison/current_pipeline/train30_val60` | `normal_rg` | 0,6288 |
-| Mid | Val | 270 | `analysis/pipeline_parameter_validation/runs/sensitivity_refined_pipeline_val270` | `baseline` | 0,6009 |
-| Mid | Test | 700 | `runs/mid_res/fuzzy_comparison/current_pipeline/test700` | `normal_rg` | 0,5996 |
+| Mid | Train | 30 | `runs/canonical_metrics/complete_metrics_v1/mid_res/train` | Baseline reexecutado | 0,6288 |
+| Mid | Val | 270 | `runs/canonical_metrics/complete_metrics_v1/mid_res/val` | Baseline reexecutado | 0,6009 |
+| Mid | Test | 700 | `runs/canonical_metrics/complete_metrics_v1/mid_res/test` | Baseline reexecutado | 0,5996 |
 | High | Train | 30 | `runs/high_res/aorta_segmentation_experiments/train/filter_envelope_lower100_pad2/2026-09-15_11-08-42` | Run completo | 0,5720 |
 | High | Val | 270 | `runs/high_res/aorta_segmentation_experiments/val/filter_envelope_lower100_pad2/2026-09-12_07-51-48` | Run completo | 0,5155 |
 | High | Test | 700 | `runs/high_res/aorta_segmentation_experiments/test/filter_envelope_lower100_pad2/2026-09-13_14-06-44` | Run completo | 0,5146 |
@@ -39,12 +42,20 @@ os ajustes específicos da resolução.
 
 ## Proveniência e tempo
 
-As tabelas mid são extrações compactas de uma única variante/split dos sweeps,
-no schema aceito pelos carregadores usuais. Cada `source_manifest.json` registra
-origem, variante, IDs, contagem, hashes do CSV/config original e sobrescritas.
-A configuração foi reconstruída somente a partir do snapshot e das sobrescritas
-registradas; os arquivos de origem permanecem intactos. O código reutilizável de
-consolidação fica em `utils.comparison_utils.canonical`.
+As tabelas mid atuais foram reexecutadas com os mesmos IDs e as configurações
+efetivas das referências anteriores, acrescentando a avaliação HD/AHD. Os
+manifests e planos registram os hashes, IDs, protocolo e configurações utilizados.
+As três referências anteriores permanecem em `before_complete_metrics_v1`.
+Os Dice gerais, volumes da aorta e status dos óstios foram reproduzidos sem
+alteração. As cinco falhas de superfície na validação e sete no teste já existiam;
+as métricas de etapas não executadas são ausentes, sem valores fabricados.
+
+HD/AHD referem-se à máscara arterial após morfologia, em mm, entre centros de
+voxels das superfícies de seis vizinhos. HD usa o máximo bidirecional; AHD usa
+a média aritmética das duas médias direcionais. Há 30, 265 e 689 pares de
+distâncias válidas no treino, validação e teste, respectivamente. No teste, quatro
+predições arteriais vazias também não têm distâncias definidas. As médias de
+distância são condicionadas aos casos válidos; não representam toda a coorte.
 
 Não são criados tempos de batch ou metadados de execução fictícios para mid.
 Sem manifest equivalente de batches, o tempo aparece como indisponível. Tempos
@@ -67,11 +78,10 @@ em vez de seguir automaticamente a referência móvel de `canonical`.
 
 ## Reexecução com todas as métricas atuais
 
-As referências acima continuam históricas até uma nova execução ser promovida.
-Os três CSVs mid não têm os diagnósticos completos da aorta; os seis CSVs não
-têm HD/AHD nem os estágios intermediários de morfologia acrescentados depois.
-Para preencher essas lacunas, consulte a seção de reexecução em
-`src/experiments/README.md` e use `rebuild_canonical_metrics.py`.
+Os três CSVs mid atuais já contêm os novos diagnósticos e métricas. High ainda
+não tem HD/AHD e os estágios intermediários recentes. Para repetir referências,
+consulte a seção de reexecução em `src/experiments/README.md` e use
+`rebuild_canonical_metrics.py`.
 
 O script usa os mesmos IDs e o snapshot **já escalonado** de cada referência,
 sem carregar o `pipeline_config.json` corrente nem escalar parâmetros outra vez.

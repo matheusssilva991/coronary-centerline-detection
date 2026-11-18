@@ -12,10 +12,12 @@ import pandas as pd
 from utils.project.analysis.aorta_automatic_quality import (
     AortaFeedbackSource,
     compare_aorta_resolutions,
+    compare_mmwhs_aorta_dice,
     default_aorta_feedback_sources,
     load_aorta_feedback_sources,
     summarize_aorta_feedback,
     summarize_aorta_feedback_comparison,
+    summarize_imagecas_aorta_ostia,
 )
 
 
@@ -428,6 +430,171 @@ class AortaAutomaticQualityTest(unittest.TestCase):
             summarize_aorta_feedback_comparison(
                 records, pd.concat([coverage, coverage])
             )
+
+    def test_ostia_comparison_preserves_denominators_and_exclusive_categories(self):
+        rows = [
+            {
+                "IMG_ID": str(i),
+                "aorta_segmentation_feedback": feedback,
+                "ostia_detection_status": status,
+            }
+            for i, (feedback, status) in enumerate(
+                [
+                    ("adequate", "both correct"),
+                    ("adequate", "both_tolerable"),
+                    ("adequate", "found_but_wrong"),
+                    ("adequate", "not_found"),
+                    ("adequate", None),
+                    ("suspected_undersegmentation", "both_correct"),
+                    ("suspected_oversegmentation", "both_tolerable"),
+                    ("insufficient_data", "not_evaluated"),
+                    (None, "pipeline_error"),
+                ]
+            )
+        ]
+        records, _ = load_aorta_feedback_sources([self.source(rows)])
+        summary = summarize_imagecas_aorta_ostia(records).set_index("aorta_group")
+        adequate = summary.loc["Adequada"]
+        self.assertEqual(adequate["total"], 5)
+        self.assertEqual(adequate["accepted"], 2)
+        self.assertEqual(adequate["accepted_percent"], 40)
+        self.assertEqual(adequate["not_evaluated"], 1)
+        self.assertEqual(adequate["both_correct"], 1)
+        self.assertEqual(adequate["both_tolerable"], 1)
+        self.assertEqual(summary.loc["Com alertas", "accepted"], 2)
+        self.assertEqual(summary.loc["Indeterminada", "not_evaluated"], 2)
+        self.assertEqual(summary["total"].sum(), 9)
+
+    def test_ostia_groups_without_cases_have_no_rate_and_splits_do_not_mix(self):
+        row = {
+            "IMG_ID": "001",
+            "aorta_segmentation_feedback": "adequate",
+            "ostia_detection_status": "both_correct",
+        }
+        records, _ = load_aorta_feedback_sources(
+            [
+                self.source([row]),
+                self.source(
+                    [{**row, "ostia_detection_status": "not_found"}], subset="test"
+                ),
+            ]
+        )
+        summary = summarize_imagecas_aorta_ostia(records)
+        empty = summary.loc[summary["total"].eq(0)]
+        self.assertTrue(empty["accepted_percent"].isna().all())
+        train = summary.loc[summary["subset"].eq("train")]
+        test = summary.loc[summary["subset"].eq("test")]
+        self.assertEqual(train["accepted"].sum(), 1)
+        self.assertEqual(test["accepted"].sum(), 0)
+        records["ostia_status"] = "typo"
+        with self.assertRaisesRegex(ValueError, "Status de óstios desconhecido"):
+            summarize_imagecas_aorta_ostia(records)
+
+    def mmwhs_source(self, rows, subset="train", resolution="mid"):
+        return self.source(
+            [
+                {
+                    "exam_id": str(i),
+                    "dataset": "MM-WHS",
+                    "subset": subset,
+                    "aorta_segmentation_feedback": "adequate",
+                    **row,
+                }
+                for i, row in enumerate(rows)
+            ],
+            dataset="MM-WHS",
+            subset=subset,
+            resolution=resolution,
+        )
+
+    def test_dice_threshold_is_inclusive_and_excludes_missing_invalid_unevaluated(self):
+        rows = [
+            {"aorta_dice": value, "aorta_ground_truth_evaluated": True}
+            for value in (0, 0.699, 0.70, 1, None, "bad", float("inf"), -1, 1.1)
+        ]
+        rows.append({"aorta_dice": 0.9, "aorta_ground_truth_evaluated": False})
+        records, _ = load_aorta_feedback_sources([self.mmwhs_source(rows)])
+        cases, summary, coverage = compare_mmwhs_aorta_dice(records)
+        self.assertEqual(cases["dice_eligible"].sum(), 4)
+        row = summary.iloc[0]
+        self.assertEqual(row["exam_count"], 10)
+        self.assertEqual(row["above_threshold"], 2)
+        self.assertEqual(row["below_threshold"], 2)
+        self.assertEqual(row["above_percent"], 50)
+        self.assertEqual(row["excluded_count"], 6)
+        self.assertEqual(coverage["status"].item(), "Parcial")
+        for threshold in (-0.1, 1.1, float("nan"), float("inf")):
+            with self.subTest(threshold=threshold), self.assertRaises(ValueError):
+                compare_mmwhs_aorta_dice(records, threshold)
+
+    def test_test_dice_rejects_legacy_and_mixed_protocols(self):
+        for methods in [
+            ["mmwhs_official_1mm_wine"],
+            [None],
+            ["mmwhs_aorta_label820_1mm_wine", "mmwhs_official_1mm_wine"],
+        ]:
+            with self.subTest(methods=methods):
+                source = self.mmwhs_source(
+                    [
+                        {
+                            "aorta_dice": 0.9,
+                            "aorta_evaluation_status": "success",
+                            "aorta_evaluation_method": method,
+                        }
+                        for method in methods
+                    ],
+                    subset="test",
+                )
+                records, _ = load_aorta_feedback_sources([source])
+                cases, summary, coverage = compare_mmwhs_aorta_dice(records)
+                self.assertFalse(cases["dice_eligible"].any())
+                self.assertTrue(summary["above_percent"].isna().all())
+                self.assertTrue(coverage["status"].str.startswith("Indisponível").all())
+                self.assertNotEqual(
+                    coverage["protocol"].item(), "Aorta isolada · label 820 · 1 mm"
+                )
+
+    def test_corrected_test_keeps_evaluated_zero_and_diagnostic_missingness(self):
+        source = self.mmwhs_source(
+            [
+                {"aorta_dice": 0, "aorta_evaluation_status": "success"},
+                {
+                    "aorta_dice": 0.7,
+                    "aorta_evaluation_status": "success",
+                    "aorta_segmentation_feedback": "insufficient_data",
+                },
+                {
+                    "aorta_dice": 0.8,
+                    "aorta_evaluation_status": "success",
+                    "aorta_segmentation_feedback": None,
+                },
+                {"aorta_dice": None, "aorta_evaluation_status": "unavailable"},
+                {"aorta_dice": 0.99, "aorta_evaluation_status": "error"},
+            ],
+            subset="test",
+        )
+        raw = pd.read_csv(source.path)
+        raw["aorta_evaluation_method"] = "mmwhs_aorta_label820_1mm_wine"
+        raw.to_csv(source.path, index=False)
+        records, _ = load_aorta_feedback_sources([source])
+        cases, summary, coverage = compare_mmwhs_aorta_dice(records)
+        self.assertEqual(
+            cases["dice_eligible"].tolist(), [True, True, True, False, False]
+        )
+        self.assertEqual(coverage["evaluated_count"].item(), 3)
+        self.assertEqual(coverage["excluded_count"].item(), 2)
+        summary = summary.set_index("feedback")
+        self.assertEqual(summary.loc["Adequada", "median_dice"], 0)
+        self.assertEqual(summary.loc["Dados insuficientes", "above_percent"], 100)
+        self.assertEqual(summary.loc["Sem feedback", "above_percent"], 100)
+
+    def test_outcome_comparisons_handle_absent_sources_without_fabricating_rows(self):
+        records, _ = load_aorta_feedback_sources([])
+        self.assertTrue(summarize_imagecas_aorta_ostia(records).empty)
+        cases, summary, coverage = compare_mmwhs_aorta_dice(records)
+        self.assertTrue(cases.empty)
+        self.assertTrue(summary.empty)
+        self.assertTrue(coverage.empty)
 
 
 class AortaAutomaticNotebookTest(unittest.TestCase):

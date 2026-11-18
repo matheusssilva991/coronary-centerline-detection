@@ -5,13 +5,35 @@ from dataclasses import dataclass
 import json
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 from utils.project.analysis.external_aorta_assessment import (
     AORTA_FEEDBACK_LABELS,
     AORTA_FEEDBACK_ORDER,
 )
+from utils.project.evaluation.mmwhs_protocol import (
+    LEGACY_WHS_METHOD,
+    OFFICIAL_AORTA_METHOD,
+)
 from utils.project.runtime.notebook_env import get_default_split_paths
+from utils.project.results.schema import normalize_ostia_status
+
+IMAGECAS_AORTA_GROUPS = ("Adequada", "Com alertas", "Indeterminada")
+OSTIA_OUTCOMES = {
+    "both_correct": "Ambos corretos",
+    "both_tolerable": "Apenas toleráveis",
+    "found_but_wrong": "Encontrados incorretos",
+    "not_found": "Não encontrados",
+    "not_evaluated": "Não avaliados",
+}
+OUTCOME_COLUMNS = [
+    "ostia_status",
+    "aorta_dice",
+    "aorta_ground_truth_evaluated",
+    "aorta_evaluation_method",
+    "aorta_evaluation_status",
+]
 
 GROUP_COLUMNS = ["reference", "dataset", "resolution", "subset"]
 RECORD_COLUMNS = [
@@ -22,6 +44,7 @@ RECORD_COLUMNS = [
     "diagnostic_available",
     "source_path",
     "source_run",
+    *OUTCOME_COLUMNS,
 ]
 
 
@@ -186,6 +209,18 @@ def load_aorta_feedback_sources(
             frame["diagnostic_available"] = available
             frame["source_path"] = str(source.path)
             frame["source_run"] = source_run
+            for column in OUTCOME_COLUMNS:
+                raw_column = (
+                    "ostia_detection_status" if column == "ostia_status" else column
+                )
+                values = raw.get(
+                    raw_column, pd.Series(pd.NA, index=raw.index, dtype="string")
+                )
+                frame[column] = (
+                    values.map(normalize_ostia_status)
+                    if column == "ostia_status"
+                    else values
+                )
             frames.append(frame.loc[:, RECORD_COLUMNS])
             row.update(
                 exam_count=len(raw),
@@ -220,6 +255,173 @@ def load_aorta_feedback_sources(
             "with_feedback",
             "status",
         ],
+    )
+
+
+def summarize_imagecas_aorta_ostia(records: pd.DataFrame) -> pd.DataFrame:
+    """Cruza diagnóstico e status salvo dos óstios, incluindo não avaliados."""
+    imagecas = records.loc[records["dataset"].eq("ImageCAS")].copy()
+    imagecas["aorta_group"] = (
+        imagecas["aorta_segmentation_feedback"]
+        .map(
+            {
+                "adequate": "Adequada",
+                "suspected_undersegmentation": "Com alertas",
+                "suspected_oversegmentation": "Com alertas",
+            }
+        )
+        .fillna("Indeterminada")
+    )
+    statuses = imagecas["ostia_status"].map(normalize_ostia_status)
+    unknown = set(statuses.dropna()) - set(OSTIA_OUTCOMES) - {"error", "pipeline_error"}
+    if unknown:
+        raise ValueError(f"Status de óstios desconhecido: {sorted(unknown)}")
+    imagecas["ostia_status"] = statuses.where(statuses.isin(OSTIA_OUTCOMES)).fillna(
+        "not_evaluated"
+    )
+    rows = []
+    for key, cohort in imagecas.groupby(GROUP_COLUMNS, sort=False):
+        for aorta_group in IMAGECAS_AORTA_GROUPS:
+            group = cohort.loc[cohort["aorta_group"].eq(aorta_group)]
+            counts = group["ostia_status"].value_counts()
+            row = {
+                **dict(zip(GROUP_COLUMNS, key, strict=True)),
+                "aorta_group": aorta_group,
+                "total": len(group),
+                **{status: int(counts.get(status, 0)) for status in OSTIA_OUTCOMES},
+            }
+            row["accepted"] = row["both_correct"] + row["both_tolerable"]
+            for status in [*OSTIA_OUTCOMES, "accepted"]:
+                row[f"{status}_percent"] = (
+                    100 * row[status] / len(group) if len(group) else np.nan
+                )
+            rows.append(row)
+    return pd.DataFrame(
+        rows,
+        columns=[
+            *GROUP_COLUMNS,
+            "aorta_group",
+            "total",
+            *OSTIA_OUTCOMES,
+            "accepted",
+            *[f"{status}_percent" for status in [*OSTIA_OUTCOMES, "accepted"]],
+        ],
+    )
+
+
+def compare_mmwhs_aorta_dice(
+    records: pd.DataFrame, threshold: float = 0.70
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """Compara Dice e diagnóstico no mesmo registro, bloqueando teste legado.
+
+    Retorna casos com elegibilidade, resumo por feedback e cobertura por coorte.
+    A ausência de Dice nunca vira zero. O corte é inclusivo e exploratório.
+    """
+    if not np.isfinite(threshold) or not 0 <= threshold <= 1:
+        raise ValueError("O corte de Dice deve estar entre 0 e 1.")
+    cases = records.loc[
+        records["dataset"].eq("MM-WHS") & records["subset"].isin(["train", "test"])
+    ].copy()
+    dice = pd.to_numeric(cases["aorta_dice"], errors="coerce").astype(float)
+    numeric_valid = dice.notna() & np.isfinite(dice) & dice.between(0, 1)
+    cases["aorta_dice"] = dice
+    cases["dice_eligible"] = False
+    coverage = []
+    for key, group in cases.groupby(GROUP_COLUMNS, sort=False):
+        if group["subset"].iloc[0] == "train":
+            evaluated = (
+                group["aorta_ground_truth_evaluated"]
+                .astype("string")
+                .str.lower()
+                .eq("true")
+                .fillna(False)
+            )
+            eligible = evaluated & numeric_valid.loc[group.index]
+            protocol = "Label 820 · grade processada"
+            status = "Disponível"
+        else:
+            methods = group["aorta_evaluation_method"]
+            corrected = methods.eq(OFFICIAL_AORTA_METHOD).fillna(False).all()
+            eligible = (
+                group["aorta_evaluation_status"].eq("success").fillna(False)
+                & numeric_valid.loc[group.index]
+                & corrected
+            )
+            protocol = "Aorta isolada · label 820 · 1 mm"
+            if not corrected:
+                protocol = (
+                    "Legado WHS · coração completo"
+                    if methods.eq(LEGACY_WHS_METHOD).fillna(False).all()
+                    else "Não corrigido/misto: "
+                    + ", ".join(sorted(set(methods.fillna("Não informado"))))
+                )
+            status = (
+                "Disponível"
+                if corrected
+                else "Indisponível: protocolo de teste não corrigido ou misturado"
+            )
+        cases.loc[group.index, "dice_eligible"] = eligible
+        valid_count = int(eligible.sum())
+        if status == "Disponível" and valid_count != len(group):
+            status = "Parcial" if valid_count else "Sem Dice válido"
+        coverage.append(
+            {
+                **dict(zip(GROUP_COLUMNS, key, strict=True)),
+                "exam_count": len(group),
+                "evaluated_count": valid_count,
+                "excluded_count": len(group) - valid_count,
+                "status": status,
+                "protocol": protocol,
+                "source_path": group["source_path"].iloc[0],
+            }
+        )
+    rows = []
+    for key, group in cases.groupby([*GROUP_COLUMNS, "feedback"], sort=False):
+        valid = group.loc[group["dice_eligible"], "aorta_dice"]
+        above = int(valid.ge(threshold).sum())
+        below = len(valid) - above
+        rows.append(
+            {
+                **dict(zip([*GROUP_COLUMNS, "feedback"], key, strict=True)),
+                "exam_count": len(group),
+                "evaluated_count": len(valid),
+                "excluded_count": len(group) - len(valid),
+                "median_dice": valid.median() if len(valid) else np.nan,
+                "above_threshold": above,
+                "below_threshold": below,
+                "above_percent": 100 * above / len(valid) if len(valid) else np.nan,
+                "below_percent": 100 * below / len(valid) if len(valid) else np.nan,
+            }
+        )
+    return (
+        cases,
+        pd.DataFrame(
+            rows,
+            columns=[
+                *GROUP_COLUMNS,
+                "feedback",
+                "exam_count",
+                "evaluated_count",
+                "excluded_count",
+                "median_dice",
+                "above_threshold",
+                "below_threshold",
+                "above_percent",
+                "below_percent",
+            ],
+        ),
+        pd.DataFrame(
+            coverage,
+            columns=[
+                *GROUP_COLUMNS,
+                "exam_count",
+                "evaluated_count",
+                "excluded_count",
+                "status",
+                "protocol",
+                "source_path",
+            ],
+        ),
     )
 
 

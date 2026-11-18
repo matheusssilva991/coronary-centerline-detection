@@ -102,7 +102,7 @@ class ProjectLayoutTest(unittest.TestCase):
     def test_all_notebooks_initialize_from_root_and_their_own_folder(self):
         root = find_repository_root(Path(__file__))
         notebooks = sorted((root / "src/eda").rglob("*.ipynb"))
-        self.assertEqual(len(notebooks), 20)
+        self.assertEqual(len(notebooks), 21)
         original_cwd = Path.cwd()
         original_sys_path = list(sys.path)
         try:

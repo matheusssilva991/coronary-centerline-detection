@@ -26,6 +26,10 @@ from utils.project.datasets.ccta import (
     load_ccta_volume,
 )
 from utils.project.dataframe import require_series_column
+from utils.project.evaluation.mmwhs_protocol import (
+    LEGACY_WHS_METHOD as LEGACY_WHS_METHOD,
+    OFFICIAL_AORTA_METHOD,
+)
 from utils.segmentation.pipeline.detection import (
     locate_and_filter_aorta_circles,
     segment_aorta_with_diagnostics,
@@ -33,8 +37,6 @@ from utils.segmentation.pipeline.detection import (
 from utils.segmentation.pipeline.preprocessing import preprocess_ccta_volume
 
 EVALUATOR_FOLDER = "MMWHS_evaluation_testdata_label_encrypt_1mm_forpublic"
-LEGACY_WHS_METHOD = "mmwhs_official_1mm_wine"
-OFFICIAL_AORTA_METHOD = "mmwhs_aorta_label820_1mm_wine"
 
 
 @dataclass(frozen=True)
