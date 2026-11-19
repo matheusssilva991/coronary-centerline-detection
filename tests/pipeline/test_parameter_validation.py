@@ -220,6 +220,10 @@ class ParameterValidationTests(unittest.TestCase):
             "OSTIA_DETECTION": {"max_z_diff_mm": 40.0},
             "REGION_GROWING": {"min_vesselness_fraction": 0.078},
         }
+        self.assertNotEqual(
+            image_load_cache_key(base),
+            image_load_cache_key({**base, "LABEL_RESAMPLING": "legacy_zoom_order0"}),
+        )
         changed_z = {
             **base,
             "OSTIA_DETECTION": {"max_z_diff_mm": 30.0},

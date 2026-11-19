@@ -590,3 +590,21 @@ link e o manifest canônicos. Execute as promoções em sequência. Métricas se
 valor por falha de processamento, máscara vazia ou etapa não executada continuam
 ausentes, com o respectivo status; ter todas as colunas não significa ter medidas
 válidas para todos os exames. Tempos de batch não são sintetizados.
+
+## Efeito da grade do rótulo no Dice arterial
+
+`compare_label_resampling.py` usa o snapshot e os IDs canônicos de treino
+em resolução `mid`. Para cada exame, calcula uma predição e avalia seu Dice
+com a referência histórica e com a referência na grade da tomografia.
+
+```bash
+uv run python src/experiments/compare_label_resampling.py \
+  --base-path "$IMAGECAS_BASE_PATH" \
+  --output-dir output/segmentation/analysis/label_resampling/mid_train
+```
+
+Use um diretório novo. O experimento grava a configuração e as origens em
+`manifest.json`, os pares e as falhas em `dice_pairs.csv` e o resultado agregado
+em `summary.json`. A coluna `delta` é o Dice corrigido menos o histórico na mesma
+predição. A coluna `legacy_minus_canonical` verifica a reprodução do CSV de
+origem. A opção `--resume` reaproveita pares concluídos com o mesmo manifesto.

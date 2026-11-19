@@ -71,6 +71,7 @@ def image_load_cache_key(config: dict[str, Any]) -> tuple[Any, ...]:
                 "DOWNSCALE_FACTORS",
                 "DOWNSCALE_METHOD",
                 "OPENCV_INTERPOLATION",
+                "LABEL_RESAMPLING",
             )
         }
     )

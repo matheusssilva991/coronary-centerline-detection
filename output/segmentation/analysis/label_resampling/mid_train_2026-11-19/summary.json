@@ -1,0 +1,42 @@
+{
+  "total": 30,
+  "valid_pairs": 30,
+  "failed": 0,
+  "mean_legacy": 0.6287699337674647,
+  "mean_corrected": 0.6281099893745187,
+  "mean_delta": -0.0006599443929461527,
+  "median_delta": 0.0007334536121148816,
+  "increases": 17,
+  "decreases": 13,
+  "ties": 0,
+  "canonical_mismatches": 0,
+  "max_abs_canonical_difference": 5.551115123125783e-17,
+  "largest_increases": [
+    {
+      "IMG_ID": 836,
+      "delta": 0.010291228964293353
+    },
+    {
+      "IMG_ID": 380,
+      "delta": 0.006023674237888299
+    },
+    {
+      "IMG_ID": 315,
+      "delta": 0.005322707576583263
+    }
+  ],
+  "largest_decreases": [
+    {
+      "IMG_ID": 793,
+      "delta": -0.01712327250172685
+    },
+    {
+      "IMG_ID": 760,
+      "delta": -0.015607603326223463
+    },
+    {
+      "IMG_ID": 428,
+      "delta": -0.0073852517448897426
+    }
+  ]
+}

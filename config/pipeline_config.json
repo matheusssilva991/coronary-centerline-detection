@@ -2,6 +2,7 @@
   "USE_GPU": true,
   "DOWNSCALE_METHOD": "opencv",
   "OPENCV_INTERPOLATION": "linear",
+  "LABEL_RESAMPLING": "nearest_on_image_grid_v1",
   "DOWNSCALE_FACTORS": [2, 2, 1],
   "MIN_THRESHOLD": -300,
   "MAX_THRESHOLD_PERCENTILE": 99.9,

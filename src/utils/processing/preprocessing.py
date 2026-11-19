@@ -13,6 +13,7 @@ import scipy.ndimage as ndi
 from typing import Any, Optional, Sequence, Tuple, cast
 from numpy.typing import NDArray
 
+from ..project.config import IMAGE_GRID_LABEL_PROTOCOL, LEGACY_LABEL_PROTOCOL
 from .gpu_utils import GPU_AVAILABLE, cu_ndi, to_cpu, to_gpu
 
 
@@ -116,6 +117,29 @@ def downscale_image(
             return downscale_image_ndi(image, factors, order=order)
 
     return downscale_image_ndi(image, factors, order=order)
+
+
+def downscale_label(
+    label: NDArray[Any],
+    config: dict[str, Any],
+    *,
+    allow_gpu_zoom: bool = False,
+) -> NDArray[Any]:
+    """Amostra classes discretas na grade da imagem ou reproduz o zoom histórico."""
+    factors = config["DOWNSCALE_FACTORS"]
+    protocol = config.get("LABEL_RESAMPLING", IMAGE_GRID_LABEL_PROTOCOL)
+    if protocol not in (IMAGE_GRID_LABEL_PROTOCOL, LEGACY_LABEL_PROTOCOL):
+        raise ValueError(f"Protocolo de redução dos rótulos desconhecido: {protocol}")
+    if protocol == IMAGE_GRID_LABEL_PROTOCOL and config["DOWNSCALE_METHOD"] == "opencv":
+        interpolation = (
+            cv2.INTER_NEAREST
+            if config.get("OPENCV_INTERPOLATION") == "nearest"
+            else cv2.INTER_NEAREST_EXACT
+        )
+        return downscale_image_opencv(label, factors, interpolation)
+    if allow_gpu_zoom:
+        return downscale_image(label, factors, order=0)
+    return downscale_image_ndi(label, factors, order=0)
 
 
 def threshold_image(

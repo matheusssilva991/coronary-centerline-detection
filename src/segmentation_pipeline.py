@@ -18,6 +18,7 @@ from utils.project.runtime.resource_monitor import apply_resource_monitoring_opt
 from utils.project.evaluation.artery_distances import apply_distance_metric_options
 from utils.processing.gpu_utils import use_gpu
 from utils.project.config import (
+    LEGACY_LABEL_PROTOCOL,
     load_config_json,
     scale_config_to_resolution,
 )
@@ -286,19 +287,24 @@ def build_effective_config(args):
         effective_config = load_config_json(args.config_file, base_config)
         print(f"⚙️  Configuração carregada de: {args.config_file}")
 
-    # Recupera apenas a opção de avaliação em retomadas sem configuração explícita.
-    # Os parâmetros científicos continuam seguindo o fluxo de configuração atual.
+    # Preserva o protocolo dos lotes anteriores, inclusive em snapshots históricos.
     resume_dir = getattr(args, "resume_dir", None)
-    if resume_dir and not args.config_file:
+    if resume_dir:
         resume_root = Path(resume_dir)
         if resume_root.name == "numeric":
             resume_root = resume_root.parent
         snapshot_path = resume_root / "config/effective_pipeline_config.json"
         if snapshot_path.is_file():
             snapshot = json.loads(snapshot_path.read_text(encoding="utf-8"))
-            effective_config["EVALUATION"] = copy.deepcopy(
-                snapshot.get("EVALUATION") or {"distance_metrics": False}
+            effective_config["LABEL_RESAMPLING"] = snapshot.get(
+                "LABEL_RESAMPLING", LEGACY_LABEL_PROTOCOL
             )
+            if not args.config_file:
+                effective_config["EVALUATION"] = copy.deepcopy(
+                    snapshot.get("EVALUATION") or {"distance_metrics": False}
+                )
+        elif getattr(args, "resume_requested", False):
+            effective_config["LABEL_RESAMPLING"] = LEGACY_LABEL_PROTOCOL
 
     # A resolução escolhida na CLI prevalece sobre fatores salvos em snapshots
     # de configuração produzidos originalmente para mid resolution.

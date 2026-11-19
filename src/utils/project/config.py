@@ -2,10 +2,15 @@
 
 import copy
 import json
+from pathlib import Path
 
 import numpy as np
 
 from ..utils.json_io import save_json_atomic
+
+
+IMAGE_GRID_LABEL_PROTOCOL = "nearest_on_image_grid_v1"
+LEGACY_LABEL_PROTOCOL = "legacy_zoom_order0"
 
 
 RESOLUTION_SCALING_GROUPS = frozenset(
@@ -91,8 +96,12 @@ def load_config_json(path, base_config):
     with open(path, "r", encoding="utf-8") as f:
         file_cfg = json.load(f)
 
+    if Path(path).name == "effective_pipeline_config.json":
+        file_cfg.setdefault("LABEL_RESAMPLING", LEGACY_LABEL_PROTOCOL)
     merged = copy.deepcopy(base_config)
     deep_update_dict(merged, file_cfg)
+    if "DOWNSCALE_METHOD" in merged:
+        merged.setdefault("LABEL_RESAMPLING", IMAGE_GRID_LABEL_PROTOCOL)
     return normalize_runtime_config(merged)
 
 
@@ -122,6 +131,7 @@ def scale_config_to_resolution(
     Retorna:        Configuração escalada com todos os parâmetros espaciais ajustados
     """
     cfg = copy.deepcopy(config)
+    cfg.setdefault("LABEL_RESAMPLING", IMAGE_GRID_LABEL_PROTOCOL)
     groups = (
         set(RESOLUTION_SCALING_GROUPS)
         if enabled_groups is None

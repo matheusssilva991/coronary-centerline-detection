@@ -69,6 +69,18 @@ Notas:
 
 - `linear` e o padrão atual usado pelo pipeline quando `DOWNSCALE_METHOD` e `opencv`.
 
+### `LABEL_RESAMPLING` (string)
+
+O padrão `nearest_on_image_grid_v1` reduz o rótulo na grade da tomografia e
+preserva as classes por vizinho mais próximo. Com OpenCV e imagem linear,
+o rótulo usa `INTER_NEAREST_EXACT`. Se a imagem usar `nearest`, o rótulo usa
+o mesmo `INTER_NEAREST`. Com SciPy, o rótulo usa zoom de ordem zero.
+
+O protocolo `legacy_zoom_order0` reproduz a redução histórica do rótulo por
+zoom, inclusive quando a imagem é reduzida com OpenCV. Os snapshots efetivos
+antigos sem este campo usam o protocolo histórico nas retomadas. O Dice, a HD,
+a AHD e a avaliação dos óstios podem variar com o rótulo em resolução reduzida.
+
 ### `DOWNSCALE_FACTORS` (array[int])
 
 - Valor atual: `[2, 2, 1]`

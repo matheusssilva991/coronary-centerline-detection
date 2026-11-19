@@ -260,7 +260,7 @@ class PipelineSimplificationTests(TestCase):
         self.assertEqual(_parse_rg_comparison_window("-1"), -1)
         self.assertEqual(_parse_rg_comparison_window("5"), 5)
 
-    @patch("utils.segmentation.pipeline.preprocessing.downscale_image_ndi")
+    @patch("utils.segmentation.pipeline.preprocessing.downscale_label")
     @patch("utils.segmentation.pipeline.preprocessing.largest_connected_component")
     @patch("utils.segmentation.pipeline.preprocessing.threshold_image_with_offset")
     @patch("utils.segmentation.pipeline.preprocessing.resolve_lower_threshold")
@@ -273,13 +273,13 @@ class PipelineSimplificationTests(TestCase):
         resolve_lower,
         threshold,
         largest_component,
-        downscale_ndi,
+        downscale_label_mock,
     ):
         image = np.arange(27, dtype=np.float32).reshape(3, 3, 3)
         label = np.ones_like(image, dtype=np.uint8)
         load_raw.return_value = (_FakeNifti(image), _FakeNifti(label))
         downscale_opencv.return_value = image
-        downscale_ndi.return_value = label
+        downscale_label_mock.return_value = label
         resolve_lower.return_value = (-300.0, {"lower_threshold_method": "fixed"})
         threshold.return_value = (image + 300.0, np.ones_like(image, bool), 300.0)
         largest_component.side_effect = lambda image_slice, mask_slice: (
@@ -294,7 +294,7 @@ class PipelineSimplificationTests(TestCase):
         )
 
         self.assertEqual(downscale_opencv.call_count, 1)
-        self.assertEqual(downscale_ndi.call_count, 1)
+        self.assertEqual(downscale_label_mock.call_count, 1)
         np.testing.assert_array_equal(result["lcc_image"], image)
         expected_upper_hu = float(np.percentile(image, 99.8))
         self.assertEqual(
@@ -302,7 +302,7 @@ class PipelineSimplificationTests(TestCase):
             expected_upper_hu,
         )
 
-    @patch("utils.segmentation.pipeline.preprocessing.downscale_image_ndi")
+    @patch("utils.segmentation.pipeline.preprocessing.downscale_label")
     @patch("utils.segmentation.pipeline.preprocessing.build_lcc_image_from_mask")
     @patch("utils.segmentation.pipeline.preprocessing.fuzzy_threshold_from_config")
     @patch("utils.segmentation.pipeline.preprocessing.resolve_lower_threshold")
@@ -315,14 +315,14 @@ class PipelineSimplificationTests(TestCase):
         resolve_lower,
         fuzzy_threshold,
         build_lcc,
-        downscale_ndi,
+        downscale_label_mock,
     ):
         image = np.arange(27, dtype=np.float32).reshape(3, 3, 3)
         label = np.ones_like(image, dtype=np.uint8)
         mask = image > 5
         load_raw.return_value = (_FakeNifti(image), _FakeNifti(label))
         downscale_opencv.return_value = image
-        downscale_ndi.return_value = label
+        downscale_label_mock.return_value = label
         resolve_lower.return_value = (-300.0, {"lower_threshold_method": "fixed"})
         fuzzy_threshold.return_value = (mask, {"fuzzy_mask_strategy": "object_argmax"})
         build_lcc.return_value = (image, mask)
@@ -334,7 +334,7 @@ class PipelineSimplificationTests(TestCase):
         )
 
         self.assertEqual(downscale_opencv.call_count, 1)
-        self.assertEqual(downscale_ndi.call_count, 1)
+        self.assertEqual(downscale_label_mock.call_count, 1)
         np.testing.assert_array_equal(result["lcc_image"], image)
         self.assertIsNone(
             result["preprocessing_details"]["effective_upper_threshold_hu"]

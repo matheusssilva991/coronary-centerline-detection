@@ -1,12 +1,80 @@
-"""Calcula resumos de Dice e acertos dos óstios por conjunto e resolução."""
+"""Calcula resumos arteriais e dos óstios por conjunto e resolução."""
 
+import numpy as np
 import pandas as pd
 from typing import Any, Dict, Optional, Sequence
 
+from utils.project.dataframe import numeric_series
 from utils.project.results.schema import (
     normalize_ostia_status,
     ostia_status_label_pt,
 )
+
+ARTERY_SURFACE_METRICS = {"artery_hd_mm": "HD", "artery_ahd_mm": "AHD"}
+ARTERY_SURFACE_STATUS = "artery_distance_metrics_status"
+
+
+def has_artery_surface_distances(frame: pd.DataFrame | None) -> bool:
+    """Identifica resultados com as colunas de distância e status."""
+    return frame is not None and {
+        ARTERY_SURFACE_STATUS,
+        *ARTERY_SURFACE_METRICS,
+    }.issubset(frame.columns)
+
+
+def artery_surface_distance_cases(frame: pd.DataFrame | None) -> pd.DataFrame:
+    """Retorna exames com HD e AHD válidos, indexados pelo ID do exame."""
+    if frame is None or not has_artery_surface_distances(frame):
+        return pd.DataFrame(
+            columns=[*ARTERY_SURFACE_METRICS, "dice_artery"],
+            index=pd.Index([], name="IMG_ID"),
+        )
+    if frame["IMG_ID"].isna().any() or frame["IMG_ID"].duplicated().any():
+        raise ValueError("A comparação de HD/AHD exige IDs presentes e únicos.")
+    evaluated = frame.loc[frame[ARTERY_SURFACE_STATUS].eq("ok")].set_index("IMG_ID")
+    cases = pd.DataFrame(
+        {column: numeric_series(evaluated, column) for column in ARTERY_SURFACE_METRICS}
+    )
+    if "dice_artery" in evaluated:
+        dice = numeric_series(evaluated, "dice_artery")
+        cases["dice_artery"] = dice.where(dice.between(0, 1))
+    else:
+        cases["dice_artery"] = np.nan
+    hd = cases["artery_hd_mm"]
+    ahd = cases["artery_ahd_mm"]
+    return cases.loc[np.isfinite(hd) & np.isfinite(ahd) & ahd.ge(0) & hd.ge(ahd)]
+
+
+def summarize_artery_surface_distance_cases(
+    source: pd.DataFrame | None, cases: pd.DataFrame
+) -> dict[str, Any]:
+    """Resume a cobertura e as distâncias usando somente os exames válidos."""
+    row: dict[str, Any] = {
+        "Exames no CSV": len(source) if source is not None else None,
+        "Exames válidos": len(cases),
+        "Cobertura": (
+            "Disponível"
+            if not cases.empty
+            else "Sem medidas válidas"
+            if has_artery_surface_distances(source)
+            else "Indisponível"
+        ),
+    }
+    for column, label in ARTERY_SURFACE_METRICS.items():
+        row[f"{label} média (mm)"] = cases[column].mean()
+        row[f"{label} mediana (mm)"] = cases[column].median()
+    row["Dice médio"] = cases["dice_artery"].mean()
+    return row
+
+
+def pair_artery_surface_distance_cases(
+    mid: pd.DataFrame, high: pd.DataFrame
+) -> pd.DataFrame:
+    """Pareia exames válidos nas duas resoluções pelo ID, em um único split."""
+    columns = list(ARTERY_SURFACE_METRICS)
+    return mid[columns].join(
+        high[columns], how="inner", lsuffix="_mid", rsuffix="_high", validate="1:1"
+    )
 
 
 def _normalize_success_status(value: Any) -> str | None:
@@ -26,6 +94,32 @@ def _success_status_series(
 def _has_success_status_column(df_split: pd.DataFrame, status_column: str) -> bool:
     """Verifica se existe um status legível ou canônico dos óstios."""
     return "ostia_status" in df_split or status_column in df_split
+
+
+def summarize_surface_distances_with_successful_ostia(
+    source: pd.DataFrame | None, cases: pd.DataFrame
+) -> dict[str, Any]:
+    """Resume HD e AHD dos exames com ambos os óstios corretos ou toleráveis."""
+    valid = cases.iloc[:0]
+    success_count: int | None = None
+    if source is not None:
+        status_column = (
+            "ostia_detection_status" if "ostia_detection_status" in source else "status"
+        )
+        if _has_success_status_column(source, status_column):
+            successful = _success_status_series(source, status_column).isin(
+                ["both_correct", "both_tolerable"]
+            )
+            success_count = int(successful.sum())
+            valid = cases.loc[cases.index.isin(source.loc[successful, "IMG_ID"])]
+    summary = {
+        "Ambos corretos ou toleráveis": success_count,
+        "Exames com HD e AHD válidos": len(valid),
+    }
+    for column, label in ARTERY_SURFACE_METRICS.items():
+        summary[f"{label} média (mm)"] = valid[column].mean()
+        summary[f"{label} mediana (mm)"] = valid[column].median()
+    return summary
 
 
 def _normalized_success_statuses(success_status: Sequence[str]) -> list[str]:

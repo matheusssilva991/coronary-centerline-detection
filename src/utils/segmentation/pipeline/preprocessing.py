@@ -14,6 +14,7 @@ from utils.processing.preprocessing import (
     build_lcc_image_from_mask,
     downscale_image_ndi,
     downscale_image_opencv,
+    downscale_label,
     largest_connected_component,
     threshold_image_with_offset,
 )
@@ -219,9 +220,7 @@ def preprocess_ccta_volume(
         )
     # O label usa interpolação de vizinho mais próximo para preservar classes.
     down_label = (
-        downscale_image_ndi(label_array, downscale_factors, order=0)
-        if label_array is not None
-        else None
+        downscale_label(label_array, config) if label_array is not None else None
     )
 
     dx, dy, dz = (

@@ -40,7 +40,11 @@ from utils.segmentation.aorta.segmentation import (
     calculate_slice_area_jump_p95,
     classify_aorta_segmentation_feedback,
 )
-from utils.processing.preprocessing import build_lcc_image_from_mask, downscale_image
+from utils.processing.preprocessing import (
+    build_lcc_image_from_mask,
+    downscale_image,
+    downscale_label,
+)
 from utils.segmentation.fuzzy.connectedness import segment_artery_fuzzy_connectedness
 from utils.segmentation.fuzzy.threshold import fuzzy_threshold_outputs
 from utils.segmentation.lower_threshold import resolve_lower_threshold
@@ -211,12 +215,7 @@ def load_downsampled_case(
             config.get("OPENCV_INTERPOLATION", "linear")
         ),
     ).astype(np.float32)
-    down_label = downscale_image(
-        label,
-        factors,
-        order=0,
-        use_opencv=False,
-    ).astype(np.uint8)
+    down_label = downscale_label(label, config, allow_gpu_zoom=True)
     scaled_spacing = tuple(spacing[idx] * factors[idx] for idx in range(3))
     return {
         "down_image": down_image,
@@ -480,6 +479,7 @@ def evaluate_prepared_image(
     experiment: dict[str, Any],
     *,
     visual_output_dir: str | Path | None = None,
+    include_artery_mask: bool = False,
 ) -> dict[str, Any]:
     """Executa óstios e artérias usando um contexto previamente preparado.
 
@@ -612,6 +612,8 @@ def evaluate_prepared_image(
             ),
         }
     )
+    if include_artery_mask:
+        row["artery_mask"] = artery_mask
     if visual_output_dir is not None:
         save_segmentation_visual(
             visual_output_dir,

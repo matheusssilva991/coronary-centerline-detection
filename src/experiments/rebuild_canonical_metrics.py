@@ -18,6 +18,7 @@ if __package__ in {None, ""}:
 
 from utils.comparison_utils.io import load_experiment_variant_results
 from utils.experiments.fuzzy_pipeline_comparison import run_image
+from utils.project.config import LEGACY_LABEL_PROTOCOL
 from utils.project.evaluation.artery_distances import apply_distance_metric_options
 from utils.project.analysis.external_aorta_assessment import AORTA_FEEDBACK_LABELS
 from utils.project.results.columns import READABLE_COLUMN_NAMES
@@ -54,6 +55,7 @@ def build_plan(repo_root: Path, resolution: str, split: str) -> dict:
         raise ValueError("Os IDs canônicos diferem do split completo registrado.")
     settings = source / "config/experiment_settings.json"
     config = json.loads(config_path.read_text())
+    config.setdefault("LABEL_RESAMPLING", LEGACY_LABEL_PROTOCOL)
     apply_distance_metric_options(config, argparse.Namespace(distance_metrics=True))
     manifest = source / "source_manifest.json"
     return {

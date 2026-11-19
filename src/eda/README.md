@@ -55,7 +55,7 @@ export IMAGECAS_BASE_PATH=/caminho/para/ImageCAS/1-1000
 | Notebook | Objetivo | Entrada principal | Saída | Custo |
 |---|---|---|---|---|
 | [external_aorta_assessment.ipynb](results/external_aorta_assessment.ipynb) | Comparar avaliações visuais mid/high por treino e teste no MM-WHS e OrCaScore e Dice da aorta no treino e teste MM-WHS | `avaliacao_visual.xlsx` e `results_all.csv` dos quatro runs | Avaliação visual, Dice separado por protocolo e alertas contextualizados por exame; comparação automática no notebook dedicado | Baixo |
-| [segmentation_results_eda.ipynb](results/segmentation_results_eda.ipynb) | Status dos óstios, distâncias, Dice e casos ruins, incluindo comparação mid/high nos IDs comuns | Referências oficiais de `canonical`, por split | Tabelas e gráficos; catálogo de falhas opcional em `analysis/bad_cases/` | Baixo |
+| [segmentation_results_eda.ipynb](results/segmentation_results_eda.ipynb) | Status e distâncias dos óstios, Dice e HD/AHD arteriais | `canonical` por split; candidato high/teste explícito na seção de HD/AHD | Tabelas e gráficos, com comparação mid/high por ID | Baixo |
 | [split_resolution_analysis.ipynb](results/split_resolution_analysis.ipynb) | Comparar train/val/test entre mid e high | Referências oficiais de `canonical` | Tabelas e gráficos; tempos ausentes permanecem indisponíveis | Baixo |
 
 ### Comparações de métodos e variantes — `comparisons/`
@@ -85,17 +85,12 @@ export IMAGECAS_BASE_PATH=/caminho/para/ImageCAS/1-1000
 Os caminhos de saída da tabela são relativos a
 `output/segmentation/analysis/`.
 
-## Casos ruins
+## Fontes das análises
 
-O detalhamento de falhas foi incorporado a
-[`results/segmentation_results_eda.ipynb`](results/segmentation_results_eda.ipynb).
-A seção identifica falha dos óstios ou Dice < 0,30, apresenta tipos de erro,
-interseções entre resoluções e IDs para inspeção. `EXPORT_BAD_CASES = False`
-preserva os catálogos históricos; habilite a opção somente para atualizá-los.
-
-As análises do baseline atual usam `canonical`, sem buscar outro run quando
-uma referência falta. Comparações históricas, fuzzy e de sensibilidade mantêm
-fontes explícitas para não alterar o significado dos experimentos.
+As análises do baseline atual usam `canonical`. A seção de HD/AHD pode usar o
+candidato high/teste configurado quando faltam as colunas de distância no
+canonical high/teste, com a origem identificada na tabela e no gráfico.
+Comparações históricas, fuzzy e de sensibilidade mantêm fontes explícitas.
 
 ## Convenções
 
