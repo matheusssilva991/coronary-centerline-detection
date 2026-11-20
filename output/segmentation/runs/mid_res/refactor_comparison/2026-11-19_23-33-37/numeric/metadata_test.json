@@ -1,0 +1,126 @@
+{
+  "metadata_schema_version": 4,
+  "run": {
+    "split": "test",
+    "resolution": "mid"
+  },
+  "configuration": {
+    "source": "effective_pipeline_config",
+    "sha256": "811f3e14b20a71da8ffb8d51d2f10e080bee2d5b8ca582bf867eefd91a326311",
+    "snapshot_file": "../config/effective_pipeline_config.json",
+    "use_gpu": true,
+    "downscale_method": "opencv",
+    "downscale_factors": [
+      2,
+      2,
+      1
+    ],
+    "min_threshold_hu": -300,
+    "max_threshold_percentile": 99.9,
+    "threshold_method": "normal",
+    "artery_segmentation_method": "region_growing",
+    "artery_distance_metrics": {
+      "enabled": false,
+      "unit": "mm",
+      "stage": "after_morphology",
+      "version": 3,
+      "surface_connectivity": 6,
+      "exterior_is_background": true,
+      "foreground_filter": "SimpleITK.HausdorffDistanceImageFilter",
+      "foreground_point_set": "nonzero_voxel_centers",
+      "hd95_surface_definition": "max_of_directional_95th_percentiles_linear"
+    }
+  },
+  "results": {
+    "execution_time": {
+      "seconds": 22027.255133390427,
+      "minutes": 367.1209188898404,
+      "hours": 6.118681981497341
+    },
+    "artery_distances": {
+      "status_counts": {
+        "disabled": 700
+      },
+      "missing_status_count": 0,
+      "artery_hd_foreground_mm": {
+        "count": 0,
+        "mean": null,
+        "std": null,
+        "median": null
+      },
+      "artery_avghd_foreground_mm": {
+        "count": 0,
+        "mean": null,
+        "std": null,
+        "median": null
+      },
+      "artery_hd95_surface_mm": {
+        "count": 0,
+        "mean": null,
+        "std": null,
+        "median": null
+      }
+    },
+    "dice": {
+      "before_morphology": {
+        "mean": 0.3175753077205801,
+        "valid_exam_count": 693
+      },
+      "after_morphology": {
+        "mean": 0.6021235058749328,
+        "valid_exam_count": 700
+      },
+      "after_closing": {
+        "mean": 0.3233918093690958,
+        "valid_exam_count": 693
+      },
+      "closing_delta": {
+        "mean": 0.005816501648515613,
+        "valid_exam_count": 693
+      },
+      "dilation_delta": {
+        "mean": 0.2848137521207353,
+        "valid_exam_count": 693
+      }
+    },
+    "ostia": {
+      "processed_exam_count": 700,
+      "success": {
+        "count": 599,
+        "percent": 85.57142857142857
+      },
+      "types": {
+        "both_correct": {
+          "count": 159,
+          "percent": 22.714285714285715
+        },
+        "both_tolerable": {
+          "count": 440,
+          "percent": 62.857142857142854
+        },
+        "found_but_incorrect": {
+          "count": 94,
+          "percent": 13.428571428571429
+        },
+        "not_found": {
+          "count": 7,
+          "percent": 1.0
+        },
+        "not_evaluated_or_error": {
+          "count": 0,
+          "percent": 0.0
+        }
+      },
+      "sides": {
+        "left_correct": {
+          "count": 489,
+          "percent": 69.85714285714286
+        },
+        "right_correct": {
+          "count": 193,
+          "percent": 27.57142857142857
+        }
+      }
+    }
+  }
+}
