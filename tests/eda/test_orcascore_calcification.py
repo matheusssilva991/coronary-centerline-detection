@@ -1,19 +1,19 @@
 """Confere pareamento CTI/referência sem reamostrar os rótulos de calcificação."""
 
-from pathlib import Path
 import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 import nbformat
 import numpy as np
 
+from eda.images.view.orcascore_calcification_views import show_calcification_view
 from utils.project.datasets.ccta import discover_orcascore_acquisitions
 from utils.project.datasets.orcascore import (
     load_orcascore_calcification_reference,
     orcascore_calcification_reference_path,
 )
-from tests.notebook_helpers import load_presentation_helpers
 
 
 class OrcascoreCalcificationTest(unittest.TestCase):
@@ -117,36 +117,35 @@ class OrcascoreCalcificationTest(unittest.TestCase):
                 self.assertIsNone(cell.execution_count)
 
     def test_overlay_preserves_native_axes_and_reference_classes(self):
-        namespace = load_presentation_helpers("orcascore_calcification_visualization")
         ct_slice = np.arange(20).reshape(4, 5)
         label_slice = self.labels[:, :, 3]
         exported = []
-        namespace.update(
-            CALCIFICATION_AVAILABLE=True,
-            calcification_ct_slice=ct_slice,
-            calcification_label_slice=label_slice,
-            calcification_label=self.labels,
-            calcification_crop=tuple(slice(0, size) for size in self.labels.shape),
-            calcification_z=3,
-            spacing_xyz=(0.4, 0.5, 2.5),
-            FIGURE_WIDTH_MM=90,
-            PREVIEW_DPI=72,
-            EXPORT_DPI=600,
-            WINDOW_LEVEL_HU=200,
-            WINDOW_WIDTH_HU=800,
-            CALCIFICATION_ALPHA=0.5,
-            CALCIFICATION_MARGIN_MM=10,
-            CALCIFICATION_SLICE_INDEX=None,
-            CALCIFICATION_REFERENCE_PATH=self.reference_path,
-            EXAM_ID="CASE",
-            SUBSET="train",
-            PAIR={"noncontrast": self.record},
-            save_print_figure=lambda fig, stem, metadata: exported.append(
-                (fig, metadata)
-            ),
-        )
         with patch("matplotlib.pyplot.show"):
-            namespace["show_calcification_view"]("comparison")
+            show_calcification_view(
+                "comparison",
+                calcification_available=True,
+                calcification_ct_slice=ct_slice,
+                calcification_label_slice=label_slice,
+                calcification_label=self.labels,
+                calcification_crop=tuple(slice(0, size) for size in self.labels.shape),
+                calcification_z=3,
+                spacing_xyz=(0.4, 0.5, 2.5),
+                figure_width_mm=90,
+                preview_dpi=72,
+                export_dpi=600,
+                window_level_hu=200,
+                window_width_hu=800,
+                calcification_alpha=0.5,
+                calcification_margin_mm=10,
+                calcification_slice_index=None,
+                calcification_reference_path=self.reference_path,
+                exam_id="CASE",
+                subset="train",
+                pair={"noncontrast": self.record},
+                save_figure=lambda fig, _stem, metadata: exported.append(
+                    (fig, metadata)
+                ),
+            )
         figure, metadata = exported[0]
         np.testing.assert_array_equal(figure.axes[0].images[0].get_array(), ct_slice)
         np.testing.assert_array_equal(figure.axes[2].images[0].get_array(), ct_slice)

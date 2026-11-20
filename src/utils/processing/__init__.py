@@ -13,8 +13,6 @@ _SYMBOL_TO_MODULE = {
     # frangi
     "get_vesselness": "frangi",
     # gpu_utils
-    "ensure_cpu": "gpu_utils",
-    "ensure_gpu": "gpu_utils",
     "get_array_module": "gpu_utils",
     "to_cpu": "gpu_utils",
     "to_gpu": "gpu_utils",
@@ -26,7 +24,6 @@ _SYMBOL_TO_MODULE = {
     "build_lcc_image_from_mask": "preprocessing",
     "largest_connected_component": "preprocessing",
     "run_core_preprocessing_pipeline": "preprocessing",
-    "threshold_image": "preprocessing",
     "threshold_image_with_offset": "preprocessing",
 }
 

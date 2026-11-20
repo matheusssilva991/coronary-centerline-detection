@@ -13,19 +13,22 @@ import numpy as np
 import pandas as pd
 
 import segmentation_pipeline
+from utils.processing.binary_operations import keep_largest_component
+from utils.processing.preprocessing import downscale_image_opencv, downscale_label
+from utils.segmentation.aorta.diagnostics import (
+    summarize_aorta_circles,
+    summarize_aorta_volume,
+)
 from utils.segmentation.pipeline.cli import (
     _parse_rg_comparison_window,
     build_parser,
 )
 from utils.segmentation.pipeline.orchestration import (
-    _circle_result_fields,
     _ostia_result_fields,
     _preprocessing_result_fields,
     _resolve_batch_plan,
     process_image,
     run_pipeline,
-    summarize_aorta_circles,
-    summarize_aorta_volume,
 )
 from utils.segmentation.pipeline.preprocessing import (
     compute_vesselness,
@@ -41,8 +44,8 @@ class _FakeNifti:
         self.header = Mock()
         self.header.get_zooms.return_value = (0.5, 0.5, 1.0)
 
-    def get_fdata(self):
-        return self._data
+    def get_fdata(self, dtype=np.float64):
+        return self._data.astype(dtype, copy=False)
 
 
 def _preprocessing_config(method):
@@ -66,8 +69,8 @@ class PipelineSimplificationTests(TestCase):
         "utils.segmentation.pipeline.orchestration.detect_and_evaluate_ostia",
         side_effect=ValueError("Nenhum óstio encontrado"),
     )
-    @patch("utils.segmentation.pipeline.orchestration.segment_aorta_with_diagnostics")
-    @patch("utils.segmentation.pipeline.orchestration.locate_and_filter_aorta_circles")
+    @patch("utils.segmentation.pipeline.detection.segment_aorta_with_diagnostics")
+    @patch("utils.segmentation.pipeline.detection.locate_and_filter_aorta_circles")
     @patch("utils.segmentation.pipeline.orchestration.compute_vesselness")
     @patch("utils.segmentation.pipeline.orchestration.load_and_preprocess_image")
     def test_imagecas_summary_keeps_original_circle_trajectory(
@@ -261,8 +264,7 @@ class PipelineSimplificationTests(TestCase):
         self.assertEqual(_parse_rg_comparison_window("5"), 5)
 
     @patch("utils.segmentation.pipeline.preprocessing.downscale_label")
-    @patch("utils.segmentation.pipeline.preprocessing.largest_connected_component")
-    @patch("utils.segmentation.pipeline.preprocessing.threshold_image_with_offset")
+    @patch("utils.segmentation.pipeline.preprocessing.build_lcc_image_from_mask")
     @patch("utils.segmentation.pipeline.preprocessing.resolve_lower_threshold")
     @patch("utils.segmentation.pipeline.preprocessing.downscale_image_opencv")
     @patch("utils.segmentation.pipeline.preprocessing.load_raw_img_and_label")
@@ -271,8 +273,7 @@ class PipelineSimplificationTests(TestCase):
         load_raw,
         downscale_opencv,
         resolve_lower,
-        threshold,
-        largest_component,
+        build_lcc,
         downscale_label_mock,
     ):
         image = np.arange(27, dtype=np.float32).reshape(3, 3, 3)
@@ -281,11 +282,7 @@ class PipelineSimplificationTests(TestCase):
         downscale_opencv.return_value = image
         downscale_label_mock.return_value = label
         resolve_lower.return_value = (-300.0, {"lower_threshold_method": "fixed"})
-        threshold.return_value = (image + 300.0, np.ones_like(image, bool), 300.0)
-        largest_component.side_effect = lambda image_slice, mask_slice: (
-            image_slice,
-            mask_slice,
-        )
+        build_lcc.return_value = (image, np.ones_like(image, bool))
 
         result = load_and_preprocess_image(
             "1",
@@ -295,6 +292,7 @@ class PipelineSimplificationTests(TestCase):
 
         self.assertEqual(downscale_opencv.call_count, 1)
         self.assertEqual(downscale_label_mock.call_count, 1)
+        build_lcc.assert_called_once()
         np.testing.assert_array_equal(result["lcc_image"], image)
         expected_upper_hu = float(np.percentile(image, 99.8))
         self.assertEqual(
@@ -371,7 +369,7 @@ class PipelineSimplificationTests(TestCase):
         self.assertEqual(empty_aorta_volume["aorta_segmented_slice_count"], 0)
         self.assertIsNone(empty_aorta_volume["aorta_voxels_per_segmented_slice"])
 
-        circles = _circle_result_fields(
+        circles = summarize_aorta_circles(
             [
                 {"slice_index": 9},
                 {"slice_index": 8, "interpolated": True},
@@ -382,17 +380,6 @@ class PipelineSimplificationTests(TestCase):
         self.assertEqual(circles["aorta_circle_count"], 3)
         self.assertEqual(circles["aorta_detected_circle_count"], 2)
         self.assertEqual(circles["aorta_circle_coverage"], 0.3)
-        self.assertEqual(
-            circles,
-            summarize_aorta_circles(
-                [
-                    {"slice_index": 9},
-                    {"slice_index": 8, "interpolated": True},
-                    {"slice_index": 7},
-                ],
-                10,
-            ),
-        )
 
         radius_summary = summarize_aorta_circles(
             [
@@ -593,3 +580,69 @@ class PipelineSimplificationTests(TestCase):
         processed_numbers = [call.args[1] for call in process_batch.call_args_list]
         self.assertEqual(processed_numbers, [3, 4, 5])
         self.assertEqual(result["batches_processed"], [1, 2, 3, 4, 5])
+
+    def test_unit_downscale_shortcuts_return_exact_copy_without_mutation(self):
+        volume = np.arange(24, dtype=np.float32).reshape(2, 3, 4)
+        scaled_img = downscale_image_opencv(volume, (1, 1, 1))
+        np.testing.assert_array_equal(scaled_img, volume)
+        self.assertIsNot(scaled_img, volume)
+
+        label = np.array([[[0, 1], [1, 0]], [[0, 0], [1, 1]]], dtype=np.uint8)
+        scaled_lbl = downscale_label(
+            label,
+            {"DOWNSCALE_FACTORS": [1, 1, 1], "DOWNSCALE_METHOD": "opencv"},
+        )
+        np.testing.assert_array_equal(scaled_lbl, label)
+        self.assertIsNot(scaled_lbl, label)
+
+    def test_keep_largest_component_preserves_empty_and_selects_largest(self):
+        empty = np.zeros((4, 4, 4), dtype=np.uint8)
+        np.testing.assert_array_equal(keep_largest_component(empty, gpu=False), empty)
+
+        mask = np.zeros((6, 6, 6), dtype=np.uint8)
+        mask[0:2, 0:2, 0:1] = 1
+        mask[3:6, 3:6, 3:6] = 1
+        expected = np.zeros_like(mask)
+        expected[3:6, 3:6, 3:6] = 1
+        np.testing.assert_array_equal(keep_largest_component(mask, gpu=False), expected)
+
+    @patch("utils.segmentation.pipeline.detection.segment_aorta_with_diagnostics")
+    @patch("utils.segmentation.pipeline.detection.locate_and_filter_aorta_circles")
+    @patch("utils.segmentation.pipeline.orchestration.compute_vesselness")
+    @patch("utils.segmentation.pipeline.orchestration.load_and_preprocess_image")
+    def test_process_image_skips_ostia_vesselness_when_aorta_fails(
+        self,
+        load_image,
+        compute_vesselness_mock,
+        track_circles,
+        segment_aorta,
+    ):
+        lcc_image = np.ones((4, 4, 3), dtype=np.float32)
+        load_image.return_value = {
+            "lcc_image": lcc_image,
+            "label": np.zeros_like(lcc_image, dtype=np.uint8),
+            "scaled_spacing": (1.0, 1.0, 1.0),
+            "preprocessing_details": {},
+            "downscale_factors": (1, 1, 1),
+        }
+        track_circles.return_value = SimpleNamespace(
+            original_circles=[{"slice_index": 0}],
+            filtered_circles=[{"slice_index": 0}],
+            filter_diagnostics={},
+        )
+        segment_aorta.side_effect = RuntimeError("aorta falhou")
+
+        result = process_image(
+            13,
+            {
+                "VESSELNESS_AORTA": {},
+                "CIRCLE_DETECTION": {},
+                "LEVEL_SET": {},
+                "OSTIA_VALIDATION": {"distance_threshold_mm": 1.0},
+                "USE_GPU": False,
+            },
+            Path("/dataset"),
+        )
+
+        self.assertEqual(result["error"], "aorta falhou")
+        compute_vesselness_mock.assert_not_called()

@@ -1,6 +1,5 @@
-# ============================================================================
-# IMPORTS
-# ============================================================================
+"""CLI principal do pipeline ImageCAS: seleção de split, lotes, consolidação e metadados."""
+
 import copy
 import json
 import logging
@@ -12,18 +11,9 @@ import pandas as pd
 # Usa GPU 0 por padrão quando a variável não for definida externamente.
 os.environ.setdefault("CUDA_VISIBLE_DEVICES", "0")
 
-from utils.utils.json_io import save_json_atomic
-from utils.project.runtime.run_logging import add_run_file_handler
-from utils.project.runtime.resource_monitor import apply_resource_monitoring_options
-from utils.project.evaluation.artery_distances import apply_distance_metric_options
 from utils.processing.gpu_utils import use_gpu
-from utils.project.config import (
-    LEGACY_LABEL_PROTOCOL,
-    load_config_json,
-    scale_config_to_resolution,
-)
+from utils.project.config import load_config_json
 from utils.project.datasets.imagecas import get_data_splits, list_dataset_image_ids
-from utils.project.runtime.run_notification import notify_run_completion
 from utils.project.results import (
     ResultIntegrityError,
     batch_result_number,
@@ -35,18 +25,33 @@ from utils.project.results import (
     summarize_batch_timing_records,
     validate_result_integrity,
 )
-from utils.project.results.paths import (
+from utils.project.results.io import (
     integrity_filename,
     metadata_candidates,
     metadata_filename,
 )
+from utils.project.runtime.run_reporting import (
+    add_run_file_handler,
+    create_standard_run_dirs,
+    notify_run_completion,
+    notify_run_exception,
+)
+from utils.segmentation.pipeline.cli import (
+    _apply_execution_overrides as _apply_execution_overrides,
+)
+from utils.segmentation.pipeline.cli import (
+    _apply_threshold_overrides as _apply_threshold_overrides,
+)
+from utils.segmentation.pipeline.cli import (
+    build_effective_config as _build_effective_config,
+)
 from utils.segmentation.pipeline.cli import parse_pipeline_args
+from utils.segmentation.pipeline.cli import (
+    select_resolution_config as _select_resolution_config,
+)
 from utils.segmentation.pipeline.orchestration import run_pipeline
 from utils.segmentation.pipeline.reporting import print_split_summary, print_statistics
-
-# ============================================================================
-# CONFIGURAÇÕES GLOBAIS
-# ============================================================================
+from utils.utils.json_io import save_json_atomic
 
 logger = logging.getLogger(__name__)
 LOG_FORMAT = "%(asctime)s %(levelname)s %(name)s [%(filename)s:%(lineno)d] %(message)s"
@@ -66,15 +71,33 @@ PIPELINE_CONFIG_PATH = REPO_ROOT / "config" / "pipeline_config.json"
 
 
 def has_imagecas_images(path: Path) -> bool:
-    """Retorna True se o diretório contém imagens ImageCAS."""
+    """Verifica se o diretório contém exames ImageCAS no padrão ``*.img.nii.gz``.
+
+    Args:
+        path (Path): Caminho do diretório candidato a raiz do dataset.
+
+    Returns:
+        bool: ``True`` se ``path`` existir e contiver ao menos um arquivo
+            ``*.img.nii.gz``.
+    """
     return path.exists() and any(path.glob("*.img.nii.gz"))
 
 
 def resolve_base_path(base_path: Path) -> Path:
-    """Resolve o caminho do ImageCAS usando fallback só para o default."""
+    """Resolve o caminho do ImageCAS usando fallback apenas para o caminho padrão.
+
+    Args:
+        base_path (Path): Diretório informado via CLI ou default local ``BASE_PATH``.
+
+    Returns:
+        Path: ``base_path`` quando válido ou ``BASE_PATH_FALLBACK`` se o padrão local
+            não existir.
+    """
+    # Prioriza o diretório informado quando já contém exames válidos.
     if has_imagecas_images(base_path):
         return base_path
 
+    # Recorre ao caminho alternativo somente quando o default local não existe.
     if base_path == BASE_PATH and has_imagecas_images(BASE_PATH_FALLBACK):
         print(
             "⚠️  Dataset não encontrado no caminho padrão local. "
@@ -91,7 +114,17 @@ def resolve_base_path(base_path: Path) -> Path:
 
 
 def load_default_config(config_path=PIPELINE_CONFIG_PATH):
-    """Carrega a configuração base do pipeline."""
+    """Carrega a configuração base do pipeline a partir de JSON (com fallback mínimo).
+
+    Args:
+        config_path (Path | str): Caminho do arquivo ``pipeline_config.json`` a
+            carregar.
+
+    Returns:
+        dict[str, Any]: Dicionário de configuração carregado e normalizado para
+            runtime.
+    """
+    # Carrega a configuração JSON principal com fallback mínimo em caso de falha.
     try:
         config = load_config_json(str(config_path), {})
         logger.info("Config carregada de pipeline_config.json: %s", config_path)
@@ -115,211 +148,40 @@ CONFIG_HIGH_RES["DOWNSCALE_FACTORS"] = [1, 1, 1]
 
 
 def select_resolution_config(args):
-    """Seleciona a configuração base para mid/high resolution."""
-    if args.resolution == "high":
-        print(
-            "🔍 Resolução: HIGH "
-            "(sem downscaling, DOWNSCALE_FACTORS = "
-            f"{CONFIG_HIGH_RES['DOWNSCALE_FACTORS']})"
-        )
-        return CONFIG_HIGH_RES
+    """Seleciona a configuração base para mid ou high resolution.
 
-    print(
-        "🔍 Resolução: MID "
-        f"(downscale 2x, DOWNSCALE_FACTORS = {CONFIG_MID_RES['DOWNSCALE_FACTORS']})"
-    )
-    return CONFIG_MID_RES
+    Args:
+        args (argparse.Namespace): Namespace CLI contendo ``resolution``.
 
-
-def _apply_execution_overrides(config, args):
-    """Aplica opções operacionais da CLI à configuração efetiva."""
-    apply_resource_monitoring_options(config, args)
-    apply_distance_metric_options(config, args)
-    # Configurações antigas podem conter opções de cache já removidas.
-    config.pop("SAVE_CACHE", None)
-    config.pop("LOAD_CACHE", None)
-
-    direct_overrides = {
-        "DOWNSCALE_METHOD": args.downscale_method,
-        "OPENCV_INTERPOLATION": args.opencv_interpolation,
-        "USE_GPU": args.use_gpu,
-    }
-    for config_key, value in direct_overrides.items():
-        if value is not None:
-            config[config_key] = value
-    save_visuals = bool(getattr(args, "save_segmentation_visuals", False))
-    if (
-        not getattr(args, "config_replace", False)
-        or "SAVE_SEGMENTATION_VISUALS" in config
-        or save_visuals
-    ):
-        config["SAVE_SEGMENTATION_VISUALS"] = save_visuals
-    visual_output_dir = getattr(args, "visual_output_dir", None)
-    if (
-        not getattr(args, "config_replace", False)
-        or "VISUAL_OUTPUT_DIR" in config
-        or visual_output_dir is not None
-    ):
-        config["VISUAL_OUTPUT_DIR"] = (
-            Path(visual_output_dir).as_posix()
-            if visual_output_dir is not None
-            else None
-        )
-
-    nested_overrides = (
-        ("ARTERY_SEGMENTATION", "method", args.artery_segmentation_method),
-        ("REGION_GROWING", "comparison_window", args.rg_comparison_window),
-    )
-    for section, config_key, value in nested_overrides:
-        if value is not None:
-            config.setdefault(section, {})[config_key] = value
-
-    level_set_config = config.setdefault("LEVEL_SET", {})
-    level_set_overrides = {
-        "num_iter": getattr(args, "aorta_level_set_iterations", None),
-        "radius_reduction_factor": getattr(
-            args,
-            "aorta_level_set_radius_reduction_factor",
-            None,
-        ),
-        "balloon": getattr(args, "aorta_level_set_balloon", None),
-        "alpha": getattr(args, "aorta_level_set_alpha", None),
-        "leak_removal_radius": getattr(args, "aorta_opening_radius", None),
-    }
-    for config_key, value in level_set_overrides.items():
-        if value is not None:
-            level_set_config[config_key] = value
-    trajectory_radius_factor = getattr(
-        args,
-        "aorta_trajectory_radius_factor",
-        None,
-    )
-    if trajectory_radius_factor is not None:
-        config.setdefault("LEVEL_SET", {})["trajectory_radius_factor"] = float(
-            trajectory_radius_factor
-        )
-    trajectory_axial_margin = getattr(
-        args,
-        "aorta_trajectory_axial_margin_slices",
-        None,
-    )
-    if trajectory_axial_margin is not None:
-        config.setdefault("LEVEL_SET", {})["trajectory_axial_margin_slices"] = int(
-            trajectory_axial_margin
-        )
-    circle_detection_config = config.setdefault("CIRCLE_DETECTION", {})
-    hough_radii_start = getattr(args, "aorta_hough_radii_start_px", None)
-    hough_radii_end = getattr(args, "aorta_hough_radii_end_px", None)
-    if hough_radii_start is not None:
-        circle_detection_config["radii_start_px"] = int(hough_radii_start)
-    if hough_radii_end is not None:
-        circle_detection_config["radii_end_px"] = int(hough_radii_end)
-    if (
-        "radii_start_px" in circle_detection_config
-        and "radii_end_px" in circle_detection_config
-        and float(circle_detection_config["radii_start_px"])
-        >= float(circle_detection_config["radii_end_px"])
-    ):
-        raise ValueError(
-            "CIRCLE_DETECTION.radii_start_px deve ser menor que radii_end_px"
-        )
-
-    circle_filter = getattr(args, "aorta_circle_filter", None)
-    circle_filter_config = circle_detection_config.get("trajectory_filter") or {}
-    if circle_filter is not None:
-        circle_filter_config["method"] = circle_filter
-    circle_filter_min_coverage = getattr(args, "aorta_circle_filter_min_coverage", None)
-    if circle_filter_min_coverage is not None:
-        circle_filter_config["min_tail_coverage"] = circle_filter_min_coverage
-    circle_filter_max_trim_fraction = getattr(
-        args, "aorta_circle_filter_max_trim_fraction", None
-    )
-    if circle_filter_max_trim_fraction is not None:
-        circle_filter_config["max_tail_trim_fraction"] = float(
-            circle_filter_max_trim_fraction
-        )
-    synthetic_tail_slices = getattr(
-        args, "aorta_circle_filter_synthetic_tail_slices", None
-    )
-    if synthetic_tail_slices is not None:
-        circle_filter_config["synthetic_tail_slices"] = int(synthetic_tail_slices)
-    if (
-        circle_filter_config
-        and circle_detection_config.get("trajectory_filter") is not circle_filter_config
-    ):
-        circle_detection_config["trajectory_filter"] = circle_filter_config
-
-
-def _apply_threshold_overrides(config, args):
-    """Aplica opções de threshold normal/fuzzy e piso inferior."""
-    thresholding_config = config.setdefault("THRESHOLDING", {})
-    if args.threshold_method is not None:
-        thresholding_config["method"] = args.threshold_method
-    if args.upper_threshold_percentile is not None:
-        config["MAX_THRESHOLD_PERCENTILE"] = args.upper_threshold_percentile
-
-    lower_threshold_config = config.setdefault("LOWER_THRESHOLD", {})
-    lower_overrides = {
-        "method": args.lower_threshold_method,
-        "percentile": args.lower_threshold_percentile,
-        "clip_min_hu": args.lower_threshold_clip_min,
-        "clip_max_hu": args.lower_threshold_clip_max,
-    }
-    for config_key, value in lower_overrides.items():
-        if value is not None:
-            lower_threshold_config[config_key] = value
-
-    if (
-        args.lower_threshold_percentile is not None
-        and thresholding_config.get("method") == "fuzzy"
-    ):
-        thresholding_config.setdefault("fuzzy", {})["lower_percentile"] = (
-            args.lower_threshold_percentile
-        )
+    Returns:
+        dict[str, Any]: Dicionário ``CONFIG_MID_RES`` ou ``CONFIG_HIGH_RES``.
+    """
+    return _select_resolution_config(args, CONFIG_MID_RES, CONFIG_HIGH_RES)
 
 
 def build_effective_config(args):
-    """Aplica resolução, arquivo extra, flags CLI e escala espacial da configuração."""
-    effective_config = copy.deepcopy(select_resolution_config(args))
+    """Monta a configuração efetiva aplicando resolução, JSON extra, flags e escala espacial.
 
-    if args.config_file:
-        base_config = {} if getattr(args, "config_replace", False) else effective_config
-        effective_config = load_config_json(args.config_file, base_config)
-        print(f"⚙️  Configuração carregada de: {args.config_file}")
+    Args:
+        args (argparse.Namespace): Namespace CLI validado do pipeline ImageCAS.
 
-    # Preserva o protocolo dos lotes anteriores, inclusive em snapshots históricos.
-    resume_dir = getattr(args, "resume_dir", None)
-    if resume_dir:
-        resume_root = Path(resume_dir)
-        if resume_root.name == "numeric":
-            resume_root = resume_root.parent
-        snapshot_path = resume_root / "config/effective_pipeline_config.json"
-        if snapshot_path.is_file():
-            snapshot = json.loads(snapshot_path.read_text(encoding="utf-8"))
-            effective_config["LABEL_RESAMPLING"] = snapshot.get(
-                "LABEL_RESAMPLING", LEGACY_LABEL_PROTOCOL
-            )
-            if not args.config_file:
-                effective_config["EVALUATION"] = copy.deepcopy(
-                    snapshot.get("EVALUATION") or {"distance_metrics": False}
-                )
-        elif getattr(args, "resume_requested", False):
-            effective_config["LABEL_RESAMPLING"] = LEGACY_LABEL_PROTOCOL
-
-    # A resolução escolhida na CLI prevalece sobre fatores salvos em snapshots
-    # de configuração produzidos originalmente para mid resolution.
-    if args.resolution == "high":
-        effective_config["DOWNSCALE_FACTORS"] = [1, 1, 1]
-
-    _apply_execution_overrides(effective_config, args)
-    _apply_threshold_overrides(effective_config, args)
-
-    effective_config["NUM_BATCHES"] = args.num_batches
-    return scale_config_to_resolution(effective_config)
+    Returns:
+        dict[str, Any]: Dicionário de configuração final normalizado e escalado
+            para a resolução.
+    """
+    return _build_effective_config(args, CONFIG_MID_RES, CONFIG_HIGH_RES)
 
 
 def print_run_settings(args, config, base_path):
-    """Mostra as configurações operacionais principais da execução."""
+    """Exibe no console um resumo das configurações operacionais da execução.
+
+    Args:
+        args (argparse.Namespace): Namespace CLI com quantidade de lotes e lote de
+            retomada.
+        config (dict[str, Any]): Configuração efetiva já resolvida.
+        base_path (Path): Diretório efetivo do dataset ImageCAS utilizado.
+    """
+    # Exibe método de downscale, origem do dataset e disponibilidade de GPU.
     if config["DOWNSCALE_METHOD"] == "opencv":
         print(
             "🔧 Método de downscale: "
@@ -334,6 +196,7 @@ def print_run_settings(args, config, base_path):
         "🖥️  GPU nas etapas compatíveis: "
         f"{'habilitada' if config.get('USE_GPU', False) else 'desabilitada'}"
     )
+    # Exibe parâmetros da localização da aorta, segmentação arterial e thresholding.
     circle_config = config.get("CIRCLE_DETECTION", {})
     circle_filter_config = circle_config.get("trajectory_filter", {})
     print("🔎 LCC: por fatia")
@@ -356,6 +219,7 @@ def print_run_settings(args, config, base_path):
         f"{lower_threshold_config.get('method', 'fixed')} "
         f"(p={lower_threshold_config.get('percentile', 'N/A')})"
     )
+    # Exibe organização em lotes, flag de visuais 3D e eventual lote de retomada.
     print(f"📦 Processamento em {args.num_batches} lotes")
     print(
         "🖼️  Visualizações 3D: "
@@ -367,7 +231,18 @@ def print_run_settings(args, config, base_path):
 
 
 def resolve_output_dir(args, output_root_dir):
-    """Cria ou reutiliza os diretórios de saída da execução."""
+    """Cria uma nova pasta de execução com timestamp ou reutiliza ``--resume-dir``.
+
+    Args:
+        args (argparse.Namespace): Namespace CLI contendo flags de retomada,
+            consolidação, resolução e grupo.
+        output_root_dir (Path): Diretório raiz onde novos runs são criados.
+
+    Returns:
+        dict[str, Path]: Dicionário com caminhos ``run_dir``, ``numeric_dir``,
+            ``config_dir``, ``visual_dir`` e ``logs_dir``.
+    """
+    # Em retomada ou consolidação (--merge-only), reaproveita o diretório existente do run.
     if (args.resume_requested or args.merge_only) and args.resume_dir:
         if args.resume_dir.exists():
             print(f"\n📁 Usando diretório anterior: {args.resume_dir}\n")
@@ -390,6 +265,7 @@ def resolve_output_dir(args, output_root_dir):
         )
         raise SystemExit(1)
 
+    # Nova execução: cria pasta com timestamp separada por resolução e grupo opcional.
     experiment_name = f"segmentation/runs/{args.resolution}_res"
     if args.run_group:
         experiment_name = f"{experiment_name}/{Path(args.run_group).as_posix()}"
@@ -410,7 +286,18 @@ def resolve_output_dir(args, output_root_dir):
 
 
 def resolve_visual_output_dir(args, run_dir, output_root_dir):
-    """Resolve a pasta visual interna ou espelha o run em uma raiz externa."""
+    """Resolve o diretório visual dentro do run ou espelhado em ``--visual-output-dir``.
+
+    Args:
+        args (argparse.Namespace): Namespace CLI contendo ``visual_output_dir`` e
+            ``resolution``.
+        run_dir (Path | str): Diretório raiz do run atual.
+        output_root_dir (Path | str): Raiz base de saída usada para calcular o
+            caminho relativo espelhado.
+
+    Returns:
+        Path: Caminho ``Path`` onde as visualizações HTML do run devem ser salvas.
+    """
     visual_root = getattr(args, "visual_output_dir", None)
     if visual_root is None:
         return Path(run_dir) / "visual"
@@ -428,27 +315,31 @@ def resolve_visual_output_dir(args, run_dir, output_root_dir):
 
 
 def build_structured_output_dirs(run_dir):
-    """Cria a estrutura padrão de uma execução nova."""
-    run_dir = Path(run_dir)
-    output_dirs = {
-        "run_dir": run_dir,
-        "numeric_dir": run_dir / "numeric",
-        "config_dir": run_dir / "config",
-        "visual_dir": run_dir / "visual",
-        "logs_dir": run_dir / "logs",
-    }
-    for output_path in (
-        output_dirs["run_dir"],
-        output_dirs["numeric_dir"],
-        output_dirs["config_dir"],
-        output_dirs["logs_dir"],
-    ):
-        output_path.mkdir(parents=True, exist_ok=True)
-    return output_dirs
+    """Cria a estrutura padrão de subdiretórios de uma execução nova.
+
+    Args:
+        run_dir (Path | str): Diretório raiz do run onde ``numeric``, ``config``,
+            ``visual`` e ``logs`` são criados.
+
+    Returns:
+        dict[str, Path]: Dicionário mapeando cada chave de subdiretório ao seu
+            ``Path``.
+    """
+    return create_standard_run_dirs(run_dir)
 
 
 def resolve_existing_output_dirs(resume_dir):
-    """Resolve diretórios para retomada em layout novo ou legado."""
+    """Resolve diretórios para retomada a partir do layout novo (``numeric/``) ou legado.
+
+    Args:
+        resume_dir (Path | str): Caminho informado pelo usuário como diretório do
+            run anterior.
+
+    Returns:
+        dict[str, Path]: Dicionário com caminhos ``run_dir``, ``numeric_dir``,
+            ``config_dir``, ``visual_dir`` e ``logs_dir``.
+    """
+    # Aceita a raiz do run, a subpasta numeric ou o layout legado plano.
     resume_dir = Path(resume_dir)
     if resume_dir.name == "numeric":
         run_dir = resume_dir.parent
@@ -460,6 +351,7 @@ def resolve_existing_output_dirs(resume_dir):
         run_dir = resume_dir
         numeric_dir = resume_dir
 
+    # Monta o mapa padrão de diretórios e garante as pastas obrigatórias de escrita.
     output_dirs = {
         "run_dir": run_dir,
         "numeric_dir": numeric_dir,
@@ -473,7 +365,12 @@ def resolve_existing_output_dirs(resume_dir):
 
 
 def setup_file_logging(logs_dir):
-    """Adiciona um arquivo de log dentro do diretório da execução."""
+    """Configura um arquivo ``pipeline.log`` dentro do diretório de logs da execução.
+
+    Args:
+        logs_dir (Path | str): Diretório onde o arquivo ``pipeline.log`` será
+            criado.
+    """
     try:
         fh_path = Path(logs_dir) / "pipeline.log"
         add_run_file_handler(
@@ -491,13 +388,28 @@ def save_run_snapshots(
     image_ids,
     split_config_path=None,
 ):
-    """Salva a configuração efetiva e os IDs da única coorte executada."""
+    """Salva snapshots JSON com a configuração efetiva e os IDs da coorte executada.
+
+    Args:
+        output_dirs (dict[str, Path]): Dicionário de caminhos do run contendo
+            ``config_dir``.
+        config (dict[str, Any]): Configuração efetiva normalizada e escalada da
+            execução.
+        split_name (str): Nome do split executado (``train``, ``val``, ``test`` ou
+            ``full``).
+        image_ids (list[int] | None): Lista ordenada de IDs da coorte selecionada
+            (ou ``None`` para omitir).
+        split_config_path (Path | str | None): Caminho opcional do arquivo
+            ``split_config`` registrado na origem.
+    """
+    # Garante a pasta de configuração e salva a configuração efetiva de forma atômica.
     config_dir = output_dirs["config_dir"]
     config_dir.mkdir(parents=True, exist_ok=True)
 
     config_path = config_dir / "effective_pipeline_config.json"
     save_json_atomic(config, config_path)
 
+    # Persiste a lista exata de IDs do split para reprodutibilidade e --merge-only.
     if image_ids is not None:
         split_payload = {
             "source": split_config_path,
@@ -508,10 +420,22 @@ def save_run_snapshots(
 
 
 def build_split_to_run(args, base_path):
-    """Resolve a única coorte solicitada e seus IDs."""
+    """Resolve o nome da coorte solicitada e a lista ordenada de IDs a processar.
+
+    Args:
+        args (argparse.Namespace): Namespace CLI com ``split``, ``split_config``,
+            ``image_ids`` e ``merge_only``.
+        base_path (Path): Diretório raiz do dataset ImageCAS.
+
+    Returns:
+        tuple[str, list[int] | None]: Tupla ``(split_name, image_ids)``
+            (``image_ids`` é ``None`` no modo ``--merge-only``).
+    """
+    # --merge-only obtém os IDs diretamente dos snapshots do run, sem ler o dataset.
     if args.merge_only:
         return args.split, None
 
+    # Resolve todos os IDs do split configurado antes de aplicar eventual filtro explícito.
     if args.split == "full":
         selected_ids = list_dataset_image_ids(base_path)
         print(
@@ -531,6 +455,7 @@ def build_split_to_run(args, base_path):
         }
         selected_ids = split_map[args.split]
 
+    # Filtra apenas os IDs explicitados por --image-ids mantendo a ordem do split.
     requested_ids = getattr(args, "image_ids", None)
     if not requested_ids:
         return args.split, selected_ids
@@ -551,7 +476,18 @@ def build_split_to_run(args, base_path):
 
 
 def load_merge_only_image_ids(output_dirs, split_name):
-    """Carrega a coorte persistida sem consultar o dataset ImageCAS."""
+    """Carrega os IDs da coorte persistida no run sem consultar o dataset ImageCAS.
+
+    Args:
+        output_dirs (dict[str, Path]): Dicionário de diretórios do run contendo
+            ``config_dir`` e ``numeric_dir``.
+        split_name (str): Nome do split cujo snapshot ``split_ids.json`` ou
+            metadata será lido.
+
+    Returns:
+        list[int]: Lista de IDs inteiros da coorte original do run.
+    """
+    # Prioriza o snapshot split_ids.json gravado nos runs atuais.
     split_path = Path(output_dirs["config_dir"]) / "split_ids.json"
     if split_path.is_file():
         payload = json.loads(split_path.read_text(encoding="utf-8"))
@@ -559,6 +495,7 @@ def load_merge_only_image_ids(output_dirs, split_name):
         if split_ids is not None:
             return [int(image_id) for image_id in split_ids]
 
+    # Recorre aos metadados legados caso split_ids.json esteja ausente.
     numeric_dir = Path(output_dirs["numeric_dir"])
     for metadata_path in metadata_candidates(numeric_dir, split_name):
         if not metadata_path.is_file():
@@ -582,7 +519,26 @@ def save_split_metadata(
     expected_batches,
     resolution=None,
 ):
-    """Salva identidade, configuração e resultados essenciais do run."""
+    """Salva identidade, configuração efetiva e resumo dos resultados do split em JSON.
+
+    Args:
+        split_name (str): Nome do split executado (``train``, ``val``, ``test`` ou
+            ``full``).
+        output_dir (Path | str): Diretório numérico onde os arquivos de metadata
+            são gravados.
+        config (dict[str, Any]): Configuração efetiva usada na execução.
+        results (pd.DataFrame): DataFrame consolidado com todos os registros do
+            split.
+        batch_timings (list[dict[str, Any]]): Lista de registros de duração dos
+            lotes carregados dos manifests.
+        expected_batches (list[int]): Lista de números dos lotes esperados na
+            consolidação.
+        resolution (str | None): Resolução da execução (``"mid"``, ``"high"`` ou
+            ``None``).
+
+    Returns:
+        str: Caminho do arquivo de metadata principal gerado.
+    """
     metadata_path = save_metadata(
         split_name,
         output_dir,
@@ -597,7 +553,15 @@ def save_split_metadata(
 
 
 def _record_incomplete_integrity(output_dir, split_name, error):
-    """Remove artefatos finais inválidos e persiste o diagnóstico de integridade."""
+    """Remove artefatos finais inválidos e persiste o diagnóstico de integridade.
+
+    Args:
+        output_dir (Path | str): Diretório numérico onde os artefatos finais são
+            gravados.
+        split_name (str): Nome do split cuja validação de integridade falhou.
+        error (ResultIntegrityError): Exceção contendo o relatório detalhado de
+            divergências de IDs.
+    """
     output_dir = Path(output_dir)
     for stale_name in (
         f"summary_{split_name}.csv",
@@ -611,40 +575,84 @@ def _record_incomplete_integrity(output_dir, split_name, error):
 
 
 def _pipeline_error_count(results):
-    """Conta exames com falha registrada no consolidado validado."""
+    """Conta exames com falha registrada no consolidado validado.
+
+    Args:
+        results (pd.DataFrame): DataFrame consolidado com os resultados por imagem.
+
+    Returns:
+        int: Quantidade de exames com erro não vazio registrado na coluna ``error``.
+    """
     if "error" not in results.columns:
         return 0
     errors = results["error"].fillna("").astype(str).str.strip()
     return int(errors.ne("").sum())
 
 
-def run_merge_only_split(
+def _finalize_split_results(
     split_name,
     image_ids,
     output_dir,
     config,
     resolution=None,
+    *,
+    missing_batches_exit=False,
+    execution_time=None,
+    batch_timing_summary=None,
+    current_run_execution_time=None,
 ):
-    """Consolida lotes já existentes e recria o metadata compacto."""
-    final_path = merge_batch_results(split_name, output_dir)
-    if final_path is None:
-        print(f"❌ Nenhum lote encontrado para o split '{split_name}'")
-        raise SystemExit(1)
+    """Consolida lotes, valida integridade e persiste metadata/resumo.
 
-    df = pd.read_csv(final_path)
+    Args:
+        split_name (str): Nome do split consolidado (``train``, ``val``, ``test``
+            ou ``full``).
+        image_ids (list[int]): Lista esperada de IDs da coorte para validação de
+            integridade.
+        output_dir (Path | str): Diretório numérico contendo lotes e saídas finais.
+        config (dict[str, Any]): Configuração efetiva da execução.
+        resolution (str | None): Resolução do run (``"mid"``, ``"high"`` ou
+            ``None``).
+        missing_batches_exit (bool): Se ``True``, encerra via ``SystemExit(1)``
+            quando nenhum lote existir.
+        execution_time (float | None): Tempo total conhecido em segundos, quando
+            já calculado.
+        batch_timing_summary (dict[str, Any] | None): Resumo pré-computado dos
+            tempos de lote.
+        current_run_execution_time (float | None): Duração em segundos da
+            invocação atual em retomadas.
+
+    Returns:
+        int: Número de exames com erro registrado no resultado consolidado.
+    """
+    # Etapa 1: mescla todos os CSVs parciais de lote no consolidado por imagem.
+    output_path = merge_batch_results(split_name, output_dir)
+    if output_path is None:
+        if missing_batches_exit:
+            print(f"❌ Nenhum lote encontrado para o split '{split_name}'")
+            raise SystemExit(1)
+        raise RuntimeError("Nenhum lote foi persistido para consolidação.")
+    if not missing_batches_exit:
+        logger.info("Resultados por imagem salvos em: %s", output_path)
+
+    # Etapa 2: confere que nenhum ID da coorte foi duplicado, perdido ou acrescentado.
+    df = pd.read_csv(output_path)
     try:
         validate_result_integrity(df, image_ids)
     except ResultIntegrityError as error:
         _record_incomplete_integrity(output_dir, split_name, error)
         raise
     (Path(output_dir) / integrity_filename(split_name)).unlink(missing_ok=True)
+
+    # Etapa 3: reconstrói tempos totais dos lotes e grava metadata/resumo final do split.
     batch_timings = load_batch_timing_records(output_dir, split_name)
     expected_batches = [
         batch_result_number(path, split_name)
         for path in list_batch_result_files(split_name, output_dir)
     ]
-    batch_timing_summary = summarize_batch_timing_records(batch_timings)
-    execution_time = batch_timing_summary.get("total_known_duration_seconds")
+    if batch_timing_summary is None:
+        batch_timing_summary = summarize_batch_timing_records(batch_timings)
+    if execution_time is None:
+        execution_time = batch_timing_summary.get("total_known_duration_seconds")
     save_split_metadata(
         split_name,
         output_dir,
@@ -660,8 +668,43 @@ def run_merge_only_split(
         config,
         execution_time,
         timing_summary=batch_timing_summary,
+        current_run_execution_time=current_run_execution_time,
     )
     return _pipeline_error_count(df)
+
+
+def run_merge_only_split(
+    split_name,
+    image_ids,
+    output_dir,
+    config,
+    resolution=None,
+):
+    """Consolida lotes já existentes, valida integridade e recria o metadata compacto.
+
+    Args:
+        split_name (str): Nome do split consolidado (``train``, ``val``, ``test``
+            ou ``full``).
+        image_ids (list[int]): Lista esperada de IDs da coorte para validação de
+            integridade.
+        output_dir (Path | str): Diretório numérico contendo os CSVs parciais de
+            lote.
+        config (dict[str, Any]): Configuração efetiva registrada no metadata
+            recalculado.
+        resolution (str | None): Resolução do run (``"mid"``, ``"high"`` ou
+            ``None``).
+
+    Returns:
+        int: Número de exames com falha registrada no CSV consolidado.
+    """
+    return _finalize_split_results(
+        split_name,
+        image_ids,
+        output_dir,
+        config,
+        resolution=resolution,
+        missing_batches_exit=True,
+    )
 
 
 def run_processing_split(
@@ -673,7 +716,27 @@ def run_processing_split(
     base_path,
     visual_dir=None,
 ):
-    """Processa um split e salva CSV final + metadata."""
+    """Executa o processamento em lotes de um split e consolida CSV final + metadata.
+
+    Args:
+        split_name (str): Nome do split a processar (``train``, ``val``, ``test``
+            ou ``full``).
+        ids (list[int]): Lista ordenada de IDs de exames ImageCAS pertencentes ao
+            split.
+        output_dir (Path | str): Diretório numérico de destino dos resultados e
+            manifests.
+        config (dict[str, Any]): Configuração efetiva normalizada e escalada para a
+            resolução.
+        args (argparse.Namespace): Namespace CLI com ``resume_batch`` e
+            ``resolution``.
+        base_path (Path): Diretório raiz do dataset ImageCAS.
+        visual_dir (Path | str | None): Diretório opcional onde visualizações 3D
+            HTML são salvas.
+
+    Returns:
+        int: Número de exames com erro registrado no consolidado final.
+    """
+    # Executa os lotes pendentes delegando a orquestração por exame.
     summary = run_pipeline(
         ids,
         split_name,
@@ -687,6 +750,7 @@ def run_processing_split(
             else None
         ),
     )
+    # Prioriza o acumulado de tempos dos lotes para refletir o tempo real em retomadas.
     current_run_execution_time = summary.get("execution_time")
     batch_timing_summary = summary.get("batch_timing_summary") or {}
     execution_time = (
@@ -695,40 +759,17 @@ def run_processing_split(
     )
 
     logger.info("Finalizando processamento em lotes...")
-    output_path = merge_batch_results(split_name, output_dir)
-    if output_path is None:
-        raise RuntimeError("Nenhum lote foi persistido para consolidação.")
-    logger.info("Resultados por imagem salvos em: %s", output_path)
-    df = pd.read_csv(output_path)
-    try:
-        validate_result_integrity(df, ids)
-    except ResultIntegrityError as error:
-        _record_incomplete_integrity(output_dir, split_name, error)
-        raise
-    (Path(output_dir) / integrity_filename(split_name)).unlink(missing_ok=True)
-    batch_timings = load_batch_timing_records(output_dir, split_name)
-    expected_batches = [
-        batch_result_number(path, split_name)
-        for path in list_batch_result_files(split_name, output_dir)
-    ]
-    save_split_metadata(
+    return _finalize_split_results(
         split_name,
+        ids,
         output_dir,
         config,
-        df,
-        batch_timings,
-        expected_batches,
         resolution=args.resolution,
-    )
-    print_split_summary(
-        df,
-        split_name,
-        config,
-        execution_time,
-        timing_summary=batch_timing_summary,
+        missing_batches_exit=False,
+        execution_time=execution_time,
+        batch_timing_summary=batch_timing_summary,
         current_run_execution_time=current_run_execution_time,
     )
-    return _pipeline_error_count(df)
 
 
 def run_requested_split(
@@ -740,12 +781,30 @@ def run_requested_split(
     base_path,
     visual_dir=None,
 ):
-    """Executa ou consolida a única coorte solicitada."""
+    """Despacha a execução completa ou a consolidação (``--merge-only``) da coorte solicitada.
+
+    Args:
+        args (argparse.Namespace): Namespace CLI validado (define ``merge_only`` e
+            parâmetros do run).
+        split_name (str): Nome do split alvo (``train``, ``val``, ``test`` ou
+            ``full``).
+        image_ids (list[int]): Lista de IDs da coorte selecionada.
+        output_dir (Path | str): Diretório numérico do run.
+        config (dict[str, Any]): Configuração efetiva normalizada e escalada.
+        base_path (Path): Diretório raiz do dataset ImageCAS.
+        visual_dir (Path | str | None): Diretório opcional para salvar visualizações
+            3D HTML.
+
+    Returns:
+        int: Número de exames com erro no resultado consolidado do split.
+    """
+    # Sinaliza no console o modo de operação e o conjunto selecionado.
     print(f"\n{'=' * 60}")
     action_label = "Consolidando" if args.merge_only else "Processando"
     print(f"🔬 {action_label} conjunto: {split_name.upper()}")
     print(f"{'=' * 60}")
 
+    # Despacha para consolidação exclusiva de lotes ou processamento completo.
     if args.merge_only:
         return run_merge_only_split(
             split_name,
@@ -767,7 +826,15 @@ def run_requested_split(
 
 
 def _run_from_args(args):
-    """Executa os argumentos validados e retorna o estado persistido."""
+    """Executa os argumentos validados e retorna o estado persistido.
+
+    Args:
+        args (argparse.Namespace): Namespace CLI validado do pipeline ImageCAS.
+
+    Returns:
+        tuple[Path, str, int]: Tupla ``(run_dir, split_name, error_count)`` com o
+            diretório do run, split executado e quantidade de exames com erro.
+    """
     if args.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
         logger.debug("Logging verbose habilitado (DEBUG)")
@@ -777,6 +844,7 @@ def _run_from_args(args):
     output_root_dir = args.output_dir
     effective_config = build_effective_config(args)
 
+    # Prepara diretórios, logs e coorte antes de gravar snapshots de reprodutibilidade.
     print_run_settings(args, effective_config, base_path)
     output_dirs = resolve_output_dir(args, output_root_dir)
     args.notification_run_dir = Path(output_dirs["run_dir"])
@@ -784,6 +852,7 @@ def _run_from_args(args):
     split_name, image_ids = build_split_to_run(args, base_path)
     if args.merge_only:
         image_ids = load_merge_only_image_ids(output_dirs, split_name)
+    # Grava os snapshots de config e split apenas na criação de um run novo.
     if not (args.resume_requested or args.merge_only):
         save_run_snapshots(
             output_dirs,
@@ -806,6 +875,7 @@ def _run_from_args(args):
 
 def main():
     """Executa o pipeline e avisa sobre o resultado quando solicitado."""
+    # Interpreta a linha de comando e executa o fluxo com notificação de exceções.
     args = parse_pipeline_args(BASE_PATH, OUTPUT_DIR)
     try:
         run_dir, split_name, error_count = _run_from_args(args)
@@ -814,18 +884,17 @@ def main():
             fallback_dir = (
                 Path(args.resume_dir) if args.resume_dir is not None else None
             )
-            notify_run_completion(
+            notify_run_exception(
+                error,
                 pipeline="ImageCAS",
                 split=args.split,
                 resolution=args.resolution,
                 run_dir=getattr(args, "notification_run_dir", fallback_dir),
-                status="interrupted"
-                if isinstance(error, KeyboardInterrupt)
-                else "failed",
-                details="Consulte o terminal e os logs para detalhes.",
+                notifier=notify_run_completion,
             )
         raise
 
+    # Exibe o encerramento no console e dispara aviso final quando --notify está ativo.
     print(f"\n{'=' * 60}")
     print("✨ Processamento concluído!")
     print(f"{'=' * 60}\n")

@@ -10,28 +10,36 @@ from typing import Any, Sequence
 
 import numpy as np
 import pandas as pd
+
+from utils.project.dataframe import require_series_column, to_numeric_series
 from utils.project.evaluation.artery_distances import (
     distance_metric_metadata,
     summarize_artery_distances,
 )
-
-from utils.utils.json_io import make_json_safe, save_json_atomic
-
-from utils.project.dataframe import require_series_column, to_numeric_series
-from utils.project.results.paths import metadata_filename
-from utils.project.results.schema import add_internal_result_aliases
+from utils.project.results.io import metadata_filename
+from utils.project.results.schema import (
+    add_internal_result_aliases,
+    normalize_ostia_status,
+)
 from utils.project.runtime.resource_monitor import (
     read_resource_diagnostics,
     resource_metadata,
 )
-
+from utils.utils.json_io import make_json_safe, save_json_atomic
 
 METADATA_SCHEMA_VERSION = 4
 EFFECTIVE_CONFIG_RELATIVE_PATH = "../config/effective_pipeline_config.json"
 
 
 def effective_config_sha256(config: dict[str, Any]) -> str:
-    """Calcula o hash determinístico do snapshot efetivo da configuração."""
+    """Calcula o hash determinístico do snapshot efetivo da configuração.
+
+    Args:
+        config (dict[str, Any]): Dicionário de configuração efetiva do pipeline.
+
+    Returns:
+        str: Digest hexadecimal SHA-256 calculado sobre o JSON ordenado.
+    """
     payload = json.dumps(
         make_json_safe(config),
         ensure_ascii=False,
@@ -42,7 +50,14 @@ def effective_config_sha256(config: dict[str, Any]) -> str:
 
 
 def _first_present(*values: Any) -> Any:
-    """Retorna o primeiro valor disponível na ordem informada."""
+    """Retorna o primeiro valor disponível na ordem informada.
+
+    Args:
+        *values (Any): Sequência de valores candidatos avaliados em ordem de prioridade.
+
+    Returns:
+        Any: Primeiro valor diferente de ``None``, ou ``None`` se todos forem nulos.
+    """
     for value in values:
         if value is not None:
             return value
@@ -53,7 +68,17 @@ def _compact_configuration(
     config: dict[str, Any],
     legacy_result_config: dict[str, Any] | None,
 ) -> dict[str, Any]:
-    """Mantém somente rótulos principais; parâmetros completos ficam no snapshot."""
+    """Mantém somente rótulos principais; parâmetros completos ficam no snapshot.
+
+    Args:
+        config (dict[str, Any]): Configuração efetiva completa da execução.
+        legacy_result_config (dict[str, Any] | None): Configuração opcional
+            extraída de resultados legados.
+
+    Returns:
+        dict[str, Any]: Resumo JSON-safe com os principais rótulos de execução.
+    """
+    # Extrai os rótulos principais priorizando a configuração sobre chaves legadas.
     legacy = legacy_result_config or {}
     thresholding = config.get("THRESHOLDING") or {}
     artery = config.get("ARTERY_SEGMENTATION") or {}
@@ -83,11 +108,20 @@ def _compact_configuration(
             legacy.get("configured_artery_segmentation_method"),
         ),
     }
+    # Converte valores não nativos (ex.: arrays/tipos NumPy) antes de serializar.
     return make_json_safe(compact)
 
 
 def _truthy_series(dataframe: pd.DataFrame, column: str) -> pd.Series:
-    """Normaliza flags legadas ou legíveis sem transformar ausentes em sucesso."""
+    """Normaliza flags legadas ou legíveis sem transformar ausentes em sucesso.
+
+    Args:
+        dataframe (pd.DataFrame): DataFrame com os resultados por imagem.
+        column (str): Nome da coluna booleana ou textual a normalizar.
+
+    Returns:
+        pd.Series: Série booleana com ``True`` apenas para marcadores positivos.
+    """
     if column not in dataframe.columns:
         return pd.Series(False, index=dataframe.index, dtype=bool)
     values = dataframe[column]
@@ -96,7 +130,14 @@ def _truthy_series(dataframe: pd.DataFrame, column: str) -> pd.Series:
 
 
 def _is_missing_scalar(value: Any) -> bool:
-    """Reconhece valores escalares ausentes sem avaliar arrays como booleanos."""
+    """Reconhece valores escalares ausentes sem avaliar arrays como booleanos.
+
+    Args:
+        value (Any): Valor escalar a verificar quanto a ausência.
+
+    Returns:
+        bool: ``True`` se o valor for ``None`` ou ``NaN`` escalar.
+    """
     if value is None:
         return True
     missing = pd.isna(value)
@@ -104,12 +145,26 @@ def _is_missing_scalar(value: Any) -> bool:
 
 
 def _has_text(value: Any) -> bool:
-    """Indica se um valor escalar contém texto útil."""
+    """Indica se um valor escalar contém texto útil.
+
+    Args:
+        value (Any): Valor escalar a verificar quanto a conteúdo textual.
+
+    Returns:
+        bool: ``True`` quando o valor não é nulo e possui caracteres não brancos.
+    """
     return not _is_missing_scalar(value) and bool(str(value).strip())
 
 
 def _metric_summary(values: pd.Series) -> dict[str, Any]:
-    """Resume a média e a quantidade válida de uma métrica."""
+    """Resume a média e a quantidade válida de uma métrica.
+
+    Args:
+        values (pd.Series): Série numérica ou conversível de uma métrica por exame.
+
+    Returns:
+        dict[str, Any]: Dicionário com ``mean`` (ou ``None``) e ``valid_exam_count``.
+    """
     numeric = to_numeric_series(values).dropna()
     return {
         "mean": float(np.asarray(numeric.mean()).item()) if not numeric.empty else None,
@@ -118,7 +173,16 @@ def _metric_summary(values: pd.Series) -> dict[str, Any]:
 
 
 def _percent_entry(count: int, total: int) -> dict[str, Any]:
-    """Monta a contagem e o percentual usando o total processado."""
+    """Monta a contagem e o percentual usando o total processado.
+
+    Args:
+        count (int): Quantidade absoluta de exames na categoria.
+        total (int): Total de exames processados usado como denominador.
+
+    Returns:
+        dict[str, Any]: Dicionário com ``count`` e ``percent`` (ou ``None`` se
+            ``total`` for zero).
+    """
     return {
         "count": int(count),
         "percent": (float(count / total * 100) if total else None),
@@ -129,7 +193,18 @@ def _execution_time(
     records: Sequence[dict[str, Any]],
     expected_batches: Sequence[int] | None,
 ) -> dict[str, float | None]:
-    """Soma somente manifests completos, sem aceitar totais parciais."""
+    """Soma somente manifests completos, sem aceitar totais parciais.
+
+    Args:
+        records (Sequence[dict[str, Any]]): Registros de tempo por lote do manifest.
+        expected_batches (Sequence[int] | None): Lista esperada de números de lote
+            para validar completude.
+
+    Returns:
+        dict[str, float | None]: Duração total em ``seconds``, ``minutes`` e
+            ``hours`` (ou nulos se incompleto).
+    """
+    # Etapa 1: infere e valida o conjunto esperado de lotes a partir de total_batches.
     invalid = False
     expected: set[int] | None = None
     if expected_batches is not None:
@@ -157,6 +232,7 @@ def _execution_time(
             invalid = True
         expected = declared_expected
 
+    # Etapa 2: coleta durações válidas por lote, rejeitando duplicatas ou inválidos.
     durations: dict[int, float] = {}
     invalid = invalid or expected is None or not expected
     for record in records:
@@ -171,6 +247,7 @@ def _execution_time(
             continue
         durations[batch_number] = duration
 
+    # Etapa 3: só agrega a duração quando todos os lotes esperados estão presentes.
     if invalid or set(durations) != expected:
         return {"seconds": None, "minutes": None, "hours": None}
 
@@ -188,7 +265,19 @@ def build_metadata_results(
     *,
     expected_batches: Sequence[int] | None = None,
 ) -> dict[str, Any]:
-    """Calcula os poucos agregados finais a partir dos artefatos persistidos."""
+    """Calcula os poucos agregados finais a partir dos artefatos persistidos.
+
+    Args:
+        results (pd.DataFrame): DataFrame com os resultados por imagem do split.
+        batch_timings (Sequence[dict[str, Any]]): Registros de duração por lote.
+        expected_batches (Sequence[int] | None): Índices esperados dos lotes para
+            validar o tempo total.
+
+    Returns:
+        dict[str, Any]: Bloco ``results`` JSON-safe com tempo, distâncias, Dice e
+            óstios.
+    """
+    # Normaliza aliases de colunas e extrai as séries de Dice antes e após morfologia.
     dataframe = add_internal_result_aliases(results)
     total = len(dataframe)
 
@@ -213,6 +302,7 @@ def build_metadata_results(
     # aplicado por exame para também tolerar arquivos mistos.
     after_dice = explicit_after.fillna(to_numeric_series(final_dice))
 
+    # Classifica o desfecho dos óstios por exame com fallback para colunas legadas.
     both_correct = _truthy_series(dataframe, "both_correct")
     both_tolerable = _truthy_series(dataframe, "both_tolerable") & ~both_correct
     ostia_found = _truthy_series(dataframe, "ostia_found")
@@ -221,13 +311,15 @@ def build_metadata_results(
         if "ostia_status" in dataframe.columns
         else pd.Series("", index=dataframe.index, dtype=str)
     )
-    statuses = (
-        status_values.fillna("")
-        .astype(str)
-        .str.strip()
-        .str.lower()
-        .str.replace(" ", "_", regex=False)
-    )
+    status_categories = {
+        "both_correct": "both_correct",
+        "both_tolerable": "both_tolerable",
+        "found_but_wrong": "found_but_incorrect",
+        "not_found": "not_found",
+        "not_evaluated": "not_evaluated_or_error",
+        "pipeline_error": "not_evaluated_or_error",
+        "error": "not_evaluated_or_error",
+    }
 
     category_counts = {
         "both_correct": 0,
@@ -237,22 +329,9 @@ def build_metadata_results(
         "not_evaluated_or_error": 0,
     }
     for position, (_, row) in enumerate(dataframe.iterrows()):
-        status = statuses.iloc[position]
-        if status in {"both_correct", "both_ostia_correct"}:
-            category = "both_correct"
-        elif status in {"both_tolerable", "both_ostia_tolerable"}:
-            category = "both_tolerable"
-        elif status in {
-            "found_but_wrong",
-            "found_but_incorrect",
-            "one_ostium_correct",
-            "no_ostium_correct",
-        }:
-            category = "found_but_incorrect"
-        elif status in {"not_found", "ostia_not_found"}:
-            category = "not_found"
-        elif status in {"not_evaluated", "pipeline_error", "error"}:
-            category = "not_evaluated_or_error"
+        status = normalize_ostia_status(status_values.iloc[position])
+        if status in status_categories:
+            category = status_categories[status]
         elif both_correct.iloc[position]:
             category = "both_correct"
         elif both_tolerable.iloc[position]:
@@ -269,6 +348,7 @@ def build_metadata_results(
             category = "not_evaluated_or_error"
         category_counts[category] += 1
 
+    # Consolida tempo, distâncias físicas, médias de Dice e contagens dos óstios.
     success_count = category_counts["both_correct"] + category_counts["both_tolerable"]
     return make_json_safe(
         {
@@ -321,7 +401,27 @@ def build_metadata(
     expected_batches: Sequence[int] | None = None,
     resource_diagnostics: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Monta metadata portátil com configuração e resultados essenciais."""
+    """Monta metadata portátil com configuração e resultados essenciais.
+
+    Args:
+        split_name (str): Nome do split avaliado (ex.: ``train``, ``val`` ou ``test``).
+        config (dict[str, Any]): Configuração efetiva utilizada na execução.
+        resolution (str | None): Perfil de resolução opcional do run.
+        config_source (str): Origem da configuração registrada no metadata.
+        config_sha256 (str | None): Hash SHA-256 explícito da configuração.
+        legacy_result_config (dict[str, Any] | None): Configuração extraída de
+            resultados legados para fallback.
+        results (pd.DataFrame | None): DataFrame opcional com resultados do split.
+        batch_timings (Sequence[dict[str, Any]]): Registros de tempo por lote.
+        expected_batches (Sequence[int] | None): Índices esperados de lotes para
+            validar a duração total.
+        resource_diagnostics (dict[str, Any] | None): Diagnósticos opcionais
+            coletados pelo monitor de recursos.
+
+    Returns:
+        dict[str, Any]: Dicionário completo de metadados portáteis do run.
+    """
+    # Monta o bloco compacto com hash, protocolo de distância e recursos.
     configuration = {
         "source": config_source,
         "sha256": (
@@ -341,6 +441,7 @@ def build_metadata(
         configuration["resource_monitoring"] = resource_metadata(
             config, resource_diagnostics
         )
+    # Reúne identificação do run, configuração e agregados finais dos resultados.
     return {
         "metadata_schema_version": METADATA_SCHEMA_VERSION,
         "run": {
@@ -369,7 +470,26 @@ def save_metadata(
     batch_timings: Sequence[dict[str, Any]] = (),
     expected_batches: Sequence[int] | None = None,
 ) -> str:
-    """Salva metadata compacto de forma atômica."""
+    """Salva metadata compacto de forma atômica.
+
+    Args:
+        split_name (str): Nome do split avaliado.
+        output_dir (str | Path): Diretório onde o JSON de metadados será salvo.
+        config (dict[str, Any]): Configuração efetiva da execução.
+        resolution (str | None): Perfil de resolução opcional do run.
+        config_source (str): Origem da configuração registrada no metadata.
+        config_sha256 (str | None): Hash SHA-256 explícito da configuração.
+        legacy_result_config (dict[str, Any] | None): Configuração extraída de
+            resultados legados para fallback.
+        results (pd.DataFrame | None): DataFrame opcional com resultados por imagem.
+        batch_timings (Sequence[dict[str, Any]]): Registros de tempo por lote.
+        expected_batches (Sequence[int] | None): Índices esperados de lotes para
+            validar a soma de tempos.
+
+    Returns:
+        str: Caminho do arquivo JSON de metadados persistido em disco.
+    """
+    # Monta o metadata incorporando diagnósticos de recursos do split, quando presentes.
     metadata = build_metadata(
         split_name,
         config,
@@ -385,6 +505,7 @@ def save_metadata(
         ),
     )
 
+    # Garante o diretório de saída e grava o JSON de metadados atomicamente.
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     metadata_path = output_dir / metadata_filename(split_name)

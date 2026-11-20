@@ -2,14 +2,13 @@
 
 import contextlib
 import io
-from pathlib import Path
 import unittest
+from pathlib import Path
 from unittest.mock import Mock, mock_open, patch
 
 import nbformat
 import numpy as np
 import pandas as pd
-
 
 NOTEBOOK = (
     Path(__file__).resolve().parents[2]

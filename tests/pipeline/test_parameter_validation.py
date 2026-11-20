@@ -1,28 +1,17 @@
 import unittest
-from pathlib import Path
 from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
 
 from utils.experiments.parameter_validation import (
-    artery_region_growing_variants,
-    build_mean_intensity_histogram,
     build_mean_normalized_intensity_histogram,
     build_normalized_intensity_histograms,
     build_parameter_pairwise_summary,
     build_parameter_sensitivity_summary,
     build_threshold_performance_data,
     compute_intensity_histogram_analysis,
-    image_load_cache_key,
-    parameter_validation_variants,
-    prepared_context_cache_key,
-    resolution_scaling_variants,
-    select_parameter_validation_cases,
-    select_top_threshold_cases,
     summarize_intensity_histograms,
-    summarize_top_threshold_cases,
-    validate_parameter_validation_append,
 )
 from utils.project.config import (
     RESOLUTION_SCALING_GROUPS,
@@ -33,26 +22,6 @@ from utils.project.dataframe import require_series_column
 
 
 class ParameterValidationTests(unittest.TestCase):
-    def test_region_growing_grid_contains_only_active_parameters(self) -> None:
-        variants = artery_region_growing_variants()
-
-        self.assertEqual(len(variants), 36)
-        self.assertEqual(
-            {
-                item["overrides"]["REGION_GROWING.min_vesselness_fraction"]
-                for item in variants
-            },
-            {0.05, 0.065, 0.078, 0.09},
-        )
-        self.assertEqual(
-            {
-                item["overrides"]["REGION_GROWING.comparison_window"]
-                for item in variants
-            },
-            {1},
-        )
-        self.assertIn("baseline", {item["name"] for item in variants})
-
     def test_builds_mean_histogram_on_common_probability_grid(self) -> None:
         histogram_bins = pd.DataFrame(
             {
@@ -64,10 +33,12 @@ class ParameterValidationTests(unittest.TestCase):
             }
         )
 
-        mean_histogram = build_mean_intensity_histogram(
-            histogram_bins,
-            histogram_name="full",
-            bins=4,
+        mean_histogram = build_mean_normalized_intensity_histogram(
+            build_normalized_intensity_histograms(
+                histogram_bins,
+                histogram_name="full",
+                bins=4,
+            )
         )
 
         self.assertEqual(len(mean_histogram), 4)
@@ -147,15 +118,15 @@ class ParameterValidationTests(unittest.TestCase):
         self.assertAlmostEqual(float(summary.loc[0, "p500_hu"]), 15.0)
         self.assertAlmostEqual(float(summary.loc[0, "p750_hu"]), 22.5)
 
-    def test_builds_top_threshold_analysis(self) -> None:
+    def test_builds_threshold_performance_data(self) -> None:
         results = pd.DataFrame(
             {
-                "variant": ["baseline", "baseline", "upper_p997", "upper_p997"],
-                "IMG_ID": [1, 2, 1, 2],
-                "dice_artery": [0.8, 0.6, 0.7, 0.9],
-                "threshold_voxels": [80, 70, 75, 72],
-                "volume_voxels": [100, 100, 100, 100],
-                "ostia_success": [True, True, True, False],
+                "variant": ["baseline", "upper_p997"],
+                "IMG_ID": [1, 2],
+                "dice_artery": [0.8, 0.9],
+                "threshold_voxels": [80, 72],
+                "volume_voxels": [100, 100],
+                "ostia_success": [True, False],
             }
         )
         parameters = pd.DataFrame(
@@ -166,20 +137,14 @@ class ParameterValidationTests(unittest.TestCase):
         )
 
         performance = build_threshold_performance_data(results, parameters)
-        top = select_top_threshold_cases(performance, top_n=1)
-        effective = pd.DataFrame(
-            {
-                "IMG_ID": [1, 2],
-                "upper_percentile": [99.9, 99.7],
-                "max_threshold_hu": [900.0, 700.0],
-            }
-        )
-        top = top.merge(effective, on=["IMG_ID", "upper_percentile"])
-        summary = summarize_top_threshold_cases(top)
 
-        self.assertEqual(len(top), 2)
-        self.assertEqual(set(top["IMG_ID"]), {1, 2})
-        self.assertEqual(set(summary["median_threshold_hu"]), {700.0, 900.0})
+        self.assertEqual(len(performance), 2)
+        self.assertAlmostEqual(
+            float(performance.iloc[0]["threshold_volume_fraction"]), 0.72
+        )
+        self.assertAlmostEqual(
+            float(performance.iloc[1]["threshold_volume_fraction"]), 0.80
+        )
 
     def test_builds_compact_sensitivity_and_pairwise_summaries(self) -> None:
         results = pd.DataFrame(
@@ -209,129 +174,8 @@ class ParameterValidationTests(unittest.TestCase):
         self.assertEqual(int(pairwise.iloc[0]["improved_images"]), 1)
         self.assertEqual(int(pairwise.iloc[0]["worse_images"]), 1)
 
-    def test_reuses_upstream_context_for_ostia_and_rg_variations(self) -> None:
-        base = {
-            "DOWNSCALE_FACTORS": [2, 2, 1],
-            "DOWNSCALE_METHOD": "opencv",
-            "OPENCV_INTERPOLATION": "linear",
-            "MAX_THRESHOLD_PERCENTILE": 99.9,
-            "VESSELNESS_AORTA": {"sigmas": [2.5, 3.0]},
-            "VESSELNESS_ARTERY": {"sigmas": [1.5, 2.0]},
-            "OSTIA_DETECTION": {"max_z_diff_mm": 40.0},
-            "REGION_GROWING": {"min_vesselness_fraction": 0.078},
-        }
-        self.assertNotEqual(
-            image_load_cache_key(base),
-            image_load_cache_key({**base, "LABEL_RESAMPLING": "legacy_zoom_order0"}),
-        )
-        changed_z = {
-            **base,
-            "OSTIA_DETECTION": {"max_z_diff_mm": 30.0},
-        }
-        changed_rg = {
-            **base,
-            "REGION_GROWING": {"min_vesselness_fraction": 0.05},
-        }
-        changed_threshold = {**base, "MAX_THRESHOLD_PERCENTILE": 99.7}
-        experiment = {"threshold_mode": "normal", "artery_method": "region_growing"}
-
-        self.assertEqual(
-            image_load_cache_key(base), image_load_cache_key(changed_threshold)
-        )
-        self.assertEqual(
-            prepared_context_cache_key(base, experiment),
-            prepared_context_cache_key(changed_z, experiment),
-        )
-        self.assertEqual(
-            prepared_context_cache_key(base, experiment),
-            prepared_context_cache_key(changed_rg, experiment),
-        )
-        self.assertNotEqual(
-            prepared_context_cache_key(base, experiment),
-            prepared_context_cache_key(changed_threshold, experiment),
-        )
-
-    def test_append_validation_accepts_matching_run(self) -> None:
-        existing = {
-            "split": "val",
-            "ids": [1, 2, 3],
-            "resolution": "mid",
-            "config_path": "config/reference.json",
-            "use_gpu": True,
-        }
-
-        validate_parameter_validation_append(
-            existing,
-            split="val",
-            image_ids=[1, 2, 3],
-            resolution="mid",
-            config_path=Path("config/reference.json"),
-            use_gpu=True,
-        )
-
-    def test_append_validation_rejects_different_ids(self) -> None:
-        existing = {
-            "split": "val",
-            "ids": [1, 2, 3],
-            "resolution": "mid",
-            "config_path": "config/reference.json",
-            "use_gpu": True,
-        }
-
-        with self.assertRaisesRegex(ValueError, "ids"):
-            validate_parameter_validation_append(
-                existing,
-                split="val",
-                image_ids=[1, 2, 4],
-                resolution="mid",
-                config_path=Path("config/reference.json"),
-                use_gpu=True,
-            )
-
-    def test_variants_are_unique_and_ofat(self) -> None:
-        variants = parameter_validation_variants()
-        names = [item["name"] for item in variants]
-
-        self.assertEqual(len(variants), 11)
-        self.assertEqual(len(names), len(set(names)))
-        self.assertEqual(names[0], "baseline")
-        self.assertIn("upper_p995", names)
-        self.assertIn("upper_p997", names)
-        self.assertIn("ostia_lower_70", names)
-        self.assertIn("ostia_lower_100", names)
-        self.assertIn("rg_vessel_09", names)
-
-        baseline = variants[0]["overrides"]
-        self.assertEqual(baseline["MAX_THRESHOLD_PERCENTILE"], 99.9)
-        self.assertEqual(baseline["OSTIA_DETECTION.max_z_diff_mm"], 40.0)
-        self.assertEqual(baseline["REGION_GROWING.threshold_divisor"], 7.0)
-
-        vessel_variant = next(
-            item for item in variants if item["name"] == "rg_vessel_05"
-        )
-        self.assertEqual(
-            vessel_variant["overrides"]["REGION_GROWING.min_vesselness_fraction"],
-            0.05,
-        )
-        self.assertEqual(
-            vessel_variant["overrides"]["REGION_GROWING.relaxed_floor_factor"],
-            0.98,
-        )
-
-        lower_region_variant = next(
-            item for item in variants if item["name"] == "ostia_lower_70"
-        )
-        self.assertEqual(
-            lower_region_variant["overrides"]["OSTIA_DETECTION.lower_fraction"],
-            0.70,
-        )
-        self.assertEqual(
-            lower_region_variant["overrides"]["OSTIA_DETECTION.max_z_diff_mm"],
-            40.0,
-        )
-
     def test_resolution_scaling_groups_can_be_isolated(self) -> None:
-        config = load_config_json("config/article_cbeb_sensitivity.json", {})
+        config = load_config_json("config/pipeline_config.json", {})
         config["DOWNSCALE_FACTORS"] = [1, 1, 1]
 
         fully_scaled = scale_config_to_resolution(config)
@@ -368,7 +212,7 @@ class ParameterValidationTests(unittest.TestCase):
         self.assertNotIn("adaptive", scaled["LEVEL_SET"])
 
     def test_resolution_scaling_rejects_unknown_group(self) -> None:
-        config = load_config_json("config/article_cbeb_sensitivity.json", {})
+        config = load_config_json("config/pipeline_config.json", {})
         config["DOWNSCALE_FACTORS"] = [1, 1, 1]
 
         with self.assertRaisesRegex(ValueError, "grupo_inexistente"):
@@ -376,101 +220,3 @@ class ParameterValidationTests(unittest.TestCase):
                 config,
                 enabled_groups={"grupo_inexistente"},
             )
-
-    def test_resolution_scaling_variants_are_explicit(self) -> None:
-        variants = resolution_scaling_variants()
-        names = [item["name"] for item in variants]
-
-        self.assertEqual(names[0], "all_scaled")
-        self.assertEqual(len(names), len(set(names)))
-        self.assertIn("circle_geometry_unscaled", names)
-        self.assertIn("morphology_radii_unscaled", names)
-        self.assertTrue(all("disabled_scaling_groups" in item for item in variants))
-        canny_variant = next(
-            item for item in variants if item["name"] == "canny_sigma_mid"
-        )
-        self.assertEqual(
-            canny_variant["post_scale_overrides"],
-            {"CIRCLE_DETECTION.canny_sigma": 3.0},
-        )
-        level_set_variant = next(
-            item for item in variants if item["name"] == "level_set_iterations_50"
-        )
-        self.assertEqual(
-            level_set_variant["post_scale_overrides"],
-            {"LEVEL_SET.num_iter": 50},
-        )
-        combined_variant = next(
-            item for item in variants if item["name"] == "canny_sigma_4_level_set_50"
-        )
-        self.assertEqual(
-            combined_variant["post_scale_overrides"],
-            {
-                "CIRCLE_DETECTION.canny_sigma": 4.0,
-                "LEVEL_SET.num_iter": 50,
-            },
-        )
-
-    def test_selects_distinct_qualitative_cases_when_available(self) -> None:
-        frame = pd.DataFrame(
-            {
-                "variant": ["best"] * 6,
-                "IMG_ID": [1, 2, 3, 4, 5, 6],
-                "dice_artery": [0.9, 0.58, 0.2, 0.4, 0.1, 0.3],
-                "ostia_success": [True, True, False, True, True, True],
-                "ostia_found": [True, True, False, True, True, True],
-                "aorta_voxels": [10, 20, 30, 100, 40, 50],
-                "aorta_volume_fraction": [0.01, 0.02, 0.03, 0.10, 0.04, 0.05],
-                "artery_volume_ratio": [1.0, 1.1, 0.5, 1.0, 3.0, 2.0],
-            }
-        )
-
-        selected = select_parameter_validation_cases(frame, "best")
-
-        self.assertEqual(len(selected), 5)
-        self.assertEqual(selected["IMG_ID"].nunique(), 5)
-        self.assertEqual(
-            set(selected["case_type"]),
-            {
-                "high_dice",
-                "near_target_mean",
-                "ostia_failure",
-                "suspected_aorta_leak",
-                "segmentation_failure",
-            },
-        )
-        near_mean = selected.loc[selected["case_type"].eq("near_target_mean")].iloc[0]
-        self.assertTrue(bool(near_mean["ostia_success"]))
-
-        ostia_failure = selected.loc[selected["case_type"].eq("ostia_failure")].iloc[0]
-        self.assertGreater(float(ostia_failure["dice_artery"]), 0.0)
-
-    def test_prefers_visible_segmentation_failure_with_accepted_ostia(
-        self,
-    ) -> None:
-        frame = pd.DataFrame(
-            {
-                "variant": ["baseline"] * 5,
-                "IMG_ID": [1, 2, 3, 4, 5],
-                "dice_artery": [0.90, 0.58, 0.30, 0.04, 0.52],
-                "ostia_success": [True, True, False, True, True],
-                "ostia_found": [True] * 5,
-                "ostia_status": [
-                    "both_correct",
-                    "both_tolerable",
-                    "found_but_wrong",
-                    "both_tolerable",
-                    "both_correct",
-                ],
-                "aorta_voxels": [10, 20, 30, 40, 50],
-                "aorta_volume_fraction": [0.01, 0.02, 0.03, 0.10, 0.04],
-                "artery_volume_ratio": [1.0, 1.1, 0.5, 0.1, 0.8],
-                "artery_voxels": [20_000, 15_000, 8_000, 100, 10_000],
-            }
-        )
-
-        selected = select_parameter_validation_cases(frame, "baseline")
-        failure = selected.loc[selected["case_type"].eq("segmentation_failure")].iloc[0]
-
-        self.assertEqual(int(failure["IMG_ID"]), 5)
-        self.assertEqual(failure["ostia_status"], "both_correct")

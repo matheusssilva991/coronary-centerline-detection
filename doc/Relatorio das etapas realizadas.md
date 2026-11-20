@@ -4,7 +4,7 @@ Este documento apresenta um resumo das etapas já concluídas no projeto, destac
 
 ## Fluxograma das Etapas
 
-[![Fluxograma das Etapas](./Fluxograma%20-%20Extração%20linhas%20centrais.png)](./Fluxograma%20-%20Extração%20linhas%20centrais.png)
+[![Fluxograma das Etapas](./fluxogramas/Fluxograma%20-%20Extração%20linhas%20centrais.png)](./fluxogramas/Fluxograma%20-%20Extração%20linhas%20centrais.png)
 
 A figura acima apresenta o fluxo de trabalho adotado para a extração das linhas centrais das artérias coronárias.
 
@@ -53,7 +53,7 @@ Essa representação reduz as artérias a uma forma unidimensional, preservando 
 
 ## Localização da Aorta Ascendente (Etapa Atual)
 
-[![Fluxograma dos algoritmos para extrair a Aorta Ascendente](./Fluxograma%20-%20Localização%20aorta%20ascendente.png)](./Fluxograma%20-%20Localização%20aorta%20ascendente.png)
+[![Fluxograma dos algoritmos para extrair a Aorta Ascendente](./fluxogramas/Fluxograma%20-%20Localização%20aorta%20ascendente.png)](./fluxogramas/Fluxograma%20-%20Localização%20aorta%20ascendente.png)
 
 A imagem acima apresenta a evolução dos algoritmos implementados para a localização da Aorta Ascendente. Inicialmente, foi empregada a Transformada de Hough para detecção de círculos, conforme descrito no artigo de referência. A saída dessa etapa consiste nas fatias que contêm a Aorta Ascendente e nos círculos que indicam sua localização.
 

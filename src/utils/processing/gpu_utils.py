@@ -5,13 +5,10 @@ Este módulo centraliza a detecção de GPU e funções auxiliares de conversão
 entre NumPy e CuPy, usadas em todos os módulos que suportam GPU.
 """
 
-import numpy as np
 import warnings
 from typing import Any
 
-# =============================================================================
-# Detecção de GPU e Imports
-# =============================================================================
+import numpy as np
 
 GPU_AVAILABLE = False
 cp = None
@@ -21,18 +18,16 @@ try:
     import cupy as cp
     import cupyx.scipy.ndimage as cu_ndi
 
-    # Teste simples: cria array pequeno na GPU
+    # Valida alocação mínima para confirmar runtime CUDA funcional.
     _ = cp.array([1, 2, 3])
     GPU_AVAILABLE = True
 
 except ImportError:
-    # CuPy não instalado
     cp = None
     cu_ndi = None
     GPU_AVAILABLE = False
 
 except Exception as e:
-    # Outro erro (ex: CUDA não encontrado, GPU driver, etc)
     cp = None
     cu_ndi = None
     GPU_AVAILABLE = False
@@ -41,37 +36,25 @@ except Exception as e:
     )
 
 
-# =============================================================================
-# Funções Públicas
-# =============================================================================
-
-
 def use_gpu() -> bool:
-    """
-    Retorna True se GPU está disponível e CuPy está instalado.
+    """Informa se o runtime GPU (CuPy) está disponível para aceleração.
 
-    Retorna:        bool: True se GPU disponível, False caso contrário
-
-    Exemplo:        >>> if use_gpu():
-        ...     print("GPU disponível!")
-        ... else:
-        ...     print("Usando CPU")
+    Returns:
+        bool: ``True`` quando o runtime CUDA/CuPy foi inicializado com sucesso.
     """
     return GPU_AVAILABLE
 
 
 def to_gpu(arr: Any) -> Any:
-    """
-    Converte array NumPy para CuPy (GPU) se GPU disponível.
+    """Transfere um array NumPy para CuPy se a GPU estiver disponível.
 
-    Se GPU não estiver disponível, retorna o array inalterado.
+    Mantém objetos que já estão em GPU ou fora do formato ``np.ndarray`` inalterados.
 
-    Argumentos:        arr (np.ndarray or cp.ndarray): Array a converter
+    Args:
+        arr (Any): Array NumPy a transferir ou objeto já em GPU/outro formato.
 
-    Retorna:        cp.ndarray or np.ndarray: Array na GPU se disponível, senão retorna entrada
-
-    Exemplo:        >>> arr_cpu = np.array([1, 2, 3])
-        >>> arr_gpu = to_gpu(arr_cpu)  # cp.ndarray se GPU disponível
+    Returns:
+        Any: Array CuPy na GPU quando disponível; caso contrário, o objeto original.
     """
     if GPU_AVAILABLE and cp is not None and isinstance(arr, np.ndarray):
         return cp.asarray(arr)
@@ -79,17 +62,14 @@ def to_gpu(arr: Any) -> Any:
 
 
 def to_cpu(arr: Any) -> Any:
-    """
-    Converte array CuPy (GPU) para NumPy (CPU) se necessário.
+    """Converte um array CuPy da GPU para NumPy na CPU, mantendo arrays CPU.
 
-    Se o array já for NumPy, retorna inalterado.
+    Args:
+        arr (Any): Array CuPy na GPU ou objeto já residente na CPU.
 
-    Argumentos:        arr (np.ndarray or cp.ndarray): Array a converter
-
-    Retorna:        np.ndarray: Array na CPU (sempre NumPy)
-
-    Exemplo:        >>> arr_gpu = cp.array([1, 2, 3])  # Na GPU
-        >>> arr_cpu = to_cpu(arr_gpu)  # np.ndarray na CPU
+    Returns:
+        Any: Array NumPy na CPU quando ``arr`` for CuPy; caso contrário, o objeto
+            original.
     """
     if GPU_AVAILABLE and cp is not None and isinstance(arr, cp.ndarray):
         return cp.asnumpy(arr)
@@ -97,45 +77,15 @@ def to_cpu(arr: Any) -> Any:
 
 
 def get_array_module(arr: Any) -> Any:
-    """
-    Retorna o módulo apropriado (numpy ou cupy) baseado no tipo do array.
+    """Retorna o módulo ``numpy`` ou ``cupy`` compatível com o array informado.
 
-    Útil para escrever código que funciona tanto com NumPy quanto CuPy.
+    Args:
+        arr (Any): Array de referência usado para escolher o módulo numérico.
 
-    Argumentos:        arr (np.ndarray or cp.ndarray): Array de entrada
-
-    Retorna:        module: numpy ou cupy
-
-    Exemplo:        >>> arr = cp.array([1, 2, 3])
-        >>> xp = get_array_module(arr)
-        >>> result = xp.sum(arr)  # Usa cp.sum() automaticamente
+    Returns:
+        Any: Módulo ``cupy`` se ``arr`` for um array CuPy ativo; caso contrário,
+            ``numpy``.
     """
     if GPU_AVAILABLE and cp is not None and isinstance(arr, cp.ndarray):
         return cp
     return np
-
-
-def ensure_cpu(arr: Any) -> Any:
-    """
-    Garante que o array está na CPU (NumPy).
-
-    Alias para to_cpu() com nome mais descritivo.
-
-    Argumentos:        arr: Array de qualquer tipo
-
-    Retorna:        np.ndarray: Array na CPU
-    """
-    return to_cpu(arr)
-
-
-def ensure_gpu(arr: Any) -> Any:
-    """
-    Garante que o array está na GPU (CuPy) se GPU disponível.
-
-    Alias para to_gpu() com nome mais descritivo.
-
-    Argumentos:        arr: Array de qualquer tipo
-
-    Retorna:        cp.ndarray or np.ndarray: Array na GPU se disponível
-    """
-    return to_gpu(arr)

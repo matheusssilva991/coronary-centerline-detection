@@ -15,16 +15,14 @@ from utils.processing.preprocessing import (
     downscale_image_ndi,
     downscale_image_opencv,
     downscale_label,
-    largest_connected_component,
-    threshold_image_with_offset,
 )
-from utils.utils.nifti_io import load_raw_img_and_label
-from utils.segmentation.fuzzy.threshold import (
+from utils.segmentation.thresholding import (
     fuzzy_threshold_from_config,
     get_thresholding_config,
     normalize_threshold_mode,
+    resolve_lower_threshold,
 )
-from utils.segmentation.lower_threshold import resolve_lower_threshold
+from utils.utils.nifti_io import load_raw_img_and_label
 
 
 def load_and_preprocess_image(
@@ -34,14 +32,20 @@ def load_and_preprocess_image(
     *,
     include_intermediates: bool = False,
 ) -> Dict[str, Any]:
-    """Carrega imagem/label, reduz resolução e monta a maior componente conectada.
+    """Carrega exame/label do ImageCAS e executa o pré-processamento padrão até a LCC.
 
-    Argumentos:        img_id: Identificador do exame ImageCAS.
-        base_path: Diretório que contém os volumes e labels.
-        config: Configuração efetiva e já escalada para a resolução escolhida.
-        include_intermediates: Inclui imagem original, downsample, máscara de
-            threshold e máscara LCC no retorno. Deve permanecer falso no
-            pipeline em lote para não reter volumes extras em memória.
+    Args:
+        img_id (str): Identificador do exame no ImageCAS (sem sufixo ``.img.nii.gz``).
+        base_path (str): Diretório base contendo os volumes e rótulos do ImageCAS.
+        config (Dict[str, Any]): Configuração já normalizada e escalada para a resolução
+            de trabalho.
+        include_intermediates (bool): Se ``True``, inclui volumes intermediários
+            (evitar em lote para poupar RAM).
+
+    Returns:
+        Dict[str, Any]: Dicionário produzido por ``preprocess_ccta_volume`` com
+            ``lcc_image``, ``label``, ``spacing``, ``scaled_spacing``,
+            ``downscale_factors`` e detalhes.
     """
     # Carrega o volume CCTA e a máscara de referência do ImageCAS.
     nii_img, nii_label = load_raw_img_and_label(
@@ -50,9 +54,10 @@ def load_and_preprocess_image(
     if nii_label is None:
         raise ValueError(f"Label não carregado para o exame {img_id}.")
     spacing = nii_img.header.get_zooms()
-    img = np.array(nii_img.get_fdata(), dtype=np.float32)
-    label = np.array(nii_label.get_fdata()).astype(np.uint8)
+    img = np.asarray(nii_img.get_fdata(dtype=np.float32), dtype=np.float32)
+    label = np.asarray(nii_label.get_fdata(dtype=np.float32), dtype=np.uint8)
 
+    # Delega downscaling, limiarização e extração da LCC ao fluxo comum de volumes.
     return preprocess_ccta_volume(
         img,
         spacing,
@@ -72,10 +77,26 @@ def preprocess_ccta_volume(
 ) -> Dict[str, Any]:
     """Pré-processa um volume CCTA, com label de referência opcional.
 
-    Esta é a etapa comum usada pelo carregador ImageCAS e por volumes externos
-    já carregados, como OrCaScore e MM-WHS. O volume deve estar no layout
-    ``(x, y, z)`` e o espaçamento deve seguir a mesma ordem.
+    Entrada comum para ImageCAS e volumes externos (OrCaScore/MM-WHS), assumindo
+    layout ``(x, y, z)`` e espaçamento positivo nessa mesma ordem.
+
+    Args:
+        image (Any): Volume CCTA 3D bruto em HU no layout ``(x, y, z)``.
+        spacing (Sequence[float]): Espaçamento físico positivo em ``mm`` na ordem
+            ``(dx, dy, dz)``.
+        config (Dict[str, Any]): Configuração efetiva já normalizada e escalada para a
+            resolução desejada.
+        label (Any | None): Rótulo 3D opcional no mesmo shape de ``image`` (preservado
+            por vizinho mais próximo).
+        include_intermediates (bool): Se ``True``, inclui ``image``, ``down_image``,
+            ``threshold_mask`` e ``lcc_mask``.
+
+    Returns:
+        Dict[str, Any]: Dicionário com ``lcc_image`` (``float32``), ``label``,
+            ``spacing``, ``scaled_spacing``, ``downscale_factors`` e
+            ``preprocessing_details``.
     """
+    # Valida dimensionalidade do volume, espaçamento físico e compatibilidade do label.
     img = np.asarray(image, dtype=np.float32)
     if img.ndim != 3:
         raise ValueError("O volume CCTA deve ser tridimensional.")
@@ -121,6 +142,7 @@ def preprocess_ccta_volume(
     else:
         down_image = downscale_image_ndi(img, downscale_factors, order=3)
 
+    # Aplica o modo de threshold escolhido (none, normal ou fuzzy) e extrai a LCC.
     if threshold_mode == "none":
         # Sem corte de HU, todos os voxels finitos continuam candidatos.
         # A LCC da máscara completa não filtraria as fatias, então a omitimos.
@@ -152,23 +174,14 @@ def preprocess_ccta_volume(
             float(min_threshold),
             float(np.percentile(down_image, config["MAX_THRESHOLD_PERCENTILE"])),
         )
-        thresh_image, thresh_mask, offset = threshold_image_with_offset(
-            down_image,
-            *thresh_vals,
-        )
+        thresh_mask = (down_image >= thresh_vals[0]) & (down_image <= thresh_vals[1])
         selected_mask = thresh_mask
-
-        lcc_image = np.zeros_like(thresh_image, dtype=thresh_image.dtype)
-        lcc_mask = np.zeros_like(thresh_mask, dtype=bool)
-        for z_idx in range(thresh_image.shape[2]):
-            lcc_slice, lcc_mask_slice = largest_connected_component(
-                thresh_image[:, :, z_idx],
-                thresh_mask[:, :, z_idx],
-            )
-            lcc_image[:, :, z_idx] = lcc_slice
-            lcc_mask[:, :, z_idx] = lcc_mask_slice
-
-        lcc_image = (lcc_image - offset).astype(np.float32)
+        lcc_image, lcc_mask = build_lcc_image_from_mask(
+            down_image,
+            thresh_mask,
+            offset=abs(float(min_threshold)),
+            per_slice=True,
+        )
         preprocessing_details.update(
             {
                 **lower_threshold_details,
@@ -223,6 +236,7 @@ def preprocess_ccta_volume(
         downscale_label(label_array, config) if label_array is not None else None
     )
 
+    # Recalcula o espaçamento após downscaling e monta o dicionário de retorno.
     dx, dy, dz = (
         spacing[0] * downscale_factors[0],
         spacing[1] * downscale_factors[1],
@@ -254,7 +268,18 @@ def compute_vesselness(
     vesselness_config: Dict[str, Any],
     use_gpu: bool = False,
 ) -> Any:
-    """Calcula o mapa de vasos (Frangi) para um volume 3D."""
+    """Calcula o mapa de vasos (Frangi) para um volume 3D.
+
+    Args:
+        image (Any): Volume 3D pré-processado (tipicamente ``lcc_image``).
+        vesselness_config (Dict[str, Any]): Dicionário de configuração
+            (``VESSELNESS_AORTA`` ou ``VESSELNESS_ARTERY``).
+        use_gpu (bool): Se ``True``, habilita execução GPU no filtro de Frangi quando
+            disponível.
+
+    Returns:
+        Any: Mapa 3D de vesselness com o mesmo shape de ``image``.
+    """
     # Monta os parâmetros do Frangi validado para aorta e artérias.
     vesselness_kwargs = {
         "sigmas": vesselness_config["sigmas"],

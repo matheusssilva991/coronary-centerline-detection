@@ -3,14 +3,34 @@
 from __future__ import annotations
 
 import argparse
+import copy
+import json
 from pathlib import Path
 
-from utils.project.runtime.resource_monitor import add_resource_monitoring_arguments
-from utils.project.evaluation.artery_distances import add_distance_metric_arguments
+from utils.project.config import (
+    LEGACY_LABEL_PROTOCOL,
+    load_config_json,
+    scale_config_to_resolution,
+)
+from utils.project.evaluation.artery_distances import (
+    add_distance_metric_arguments,
+    apply_distance_metric_options,
+)
+from utils.project.runtime.resource_monitor import (
+    add_resource_monitoring_arguments,
+    apply_resource_monitoring_options,
+)
 
 
 def _parse_rg_comparison_window(value: str) -> int:
-    """Converte ``ALL`` ou um tamanho inteiro para a representação interna."""
+    """Converte ``ALL`` ou um tamanho inteiro para a representação interna.
+
+    Args:
+        value (str): Valor textual informado na flag ``--rg-comparison-window``.
+
+    Returns:
+        int: ``-1`` para ``ALL``/``-1`` ou inteiro positivo da janela deslizante.
+    """
     normalized = value.strip().upper()
     if normalized == "ALL":
         return -1
@@ -107,13 +127,24 @@ Arquivos de saída:
 
 
 def build_parser(default_base_path, default_output_dir):
-    """Cria o parser de argumentos do pipeline."""
+    """Cria o parser ``argparse`` completo do pipeline de segmentação.
+
+    Args:
+        default_base_path (Path | str): Caminho padrão usado como default de
+            ``--base-path``.
+        default_output_dir (Path | str): Diretório padrão usado como default de
+            ``--output-dir``.
+
+    Returns:
+        argparse.ArgumentParser: Instância configurada do parser da CLI.
+    """
     parser = argparse.ArgumentParser(
         description="Pipeline de segmentação coronária",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=PIPELINE_EPILOG,
     )
 
+    # Dataset, resolução e dispositivo de processamento.
     parser.add_argument(
         "--split",
         choices=["train", "val", "test", "full"],
@@ -144,6 +175,7 @@ def build_parser(default_base_path, default_output_dir):
         action="store_false",
         help="Força CPU nas etapas compatíveis, mesmo se houver GPU disponível.",
     )
+    # Método arterial e parâmetros geométricos da aorta (level set / Hough).
     parser.add_argument(
         "--artery-segmentation-method",
         "--artery-method",
@@ -216,6 +248,7 @@ def build_parser(default_base_path, default_output_dir):
             "experimental sugerido: 5 fatias."
         ),
     )
+    # Parâmetros da transformada de Hough e filtro da trajetória dos círculos.
     parser.add_argument(
         "--aorta-hough-radii-start-px",
         type=int,
@@ -279,6 +312,7 @@ def build_parser(default_base_path, default_output_dir):
             "últimos N voxels aceitos."
         ),
     )
+    # Thresholding inicial (normal/fuzzy) e interpolação do downscaling.
     parser.add_argument(
         "--threshold-method",
         choices=["normal", "fuzzy"],
@@ -335,6 +369,7 @@ def build_parser(default_base_path, default_output_dir):
         default=None,
         help="Método de interpolação do OpenCV (usado apenas se --downscale-method=opencv)",
     )
+    # Diretórios de saída, retomada em lotes, logs e monitoramento opcional.
     parser.add_argument(
         "--output-dir",
         type=str,
@@ -359,6 +394,7 @@ def build_parser(default_base_path, default_output_dir):
             f"(padrão: {default_base_path}; se indisponível, o pipeline tenta o fallback configurado)"
         ),
     )
+    # Configuração externa via JSON, seleção de splits/IDs e retomada em lotes.
     parser.add_argument(
         "--merge-only",
         action="store_true",
@@ -444,10 +480,22 @@ def build_parser(default_base_path, default_output_dir):
 
 
 def parse_pipeline_args(default_base_path, default_output_dir):
-    """Parseia, valida e normaliza argumentos do pipeline."""
+    """Faz o parsing, valida faixas e normaliza os argumentos da CLI do pipeline.
+
+    Args:
+        default_base_path (Path | str): Caminho padrão repassado ao parser para
+            ``--base-path``.
+        default_output_dir (Path | str): Diretório padrão repassado ao parser para
+            ``--output-dir``.
+
+    Returns:
+        argparse.Namespace: Namespace validado com ``image_ids`` deduplicado e
+            caminhos expandidos como ``Path``.
+    """
     parser = build_parser(default_base_path, default_output_dir)
     args = parser.parse_args()
 
+    # Valida faixas numéricas dos hiperparâmetros antes de inicializar diretórios/logs.
     if args.resume_batch < 0:
         parser.error("--resume-batch deve ser 0 ou maior")
     if args.num_batches <= 0:
@@ -476,6 +524,7 @@ def parse_pipeline_args(default_base_path, default_output_dir):
         and args.aorta_trajectory_axial_margin_slices < 0
     ):
         parser.error("--aorta-trajectory-axial-margin-slices deve ser zero ou maior")
+    # Converte e deduplica --image-ids mantendo a ordem informada pelo usuário.
     if args.image_ids:
         try:
             args.image_ids = [
@@ -490,6 +539,7 @@ def parse_pipeline_args(default_base_path, default_output_dir):
         if not args.image_ids:
             parser.error("--image-ids não pode ser vazio")
         args.image_ids = list(dict.fromkeys(args.image_ids))
+    # Verifica incompatibilidades entre modos de retomada, consolidação e substituição de config.
     if args.merge_only and not args.resume_dir:
         parser.error("--merge-only requer --resume-dir com a pasta de saída existente")
     if args.config_replace and not args.config_file:
@@ -504,6 +554,7 @@ def parse_pipeline_args(default_base_path, default_output_dir):
     if args.split == "full" and args.split_config:
         parser.error("--split-config não se aplica a --split full")
 
+    # Expande caminhos relativos/~ de entrada e saída para objetos Path.
     args.base_path = Path(args.base_path).expanduser()
     args.output_dir = Path(args.output_dir).expanduser()
     args.visual_output_dir = (
@@ -516,3 +567,236 @@ def parse_pipeline_args(default_base_path, default_output_dir):
     args.resume_requested = args.resume_batch > 0
 
     return args
+
+
+def select_resolution_config(args, mid_config, high_config):
+    """Seleciona a configuração base para mid ou high resolution.
+
+    Args:
+        args (argparse.Namespace): Namespace CLI contendo ``resolution`` (``"mid"`` ou
+            ``"high"``).
+        mid_config (dict[str, Any]): Configuração base para mid resolution
+            (com downscale).
+        high_config (dict[str, Any]): Dicionário base para high resolution (sem
+            downscale).
+
+    Returns:
+        dict[str, Any]: Dicionário de configuração correspondente à resolução
+            selecionada.
+    """
+    if args.resolution == "high":
+        print(
+            "🔍 Resolução: HIGH "
+            "(sem downscaling, DOWNSCALE_FACTORS = "
+            f"{high_config['DOWNSCALE_FACTORS']})"
+        )
+        return high_config
+
+    print(
+        "🔍 Resolução: MID "
+        f"(downscale 2x, DOWNSCALE_FACTORS = {mid_config['DOWNSCALE_FACTORS']})"
+    )
+    return mid_config
+
+
+def _apply_execution_overrides(config, args):
+    """Aplica opções operacionais da CLI à configuração efetiva.
+
+    Args:
+        config (dict[str, Any]): Dicionário de configuração atualizado in-place.
+        args (argparse.Namespace): Argumentos já validados da linha de comando.
+    """
+    apply_resource_monitoring_options(config, args)
+    apply_distance_metric_options(config, args)
+    # Configurações antigas podem conter opções de cache já removidas.
+    config.pop("SAVE_CACHE", None)
+    config.pop("LOAD_CACHE", None)
+
+    # Overrides operacionais e flags de visualização 3D.
+    direct_overrides = {
+        "DOWNSCALE_METHOD": args.downscale_method,
+        "OPENCV_INTERPOLATION": args.opencv_interpolation,
+        "USE_GPU": args.use_gpu,
+    }
+    for config_key, value in direct_overrides.items():
+        if value is not None:
+            config[config_key] = value
+    save_visuals = bool(getattr(args, "save_segmentation_visuals", False))
+    if (
+        not getattr(args, "config_replace", False)
+        or "SAVE_SEGMENTATION_VISUALS" in config
+        or save_visuals
+    ):
+        config["SAVE_SEGMENTATION_VISUALS"] = save_visuals
+    visual_output_dir = getattr(args, "visual_output_dir", None)
+    if (
+        not getattr(args, "config_replace", False)
+        or "VISUAL_OUTPUT_DIR" in config
+        or visual_output_dir is not None
+    ):
+        config["VISUAL_OUTPUT_DIR"] = (
+            Path(visual_output_dir).as_posix()
+            if visual_output_dir is not None
+            else None
+        )
+
+    # Overrides da segmentação arterial e do level set da aorta.
+    nested_overrides = (
+        ("ARTERY_SEGMENTATION", "method", args.artery_segmentation_method),
+        ("REGION_GROWING", "comparison_window", args.rg_comparison_window),
+    )
+    for section, config_key, value in nested_overrides:
+        if value is not None:
+            config.setdefault(section, {})[config_key] = value
+
+    # Sobrescreve os hiperparâmetros do level set da aorta quando informados na CLI.
+    level_set_config = config.setdefault("LEVEL_SET", {})
+    level_set_overrides = (
+        ("aorta_level_set_iterations", "num_iter", None),
+        ("aorta_level_set_radius_reduction_factor", "radius_reduction_factor", None),
+        ("aorta_level_set_balloon", "balloon", None),
+        ("aorta_level_set_alpha", "alpha", None),
+        ("aorta_opening_radius", "leak_removal_radius", None),
+        ("aorta_trajectory_radius_factor", "trajectory_radius_factor", float),
+        ("aorta_trajectory_axial_margin_slices", "trajectory_axial_margin_slices", int),
+    )
+    for arg_name, config_key, converter in level_set_overrides:
+        value = getattr(args, arg_name, None)
+        if value is not None:
+            level_set_config[config_key] = converter(value) if converter else value
+
+    # Overrides da detecção por Hough e do filtro de trajetória dos círculos.
+    circle_detection_config = config.setdefault("CIRCLE_DETECTION", {})
+    for arg_name, config_key in (
+        ("aorta_hough_radii_start_px", "radii_start_px"),
+        ("aorta_hough_radii_end_px", "radii_end_px"),
+    ):
+        value = getattr(args, arg_name, None)
+        if value is not None:
+            circle_detection_config[config_key] = int(value)
+    if (
+        "radii_start_px" in circle_detection_config
+        and "radii_end_px" in circle_detection_config
+        and float(circle_detection_config["radii_start_px"])
+        >= float(circle_detection_config["radii_end_px"])
+    ):
+        raise ValueError(
+            "CIRCLE_DETECTION.radii_start_px deve ser menor que radii_end_px"
+        )
+
+    # Atualiza parâmetros do filtro mantendo compatibilidade com configs antigas.
+    circle_filter_config = circle_detection_config.get("trajectory_filter") or {}
+    circle_filter_overrides = (
+        ("aorta_circle_filter", "method", None),
+        ("aorta_circle_filter_min_coverage", "min_tail_coverage", None),
+        ("aorta_circle_filter_max_trim_fraction", "max_tail_trim_fraction", float),
+        ("aorta_circle_filter_synthetic_tail_slices", "synthetic_tail_slices", int),
+    )
+    for arg_name, config_key, converter in circle_filter_overrides:
+        value = getattr(args, arg_name, None)
+        if value is not None:
+            circle_filter_config[config_key] = converter(value) if converter else value
+    if circle_filter_config:
+        circle_detection_config["trajectory_filter"] = circle_filter_config
+
+
+def _apply_threshold_overrides(config, args):
+    """Aplica opções de threshold normal ou fuzzy e piso inferior.
+
+    Args:
+        config (dict[str, Any]): Dicionário de configuração atualizado in-place.
+        args (argparse.Namespace): Argumentos validados contendo opções de
+            limiarização.
+    """
+    # Atualiza o método de threshold inicial e o percentil superior quando fornecidos.
+    thresholding_config = config.setdefault("THRESHOLDING", {})
+    if args.threshold_method is not None:
+        thresholding_config["method"] = args.threshold_method
+    if args.upper_threshold_percentile is not None:
+        config["MAX_THRESHOLD_PERCENTILE"] = args.upper_threshold_percentile
+
+    # Aplica sobrescritas do limiar inferior e sincroniza o percentil no modo fuzzy.
+    lower_threshold_config = config.setdefault("LOWER_THRESHOLD", {})
+    lower_overrides = {
+        "method": args.lower_threshold_method,
+        "percentile": args.lower_threshold_percentile,
+        "clip_min_hu": args.lower_threshold_clip_min,
+        "clip_max_hu": args.lower_threshold_clip_max,
+    }
+    for config_key, value in lower_overrides.items():
+        if value is not None:
+            lower_threshold_config[config_key] = value
+
+    if (
+        args.lower_threshold_percentile is not None
+        and thresholding_config.get("method") == "fuzzy"
+    ):
+        thresholding_config.setdefault("fuzzy", {})["lower_percentile"] = (
+            args.lower_threshold_percentile
+        )
+
+
+def build_effective_config(args, mid_config, high_config):
+    """Monta e escala a configuração efetiva para a resolução selecionada.
+
+    Args:
+        args (argparse.Namespace): Namespace CLI validado contendo flags de resolução,
+            sobrescritas e retomada.
+        mid_config (dict[str, Any]): Configuração base para mid resolution.
+        high_config (dict[str, Any]): Configuração base para high resolution.
+
+    Returns:
+        dict[str, Any]: Dicionário de configuração final normalizado e já escalado
+            para a resolução escolhida.
+    """
+    # Parte da configuração da resolução selecionada e aplica eventual JSON externo.
+    effective_config = copy.deepcopy(
+        select_resolution_config(args, mid_config, high_config)
+    )
+
+    if args.config_file:
+        base_config = {} if getattr(args, "config_replace", False) else effective_config
+        effective_config = load_config_json(args.config_file, base_config)
+        print(f"⚙️  Configuração carregada de: {args.config_file}")
+
+    # Preserva o protocolo dos lotes anteriores, inclusive em snapshots históricos.
+    resume_dir = getattr(args, "resume_dir", None)
+    merge_protocol = (
+        {"version": "unrecorded"} if getattr(args, "merge_only", False) else None
+    )
+    if resume_dir:
+        resume_root = Path(resume_dir)
+        if resume_root.name == "numeric":
+            resume_root = resume_root.parent
+        snapshot_path = resume_root / "config/effective_pipeline_config.json"
+        if snapshot_path.is_file():
+            snapshot = json.loads(snapshot_path.read_text(encoding="utf-8"))
+            effective_config["LABEL_RESAMPLING"] = snapshot.get(
+                "LABEL_RESAMPLING", LEGACY_LABEL_PROTOCOL
+            )
+            if getattr(args, "merge_only", False):
+                merge_protocol = (snapshot.get("EVALUATION") or {}).get(
+                    "distance_metrics_protocol", {"version": "unrecorded"}
+                )
+            if not args.config_file:
+                effective_config["EVALUATION"] = copy.deepcopy(
+                    snapshot.get("EVALUATION") or {"distance_metrics": False}
+                )
+        elif getattr(args, "resume_requested", False):
+            effective_config["LABEL_RESAMPLING"] = LEGACY_LABEL_PROTOCOL
+
+    # A resolução escolhida na CLI prevalece sobre fatores salvos em snapshots
+    # de configuração produzidos originalmente para mid resolution.
+    if args.resolution == "high":
+        effective_config["DOWNSCALE_FACTORS"] = [1, 1, 1]
+
+    # Aplica flags da CLI por último e escala parâmetros espaciais para a resolução.
+    _apply_execution_overrides(effective_config, args)
+    if merge_protocol is not None:
+        effective_config.setdefault("EVALUATION", {})["distance_metrics_protocol"] = (
+            merge_protocol
+        )
+    _apply_threshold_overrides(effective_config, args)
+
+    effective_config["NUM_BATCHES"] = args.num_batches
+    return scale_config_to_resolution(effective_config)

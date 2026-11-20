@@ -1,3 +1,5 @@
+"""Montagem de cenários comparativos de detecção dos óstios entre método matemático e referências."""
+
 from pathlib import Path
 
 import pandas as pd
@@ -8,10 +10,22 @@ from .ia_math import filter_to_common_ia_math_ids
 
 
 def load_math_results_for_ostia_scenario(math_paths, scenario):
-    """Carrega resultados matemáticos de um cenário específico de óstios."""
+    """Carrega resultados matemáticos de um cenário específico de óstios.
+
+    Args:
+        math_paths (Mapping[str, Any]): Mapeamento de resolução alvo para caminhos
+            de CSV, DataFrames já carregados ou dicionários por split.
+        scenario (str): Cenário de filtragem dos óstios (``"full"``,
+            ``"correct"`` ou ``"incorrect"``).
+
+    Returns:
+        tuple[pd.DataFrame, list[str]]: Tabela padronizada dos casos do cenário e
+        lista de avisos sobre arquivos ausentes ou schemas inválidos.
+    """
     math_frames = []
     missing_math_files = []
 
+    # Percorre resoluções e splits aceitando DataFrames em memória ou arquivos CSV.
     for target_resolution, resolution_paths in math_paths.items():
         if isinstance(resolution_paths, dict):
             split_items = resolution_paths.items()
@@ -29,6 +43,7 @@ def load_math_results_for_ostia_scenario(math_paths, scenario):
                     )
                     continue
                 df_math = add_internal_result_aliases(pd.read_csv(summary_path))
+            # Aplica o filtro do cenário de detecção dos óstios antes de normalizar.
             if scenario == "correct":
                 df_math = filter_correct_ostia_cases(df_math)
             elif scenario == "incorrect":
@@ -40,6 +55,7 @@ def load_math_results_for_ostia_scenario(math_paths, scenario):
             if df_math.empty:
                 continue
 
+            # Valida colunas mínimas e converte métricas para o schema compartilhado.
             if "IMG_ID" not in df_math.columns or "dice_artery" not in df_math.columns:
                 missing_math_files.append(
                     f"Schema inesperado em {target_resolution}/{split_name}"
@@ -77,7 +93,20 @@ def load_math_results_for_ostia_scenario(math_paths, scenario):
 
 
 def load_ostia_comparison_scenario(ia_results_df, math_paths, scenario):
-    """Monta os subconjuntos de IA e matemática para uma comparação."""
+    """Monta os subconjuntos de IA e matemática para uma comparação.
+
+    Args:
+        ia_results_df (pd.DataFrame): Resultados padronizados da IA carregados
+            previamente no schema comum.
+        math_paths (Mapping[str, Any]): Mapeamento de resolução alvo para fontes
+            de resultados do pipeline matemático.
+        scenario (str): Cenário de óstios analisado (``"full"``, ``"correct"``
+            ou ``"incorrect"``).
+
+    Returns:
+        tuple[pd.DataFrame, pd.DataFrame, list[str]]: Subconjunto da IA,
+        subconjunto matemático restrito a IDs comuns e lista de avisos.
+    """
     scenario_math_df, missing_math_files = load_math_results_for_ostia_scenario(
         math_paths,
         scenario,
@@ -96,8 +125,18 @@ def load_ostia_comparison_scenario(ia_results_df, math_paths, scenario):
 def build_ostia_image_comparison_df(ia_results_df, math_results_df):
     """Pareia cada método de IA por imagem com o Dice matemático.
 
-    Keeping one row per IA method avoids selecting the best model separately
-    for each examination, which would make the visual comparison optimistic.
+    Manter uma linha por método de IA evita selecionar separadamente o melhor
+    modelo para cada exame, o que tornaria a comparação visual otimista.
+
+    Args:
+        ia_results_df (pd.DataFrame): Resultados da IA com ``target_resolution``,
+            ``img_id``, ``dice`` e ``method``.
+        math_results_df (pd.DataFrame): Resultados do pipeline matemático no
+            mesmo schema.
+
+    Returns:
+        pd.DataFrame: Tabela pareada por resolução e exame contendo ``ia_dice``,
+        ``ia_method``, ``math_dice`` e ``math_method``.
     """
     columns = [
         "target_resolution",
@@ -108,6 +147,7 @@ def build_ostia_image_comparison_df(ia_results_df, math_results_df):
         "math_method",
     ]
 
+    # Retorna tabela vazia quando faltam registros ou colunas obrigatórias.
     if ia_results_df.empty or math_results_df.empty:
         return pd.DataFrame(columns=columns)
 
@@ -118,6 +158,7 @@ def build_ostia_image_comparison_df(ia_results_df, math_results_df):
     if not required_cols.issubset(math_results_df.columns):
         return pd.DataFrame(columns=columns)
 
+    # Consolida o melhor Dice por resolução, exame e método de IA sem misturar modelos.
     ia_subset = ia_results_df.dropna(
         subset=["target_resolution", "img_id", "dice", "method"]
     ).copy()
@@ -133,6 +174,7 @@ def build_ostia_image_comparison_df(ia_results_df, math_results_df):
         .rename(columns={"dice": "ia_dice", "method": "ia_method"})
     )
 
+    # Seleciona o Dice de referência do método matemático por resolução e exame.
     math_subset = math_results_df.dropna(
         subset=["target_resolution", "img_id", "dice", "method"]
     ).copy()
@@ -148,6 +190,7 @@ def build_ostia_image_comparison_df(ia_results_df, math_results_df):
         .rename(columns={"dice": "math_dice", "method": "math_method"})
     )
 
+    # Cruza os pares de IA e matemática pelos identificadores compartilhados.
     return (
         ia_by_method_df[["target_resolution", "img_id", "ia_dice", "ia_method"]]
         .merge(

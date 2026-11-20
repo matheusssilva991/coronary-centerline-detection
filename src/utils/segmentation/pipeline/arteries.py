@@ -12,11 +12,12 @@ import numpy as np
 from skimage.morphology import ball
 
 from utils.processing.binary_operations import binary_closing, binary_dilation
-from utils.project.results.columns import ARTERY_BRANCH_COLUMNS
 from utils.project.evaluation.artery_distances import evaluate_artery_distances
-from utils.utils.metrics import dice_score
+from utils.project.results.columns import ARTERY_BRANCH_COLUMNS
 from utils.segmentation.artery_segmentation import normal_region_growing_from_ostia
 from utils.segmentation.pipeline.preprocessing import compute_vesselness
+from utils.utils.metrics import dice_score
+from utils.utils.roi import mask_voxel_bbox_slices
 
 
 @dataclass(frozen=True)
@@ -31,7 +32,17 @@ class ArterySegmentationResult:
 
 
 def _normalize_artery_segmentation_method(method: Any) -> str:
-    """Normaliza o nome do método de segmentação arterial."""
+    """Normaliza o nome do método de segmentação arterial.
+
+    Args:
+        method (Any): Nome ou alias do método (``rg``/``region_growing`` ou
+            ``fc``/``fuzzy_connectedness``).
+
+    Returns:
+        str: Identificador canônico (``"region_growing"`` ou
+            ``"fuzzy_connectedness"``).
+    """
+    # Normaliza separadores e resolve aliases conhecidos para o identificador canônico.
     normalized = str(method or "region_growing").strip().lower()
     normalized = normalized.replace("-", "_").replace(" ", "_")
     aliases = {
@@ -57,7 +68,21 @@ def get_artery_postprocessing_stages(
     closing_radius: Optional[int] = None,
     dilation_radius: Optional[int] = None,
 ) -> Dict[str, np.ndarray]:
-    """Retorna as máscaras bruta, fechada e dilatada do pós-processamento."""
+    """Retorna as máscaras bruta, fechada e dilatada do pós-processamento na CPU.
+
+    Args:
+        mask (Any): Máscara binária 3D bruta gerada pela segmentação arterial.
+        config (Dict[str, Any]): Configuração efetiva contendo ``POSTPROCESSING``.
+        closing_radius (int | None): Raio esférico em voxels do fechamento; ``None``
+            usa ``POSTPROCESSING.closing_radius``.
+        dilation_radius (int | None): Raio esférico em voxels da dilatação; ``None``
+            usa ``POSTPROCESSING.dilation_radius``.
+
+    Returns:
+        Dict[str, np.ndarray]: Dicionário com ``raw_mask``, ``closed_mask`` e
+            ``final_mask`` em ``uint8``.
+    """
+    # Resolve raios efetivos e recorta pela bounding box para acelerar a morfologia.
     post_config = config["POSTPROCESSING"]
     close_radius = (
         post_config["closing_radius"] if closing_radius is None else int(closing_radius)
@@ -69,24 +94,38 @@ def get_artery_postprocessing_stages(
     )
 
     raw_mask = (np.asarray(mask) > 0).astype(np.uint8)
+    pad = max(close_radius, 0) + max(dilate_radius, 0) + 1
+    bbox = mask_voxel_bbox_slices(raw_mask, pad)
+    if bbox is None:
+        return {
+            "raw_mask": raw_mask,
+            "closed_mask": np.zeros_like(raw_mask),
+            "final_mask": np.zeros_like(raw_mask),
+        }
+
+    # Aplica fechamento seguido de dilatação esférica e restaura o shape completo.
     closing_structure = np.asarray(ball(close_radius))
     dilation_structure = np.asarray(ball(dilate_radius))
-    closed_mask = binary_closing(
-        raw_mask > 0,
+    closed_sub = binary_closing(
+        raw_mask[bbox] > 0,
         structure=closing_structure,
         # Mantém a morfologia final na CPU para reduzir diferenças discretas
         # entre execuções CPU/GPU.
         gpu=False,
     )
-    final_mask = binary_dilation(
-        closed_mask,
+    final_sub = binary_dilation(
+        closed_sub,
         structure=dilation_structure,
         gpu=False,
     )
+    closed_mask = np.zeros_like(raw_mask)
+    closed_mask[bbox] = np.asarray(closed_sub, dtype=np.uint8)
+    final_mask = np.zeros_like(raw_mask)
+    final_mask[bbox] = np.asarray(final_sub, dtype=np.uint8)
     return {
         "raw_mask": raw_mask,
-        "closed_mask": np.asarray(closed_mask, dtype=np.uint8),
-        "final_mask": np.asarray(final_mask, dtype=np.uint8),
+        "closed_mask": closed_mask,
+        "final_mask": final_mask,
     }
 
 
@@ -97,7 +136,19 @@ def postprocess_artery_mask(
     closing_radius: Optional[int] = None,
     dilation_radius: Optional[int] = None,
 ) -> np.ndarray:
-    """Aplica fechamento + dilatação usados nas máscaras arteriais."""
+    """Aplica fechamento e dilatação esférica usados nas máscaras arteriais.
+
+    Args:
+        mask (Any): Máscara binária 3D bruta gerada pela segmentação arterial.
+        config (Dict[str, Any]): Configuração efetiva contendo ``POSTPROCESSING``.
+        closing_radius (int | None): Raio em voxels do fechamento; ``None`` usa
+            ``POSTPROCESSING.closing_radius``.
+        dilation_radius (int | None): Raio em voxels da dilatação; ``None`` usa
+            ``POSTPROCESSING.dilation_radius``.
+
+    Returns:
+        np.ndarray: Máscara binária ``uint8`` 3D após fechamento e dilatação.
+    """
     stages = get_artery_postprocessing_stages(
         mask,
         config,
@@ -115,11 +166,22 @@ def evaluate_artery_postprocessing_stages(
     label_artery: Any = None,
     spacing: Optional[Sequence[float]] = None,
 ) -> Dict[str, Any]:
-    """Mede os estágios já calculados, sem reaplicar a morfologia.
+    """Mede voxels, volumes e Dice dos estágios já calculados, sem reaplicar morfologia.
 
-    O Dice exige uma referência compatível; volumes em mL exigem o espaçamento
-    efetivo da resolução de trabalho, em milímetros.
+    Args:
+        raw_mask (Any): Máscara arterial bruta antes da morfologia.
+        closed_mask (Any): Máscara após o fechamento esférico.
+        final_mask (Any): Máscara final após fechamento e dilatação.
+        label_artery (Any): Máscara binária de referência opcional para cálculo de
+            Dice e deltas.
+        spacing (Sequence[float] | None): Espaçamento físico em ``mm`` na resolução de
+            trabalho para converter voxels em ``mL``.
+
+    Returns:
+        Dict[str, Any]: Dicionário com contagens de voxels e, quando disponíveis,
+            volumes em ``mL`` e Dice por estágio.
     """
+    # Etapa 1: contabiliza voxels por estágio morfológico (bruto, fechado e dilatado).
     masks = (raw_mask, closed_mask, final_mask)
     counts = [int(np.sum(mask)) for mask in masks]
     stages = ("before_morphology", "after_closing", "after_morphology")
@@ -128,6 +190,7 @@ def evaluate_artery_postprocessing_stages(
         for stage, count in zip(stages, counts, strict=True)
     }
     metrics["artery_voxels"] = counts[-1]
+    # Etapa 2: converte contagens em mL apenas quando o espaçamento físico da resolução é informado.
     if spacing is not None:
         spacing_array = np.asarray(spacing, dtype=float)
         if (
@@ -143,6 +206,7 @@ def evaluate_artery_postprocessing_stages(
                 for stage, count in zip(stages, counts, strict=True)
             }
         )
+    # Etapa 3: calcula o ganho/perda de Dice em cada operação morfológica quando há ground truth.
     if label_artery is not None:
         before, closed, after = (
             float(dice_score(mask, label_artery)) for mask in masks
@@ -167,7 +231,20 @@ def _segment_with_region_growing(
     ostia_right: Optional[Sequence[int]],
     config: Dict[str, Any],
 ) -> tuple[np.ndarray, Dict[str, Any]]:
-    """Executa o region growing padrão e retorna máscara + metadados."""
+    """Executa o region growing padrão e retorna máscara e metadados.
+
+    Args:
+        vesselness_artery (Any): Mapa 3D de vesselness arterial pré-calculado.
+        ostia_left (Sequence[int] | None): Coordenada ``(y, x, z)`` do óstio esquerdo
+            ou ``None``.
+        ostia_right (Sequence[int] | None): Coordenada ``(y, x, z)`` do óstio direito
+            ou ``None``.
+        config (Dict[str, Any]): Configuração efetiva contendo ``REGION_GROWING``.
+
+    Returns:
+        tuple[np.ndarray, Dict[str, Any]]: Tupla ``(raw_mask, metadados)`` com a
+            máscara bruta e contagens diagnósticas por ramo.
+    """
     # Segmenta as artérias a partir dos óstios esquerdo e direito.
     details: Dict[str, Any] = {}
     raw_mask = normal_region_growing_from_ostia(
@@ -190,11 +267,27 @@ def _segment_with_fuzzy_connectedness(
     ostia_right: Optional[Sequence[int]],
     config: Dict[str, Any],
 ) -> tuple[np.ndarray, Dict[str, Any]]:
-    """Executa fuzzy connectedness arterial e retorna máscara + metadados."""
+    """Executa fuzzy connectedness arterial e retorna máscara e metadados.
+
+    Args:
+        lcc_image (Any): Volume 3D pré-processado em HU (pós-LCC).
+        vesselness_artery (Any): Mapa 3D de vesselness arterial pré-calculado.
+        ostia_left (Sequence[int] | None): Coordenada ``(y, x, z)`` do óstio esquerdo
+            ou ``None``.
+        ostia_right (Sequence[int] | None): Coordenada ``(y, x, z)`` do óstio direito
+            ou ``None``.
+        config (Dict[str, Any]): Configuração efetiva contendo ``FUZZY_CONNECTEDNESS``
+            e ``MIN_THRESHOLD``.
+
+    Returns:
+        tuple[np.ndarray, Dict[str, Any]]: Tupla ``(raw_mask, metadados)`` com a
+            máscara binária pré-morfologia e estatísticas da propagação.
+    """
     from utils.segmentation.fuzzy.connectedness import (
         segment_artery_fuzzy_connectedness,
     )
 
+    # Extrai hiperparâmetros da FC preservando o dicionário original da configuração.
     fc_config = dict(config.get("FUZZY_CONNECTEDNESS", {}))
     max_candidate_voxels = fc_config.pop("max_candidate_voxels", 500_000)
     max_processed_voxels = fc_config.pop("max_processed_voxels", 500_000)
@@ -227,7 +320,26 @@ def segment_artery_masks_from_vesselness(
     *,
     method: Any = None,
 ) -> ArterySegmentationResult:
-    """Segmenta artérias sem exigir uma referência coronariana."""
+    """Segmenta artérias coronárias e pós-processa sem exigir referência anotada.
+
+    Args:
+        lcc_image (Any): Volume 3D pré-processado (usado pela variante fuzzy
+            connectedness).
+        vesselness_artery (Any): Mapa 3D de vesselness arterial pré-calculado.
+        ostia_left (Sequence[int] | None): Coordenada ``(y, x, z)`` do óstio esquerdo
+            ou ``None``.
+        ostia_right (Sequence[int] | None): Coordenada ``(y, x, z)`` do óstio direito
+            ou ``None``.
+        config (Dict[str, Any]): Configuração efetiva contendo método, parâmetros de
+            crescimento/FC e ``POSTPROCESSING``.
+        method (Any): Sobrescrita opcional do método (``rg``/``region_growing`` ou
+            ``fc``/``fuzzy_connectedness``).
+
+    Returns:
+        ArterySegmentationResult: Estrutura com ``raw_mask``, ``closed_mask``,
+            ``final_mask``, ``method`` e ``details``.
+    """
+    # Etapa 1: resolve o método arterial (region_growing ou fuzzy_connectedness) e gera a máscara bruta.
     configured_method = config.get("ARTERY_SEGMENTATION", {}).get(
         "method", "region_growing"
     )
@@ -250,6 +362,7 @@ def segment_artery_masks_from_vesselness(
             config,
         )
 
+    # Etapa 2: aplica fechamento e dilatação configurados para obter os três estágios da máscara.
     stages = get_artery_postprocessing_stages(raw_mask, config)
     return ArterySegmentationResult(
         raw_mask=stages["raw_mask"],
@@ -269,7 +382,24 @@ def segment_arteries_from_ostia(
     *,
     spacing: Optional[Sequence[float]] = None,
 ) -> Dict[str, Any]:
-    """Calcula vesselness arterial, segmenta artérias e avalia Dice."""
+    """Calcula vesselness arterial, segmenta artérias e avalia métricas.
+
+    Args:
+        lcc_image (Any): Volume 3D pré-processado (pós-LCC).
+        label_artery (Any): Máscara binária 3D de referência arterial.
+        ostia_left (Sequence[int] | None): Coordenada ``(y, x, z)`` do óstio esquerdo
+            ou ``None``.
+        ostia_right (Sequence[int] | None): Coordenada ``(y, x, z)`` do óstio direito
+            ou ``None``.
+        config (Dict[str, Any]): Configuração efetiva contendo ``VESSELNESS_ARTERY``,
+            método arterial, morfologia e avaliação.
+        spacing (Sequence[float] | None): Espaçamento físico em ``mm`` na ordem
+            ``(dy, dx, dz)`` (ou ``None`` para omitir distâncias físicas).
+
+    Returns:
+        Dict[str, Any]: Dicionário com ``artery_mask``, ``raw_artery_mask``, métricas
+            de Dice, distâncias e diagnósticos.
+    """
     # Calcula o mapa de vasos usado pela segmentação arterial.
     vesselness_artery = compute_vesselness(
         lcc_image,
@@ -277,6 +407,7 @@ def segment_arteries_from_ostia(
         use_gpu=config.get("USE_GPU", False),
     )
 
+    # Delega segmentação e avaliação reutilizando o mapa de vesselness recém-calculado.
     return segment_arteries_from_vesselness(
         lcc_image,
         label_artery,
@@ -300,12 +431,29 @@ def segment_arteries_from_vesselness(
 ) -> Dict[str, Any]:
     """Segmenta artérias reutilizando um mapa de vesselness já calculado.
 
-    Esta entrada é útil em experimentos pareados que alteram apenas o Region
-    Growing ou a morfologia. O fluxo principal continua usando
-    :func:`segment_arteries_from_ostia`, que calcula o mapa e delega para esta
-    função.
+    Entrada útil em experimentos pareados que variam apenas RG/FC ou morfologia;
+    o fluxo padrão entra por :func:`segment_arteries_from_ostia`.
+
+    Args:
+        lcc_image (Any): Volume 3D pré-processado (usado pela variante fuzzy
+            connectedness).
+        label_artery (Any): Máscara binária 3D de referência arterial.
+        vesselness_artery (Any): Mapa 3D de vesselness arterial pré-calculado.
+        ostia_left (Sequence[int] | None): Coordenada ``(y, x, z)`` do óstio esquerdo
+            ou ``None``.
+        ostia_right (Sequence[int] | None): Coordenada ``(y, x, z)`` do óstio direito
+            ou ``None``.
+        config (Dict[str, Any]): Configuração efetiva com parâmetros arteriais,
+            pós-processamento e avaliação.
+        spacing (Sequence[float] | None): Espaçamento físico em ``mm`` para cálculo
+            opcional das distâncias arteriais.
+
+    Returns:
+        Dict[str, Any]: Dicionário com ``artery_mask``, ``raw_artery_mask``, métricas
+            de Dice por estágio, distâncias físicas e metadados do método arterial.
     """
 
+    # Etapa 1: segmenta artérias brutas e pós-processadas usando o método escolhido na configuração.
     segmentation = segment_artery_masks_from_vesselness(
         lcc_image,
         vesselness_artery,
@@ -317,6 +465,7 @@ def segment_arteries_from_vesselness(
     raw_artery_mask = segmentation.raw_mask
     details = segmentation.details
 
+    # Etapa 2: mede Dice por estágio morfológico e distâncias físicas finais (mm) quando habilitadas.
     metrics = evaluate_artery_postprocessing_stages(
         raw_artery_mask,
         segmentation.closed_mask,
@@ -324,6 +473,7 @@ def segment_arteries_from_vesselness(
         label_artery=label_artery,
     )
 
+    # Consolida diagnósticos por ramo, métricas morfológicas, distâncias e FC.
     return {
         # As máscaras são removidas pela orquestração antes da persistência.
         **{column: details.get(column) for column in ARTERY_BRANCH_COLUMNS},

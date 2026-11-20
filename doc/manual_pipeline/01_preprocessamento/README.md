@@ -273,33 +273,6 @@ small = downscale_image(image, (2, 2, 1), use_opencv=True)
 assert small.shape == (16, 16, 8)
 ```
 
-### `threshold_image`
-
-Seleciona a faixa inclusiva, sem deslocamento.
-
-Importação: `from utils.processing.preprocessing import threshold_image`.
-
-```text
-threshold_image(
-    image: NDArray[Any], min_val: float = -300, max_val: float = 675
-) -> Tuple[NDArray[Any], NDArray[Any]]
-```
-
-| Parâmetro | Tipo | Obrigatório / padrão da função | Unidade e efeito |
-|---|---|---|---|
-| `image` | `NDArray[Any]` | Sim | Imagem/volume numérico de entrada; intensidades em HU quando usado como CCTA. |
-| `min_val` | `float` | `-300` | Limite inferior inclusivo de intensidade, em HU. |
-| `max_val` | `float` | `675` | Limite superior inclusivo de intensidade, em HU. |
-
-**Saída:** (imagem mascarada, máscara bool), ambos com o shape original; imagem é image × máscara.
-
-```python
-from utils.processing.preprocessing import threshold_image
-
-thresholded, selected = threshold_image(image, -300, 500)
-assert selected.dtype == bool and thresholded.shape == image.shape
-```
-
 ### `threshold_image_with_offset`
 
 Seleciona a faixa e desloca os valores válidos para distinguir intensidades negativas do fundo.
@@ -428,7 +401,7 @@ O padrão local do percentil é **99.5**; o wrapper configurado usa **99.9**. N�
 
 Resolve piso fixo ou percentil dos voxels finitos na faixa de estimação.
 
-Importação: `from utils.segmentation.lower_threshold import resolve_lower_threshold`.
+Importação: `from utils.segmentation.thresholding import resolve_lower_threshold`.
 
 ```text
 resolve_lower_threshold(
@@ -444,7 +417,7 @@ resolve_lower_threshold(
 **Saída:** (piso float em HU, detalhes dict). Percentil sem valores válidos usa fixed_hu e registra lower_threshold_fallback=empty_valid_values.
 
 ```python
-from utils.segmentation.lower_threshold import resolve_lower_threshold
+from utils.segmentation.thresholding import resolve_lower_threshold
 
 minimum, lower_details = resolve_lower_threshold(image, config)
 assert minimum == -300
@@ -454,7 +427,7 @@ assert minimum == -300
 
 Estima centros do fundo mole, objeto e fundo denso.
 
-Importação: `from utils.segmentation.fuzzy.threshold import estimate_fuzzy_centers`.
+Importação: `from utils.segmentation.thresholding import estimate_fuzzy_centers`.
 
 ```text
 estimate_fuzzy_centers(
@@ -477,7 +450,7 @@ estimate_fuzzy_centers(
 **Saída:** Array float32 com três centros HU em ordem crescente; usa finitos e preferencialmente valores >= min_hu.
 
 ```python
-from utils.segmentation.fuzzy.threshold import estimate_fuzzy_centers
+from utils.segmentation.thresholding import estimate_fuzzy_centers
 
 centers = estimate_fuzzy_centers(image, -300, 100, 99.8, 99.96)
 assert centers.shape == (3,)
@@ -487,7 +460,7 @@ assert centers.shape == (3,)
 
 Constrói pertinências de três classes e retém voxels cuja classe dominante é objeto, também impondo volume >= min_hu.
 
-Importação: `from utils.segmentation.fuzzy.threshold import fuzzy_threshold_outputs`.
+Importação: `from utils.segmentation.thresholding import fuzzy_threshold_outputs`.
 
 ```text
 fuzzy_threshold_outputs(
@@ -515,7 +488,7 @@ fuzzy_threshold_outputs(
 **Saída:** (máscara bool, detalhes com soft_center_hu, object_center_hu, dense_center_hu e fuzzy_mask_strategy=object_argmax). Não retorna os volumes de pertinência.
 
 ```python
-from utils.segmentation.fuzzy.threshold import fuzzy_threshold_outputs
+from utils.segmentation.thresholding import fuzzy_threshold_outputs
 
 fuzzy_mask, fuzzy_details = fuzzy_threshold_outputs(
     image, min_hu=-300, soft_margin_hu=100, dense_percentile=99.96, smooth_radius=0
@@ -529,7 +502,7 @@ Os padrões locais (160 HU, P99.95, raio 1) diferem dos usados pelo wrapper/conf
 
 Aplica os parâmetros de THRESHOLDING.fuzzy e MIN_THRESHOLD ao modelo fuzzy. Não resolve sozinho LOWER_THRESHOLD.
 
-Importação: `from utils.segmentation.fuzzy.threshold import fuzzy_threshold_from_config`.
+Importação: `from utils.segmentation.thresholding import fuzzy_threshold_from_config`.
 
 ```text
 fuzzy_threshold_from_config(
@@ -545,7 +518,7 @@ fuzzy_threshold_from_config(
 **Saída:** A mesma tupla de máscara bool e detalhes de fuzzy_threshold_outputs.
 
 ```python
-from utils.segmentation.fuzzy.threshold import fuzzy_threshold_from_config
+from utils.segmentation.thresholding import fuzzy_threshold_from_config
 
 fuzzy_mask, fuzzy_details = fuzzy_threshold_from_config(image, config)
 assert fuzzy_details["fuzzy_mask_strategy"] == "object_argmax"

@@ -333,7 +333,7 @@ class PipelineResourceIntegrationTests(TestCase):
             )
             stack.enter_context(
                 patch(
-                    prefix + "locate_and_filter_aorta_circles",
+                    "utils.segmentation.pipeline.detection.locate_and_filter_aorta_circles",
                     return_value=SimpleNamespace(
                         original_circles=[], filtered_circles=[], filter_diagnostics={}
                     ),
@@ -341,7 +341,7 @@ class PipelineResourceIntegrationTests(TestCase):
             )
             stack.enter_context(
                 patch(
-                    prefix + "segment_aorta_with_diagnostics",
+                    "utils.segmentation.pipeline.detection.segment_aorta_with_diagnostics",
                     return_value=SimpleNamespace(mask=volume, diagnostics={}),
                 )
             )

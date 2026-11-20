@@ -11,15 +11,14 @@ for an inspectable external CCTA exam. Reusable code lives under `src/utils/`:
 - `project/`: datasets, results, analysis, evaluation, and runtime infrastructure;
   shared configuration and DataFrame helpers remain at its root.
 - `segmentation/`: aorta, fuzzy methods, and pipeline coordination; artery,
-  ostia, lower-threshold, and backend modules remain at its root.
+  ostia, and thresholding modules remain at its root.
 - `visualization/`: images, intermediate pipeline stages, and result plots.
 - `comparison_utils/`: result loading, summaries, pairing, and statistics;
   analysis code must not depend on Matplotlib, IPython, or visualization modules.
 - `processing/`, `experiments/`, and `utils/`: image processing, experiment
   helpers, and generic NIfTI, JSON, metrics, and ROI utilities.
 
-Experiment drivers and shell runners belong in `src/experiments/`; exploratory
-notebooks are grouped under `src/eda/{images,intensity,results,comparisons,aorta,sensitivity}/`
+Exploratory notebooks are grouped under `src/eda/{images,intensity,results,comparisons,aorta,sensitivity}/`
 and indexed only in `src/eda/README.md`. Keep the two execution notebooks in
 the root of `src/`.
 Configuration files are in `config/`, automated tests in `tests/`, and
@@ -54,8 +53,9 @@ codes. Ruff defines formatting and lint behavior. Use `snake_case` for modules,
 functions, variables, and test files; use `UPPER_CASE` for notebook/config constants.
 Prefer existing helpers
 over notebook-local duplicates. Keep reusable calculations in modules and
-analysis-specific presentation helpers in notebook cells tagged
-`presentation-helpers`. Keep pipeline behavior controlled through JSON
+analysis-specific presentation helpers in `src/eda/<group>/view/*_views.py`
+modules (or in notebook cells tagged `presentation-helpers` for lightweight
+notebooks with 1–2 helpers). Keep pipeline behavior controlled through JSON
 configuration or CLI flags rather than hard-coded experiment values.
 
 ## Testing Guidelines

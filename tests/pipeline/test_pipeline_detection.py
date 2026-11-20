@@ -4,7 +4,9 @@ from unittest import TestCase
 from unittest.mock import patch
 
 import numpy as np
+from skimage.draw import disk
 
+from utils.segmentation.aorta import localization as aorta_localization
 from utils.segmentation.pipeline.detection import (
     detect_ostia,
     locate_and_filter_aorta_circles,
@@ -96,3 +98,43 @@ class AortaCircleDetectionTest(TestCase):
 
         self.assertEqual(result, ((1, 2, 3), (4, 5, 6)))
         self.assertEqual(find_ostia.call_args.kwargs["spacing"], (0.75, 0.5, 1.0))
+
+    def test_detect_aorta_circles_runs_initial_slice_hough_once_with_identical_result(
+        self,
+    ):
+        volume = np.zeros((64, 64, 3), dtype=np.float32)
+        for z in range(3):
+            rr, cc = disk((16, 46), 8, shape=(64, 64))
+            volume[rr, cc, z] = 500.0
+
+        hough_radii = np.arange(7, 10, 1)
+        expected_initial = aorta_localization.detect_initial_circle(
+            volume[:, :, 2],
+            hough_radii,
+            quadrant_offset=(0, 0),
+            total_num_peaks=5,
+            canny_sigma=1.5,
+        )
+        self.assertIsNotNone(expected_initial)
+
+        with patch(
+            "utils.segmentation.aorta.localization._detect_circles_in_slice",
+            wraps=aorta_localization._detect_circles_in_slice,
+        ) as detect_slice:
+            circles = aorta_localization.detect_aorta_circles(
+                volume,
+                hough_radii,
+                pixel_spacing=1.0,
+                tol_radius_mm=4.0,
+                tol_distance_mm=6.0,
+                quadrant_offset=(0, 0),
+                total_num_peaks_initial=5,
+                total_num_peaks=5,
+                canny_sigma=1.5,
+                verbose=False,
+            )
+
+        self.assertEqual(len(circles), 3)
+        # 1 chamada para a fatia inicial (z=2) + 1 para z=1 + 1 para z=0.
+        self.assertEqual(detect_slice.call_count, 3)
+        self.assertAlmostEqual(circles[0]["accum"], expected_initial["accum"])

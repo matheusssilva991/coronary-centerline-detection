@@ -4,19 +4,16 @@ import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest import TestCase
-from unittest.mock import patch
 
-from nibabel.nifti1 import Nifti1Image
 import numpy as np
 
-from utils.experiments.fuzzy_pipeline_comparison import load_downsampled_case
+import segmentation_pipeline
 from utils.processing.preprocessing import downscale_label
 from utils.project.config import (
     IMAGE_GRID_LABEL_PROTOCOL,
     LEGACY_LABEL_PROTOCOL,
     load_config_json,
 )
-import segmentation_pipeline
 from utils.segmentation.pipeline.cli import build_parser
 from utils.segmentation.pipeline.preprocessing import preprocess_ccta_volume
 
@@ -39,21 +36,8 @@ class LabelResamplingTests(TestCase):
                 pipeline = preprocess_ccta_volume(
                     image, (1, 1, 1), config, label=label, include_intermediates=True
                 )
-                volumes = (
-                    Nifti1Image(image, np.eye(4)),
-                    Nifti1Image(label, np.eye(4)),
-                )
-                with patch(
-                    "utils.experiments.fuzzy_pipeline_comparison.load_raw_img_and_label",
-                    return_value=volumes,
-                ):
-                    experiment = load_downsampled_case(1, Path("."), config)
                 expected = label[chosen, 1::2, :]
                 np.testing.assert_array_equal(pipeline["label"], expected)
-                np.testing.assert_array_equal(experiment["down_label"], expected)
-                np.testing.assert_array_equal(
-                    pipeline["down_image"], experiment["down_image"]
-                )
                 centers = (np.arange(len(chosen)) + 0.5) * size / len(chosen) - 0.5
                 np.testing.assert_allclose(
                     pipeline["down_image"][:, 0, 0], centers, atol=1e-6

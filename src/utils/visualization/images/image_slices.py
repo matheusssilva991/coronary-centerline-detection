@@ -1,7 +1,5 @@
 """Visualizações básicas de volumes, fatias e círculos detectados."""
 
-from pathlib import Path
-
 from typing import Any, Literal, Optional, Sequence
 
 import matplotlib.patches as patches
@@ -24,7 +22,35 @@ def _create_volume_slice_figure(
     padding_fraction: float = 0.0,
     output_size_px: tuple[int, int] | None = None,
 ) -> tuple[Any, Any]:
-    """Cria a figura 2D completa compartilhada pela exibição e exportação."""
+    """Cria a figura 2D completa de uma fatia para exibição ou exportação.
+
+    Args:
+        image_volume (NDArray[Any]): Volume 3D de entrada a ser fatiado.
+        slice_index (int): Índice da fatia ao longo de ``axis`` (aceita índices
+            negativos).
+        axis (int): Eixo do volume usado para extrair a fatia (``0``, ``1`` ou
+            ``2``).
+        cmap (str): Nome do mapa de cores do Matplotlib aplicado à imagem.
+        vmin (float | None): Limite inferior da escala de intensidades; ``None``
+            usa o mínimo automático da fatia.
+        vmax (float | None): Limite superior da escala de intensidades; ``None``
+            usa o máximo automático da fatia.
+        origin (Literal["upper", "lower"]): Origem vertical dos pixels na
+            figura.
+        dpi (int): Resolução da figura em pontos por polegada.
+        figure_width (float): Largura da figura em polegadas quando
+            ``output_size_px`` não é informado.
+        padding_fraction (float): Margem proporcional adicionada em volta da
+            fatia.
+        output_size_px (tuple[int, int] | None): Dimensão exata
+            ``(largura, altura)`` em pixels; ``None`` ajusta a altura pela
+            proporção da fatia.
+
+    Returns:
+        tuple[Any, Any]: Par ``(fig, ax)`` do Matplotlib com a fatia
+        renderizada.
+    """
+    # Valida parâmetros geométricos e garante que o volume seja tridimensional.
     if image_volume.ndim != 3:
         raise ValueError("image_volume deve ser 3D.")
     if axis not in (0, 1, 2):
@@ -55,6 +81,7 @@ def _create_volume_slice_figure(
         figure_width = output_width / dpi
         figure_height = output_height / dpi
 
+    # Renderiza a fatia ocupando toda a área útil da figura sem eixos.
     fig, ax = plt.subplots(figsize=(figure_width, figure_height), dpi=dpi)
     ax.imshow(
         image_slice,
@@ -93,7 +120,33 @@ def plot_volume_slice(
     output_size_px: tuple[int, int] | None = None,
     show: bool = True,
 ) -> tuple[Any, Any]:
-    """Exibe uma fatia completa do volume sem recortar pixels das bordas."""
+    """Exibe uma fatia completa do volume sem recortar pixels das bordas.
+
+    Args:
+        image_volume (NDArray[Any]): Volume 3D de entrada a ser visualizado.
+        slice_index (int): Índice da fatia ao longo de ``axis`` (aceita índices
+            negativos).
+        axis (int): Eixo de corte do volume (``0``, ``1`` ou ``2``).
+        cmap (str): Nome do mapa de cores do Matplotlib.
+        vmin (float | None): Valor mínimo da escala de intensidade; ``None`` usa
+            ajuste automático.
+        vmax (float | None): Valor máximo da escala de intensidade; ``None`` usa
+            ajuste automático.
+        origin (Literal["upper", "lower"]): Origem vertical dos pixels no eixo.
+        dpi (int): Resolução da figura em pontos por polegada.
+        figure_width (float): Largura da figura em polegadas quando
+            ``output_size_px`` é ``None``.
+        padding_fraction (float): Fração de preenchimento ao redor da fatia.
+        output_size_px (tuple[int, int] | None): Tamanho final
+            ``(largura, altura)`` em pixels; ``None`` preserva a proporção
+            natural da fatia.
+        show (bool): Se ``True``, chama ``plt.show()`` antes de retornar a
+            figura.
+
+    Returns:
+        tuple[Any, Any]: Par ``(fig, ax)`` do Matplotlib contendo a fatia
+        exibida.
+    """
     fig, ax = _create_volume_slice_figure(
         image_volume,
         slice_index,
@@ -110,48 +163,6 @@ def plot_volume_slice(
     if show:
         plt.show()
     return fig, ax
-
-
-def save_volume_slice_figure(
-    image_volume: NDArray,
-    slice_index: int,
-    output_path: str | Path,
-    *,
-    axis: int = 2,
-    cmap: str = "gray",
-    vmin: Optional[float] = None,
-    vmax: Optional[float] = None,
-    origin: Literal["upper", "lower"] = "upper",
-    dpi: int = 300,
-    figure_width: float = 7.0,
-    padding_fraction: float = 0.0,
-    output_size_px: tuple[int, int] | None = None,
-) -> Path:
-    """Salva uma fatia 2D completa, sem recorte automático do Matplotlib.
-
-    O tamanho da figura acompanha a proporção real da fatia e os limites dos
-    eixos incluem explicitamente todos os pixels. Isso evita que o backend do
-    notebook ou ``bbox_inches='tight'`` remova parte da imagem.
-    """
-    output = Path(output_path)
-    output.parent.mkdir(parents=True, exist_ok=True)
-
-    fig, _ = _create_volume_slice_figure(
-        image_volume,
-        slice_index,
-        axis=axis,
-        cmap=cmap,
-        vmin=vmin,
-        vmax=vmax,
-        origin=origin,
-        dpi=dpi,
-        figure_width=figure_width,
-        padding_fraction=padding_fraction,
-        output_size_px=output_size_px,
-    )
-    fig.savefig(output, dpi=dpi, pad_inches=0, facecolor="black")
-    plt.close(fig)
-    return output
 
 
 def plot_mip_projection(
@@ -174,10 +185,40 @@ def plot_mip_projection(
     show_labels: bool = True,
     dpi: int = 100,
 ) -> Any:
-    """Plota projeções MIP (ou min/mean) em vistas ortogonais de um volume 3D."""
+    """Plota projeções MIP, MinIP ou média em vistas ortogonais de um volume 3D.
+
+    Args:
+        image_volume (NDArray[Any]): Volume 3D ``(Y, X, Z)`` a ser projetado.
+        title (str): Título principal exibido acima das vistas quando
+            ``show_title`` é ``True``.
+        show_title (bool): Se ``True``, adiciona o título geral na figura.
+        cmap (str): Nome do mapa de cores do Matplotlib.
+        invert_cmap (bool): Se ``True``, inverte o mapa de cores selecionado.
+        views (Sequence[Literal["axial", "coronal", "sagittal"]]): Sequência de
+            vistas ortogonais a exibir em colunas.
+        vmin (float | None): Limite inferior da escala de intensidades; ``None``
+            deixa o Matplotlib definir automaticamente.
+        vmax (float | None): Limite superior da escala de intensidades; ``None``
+            deixa o Matplotlib definir automaticamente.
+        projection (Literal["max", "min", "mean"]): Operação aplicada ao longo
+            do eixo de projeção (``"max"``, ``"min"`` ou ``"mean"``).
+        window_level (float | None): Centro da janela de intensidades (em HU);
+            requer ``window_width`` para ser aplicado.
+        window_width (float | None): Largura da janela de intensidades (em HU);
+            requer ``window_level`` para ser aplicado.
+        return_fig (bool): Se ``True``, retorna ``(fig, axes)`` sem fechar a
+            figura.
+        show_labels (bool): Se ``True``, exibe subtítulos com vista e dimensões.
+        dpi (int): Resolução da figura em pontos por polegada.
+
+    Returns:
+        tuple[Any, Any] | None: Par ``(fig, axes)`` quando ``return_fig`` é
+        ``True``; caso contrário exibe, fecha a figura e retorna ``None``.
+    """
     if image_volume.ndim != 3:
         raise ValueError("A imagem deve ser 3D.")
 
+    # Aplica janelamento de intensidade (WL/WW) antes da projeção, se informado.
     if window_level is not None and window_width is not None:
         lower = window_level - window_width // 2
         upper = window_level + window_width // 2
@@ -187,6 +228,7 @@ def plot_mip_projection(
     axis_map = {"axial": 2, "coronal": 1, "sagittal": 0}
     proj_func = {"max": np.max, "min": np.min, "mean": np.mean}[projection]
 
+    # Prepara grade de subplots e configuração comum de colormap e limites.
     n_views = len(views)
     fig, axes = plt.subplots(1, n_views, figsize=(6 * n_views, 6), dpi=dpi)
     if n_views == 1:
@@ -199,6 +241,7 @@ def plot_mip_projection(
     if vmax is not None:
         imshow_kwargs["vmax"] = vmax
 
+    # Calcula e renderiza a projeção solicitada para cada vista anatômica.
     for i, view in enumerate(views):
         if view not in axis_map:
             raise ValueError(
@@ -212,6 +255,7 @@ def plot_mip_projection(
             )
         axes[i].axis("off")
 
+    # Ajusta título geral, layout e retorna a figura ou exibe diretamente.
     if show_title:
         plt.suptitle(title, fontsize=16, y=0.96)
         plt.tight_layout(rect=(0, 0, 1, 0.94))
@@ -232,11 +276,24 @@ def plot_slices(
     vmin: Optional[float] = None,
     vmax: Optional[float] = None,
 ) -> None:
-    """Exibe múltiplas fatias 2D selecionadas de um volume."""
+    """Exibe múltiplas fatias axiais selecionadas de um volume 3D em grade.
+
+    Args:
+        img (NDArray[Any]): Volume 3D ``(Y, X, Z)`` contendo as fatias.
+        slices_indices (Sequence[int]): Índices das fatias no eixo Z a exibir.
+        cmap (str): Nome do mapa de cores do Matplotlib.
+        title (str | None): Título geral opcional exibido no topo da grade;
+            ``None`` omite o título principal.
+        vmin (float | None): Limite inferior da escala de intensidades; ``None``
+            usa ajuste automático.
+        vmax (float | None): Limite superior da escala de intensidades; ``None``
+            usa ajuste automático.
+    """
     n_slices = len(slices_indices)
     if n_slices == 0:
         raise ValueError("slices_indices não pode ser vazio.")
 
+    # Dimensiona a grade de subplots com até 5 colunas e normaliza o formato de axes.
     n_cols = min(5, n_slices)
     n_rows = (n_slices + n_cols - 1) // n_cols
 
@@ -246,6 +303,7 @@ def plot_slices(
     elif n_rows == 1 or n_cols == 1:
         axes = np.array([axes]).reshape(n_rows, n_cols)
 
+    # Renderiza cada fatia axial solicitada com seu índice no título.
     for i, slice_idx in enumerate(slices_indices):
         row, col = i // n_cols, i % n_cols
         ax = axes[row, col]
@@ -253,6 +311,7 @@ def plot_slices(
         ax.set_title(f"Fatia {slice_idx}")
         ax.axis("off")
 
+    # Remove subplots excedentes da última linha e finaliza o layout.
     for i in range(n_slices, n_rows * n_cols):
         row, col = i // n_cols, i % n_cols
         fig.delaxes(axes[row, col])
@@ -274,7 +333,21 @@ def visualize_circles_on_slices(
     vmax: Optional[float] = None,
     dpi: int = 100,
 ) -> None:
-    """Sobrepõe círculos detectados em fatias amostradas do volume."""
+    """Sobrepõe círculos detectados em fatias axiais amostradas do volume.
+
+    Args:
+        image (NDArray[Any]): Volume 3D ``(Y, X, Z)`` usado como imagem de
+            fundo.
+        detected_circles (Sequence[dict[str, Any]]): Lista de detecções com as
+            chaves ``slice_index``, ``center_x``, ``center_y`` e ``radius`` em
+            pixels.
+        num_samples (int): Quantidade máxima de fatias distintas a amostrar.
+        vmin (float | None): Limite inferior da escala de intensidades; ``None``
+            usa ajuste automático.
+        vmax (float | None): Limite superior da escala de intensidades; ``None``
+            usa ajuste automático.
+        dpi (int): Resolução da figura em pontos por polegada.
+    """
     if not detected_circles:
         raise ValueError("detected_circles não pode ser vazio.")
 
@@ -283,9 +356,11 @@ def visualize_circles_on_slices(
     step = max(1, len(slice_indices) // num_samples)
     selected_slices = slice_indices[::step][:num_samples]
 
+    # Cria grade fixa 2x3 para exibir até seis fatias representativas.
     fig, axes = plt.subplots(2, 3, figsize=(9, 6), dpi=dpi)
     axes = axes.flatten()
 
+    # Desenha a fatia e sobrepõe o contorno e o centro de cada círculo detectado.
     for i, slice_idx in enumerate(selected_slices):
         if i >= len(axes):
             break
@@ -309,6 +384,7 @@ def visualize_circles_on_slices(
         axes[i].set_title(f"Fatia {slice_idx}")
         axes[i].axis("off")
 
+    # Oculta painéis vazios caso haja menos fatias que células na grade.
     for i in range(len(selected_slices), len(axes)):
         axes[i].axis("off")
 

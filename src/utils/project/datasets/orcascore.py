@@ -8,8 +8,8 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
-from numpy.typing import NDArray
 import pandas as pd
+from numpy.typing import NDArray
 
 from utils.project.datasets.ccta import load_mhd_volume_xyz, read_mhd_header
 
@@ -23,7 +23,15 @@ ORCASCORE_CALCIFICATION_LABEL_SPECS = {
 def orcascore_calcification_reference_path(
     record: Mapping[str, Any] | pd.Series,
 ) -> Path:
-    """Resolve a referência somente para a aquisição sem contraste do exame."""
+    """Resolve a referência somente para a aquisição sem contraste do exame.
+
+    Args:
+        record (Mapping[str, Any] | pd.Series): Registro do inventário OrCaScore
+            referente à aquisição CTI sem contraste.
+
+    Returns:
+        Path: Caminho esperado do arquivo ``*R.mhd`` em ``Reference_standard``.
+    """
     if (
         record.get("dataset") != "OrCaScore"
         or record.get("acquisition") != "noncontrast"
@@ -40,10 +48,22 @@ def orcascore_calcification_reference_path(
 def load_orcascore_calcification_reference(
     record: Mapping[str, Any] | pd.Series,
 ) -> NDArray[np.generic] | None:
-    """Carrega labels 0–3 sem reamostrar, distinguindo ausência de máscara vazia."""
+    """Carrega labels 0–3 sem reamostrar, distinguindo ausência de máscara vazia.
+
+    Args:
+        record (Mapping[str, Any] | pd.Series): Registro do inventário para a
+            aquisição CTI sem contraste.
+
+    Returns:
+        NDArray[np.generic] | None: Volume 3D de rótulos ``0`` a ``3`` na ordem
+            ``(x, y, z)``, ou ``None`` se o arquivo de referência não existir.
+    """
+    # Resolve o caminho da referência e distingue ausência de arquivo de máscara vazia.
     path = orcascore_calcification_reference_path(record)
     if not path.is_file():
         return None
+
+    # Garante correspondência exata de grade, transformação e orientação com a CTI.
     image_header = read_mhd_header(record["path"])
     label_header = read_mhd_header(path)
     for field, size, default in (
@@ -67,6 +87,8 @@ def load_orcascore_calcification_reference(
         "AnatomicalOrientation"
     ):
         raise ValueError("Orientação da referência difere da CTI.")
+
+    # Carrega os rótulos nativos sem reamostragem e valida o conjunto de classes 0–3.
     label = load_mhd_volume_xyz(path)
     unknown = set(np.unique(label)) - {0, *ORCASCORE_CALCIFICATION_LABEL_SPECS}
     if unknown:

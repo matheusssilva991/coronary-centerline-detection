@@ -8,7 +8,15 @@ from utils.project.results import summarize_results_df
 
 
 def print_statistics(train_ids, val_ids, test_ids, all_ids):
-    """Imprime estatísticas dos conjuntos de dados."""
+    """Imprime no console a distribuição quantitativa dos splits do dataset.
+
+    Args:
+        train_ids (Sequence[Any]): Coleção de IDs do conjunto de treino.
+        val_ids (Sequence[Any]): Coleção de IDs do conjunto de validação.
+        test_ids (Sequence[Any]): Coleção de IDs do conjunto de teste.
+        all_ids (Sequence[Any]): Coleção completa de IDs usada como denominador.
+    """
+    # Imprime cabeçalho e contagens absolutas e percentuais de cada split.
     print("\n" + "=" * 50)
     print("ESTATÍSTICAS DOS CONJUNTOS")
     print("=" * 50)
@@ -29,7 +37,14 @@ def print_statistics(train_ids, val_ids, test_ids, all_ids):
 
 
 def _format_duration(seconds):
-    """Formata uma duração em segundos, minutos e horas."""
+    """Formata uma duração em segundos, minutos e horas.
+
+    Args:
+        seconds (float | None): Duração em segundos, ou ``None``/``NaN`` se ausente.
+
+    Returns:
+        str: Texto formatado com segundos, minutos e horas, ou ``"N/A"``.
+    """
     if seconds is None or pd.isna(seconds):
         return "N/A"
     return f"{seconds:.1f}s ({seconds / 60:.2f}min, {seconds / 3600:.3f}h)"
@@ -43,7 +58,21 @@ def print_split_summary(
     timing_summary=None,
     current_run_execution_time=None,
 ):
-    """Imprime estatísticas consolidadas de um split."""
+    """Imprime estatísticas consolidadas e métricas de execução de um split.
+
+    Args:
+        df (pd.DataFrame): DataFrame com os resultados por imagem do split.
+        split_name (str): Nome do split exibido no cabeçalho (ex.: ``TRAIN``,
+            ``VAL``).
+        config (dict[str, Any]): Configuração efetiva (lê
+            ``OSTIA_VALIDATION.distance_threshold_mm``).
+        execution_time (float | None): Duração total acumulada em segundos, ou ``None``
+            para omitir.
+        timing_summary (dict[str, Any] | None): Resumo opcional dos manifestos de lote
+            (alerta lotes sem tempo salvo).
+        current_run_execution_time (float | None): Duração apenas do processo atual em
+            segundos (exibida em retomadas).
+    """
     if df.empty:
         return
 
@@ -51,6 +80,7 @@ def print_split_summary(
     summary = summarize_results_df(df)
     tolerance_mm = config["OSTIA_VALIDATION"]["distance_threshold_mm"]
 
+    # Exibe taxas de sucesso de óstios e cobertura da etapa de segmentação arterial.
     print(f"\n📊 Estatísticas do conjunto {split_name}:")
     print(
         f"   - Óstios encontrados:         {summary['ostia_found']:3d} "
@@ -98,6 +128,7 @@ def print_split_summary(
                 )
         else:
             print(f"   - Dice médio:       {summary['dice_artery_mean']:.4f}")
+    # Informa durações acumuladas, tempo local em retomadas e lotes sem manifest.
     if execution_time:
         print(f"   - Tempo total conhecido: {_format_duration(execution_time)}")
     if current_run_execution_time and current_run_execution_time != execution_time:

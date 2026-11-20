@@ -70,11 +70,10 @@ não recebem Dice intermediário zero. Nenhum resultado histórico é migrado.
 
 ## HD e AHD opcionais na máscara final
 
-Ative com `--distance-metrics` no pipeline ImageCAS ou na comparação fuzzy:
+Use `--distance-metrics` no pipeline ImageCAS.
 
 ```bash
 uv run python src/segmentation_pipeline.py --split train --resolution mid --gpu --distance-metrics
-uv run python src/experiments/fuzzy_pipeline_comparison.py --split train --sample-size 30 --resolution mid --gpu --distance-metrics
 ```
 
 O padrão é `EVALUATION.distance_metrics=false`. `--no-distance-metrics` desativa
@@ -85,21 +84,16 @@ Na retomada sem `--config-file`, a opção é recuperada do snapshot original do
 run; uma flag explícita prevalece. Lotes concluídos não são recalculados, portanto
 uma retomada pode conter exames com e sem essas medidas.
 
-As superfícies são os centros dos voxels removidos por uma erosão com seis
-vizinhos, considerando o exterior do volume como fundo. Não há suavização,
-subamostragem ou descarte de componentes. As coordenadas usam o espaçamento
-efetivo da resolução, em mm, não o espaçamento original sem os fatores de escala.
-Para distâncias ao ponto mais próximo nos dois sentidos, `d(A,B)` e `d(B,A)`:
+O filtro Hausdorff do SimpleITK calcula HD e AvgHD sobre as máscaras inteiras
+(`artery_hd_foreground_mm` e `artery_avghd_foreground_mm`). Para o HD95
+(`artery_hd95_surface_mm`), os centros dos voxels da superfície são obtidos por
+erosão de seis vizinhos com exterior igual a fundo. Calcula-se o percentil 95
+das distâncias mínimas em cada sentido, usando o maior dos dois. Todas as
+distâncias usam o espaçamento efetivo em milímetros. As antigas colunas
+`artery_hd_mm` e `artery_ahd_mm` permanecem legíveis nos resultados históricos.
+Os CSVs registram o estado em `artery_distance_metrics_status` e o detalhe de
+falhas em `artery_distance_metrics_error`.
 
-- `HD = max(max(d(A,B)), max(d(B,A)))`;
-- `AHD = (mean(d(A,B)) + mean(d(B,A))) / 2`.
-
-Cada sentido tem o mesmo peso na AHD. Isso difere de concatenar todas as
-distâncias e tirar uma média ponderada pelo número de pontos. A convenção não
-deve ser considerada equivalente à avaliação da IA sem conferir seu código.
-
-Os CSVs incluem `artery_hd_mm`, `artery_ahd_mm`,
-`artery_distance_metrics_status` e `artery_distance_metrics_error`.
 Os status possíveis são `disabled`, `ok`, `prediction_empty`, `reference_empty`,
 `both_empty`, `not_evaluated` e `error`. Máscaras não vazias idênticas dão zero;
 qualquer máscara vazia deixa as distâncias indisponíveis, inclusive ambas vazias.
@@ -112,8 +106,9 @@ esses valores, sem imputação de zero. Nenhuma máscara adicional é salva.
 O cálculo usa CPU e aumenta o tempo/memória da avaliação; tempos com a opção
 ativada não são diretamente comparáveis a runs sem ela.
 
-O helper independente é `surface_distance_metrics(prediction, reference, spacing)`
-em `utils.utils.metrics`; exige máscaras 3D alinhadas e espaçamento válido.
+Em `utils.utils.metrics`, `foreground_hausdorff_distances(prediction, reference, spacing)`
+retorna o par (HD, AvgHD) do SimpleITK para máscaras 3D alinhadas e não vazias.
+A função `surface_hd95` calcula o HD95 para máscaras booleanas.
 Os wrappers de segmentação aceitam `spacing=` opcional: ele é obrigatório para
 produzir distâncias em mm quando a avaliação está ativada. Os pipelines em lote
 passam esse espaçamento automaticamente.

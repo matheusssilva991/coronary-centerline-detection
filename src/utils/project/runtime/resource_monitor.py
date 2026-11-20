@@ -31,7 +31,14 @@ QUERY_TIMEOUT = 1.0
 
 
 def positive_interval(value: str | float) -> float:
-    """Valida um intervalo finito e estritamente positivo."""
+    """Valida um intervalo finito e estritamente positivo.
+
+    Args:
+        value (str | float): Intervalo de amostragem em segundos a validar.
+
+    Returns:
+        float: Intervalo convertido para ``float`` finito e estritamente positivo.
+    """
     interval = float(value)
     if not math.isfinite(interval) or interval <= 0:
         raise argparse.ArgumentTypeError("o intervalo deve ser finito e maior que zero")
@@ -39,7 +46,12 @@ def positive_interval(value: str | float) -> float:
 
 
 def add_resource_monitoring_arguments(parser: argparse.ArgumentParser) -> None:
-    """Acrescenta as mesmas opções operacionais às duas CLIs."""
+    """Acrescenta as mesmas opções operacionais às duas CLIs.
+
+    Args:
+        parser (argparse.ArgumentParser): Instância de ``ArgumentParser`` onde
+            as flags são registradas.
+    """
     parser.add_argument(
         "--monitor-resources",
         action=argparse.BooleanOptionalAction,
@@ -55,13 +67,21 @@ def add_resource_monitoring_arguments(parser: argparse.ArgumentParser) -> None:
 
 
 def apply_resource_monitoring_options(config: dict, args: argparse.Namespace) -> None:
-    """Preserva opções do snapshot quando a CLI não as sobrescreve."""
+    """Preserva opções do snapshot quando a CLI não as sobrescreve.
+
+    Args:
+        config (dict[str, Any]): Dicionário de configuração atualizado in-place
+            na chave ``RESOURCE_MONITORING``.
+        args (argparse.Namespace): Namespace CLI com ``monitor_resources`` e
+            ``resource_sampling_interval``.
+    """
     if (
         "RESOURCE_MONITORING" not in config
         and getattr(args, "monitor_resources", None) is None
         and getattr(args, "resource_sampling_interval", None) is None
     ):
         return
+    # Aplica overrides da CLI preservando os demais campos do snapshot efetivo.
     options = dict(config.get("RESOURCE_MONITORING") or {})
     if getattr(args, "monitor_resources", None) is not None:
         options["enabled"] = bool(args.monitor_resources)
@@ -75,13 +95,29 @@ def apply_resource_monitoring_options(config: dict, args: argparse.Namespace) ->
 
 
 def read_process_rss(pid: int) -> int:
-    """Lê RSS corrente no Linux; não usa o máximo acumulado ru_maxrss."""
+    """Lê RSS corrente no Linux; não usa o máximo acumulado ru_maxrss.
+
+    Args:
+        pid (int): Identificador do processo Linux consultado em ``/proc/<pid>/statm``.
+
+    Returns:
+        int: Memória residente (RSS) corrente do processo em bytes.
+    """
     resident_pages = int(Path(f"/proc/{pid}/statm").read_text().split()[1])
     return resident_pages * os.sysconf("SC_PAGE_SIZE")
 
 
 def parse_process_vram(output: str, pid: int) -> tuple[int, list[str]]:
-    """Soma somente alocações do PID nas GPUs, convertendo MiB em bytes."""
+    """Soma somente alocações do PID nas GPUs, convertendo MiB em bytes.
+
+    Args:
+        output (str): Saída CSV sem cabeçalho gerada por ``nvidia-smi``.
+        pid (int): Identificador do processo cujas alocações de VRAM serão somadas.
+
+    Returns:
+        tuple[int, list[str]]: Total de VRAM alocada em bytes e lista ordenada de
+            UUIDs de GPU.
+    """
     total, devices = 0, set()
     for row in csv.reader(output.splitlines()):
         if not row or row[0].strip() != str(pid):
@@ -98,7 +134,15 @@ def parse_process_vram(output: str, pid: int) -> tuple[int, list[str]]:
 
 
 def query_process_vram(pid: int) -> tuple[int, list[str]]:
-    """Consulta todas as GPUs sem interpretar índices de CUDA_VISIBLE_DEVICES."""
+    """Consulta todas as GPUs sem interpretar índices de CUDA_VISIBLE_DEVICES.
+
+    Args:
+        pid (int): Identificador do processo atual consultado via ``nvidia-smi``.
+
+    Returns:
+        tuple[int, list[str]]: Total de VRAM observada em bytes e lista ordenada de
+            UUIDs de GPU.
+    """
     query = subprocess.run(
         [
             "nvidia-smi",
@@ -114,7 +158,13 @@ def query_process_vram(pid: int) -> tuple[int, list[str]]:
 
 
 def computational_environment() -> dict[str, Any]:
-    """Registra hardware básico sem inicializar CUDA nem consultar memória global da GPU."""
+    """Registra hardware básico sem inicializar CUDA nem consultar VRAM global.
+
+    Returns:
+        dict[str, Any]: Dicionário com host, plataforma, versão Python, CPU,
+            RAM física e ``cuda_visible_devices``.
+    """
+    # Coleta atributos básicos do ambiente e memória sem inicializar driver CUDA.
     environment: dict[str, Any] = {}
     try:
         environment.update(
@@ -145,6 +195,12 @@ class ResourceMonitor:
     """Mantém máximos observados e contadores independentes para um exame."""
 
     def __init__(self, config: dict[str, Any]):
+        """Inicializa o monitor de recursos para o processo atual.
+
+        Args:
+            config (dict[str, Any]): Configuração efetiva com ``USE_GPU`` e seção
+                opcional ``RESOURCE_MONITORING``.
+        """
         options = config.get("RESOURCE_MONITORING") or {}
         self.enabled = bool(options.get("enabled", False))
         self.interval = positive_interval(
@@ -152,6 +208,7 @@ class ResourceMonitor:
         )
         self.use_gpu = bool(config.get("USE_GPU", False))
         self.pid = os.getpid()
+        # Inicializa acumuladores de pico, contagem de amostras e controle da thread.
         self.ram_peak: int | None = None
         self.vram_peak: int | None = None
         self.ram_samples = self.vram_samples = 0
@@ -163,16 +220,25 @@ class ResourceMonitor:
         self._finished = False
 
     def _record_error(self, metric: str, error: Exception) -> None:
+        """Registra e contabiliza uma falha isolada durante o monitoramento.
+
+        Args:
+            metric (str): Origem da falha (ex.: ``ram``, ``vram`` ou ``monitor``).
+            error (Exception): Exceção capturada durante a operação.
+        """
         message = f"{metric}: {type(error).__name__}: {error}"
         self.errors[message] = self.errors.get(message, 0) + 1
 
     def _sample(self) -> None:
+        """Executa uma coleta pontual de RSS e VRAM do PID atual."""
+        # Amostra a memória residente (RSS) corrente do processo via /proc.
         try:
             value = read_process_rss(self.pid)
             self.ram_peak = max(self.ram_peak or 0, value)
             self.ram_samples += 1
         except Exception as error:
             self._record_error("ram", error)
+        # Amostra a VRAM alocada pelo PID quando o monitoramento em GPU está ativo.
         if self._gpu_query_available:
             try:
                 value, devices = query_process_vram(self.pid)
@@ -186,6 +252,7 @@ class ResourceMonitor:
                     self._gpu_query_available = False
 
     def _run(self) -> None:
+        """Executa o loop periódico de amostragem até receber o sinal de parada."""
         while not self._stop_event.wait(self.interval):
             self._sample()
 
@@ -204,15 +271,22 @@ class ResourceMonitor:
             self._thread = None
 
     def finish(self, result: dict[str, Any]) -> None:
-        """Encerra consultas, obtém amostra final e anexa somente diagnósticos."""
+        """Encerra consultas, obtém amostra final e anexa somente diagnósticos.
+
+        Args:
+            result (dict[str, Any]): Dicionário de resultado do exame atualizado com
+                picos, contagens e diagnósticos.
+        """
+        # Sinaliza parada da thread em segundo plano e faz uma última coleta síncrona.
         if not self._finished:
             self._stop_event.set()
             if self._thread is not None:
-                # Toda consulta tem timeout; join impede thread vazando ao próximo exame.
+                # Toda consulta tem timeout; join evita thread vazando ao próximo exame.
                 self._thread.join()
             if self.enabled:
                 self._sample()
             self._finished = True
+        # Classifica a cobertura da coleta e grava métricas e detalhes no resultado.
         status = "disabled"
         if self.enabled:
             if not self.ram_samples and (not self.use_gpu or not self.vram_samples):
@@ -247,7 +321,15 @@ class ResourceMonitor:
 
 
 def read_resource_diagnostics(path: Path) -> dict[str, Any]:
-    """Carrega diagnósticos existentes sem transformar erro de coleta em falha científica."""
+    """Carrega diagnósticos existentes sem transformar erro em falha científica.
+
+    Args:
+        path (Path): Caminho do arquivo JSON de diagnósticos de recursos do split.
+
+    Returns:
+        dict[str, Any]: Objeto JSON carregado, dicionário vazio se ausente ou erro
+            em ``metadata_error``.
+    """
     if not path.is_file():
         return {}
     try:
@@ -261,7 +343,14 @@ def read_resource_diagnostics(path: Path) -> dict[str, Any]:
 
 
 def persist_resource_diagnostics(result: dict, path: Path, exam_key: str) -> None:
-    """Atualiza somente o exame processado, preservando sessões anteriores."""
+    """Atualiza somente o exame processado, preservando sessões anteriores.
+
+    Args:
+        result (dict[str, Any]): Dicionário de resultado do exame contendo
+            opcionalmente ``_resource_monitor_details``.
+        path (Path): Caminho do arquivo JSON compartilhado de diagnósticos do split.
+        exam_key (str): Chave única identificadora do exame na seção ``exams``.
+    """
     details = result.pop("_resource_monitor_details", None)
     if details is None:
         return
@@ -269,6 +358,7 @@ def persist_resource_diagnostics(result: dict, path: Path, exam_key: str) -> Non
         payload = read_resource_diagnostics(path)
         if "metadata_error" in payload:
             return  # Nunca sobrescreve um arquivo ilegível silenciosamente.
+        # Deduplica a assinatura do ambiente por hash antes de gravar o exame.
         details = dict(details)
         environment = details.pop("environment")
         identifier = hashlib.sha256(
@@ -287,8 +377,20 @@ def persist_resource_diagnostics(result: dict, path: Path, exam_key: str) -> Non
 
 
 def resource_metadata(config: dict, diagnostics: dict | None = None) -> dict[str, Any]:
-    """Descreve protocolo, ambiente e erros, sem estimar picos ausentes."""
+    """Descreve protocolo, ambiente e erros, sem estimar picos ausentes.
+
+    Args:
+        config (dict[str, Any]): Configuração efetiva contendo a seção opcional
+            ``RESOURCE_MONITORING``.
+        diagnostics (dict[str, Any] | None): Diagnósticos acumulados por exame
+            carregados do disco.
+
+    Returns:
+        dict[str, Any]: Bloco de metadados com parâmetros de amostragem, limitações,
+            ambientes e falhas.
+    """
     diagnostics = diagnostics or {}
+    # Consolida protocolo de amostragem, UUIDs de GPU observados e erros por exame.
     return {
         **(
             config.get("RESOURCE_MONITORING")

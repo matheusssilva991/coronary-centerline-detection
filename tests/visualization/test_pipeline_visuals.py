@@ -13,14 +13,16 @@ from segmentation_pipeline import (
     run_processing_split,
 )
 from utils.segmentation.pipeline.cli import build_parser
-from utils.segmentation.pipeline.visuals import (
+from utils.visualization.pipeline.pipeline_artifacts import (
     save_segmentation_visual,
     save_segmentation_visual_to_path,
 )
 
 
 class PipelineVisualTests(unittest.TestCase):
-    @patch("utils.segmentation.pipeline.visuals.visualize_aorta_ostia_artery")
+    @patch(
+        "utils.visualization.pipeline.pipeline_artifacts.visualize_aorta_ostia_artery"
+    )
     def test_saves_generic_visual_without_ground_truth(self, visualize):
         def write_snapshot(*args, **kwargs):
             Path(kwargs["save_html_path"]).write_text("<html></html>")
@@ -207,7 +209,9 @@ class PipelineVisualTests(unittest.TestCase):
             visual_dir,
         )
 
-    @patch("utils.segmentation.pipeline.visuals.visualize_aorta_ostia_artery")
+    @patch(
+        "utils.visualization.pipeline.pipeline_artifacts.visualize_aorta_ostia_artery"
+    )
     def test_saves_combined_visual_in_requested_directory(self, visualize):
         def write_snapshot(*args, **kwargs):
             Path(kwargs["save_html_path"]).write_text("<html></html>")
@@ -239,7 +243,9 @@ class PipelineVisualTests(unittest.TestCase):
         visualize.assert_called_once()
         self.assertFalse(visualize.call_args.kwargs["display_plot"])
 
-    @patch("utils.segmentation.pipeline.visuals.visualize_aorta_ostia_artery")
+    @patch(
+        "utils.visualization.pipeline.pipeline_artifacts.visualize_aorta_ostia_artery"
+    )
     def test_visualization_failure_does_not_raise(self, visualize):
         visualize.side_effect = RuntimeError("mesh failure")
 

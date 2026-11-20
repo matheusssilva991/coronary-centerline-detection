@@ -3,8 +3,11 @@ import unittest
 import pandas as pd
 
 from utils.project.results import (
-    add_config_columns,
+    CANONICAL_COLUMN_NAMES,
+    READABLE_COLUMN_NAMES,
+    RESULT_COLUMNS,
     add_internal_result_aliases,
+    build_result_row,
     make_readable_results_dataframe,
     make_result_dataframe,
     ostia_status_label_pt,
@@ -14,14 +17,6 @@ from utils.project.results import (
 
 
 class ResultAliasTests(unittest.TestCase):
-    def test_adds_aorta_opening_radius_from_effective_config(self):
-        result = add_config_columns(
-            pd.DataFrame({"IMG_ID": [1]}),
-            {"LEVEL_SET": {"leak_removal_radius": 2}},
-        )
-
-        self.assertEqual(result.loc[0, "aorta_opening_radius"], 2)
-
     def test_adds_typed_internal_aliases_without_removing_readable_columns(self):
         readable_df = pd.DataFrame(
             {
@@ -154,6 +149,47 @@ class ResultAliasTests(unittest.TestCase):
         internal = make_result_dataframe([{"IMG_ID": 1, "max_threshold": 875.0}])
 
         self.assertEqual(internal.loc[0, "effective_upper_threshold_hu"], 875.0)
+
+    def test_readable_column_map_and_build_result_row_preserve_contract(self):
+        self.assertEqual(
+            CANONICAL_COLUMN_NAMES,
+            {
+                readable: internal
+                for internal, readable in READABLE_COLUMN_NAMES.items()
+            },
+        )
+        self.assertEqual(READABLE_COLUMN_NAMES["dice_artery"], "artery_dice")
+        self.assertEqual(
+            READABLE_COLUMN_NAMES["aorta_circle_filter_method"],
+            "aorta_circle_filter_method",
+        )
+        self.assertEqual(READABLE_COLUMN_NAMES["min_threshold"], "min_threshold_hu")
+        self.assertEqual(READABLE_COLUMN_NAMES["max_threshold"], "max_threshold_hu")
+
+        empty_row = build_result_row({})
+        for column in RESULT_COLUMNS:
+            self.assertIn(column, empty_row)
+        self.assertEqual(empty_row["artery_segmentation_method"], "region_growing")
+        self.assertEqual(empty_row["aorta_circle_filter_method"], "none")
+        self.assertFalse(empty_row["ostia_found"])
+        self.assertEqual(empty_row["status"], "none_correct")
+
+        legacy_row = build_result_row(
+            {
+                "IMG_ID": 42,
+                "artery_dice": 0.81,
+                "max_threshold_hu": 910.0,
+                "ostia_detected": "yes",
+                "ostia_detection_status": "both correct",
+                "both_ostia_correct": "yes",
+            }
+        )
+        self.assertEqual(legacy_row["IMG_ID"], 42)
+        self.assertEqual(legacy_row["dice_artery"], 0.81)
+        self.assertEqual(legacy_row["effective_upper_threshold_hu"], 910.0)
+        self.assertTrue(legacy_row["ostia_found"])
+        self.assertEqual(legacy_row["ostia_status"], "both_correct")
+        self.assertEqual(legacy_row["status"], "both_correct")
 
 
 if __name__ == "__main__":

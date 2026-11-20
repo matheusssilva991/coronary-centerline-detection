@@ -17,8 +17,11 @@ com lower_fraction=1.0 e padding=2. RG e pos-processamento arterial nao mudaram;
 FC e threshold fuzzy continuam disponiveis. Evidencia quantitativa em mid;
 a promocao nao implica validacao equivalente em high resolution.
 
-O artigo permanece reproduzivel com `article_cbeb_sensitivity.json`, que
-desativa explicitamente filtro, envelope e padding ao mesclar com o padrao.
+Para conferir os parâmetros de uma execução do artigo, consulte o
+`config/effective_pipeline_config.json` salvo com seus resultados. O arquivo
+de ajustes usado na análise de sensibilidade, `article_cbeb_sensitivity.json`,
+está no histórico do Git. Para consultar seu conteúdo, execute
+`git show 4ce263f:config/article_cbeb_sensitivity.json` na raiz do projeto.
 Os runs em `current_baseline_p99_9` continuam sendo o **P99.9 puro historico**;
 seu nome nao indica mais a configuracao operacional atual.
 
@@ -636,10 +639,15 @@ na máscara coronariana final, nos fluxos ImageCAS e comparação fuzzy. As CLIs
 aceitam `--distance-metrics` e `--no-distance-metrics`; a ausência da flag preserva
 a opção carregada. Não modifica segmentação, morfologia ou Dice.
 
-O snapshot efetivo registra `distance_metrics_protocol` com unidade, máscara
-avaliada, conectividade da superfície e definição da AHD. AHD é a média das duas
-médias direcionais, não a média conjunta de todos os pontos. O espaçamento
-efetivo é informado pelo pipeline, sem ajuste manual conforme Mid/High.
+O protocolo 3 usa o espaçamento efetivo em milímetros e produz três medidas.
+O SimpleITK calcula HD e AvgHD entre as máscaras inteiras
+(`artery_hd_foreground_mm` e `artery_avghd_foreground_mm`). A coluna
+`artery_hd95_surface_mm` contém o maior dos percentis 95 direcionais entre
+superfícies de seis vizinhos, com interpolação linear. Em retomadas, os exames
+já concluídos preservam os campos originais. Os novos exames avaliados registram
+o protocolo 3 em `artery_distance_protocol_version`.
+As colunas históricas `artery_hd_mm` e `artery_ahd_mm` identificam medidas de
+superfície gravadas em versões anteriores.
 
 Veja os status, política de máscaras vazias e resumos no
 [manual de avaliação](../doc/manual_pipeline/07_posprocessamento_avaliacao/README.md#hd-e-ahd-opcionais-na-máscara-final).

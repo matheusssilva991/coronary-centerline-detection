@@ -6,7 +6,6 @@ from unittest.mock import patch
 import numpy as np
 
 from utils.visualization.images.volume import (
-    visualize_arteries_comparison,
     visualize_binary_masks_comparison,
     visualize_label_map_3d,
 )
@@ -195,22 +194,6 @@ class BinaryMaskComparisonTests(unittest.TestCase):
                 empty,
                 display_plot=False,
             )
-
-    @patch("utils.visualization.images.volume.visualize_binary_masks_comparison")
-    def test_artery_wrapper_preserves_legacy_labels(self, compare_masks):
-        mask = np.ones((2, 2, 2), dtype=np.uint8)
-        expected_plot = _FakePlot()
-        compare_masks.return_value = expected_plot
-
-        result = visualize_arteries_comparison(
-            mask,
-            mask,
-            display_plot=False,
-        )
-
-        self.assertIs(result, expected_plot)
-        self.assertEqual(compare_masks.call_args.kwargs["reference_name"], "Label")
-        self.assertEqual(compare_masks.call_args.kwargs["predicted_name"], "Predita")
 
 
 if __name__ == "__main__":

@@ -24,7 +24,6 @@ from typing import Any, Iterable, Sequence
 import numpy as np
 from numpy.typing import NDArray
 
-
 NEIGHBORS_26 = tuple(
     (dy, dx, dz)
     for dy in (-1, 0, 1)
@@ -35,7 +34,15 @@ NEIGHBORS_26 = tuple(
 
 
 def _neighbor_offsets(neighborhood: int) -> tuple[tuple[int, int, int], ...]:
-    """Retorna os deslocamentos da vizinhanca 3D solicitada."""
+    """Retorna os deslocamentos da vizinhança 3D solicitada.
+
+    Args:
+        neighborhood (int): Conectividade 3D desejada (``6``, ``18`` ou ``26``).
+
+    Returns:
+        tuple[tuple[int, int, int], ...]: Deslocamentos inteiros ``(dy, dx, dz)``
+            correspondentes à conectividade escolhida.
+    """
     if neighborhood not in {6, 18, 26}:
         raise ValueError("neighborhood deve ser 6, 18 ou 26")
 
@@ -54,7 +61,17 @@ def _validate_seed(
     seed_point: Sequence[int] | None,
     volume_shape: Sequence[int],
 ) -> tuple[int, int, int] | None:
-    """Retorna a semente como tupla se ela estiver dentro do volume."""
+    """Retorna a semente como tupla inteira se estiver dentro do volume.
+
+    Args:
+        seed_point (Sequence[int] | None): Coordenada ``(y, x, z)`` da semente ou
+            ``None``.
+        volume_shape (Sequence[int]): Dimensões ``(height, width, depth)`` do volume 3D.
+
+    Returns:
+        tuple[int, int, int] | None: Coordenada inteira ``(y, x, z)`` válida dentro dos
+            limites do volume, ou ``None`` se ausente ou fora do domínio.
+    """
     if seed_point is None:
         return None
 
@@ -72,7 +89,19 @@ def _adaptive_floor(
     switch_at_voxels: int,
     smooth_relaxation: bool,
 ) -> float:
-    """Calcula o piso mínimo de vesselness no estágio atual do crescimento."""
+    """Calcula o piso mínimo de vesselness no estágio atual do crescimento.
+
+    Args:
+        count (int): Quantidade de voxels já aceitos na região.
+        min_start (float): Piso inicial de vesselness exigido no início do crescimento.
+        min_end (float): Piso final relaxado após atingir ``switch_at_voxels``.
+        switch_at_voxels (int): Limiar de voxels para transição ao piso relaxado.
+        smooth_relaxation (bool): Se ``True``, interpola linearmente entre ``min_start``
+            e ``min_end`` antes da transição.
+
+    Returns:
+        float: Piso mínimo de vesselness aplicável ao passo atual.
+    """
     if switch_at_voxels <= 0 or count >= switch_at_voxels:
         return min_end
     if not smooth_relaxation:
@@ -88,16 +117,31 @@ def _comparison_mean(
     current_value: float,
     running_sum: float,
     running_count: int,
+    window_sum: float,
     value_history: deque[float] | None,
 ) -> float:
-    """Define a referência usada para comparar o próximo voxel candidato."""
+    """Define a referência usada para comparar o próximo voxel candidato.
+
+    Args:
+        comparison_window (int): Tamanho da janela de comparação (``1`` para voxel
+            atual, ``-1`` para média acumulada, ou ``> 1`` para janela deslizante).
+        use_running_mean (bool): Indica se deve usar a média acumulada de toda a região.
+        current_value (float): Valor de vesselness do voxel atual na fronteira.
+        running_sum (float): Soma acumulada dos valores de vesselness já aceitos.
+        running_count (int): Quantidade total de voxels aceitos até o momento.
+        window_sum (float): Soma dos últimos valores mantidos em ``value_history``.
+        value_history (deque[float] | None): Histórico recente de valores na janela.
+
+    Returns:
+        float: Valor de referência de vesselness para o teste de similaridade.
+    """
     if comparison_window == 1:
         return current_value
     if use_running_mean:
         return running_sum / max(running_count, 1)
-    if value_history is None:
+    if not value_history:
         return current_value
-    return float(np.mean(value_history))
+    return window_sum / len(value_history)
 
 
 def _neighbor_is_acceptable(
@@ -106,7 +150,18 @@ def _neighbor_is_acceptable(
     current_floor: float,
     threshold: float,
 ) -> bool:
-    """Verifica piso de vesselness e similaridade com a região atual."""
+    """Verifica piso de vesselness e similaridade com a região atual.
+
+    Args:
+        neighbor_val (float): Valor de vesselness do voxel vizinho avaliado.
+        comparison_value (float): Intensidade de referência da região atual.
+        current_floor (float): Piso mínimo de vesselness permitido no passo atual.
+        threshold (float): Tolerância máxima de diferença absoluta até
+            ``comparison_value``.
+
+    Returns:
+        bool: ``True`` se o vizinho atende ao piso e à tolerância de similaridade.
+    """
     if neighbor_val < current_floor:
         return False
     return abs(neighbor_val - comparison_value) <= threshold
@@ -119,7 +174,19 @@ def _collect_seed_candidates_by_score(
     min_seed_score: float,
     max_candidates: int,
 ) -> list[tuple[int, int, int]]:
-    """Seleciona os melhores voxels locais para iniciar o crescimento."""
+    """Seleciona os melhores voxels locais para iniciar o crescimento.
+
+    Args:
+        seed (Sequence[int] | None): Coordenada ``(y, x, z)`` inicial do óstio ou
+            ``None``.
+        score_map (NDArray[Any]): Mapa 3D de pontuação (vesselness) em ``(y, x, z)``.
+        search_radius (int): Raio cúbico em voxels ao redor da semente para busca local.
+        min_seed_score (float): Pontuação mínima exigida para aceitar um candidato.
+        max_candidates (int): Número máximo de sementes retornadas em ordem decrescente.
+
+    Returns:
+        list[tuple[int, int, int]]: Lista de coordenadas ``(y, x, z)`` selecionadas.
+    """
     validated_seed = _validate_seed(seed, score_map.shape)
     if validated_seed is None:
         return []
@@ -131,6 +198,7 @@ def _collect_seed_candidates_by_score(
     x0, x1 = max(0, x - radius), min(score_map.shape[1], x + radius + 1)
     z0, z1 = max(0, z - radius), min(score_map.shape[2], z + radius + 1)
 
+    # Filtra candidatos locais acima do piso e faz fallback na própria semente.
     local_scores = score_map[y0:y1, x0:x1, z0:z1]
     candidate_mask = local_scores >= float(min_seed_score)
     if not np.any(candidate_mask):
@@ -159,7 +227,20 @@ def _vesselness_reference(
     radius: int,
     percentile: float,
 ) -> float:
-    """Calcula a referencia global ou local usada pelos limiares do RG."""
+    """Calcula a referência global ou local usada pelos limiares do region growing.
+
+    Args:
+        vesselness_map (NDArray[Any]): Mapa 3D de vesselness arterial ``(y, x, z)``.
+        ostia (Iterable[Sequence[int] | None]): Coordenadas ``(y, x, z)`` dos óstios
+            usados na amostragem local (elementos ``None`` são ignorados).
+        scope (str): Escopo da referência (``"global"`` ou ``"ostia_local"``).
+        radius (int): Raio cúbico em voxels ao redor de cada óstio no modo local.
+        percentile (float): Percentil em ``[0, 100]`` aplicado aos valores positivos.
+
+    Returns:
+        float: Intensidade de referência para escalar os parâmetros do crescimento.
+    """
+    # Valida o escopo e o percentil antes de amostrar os óstios.
     global_max = float(np.max(vesselness_map))
     if scope == "global":
         return global_max
@@ -192,6 +273,7 @@ def _vesselness_reference(
 
     if not local_values:
         return global_max
+    # Usa percentil positivo local para reduzir sensibilidade a ruído ou stents fora do óstio.
     values = np.concatenate(local_values)
     positive = values[np.isfinite(values) & (values > 0)]
     if positive.size == 0:
@@ -204,7 +286,16 @@ def _region_growing_parameters(
     reference: float,
     map_minimum: float,
 ) -> dict[str, Any]:
-    """Converte a referencia de vesselness nos parametros absolutos do RG."""
+    """Converte a referência de vesselness nos parâmetros absolutos do region growing.
+
+    Args:
+        rg_config (dict[str, Any]): Bloco ``REGION_GROWING`` da configuração efetiva.
+        reference (float): Valor de referência de vesselness do exame ou ramo.
+        map_minimum (float): Valor mínimo observado no mapa de vesselness do volume.
+
+    Returns:
+        dict[str, Any]: Parâmetros prontos para ``_region_growing_from_seeds``.
+    """
     return {
         "threshold": (reference - map_minimum) / float(rg_config["threshold_divisor"]),
         "max_volume": int(rg_config["max_volume"]),
@@ -232,12 +323,33 @@ def _region_growing_from_seeds(
     neighborhood: int = 26,
     verbose: bool = False,
 ) -> NDArray[np.uint8]:
-    """Cresce uma região usando uma ou mais sementes iniciais."""
+    """Cresce uma região usando uma ou mais sementes iniciais.
+
+    Args:
+        vesselness_map (NDArray[Any]): Mapa 3D de vesselness arterial ``(y, x, z)``.
+        seeds (Iterable[Sequence[int]]): Coordenadas iniciais ``(y, x, z)`` da região.
+        threshold (float): Tolerância máxima de diferença até a referência atual.
+        min_vesselness (float): Piso inicial mínimo de vesselness para aceitar voxels.
+        max_volume (int): Teto de voxels aceitos antes de encerrar a expansão.
+        relaxed_floor_factor (float): Fator multiplicativo aplicado a ``min_vesselness``
+            após atingir ``switch_at_voxels``.
+        switch_at_voxels (int): Limiar de voxels aceitos para relaxar o piso mínimo.
+        comparison_window (int | str): Modo de referência (``1``, ``-1``, ``"ALL"`` ou
+            tamanho inteiro positivo da janela deslizante).
+        smooth_relaxation (bool): Se ``True``, interpola o piso até
+            ``switch_at_voxels``.
+        neighborhood (int): Conectividade 3D entre vizinhos (``6``, ``18`` ou ``26``).
+        verbose (bool): Se ``True``, imprime mensagens de diagnóstico no console.
+
+    Returns:
+        NDArray[np.uint8]: Máscara binária ``uint8`` 3D dos voxels segmentados.
+    """
     if vesselness_map.ndim != 3:
         raise ValueError(
             f"vesselness_map deve ser 3D, recebido shape={vesselness_map.shape}"
         )
 
+    # Configura a janela de comparação (voxel atual, janela móvel ou média global).
     use_running_mean = False
     value_history: deque[float] | None = None
     if isinstance(comparison_window, str):
@@ -258,41 +370,48 @@ def _region_growing_from_seeds(
     # O piso pode relaxar gradualmente depois que a região ganha suporte suficiente.
     min_start = float(min_vesselness)
     min_end = min_start * float(relaxed_floor_factor)
+    max_vol = int(max_volume)
+    switch_at = int(switch_at_voxels)
+    smooth_relax = bool(smooth_relaxation)
+    thresh = float(threshold)
     mask = np.zeros_like(vesselness_map, dtype=np.uint8)
-    visited = np.zeros_like(vesselness_map, dtype=bool)
     queue: deque[tuple[int, int, int]] = deque()
     running_sum = 0.0
     running_count = 0
+    window_sum = 0.0
     neighbor_offsets = _neighbor_offsets(int(neighborhood))
 
     # Inicializa a fila com as sementes válidas e acima do piso mínimo.
     for seed in seeds:
         coord = _validate_seed(seed, vesselness_map.shape)
-        if coord is None or visited[coord]:
+        if coord is None or mask[coord]:
             continue
 
         seed_val = float(vesselness_map[coord])
         if seed_val < min_start:
             continue
 
-        visited[coord] = True
         mask[coord] = 1
         queue.append(coord)
         running_sum += seed_val
         running_count += 1
         if value_history is not None:
+            if len(value_history) == comparison_window:
+                window_sum -= value_history[0]
             value_history.append(seed_val)
+            window_sum += seed_val
     if running_count == 0:
         if verbose:
             print("Nenhuma semente válida acima do piso de vesselness.")
         return mask
 
+    # Loop BFS: expande a partir da fronteira até esvaziar a fila ou atingir max_volume.
     count = running_count
-    dims = vesselness_map.shape
+    dim0, dim1, dim2 = vesselness_map.shape
     while queue:
-        if count >= int(max_volume):
+        if count >= max_vol:
             if verbose:
-                print(f"Volume máximo atingido: {max_volume}")
+                print(f"Volume máximo atingido: {max_vol}")
             break
 
         cy, cx, cz = queue.popleft()
@@ -304,22 +423,23 @@ def _region_growing_from_seeds(
             current_value,
             running_sum,
             running_count,
+            window_sum,
             value_history,
         )
         current_floor = _adaptive_floor(
             count,
             min_start,
             min_end,
-            int(switch_at_voxels),
-            bool(smooth_relaxation),
+            switch_at,
+            smooth_relax,
         )
 
         # Testa a vizinhança configurada para seguir ramos arteriais em 3D.
         for dy, dx, dz in neighbor_offsets:
             ny, nx, nz = cy + dy, cx + dx, cz + dz
-            if not (0 <= ny < dims[0] and 0 <= nx < dims[1] and 0 <= nz < dims[2]):
+            if not (0 <= ny < dim0 and 0 <= nx < dim1 and 0 <= nz < dim2):
                 continue
-            if visited[ny, nx, nz]:
+            if mask[ny, nx, nz]:
                 continue
 
             neighbor_value = float(vesselness_map[ny, nx, nz])
@@ -327,19 +447,22 @@ def _region_growing_from_seeds(
                 neighbor_value,
                 reference,
                 current_floor,
-                float(threshold),
+                thresh,
             ):
                 continue
-            visited[ny, nx, nz] = True
             mask[ny, nx, nz] = 1
             queue.append((ny, nx, nz))
             count += 1
 
+            # Atualiza os acumuladores de referência conforme o modo de janela ativo.
             if use_running_mean:
                 running_sum += neighbor_value
                 running_count += 1
             elif value_history is not None:
+                if len(value_history) == comparison_window:
+                    window_sum -= value_history[0]
                 value_history.append(neighbor_value)
+                window_sum += neighbor_value
     if verbose:
         print(f"Voxels segmentados: {count}")
     return mask
@@ -353,17 +476,29 @@ def normal_region_growing_from_ostia(
     *,
     branch_diagnostics: dict[str, Any] | None = None,
 ) -> NDArray[np.uint8]:
-    """Segmenta artérias coronárias a partir dos óstios detectados.
+    """Segmenta artérias coronárias a partir dos óstios por crescimento de região.
 
-    O método usa o crescimento de região padrão do pipeline, com refinamento de
-    semente e multiseed local quando esses parâmetros estão ligados na config.
-    O retorno continua sendo apenas a uniao binaria das duas arvores.
+    Args:
+        vesselness_artery (NDArray[Any]): Mapa 3D de vesselness arterial no formato
+            ``(y, x, z)``.
+        ostia_left (Sequence[int] | None): Coordenada ``(y, x, z)`` do óstio esquerdo,
+            ou ``None`` se ausente.
+        ostia_right (Sequence[int] | None): Coordenada ``(y, x, z)`` do óstio direito,
+            ou ``None`` se ausente.
+        config (dict[str, Any]): Configuração efetiva com o bloco ``REGION_GROWING``.
+        branch_diagnostics (dict[str, Any] | None): Dicionário opcional preenchido
+            in-place com contagens brutas por ramo.
+
+    Returns:
+        NDArray[np.uint8]: Máscara binária ``uint8`` 3D resultante da união das árvores
+            coronárias.
     """
     if vesselness_artery.ndim != 3:
         raise ValueError(
             f"vesselness_artery deve ser 3D, recebido shape={vesselness_artery.shape}"
         )
 
+    # Etapa 1: determina a intensidade de referência e converte parâmetros configurados para a escala do exame.
     rg_config = config["REGION_GROWING"]
     ostia = [ostia_left, ostia_right]
     reference_scope = str(rg_config.get("reference_scope", "global"))
@@ -383,7 +518,6 @@ def normal_region_growing_from_ostia(
     if max_vesselness <= 0:
         return np.zeros_like(vesselness_artery, dtype=np.uint8)
 
-    # Converte as frações configuradas em limiares absolutos deste exame.
     params = _region_growing_parameters(rg_config, max_vesselness, min_vesselness_map)
 
     use_seed_refinement = bool(rg_config.get("use_seed_refinement", False))
@@ -395,10 +529,12 @@ def normal_region_growing_from_ostia(
     seed_candidate_radius = int(rg_config.get("seed_candidate_radius", 1))
     max_seed_candidates = int(rg_config.get("max_seed_candidates", 1))
 
+    # Etapa 2: seleciona e opcionalmente refina/multiplica as sementes ao redor de cada óstio.
     def seeds_for_ostium(
         ostium: Sequence[int] | None,
         branch_reference: float,
     ) -> list[tuple[int, int, int]]:
+        """Seleciona sementes iniciais para um óstio conforme o modo configurado."""
         if ostium is None:
             return []
         if not (use_seed_refinement or use_multi_seed):
@@ -437,6 +573,7 @@ def normal_region_growing_from_ostia(
     if not any(seed_groups):
         return np.zeros_like(vesselness_artery, dtype=np.uint8)
 
+    # Etapa 3: executa o region growing separado por ramo (padrão) ou conjunto.
     if grow_each_ostium_separately:
         # Evita que um ramo mais forte domine a expansão iniciada no outro óstio.
         combined = np.zeros_like(vesselness_artery, dtype=np.uint8)
@@ -457,6 +594,7 @@ def normal_region_growing_from_ostia(
             combined |= branch
         return combined.astype(np.uint8)
 
+    # Caso contrário, cresce todos os óstios juntos em uma única fila compartilhada.
     all_seeds = [seed for seed_group in seed_groups for seed in seed_group]
     return _region_growing_from_seeds(
         vesselness_artery,

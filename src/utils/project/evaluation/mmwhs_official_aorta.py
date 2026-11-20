@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 import shutil
@@ -20,15 +21,11 @@ from nibabel.nifti1 import Nifti1Image
 from numpy.typing import NDArray
 from scipy import ndimage as ndi
 
+from utils.project.dataframe import require_series_column
 from utils.project.datasets.ccta import (
     MMWHS_AORTA_LABEL_VALUE,
     align_ccta_volume_to_imagecas_view,
     load_ccta_volume,
-)
-from utils.project.dataframe import require_series_column
-from utils.project.evaluation.mmwhs_protocol import (
-    LEGACY_WHS_METHOD as LEGACY_WHS_METHOD,
-    OFFICIAL_AORTA_METHOD,
 )
 from utils.segmentation.pipeline.detection import (
     locate_and_filter_aorta_circles,
@@ -37,6 +34,10 @@ from utils.segmentation.pipeline.detection import (
 from utils.segmentation.pipeline.preprocessing import preprocess_ccta_volume
 
 EVALUATOR_FOLDER = "MMWHS_evaluation_testdata_label_encrypt_1mm_forpublic"
+LEGACY_WHS_METHOD = "mmwhs_official_1mm_wine"
+OFFICIAL_AORTA_METHOD = "mmwhs_aorta_label820_1mm_wine"
+
+LOGGER = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -52,7 +53,21 @@ class AortaPrediction:
 def predict_aorta(
     record: pd.Series, config: dict[str, Any], *, align_volume: bool = True
 ) -> AortaPrediction:
-    """Reproduz as etapas do batch até a máscara final da aorta."""
+    """Reproduz o batch até a máscara final da aorta em um exame MM-WHS.
+
+    Args:
+        record (pd.Series): Linha do inventário CCTA com caminho e espaçamentos
+            em ``mm``.
+        config (dict[str, Any]): Configuração efetiva normalizada e já escalada
+            para a resolução do run.
+        align_volume (bool): Se ``True``, aplica o alinhamento visual
+            MM-WHS → ImageCAS antes de segmentar.
+
+    Returns:
+        AortaPrediction: Estrutura com máscara binária, shape nativo e eixos
+            invertidos para restauração.
+    """
+    # Etapa 1: carrega o volume nativo, valida espaçamento e alinha se ativo.
     image = load_ccta_volume(record).astype(np.float32, copy=False)
     if image.ndim != 3:
         raise ValueError("A imagem de teste deve ser tridimensional.")
@@ -70,12 +85,14 @@ def predict_aorta(
         if not np.isfinite(numeric) or numeric <= 0:
             raise ValueError(f"Espaçamento inválido no inventário: {column}.")
         spacing_values.append(numeric)
+    # Etapa 2: pré-processa na resolução do run e libera buffers de entrada.
     processed = preprocess_ccta_volume(aligned, tuple(spacing_values), config)
     lcc_image = np.asarray(processed["lcc_image"])
     downscale_factors = processed["downscale_factors"]
     scaled_spacing = tuple(float(value) for value in processed["scaled_spacing"])
     del image, aligned, processed
 
+    # Etapa 3: rastreia círculos, segmenta a aorta e guarda orientação nativa.
     tracking = locate_and_filter_aorta_circles(
         lcc_image, downscale_factors, scaled_spacing, config["CIRCLE_DETECTION"]
     )
@@ -100,7 +117,17 @@ def predict_aorta(
 
 
 def restore_native_mask(prediction: AortaPrediction) -> NDArray[np.uint8]:
-    """Reamostra por vizinho mais próximo e desfaz inversões de visualização."""
+    """Reamostra a máscara por vizinho mais próximo e desfaz inversões visuais.
+
+    Args:
+        prediction (AortaPrediction): Predição produzida por ``predict_aorta`` com
+            shape nativo e eixos invertidos.
+
+    Returns:
+        NDArray[np.uint8]: Máscara binária ``uint8`` não vazia restaurada na
+            grade nativa do volume MM-WHS.
+    """
+    # Reamostra a máscara binária por vizinho mais próximo para a grade nativa.
     mask = prediction.mask
     if mask.ndim != 3 or any(size <= 0 for size in prediction.native_shape):
         raise ValueError("Shape da máscara ou da imagem nativa inválido.")
@@ -116,6 +143,7 @@ def restore_native_mask(prediction: AortaPrediction) -> NDArray[np.uint8]:
         raise ValueError(
             f"A máscara restaurada tem shape {restored.shape}; esperado {prediction.native_shape}."
         )
+    # Desfaz as inversões de alinhamento visual e confirma máscara binária não vazia.
     for axis in prediction.flipped_axes:
         restored = np.flip(restored, axis=axis)
     restored = np.ascontiguousarray(restored > 0, dtype=np.uint8)
@@ -125,7 +153,15 @@ def restore_native_mask(prediction: AortaPrediction) -> NDArray[np.uint8]:
 
 
 def verify_run_result(run_dir: Path, exam_id: str, prediction: AortaPrediction) -> None:
-    """Confere a máscara processada com o volume persistido no run original."""
+    """Confere se a máscara gerada reproduz voxels e círculos salvos no run original.
+
+    Args:
+        run_dir (Path): Diretório raiz do run MM-WHS com ``numeric/results_all.csv``.
+        exam_id (str): Identificador do exame no subconjunto ``test``.
+        prediction (AortaPrediction): Predição recém-gerada por ``predict_aorta``
+            para validação de consistência.
+    """
+    # Lê o CSV consolidado do run e localiza a linha única do exame no conjunto test.
     path = run_dir / "numeric/results_all.csv"
     if not path.is_file():
         raise FileNotFoundError(f"Resultados do run não encontrados: {path}")
@@ -141,6 +177,7 @@ def verify_run_result(run_dir: Path, exam_id: str, prediction: AortaPrediction) 
     if len(rows) != 1:
         raise ValueError(f"O run não contém um único resultado para {exam_id}.")
     row = rows.iloc[0]
+    # Compara voxels e círculos da predição atual com os valores persistidos.
     expected_voxels = row["aorta_mask_voxels"]
     expected_circles = row["aorta_circle_count"]
     if pd.isna(expected_voxels) or pd.isna(expected_circles):
@@ -157,7 +194,15 @@ def verify_run_result(run_dir: Path, exam_id: str, prediction: AortaPrediction) 
 def save_prediction(
     reference_path: Path, native_mask: NDArray[np.uint8], output_path: Path
 ) -> None:
-    """Salva a máscara como label 820 em NIfTI int16 na geometria original."""
+    """Salva a máscara como label 820 em NIfTI ``int16`` mantendo geometria.
+
+    Args:
+        reference_path (Path): Caminho do NIfTI CT original usado como referência.
+        native_mask (NDArray[np.uint8]): Máscara binária 3D na grade nativa de
+            ``reference_path``.
+        output_path (Path): Caminho do arquivo NIfTI de destino (falha se já existir).
+    """
+    # Carrega o CT de referência e valida geometria e máscara antes de gerar o rótulo.
     if output_path.exists():
         raise FileExistsError(f"Predição já existe: {output_path}")
     reference = load_nifti(str(reference_path))
@@ -167,6 +212,7 @@ def save_prediction(
         raise ValueError("A imagem de referência não possui affine.")
     if native_mask.shape != reference.shape or not np.any(native_mask):
         raise ValueError("A máscara nativa não coincide com a imagem ou está vazia.")
+    # Codifica a aorta como label 820 em int16 preservando affine, qform e sform.
     labels = np.where(native_mask > 0, MMWHS_AORTA_LABEL_VALUE, 0).astype(np.int16)
     header = reference.header.copy()
     header.set_data_dtype(np.int16)
@@ -180,7 +226,12 @@ def save_prediction(
 
 
 def validate_saved_prediction(reference_path: Path, prediction_path: Path) -> None:
-    """Confere shape, orientação e tipo antes de chamar o avaliador."""
+    """Confere shape, affine e dtype ``int16`` da predição antes de acionar o avaliador.
+
+    Args:
+        reference_path (Path): Caminho do volume CT original NIfTI-1.
+        prediction_path (Path): Caminho do NIfTI-1 de rótulo salvo para avaliação.
+    """
     reference = load_nifti(str(reference_path))
     prediction = load_nifti(str(prediction_path))
     if not isinstance(reference, Nifti1Image) or not isinstance(
@@ -198,7 +249,12 @@ def validate_saved_prediction(reference_path: Path, prediction_path: Path) -> No
 
 
 def preflight_evaluator(evaluator_dir: Path, exam_ids: list[str]) -> None:
-    """Verifica Wine, executáveis e labels antes de uma avaliação em lote."""
+    """Verifica Wine, executáveis e rótulos cifrados antes de avaliar o lote.
+
+    Args:
+        evaluator_dir (Path): Pasta do avaliador MM-WHS contendo ``.exe`` e ``nii/``.
+        exam_ids (list[str]): Lista de IDs de exames ``test`` com rótulos cifrados.
+    """
     if shutil.which("wine") is None or shutil.which("winepath") is None:
         raise FileNotFoundError("wine e winepath precisam estar disponíveis no PATH.")
     required = [
@@ -215,7 +271,14 @@ def preflight_evaluator(evaluator_dir: Path, exam_ids: list[str]) -> None:
 
 
 def _wine_path(path: Path) -> str:
-    """Converte um caminho Linux existente ou futuro para a sintaxe do Wine."""
+    """Converte um caminho Linux existente ou futuro para a sintaxe do Wine.
+
+    Args:
+        path (Path): Caminho Linux a converter para o formato Windows do Wine.
+
+    Returns:
+        str: Caminho convertido pelo comando ``winepath -w``.
+    """
     converted = subprocess.run(
         ["winepath", "-w", str(path.resolve())],
         check=True,
@@ -227,37 +290,29 @@ def _wine_path(path: Path) -> str:
     return converted
 
 
-def parse_dice_lo(path: Path, exam_id: str) -> float:
-    """Lê exclusivamente o DiceLO legado do protocolo de coração completo."""
-    lines = [
-        line.strip()
-        for line in path.read_text(encoding="ascii").splitlines()
-        if line.strip()
-    ]
-    if len(lines) != 1:
-        raise ValueError(f"Resultado oficial deve ter uma linha: {path}")
-    fields = [field.strip() for field in lines[0].split("\t") if field.strip()]
-    expected_id = f"ct{exam_id.rsplit('_', maxsplit=1)[-1]}"
-    if len(fields) != 10 or fields[8] != expected_id or fields[9] != "--decodeseg2":
-        raise ValueError(f"Identidade ou formato inválido no resultado oficial: {path}")
-    try:
-        scores = [float(value) for value in fields[:8]]
-    except ValueError as error:
-        raise ValueError(
-            f"Métrica não numérica no resultado oficial: {path}"
-        ) from error
-    if any(not np.isfinite(value) or value < 0 or value > 1 for value in scores):
-        raise ValueError(f"Métrica fora de [0, 1] no resultado oficial: {path}")
-    return scores[5]
-
-
 def aorta_dice_result_path(output_dir: Path, exam_id: str) -> Path:
-    """Resolve o artefato do Dice isolado, separado do XLS legado."""
+    """Resolve o caminho do JSON do Dice isolado, separado do XLS legado.
+
+    Args:
+        output_dir (Path): Diretório de saída por exame da avaliação da aorta.
+        exam_id (str): Identificador do exame MM-WHS.
+
+    Returns:
+        Path: Caminho ``<output_dir>/<exam_id>_aorta_dice.json``.
+    """
     return output_dir / f"{exam_id}_aorta_dice.json"
 
 
 def parse_aorta_dice(path: Path, exam_id: str) -> float:
-    """Valida identidade, protocolo e Dice do resultado da aorta isolada."""
+    """Valida identidade, protocolo e valor de Dice no artefato JSON da aorta isolada.
+
+    Args:
+        path (Path): Caminho do arquivo ``*_aorta_dice.json`` persistido.
+        exam_id (str): Identificador esperado do exame (validação de correspondência).
+
+    Returns:
+        float: Valor de Dice validado no intervalo ``[0, 1]``.
+    """
     payload = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(payload, dict) or (
         payload.get("exam_id") != exam_id
@@ -274,7 +329,15 @@ def parse_aorta_dice(path: Path, exam_id: str) -> float:
 
 
 def parse_label_dice_output(stdout: str) -> float:
-    """Extrai exatamente um escore da saída textual do modo por label."""
+    """Extrai exatamente um escore Dice da saída textual do avaliador por label.
+
+    Args:
+        stdout (str): Saída padrão capturada da execução de ``zxhCardWhsEvaluate.exe``.
+
+    Returns:
+        float: Valor de Dice validado no intervalo ``[0, 1]``.
+    """
+    # Filtra linhas numéricas ou tokens especiais na saída do avaliador.
     tokens = [
         line.strip()
         for line in stdout.splitlines()
@@ -286,6 +349,7 @@ def parse_label_dice_output(stdout: str) -> float:
     ]
     if len(tokens) != 1:
         raise ValueError("O avaliador deve retornar exatamente um Dice numérico.")
+    # Valida conversão numérica única e garante escore finito dentro de [0, 1].
     try:
         value = float(tokens[0])
     except ValueError as error:
@@ -296,7 +360,14 @@ def parse_label_dice_output(stdout: str) -> float:
 
 
 def _save_aorta_dice(path: Path, exam_id: str, dice: float) -> None:
-    """Persiste o resultado validado com substituição atômica."""
+    """Persiste o resultado validado com substituição atômica.
+
+    Args:
+        path (Path): Caminho de destino do arquivo JSON de Dice da aorta.
+        exam_id (str): Identificador do exame MM-WHS.
+        dice (float): Valor de Dice validado no intervalo ``[0, 1]``.
+    """
+    # Monta o payload oficial do label 820 e garante que o diretório exista.
     payload = {
         "exam_id": exam_id,
         "method": OFFICIAL_AORTA_METHOD,
@@ -305,6 +376,7 @@ def _save_aorta_dice(path: Path, exam_id: str, dice: float) -> None:
     }
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary: Path | None = None
+    # Grava em arquivo temporário com fsync e substitui atomicamente no destino final.
     try:
         with tempfile.NamedTemporaryFile(
             mode="w", encoding="utf-8", dir=path.parent, suffix=".tmp", delete=False
@@ -323,7 +395,21 @@ def _save_aorta_dice(path: Path, exam_id: str, dice: float) -> None:
 def evaluate_with_wine(
     prediction_path: Path, exam_id: str, evaluator_dir: Path, output_dir: Path
 ) -> Path:
-    """Reamostra para 1 mm e compara somente o label 820 com a referência."""
+    """Reamostra a predição para 1 mm via Wine e avalia somente o label 820.
+
+    Args:
+        prediction_path (Path): Caminho do NIfTI ``int16`` nativo predito.
+        exam_id (str): Identificador do exame MM-WHS ``test`` usado para localizar
+            o gabarito cifrado.
+        evaluator_dir (Path): Pasta com ``zxhtransform.exe``,
+            ``zxhCardWhsEvaluate.exe`` e ``nii/``.
+        output_dir (Path): Diretório do exame onde o volume reamostrado e o
+            ``*_aorta_dice.json`` são gravados.
+
+    Returns:
+        Path: Caminho do arquivo JSON contendo o Dice oficial do label 820.
+    """
+    # Confere pré-requisitos do Wine e reutiliza JSON oficial já validado, se existir.
     preflight_evaluator(evaluator_dir, [exam_id])
     transform = evaluator_dir / "zxhtransform.exe"
     evaluator = evaluator_dir / "zxhCardWhsEvaluate.exe"
@@ -334,6 +420,7 @@ def evaluate_with_wine(
         parse_aorta_dice(dice_path, exam_id)
         return dice_path
     output_dir.mkdir(parents=True, exist_ok=True)
+    # Reamostra a predição para 1 mm isotrópico antes de invocar o executável cifrado.
     if not resampled.exists():
         subprocess.run(
             [
@@ -356,6 +443,7 @@ def evaluate_with_wine(
         )
     if not resampled.is_file():
         raise RuntimeError("O zxhtransform não produziu o NIfTI de 1 mm.")
+    # Avalia só o label 820 (aorta ascendente) e grava JSON separado do XLS legado.
     evaluation = subprocess.run(
         [
             "wine",
@@ -380,10 +468,125 @@ def evaluate_with_wine(
 
 
 def has_aorta_mask(row: Mapping[str, Any]) -> bool:
-    """Identifica exames com máscara final da aorta persistida no CSV."""
+    """Identifica exames com máscara final não vazia da aorta registrada no CSV.
+
+    Args:
+        row (Mapping[str, Any]): Registro tabular com a coluna
+            ``aorta_mask_voxels``.
+
+    Returns:
+        bool: ``True`` se ``aorta_mask_voxels`` for finito e estritamente positivo.
+    """
     value = row.get("aorta_mask_voxels")
     return (
         isinstance(value, (int, float, np.integer, np.floating))
         and np.isfinite(float(value))
         and float(value) > 0
     )
+
+
+def evaluate_test_aorta_result(
+    row: Mapping[str, Any],
+    record: pd.Series,
+    config: dict[str, Any],
+    run_dir: Path,
+    evaluator_dir: Path,
+    *,
+    rebuild_mask: bool,
+    align_volume: bool = True,
+) -> dict[str, Any]:
+    """Avalia a aorta de um exame ``test`` sem alterar o resultado científico.
+
+    Args:
+        row (Mapping[str, Any]): Registro numérico atual do exame no run.
+        record (pd.Series): Linha do inventário CCTA com caminho e espaçamentos
+            em ``mm``.
+        config (dict[str, Any]): Configuração efetiva normalizada e escalada do run.
+        run_dir (Path): Diretório raiz do run MM-WHS.
+        evaluator_dir (Path): Pasta com os binários oficiais e rótulos cifrados.
+        rebuild_mask (bool): Se ``True``, reexecuta ``predict_aorta`` quando o
+            NIfTI nativo ainda não foi exportado.
+        align_volume (bool): Se ``True``, aplica alinhamento visual
+            MM-WHS → ImageCAS ao reconstruir a máscara.
+
+    Returns:
+        dict[str, Any]: Cópia atualizada de ``row`` com ``aorta_dice``,
+            ``aorta_evaluation_status``, ``aorta_ground_truth_evaluated``,
+            ``aorta_evaluation_method`` e ``aorta_evaluation_error``.
+    """
+    updated = dict(row)
+    exam_id = str(record["exam_id"])
+    updated["aorta_evaluation_method"] = OFFICIAL_AORTA_METHOD
+    updated["aorta_ground_truth_available"] = True
+    updated["aorta_evaluation_error"] = None
+    # Interrompe cedo quando o exame não produziu máscara da aorta no run.
+    if not has_aorta_mask(row):
+        updated["aorta_evaluation_status"] = "unavailable"
+        updated["aorta_ground_truth_evaluated"] = False
+        updated["aorta_dice"] = None
+        return updated
+
+    output_dir = run_dir / "evaluation" / "aorta" / "test" / exam_id
+    prediction_path = output_dir / f"{exam_id}_label.nii.gz"
+    try:
+        # Etapa 1: reaproveita NIfTI exportado ou reconstrói a máscara nativa.
+        reference_path = Path(str(record["path"]))
+        if prediction_path.exists():
+            validate_saved_prediction(reference_path, prediction_path)
+        elif rebuild_mask:
+            prediction = predict_aorta(
+                record, {**config, "USE_GPU": False}, align_volume=align_volume
+            )
+            verify_run_result(run_dir, exam_id, prediction)
+            native_mask = restore_native_mask(prediction)
+            save_prediction(reference_path, native_mask, prediction_path)
+            del native_mask, prediction
+        else:
+            raise FileNotFoundError(f"Predição da aorta ausente: {prediction_path}")
+        # Etapa 2: calcula e persiste o Dice oficial do label 820 isoladamente.
+        dice_path = evaluate_with_wine(
+            prediction_path, exam_id, evaluator_dir, output_dir
+        )
+        updated["aorta_dice"] = parse_aorta_dice(dice_path, exam_id)
+        updated["aorta_ground_truth_evaluated"] = True
+        updated["aorta_evaluation_status"] = "success"
+    except Exception as error:
+        # Registra falha isolada da avaliação oficial sem descartar resultados do exame.
+        LOGGER.exception("Falha na avaliação oficial da aorta de %s", exam_id)
+        updated["aorta_dice"] = None
+        updated["aorta_ground_truth_evaluated"] = False
+        updated["aorta_evaluation_status"] = "error"
+        updated["aorta_evaluation_error"] = str(error)
+    return updated
+
+
+def official_evaluation_complete(row: Mapping[str, Any], run_dir: Path) -> bool:
+    """Confere se o Dice persistido na linha coincide com o arquivo oficial do exame.
+
+    Args:
+        row (Mapping[str, Any]): Registro numérico do exame no CSV consolidado.
+        run_dir (Path): Diretório raiz do run contendo
+            ``evaluation/aorta/test/<exam_id>/``.
+
+    Returns:
+        bool: ``True`` quando a avaliação oficial já foi concluída e validada
+            com consistência numérica.
+    """
+    from utils.project.results.external import has_valid_aorta_dice
+
+    # Verifica primeiro se o registro no CSV já indica conclusão oficial válida.
+    if row.get("aorta_evaluation_method") != OFFICIAL_AORTA_METHOD:
+        return False
+    if row.get("aorta_evaluation_status") != "success" or not has_valid_aorta_dice(row):
+        return False
+    # Confirma a existência do JSON oficial e a igualdade numérica com o CSV.
+    exam_id = str(row["exam_id"])
+    dice_path = aorta_dice_result_path(
+        run_dir / "evaluation" / "aorta" / "test" / exam_id, exam_id
+    )
+    if not dice_path.is_file():
+        return False
+    saved_dice = parse_aorta_dice(dice_path, exam_id)
+    if not np.isclose(saved_dice, float(row["aorta_dice"]), rtol=0, atol=1e-6):
+        raise ValueError(f"Dice do CSV diverge do arquivo oficial: {exam_id}")
+    return True

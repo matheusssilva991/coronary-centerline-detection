@@ -39,7 +39,17 @@ NUMERIC_COLUMNS = VOLUME_COLUMNS[3:9]
 def calculate_artery_volume(
     label: NDArray[Any], spacing_mm: Sequence[float] | NDArray[Any]
 ) -> dict[str, Any]:
-    """Conta somente label == 1 e converte mm³ para mL na geometria nativa."""
+    """Conta somente label == 1 e converte mm³ para mL na geometria nativa.
+
+    Args:
+        label (NDArray[Any]): Volume 3D de rótulos na grade nativa.
+        spacing_mm (Sequence[float] | NDArray[Any]): Espaçamento físico em milímetros
+            na ordem ``(sx, sy, sz)``.
+
+    Returns:
+        dict[str, Any]: Métricas com contagem de voxels, espaçamento e volume em mL.
+    """
+    # Valida dimensionalidade 3D do rótulo, finitude e espaçamento positivo.
     if label.ndim != 3:
         raise ValueError("O rótulo deve ser um volume 3D.")
     spacing = np.asarray(spacing_mm, dtype=float)
@@ -47,6 +57,8 @@ def calculate_artery_volume(
         raise ValueError("O spacing deve conter três valores finitos e positivos.")
     if not np.isfinite(label).all():
         raise ValueError("O rótulo contém valores não finitos.")
+
+    # Conta apenas voxels coronarianos (classe 1) e converte mm³ para mL.
     voxel_count = int(np.count_nonzero(label == ARTERY_LABEL))
     voxel_volume = float(np.prod(spacing))
     if not np.isfinite(voxel_volume) or voxel_volume <= 0:
@@ -73,7 +85,20 @@ def classify_artery_volume_outliers(
 
     Limites descritivos usam todos os volumes válidos fornecidos; valores
     exatamente no limite permanecem na faixa. O z-score usa DP amostral.
+
+    Args:
+        volumes (pd.DataFrame): Tabela de volumes retornada ou compatível com o CSV.
+        method (str): Critério de detecção de outliers (``"iqr"`` ou ``"std"``).
+        iqr_multiplier (float): Multiplicador do intervalo interquartil para limites
+            quando ``method="iqr"``.
+        std_multiplier (float): Multiplicador do desvio-padrão amostral para limites
+            quando ``method="std"``.
+
+    Returns:
+        tuple[pd.DataFrame, dict[str, Any]]: Par ``(classified, summary)`` com
+            classificação por exame e estatísticas dos limites calculados.
     """
+    # Valida método estatístico e multiplicadores não negativos.
     if method not in {"iqr", "std"}:
         raise ValueError("method deve ser 'iqr' ou 'std'.")
     if any(
@@ -81,6 +106,8 @@ def classify_artery_volume_outliers(
         for value in (iqr_multiplier, std_multiplier)
     ):
         raise ValueError("Os multiplicadores devem ser finitos e não negativos.")
+
+    # Filtra apenas exames concluídos com status ok e verifica integridade dos valores.
     selected = volumes.loc[volumes["status"].eq("ok")].copy()
     if selected["IMG_ID"].isna().any() or selected["IMG_ID"].duplicated().any():
         raise ValueError("IDs dos volumes devem ser únicos e não ausentes.")
@@ -89,6 +116,8 @@ def classify_artery_volume_outliers(
     )
     if not np.isfinite(values.to_numpy(dtype=float)).all() or values.lt(0).any():
         raise ValueError("Volumes concluídos devem ser finitos e não negativos.")
+
+    # Calcula tendência central, dispersão amostral, quartis e limites de corte.
     selected["volume_ml"] = values
     mean = float(values.mean())
     std = (
@@ -107,6 +136,8 @@ def classify_artery_volume_outliers(
         if method == "iqr"
         else (mean - std_multiplier * std, mean + std_multiplier * std)
     )
+
+    # Calcula z-score e classifica cada exame em in_range, low ou high.
     selected["volume_z_score"] = (values - mean) / std if std > 0 else np.nan
     if std == 0:
         selected["volume_z_score"] = 0.0
@@ -130,6 +161,15 @@ def classify_artery_volume_outliers(
 
 
 def _read_cached_volumes(path: Path) -> pd.DataFrame:
+    """Lê e audita o CSV de cache de volumes coronarianos.
+
+    Args:
+        path (Path): Caminho do arquivo CSV persistido.
+
+    Returns:
+        pd.DataFrame: Tabela validada e ordenada por ``IMG_ID``.
+    """
+    # Lê o CSV e confere o conjunto exato de colunas obrigatórias.
     dataframe = pd.read_csv(path)
     missing = set(VOLUME_COLUMNS) - set(dataframe.columns)
     if missing:
@@ -137,6 +177,8 @@ def _read_cached_volumes(path: Path) -> pd.DataFrame:
             f"CSV de volumes incompatível; colunas ausentes: {sorted(missing)}"
         )
     dataframe = dataframe.loc[:, VOLUME_COLUMNS].copy()
+
+    # Valida identificadores inteiros positivos únicos, status e classe do rótulo.
     ids = to_numeric_series(require_series_column(dataframe, "IMG_ID"), errors="raise")
     if (
         ids.isna().any()
@@ -156,6 +198,8 @@ def _read_cached_volumes(path: Path) -> pd.DataFrame:
         .all()
     ):
         raise ValueError("O CSV deve conter somente a classe coronariana 1.")
+
+    # Garante caminhos relativos seguros para os arquivos de rótulo e converte números.
     for relative in dataframe["label_file"]:
         if (
             not isinstance(relative, str)
@@ -168,6 +212,8 @@ def _read_cached_volumes(path: Path) -> pd.DataFrame:
         dataframe[column] = to_numeric_series(
             require_series_column(dataframe, column), errors="raise"
         )
+
+    # Audita finitude, positividade e consistência aritmética nos registros ok.
     valid = dataframe.loc[dataframe["status"].eq("ok"), NUMERIC_COLUMNS]
     if not np.isfinite(valid.to_numpy(dtype=float)).all():
         raise ValueError(
@@ -193,6 +239,14 @@ def _read_cached_volumes(path: Path) -> pd.DataFrame:
 
 
 def _calculate_label_file(path: Path) -> dict[str, Any]:
+    """Lê um arquivo de rótulo NIfTI e calcula seu volume coronariano em mL.
+
+    Args:
+        path (Path): Caminho do arquivo ``*.label.nii.gz``.
+
+    Returns:
+        dict[str, Any]: Métricas físicas retornadas por ``calculate_artery_volume``.
+    """
     image = cast(SpatialImage, load_nifti(str(path)))
     # O ImageCAS usa mm; unidades NIfTI explícitas são convertidas quando necessário.
     header = cast(Nifti1Header, image.header)
@@ -217,13 +271,28 @@ def load_or_compute_artery_volumes(
     ``force_recompute`` descarta o cache apenas após localizar as máscaras.
     Sem dataset montado, o CSV continua consultável com um aviso. Arquivos
     concluídos modificados no disco exigem recálculo explícito.
+
+    Args:
+        csv_path (str | Path): Caminho do arquivo CSV de cache e persistência.
+        base_path (str | Path | None): Diretório raiz opcional do ImageCAS; ``None``
+            usa ``resolve_imagecas_base_path``.
+        force_recompute (bool): Descarta o cache válido se ``True`` após localizar
+            as máscaras em disco.
+        show_progress (bool): Exibe barra de progresso durante o processamento dos
+            exames pendentes.
+
+    Returns:
+        pd.DataFrame: Tabela consolidada ordenada por ``IMG_ID`` com todos os exames.
     """
+    # Lê cache existente, exceto quando o recálculo completo é solicitado.
     csv_path = Path(csv_path)
     cached = (
         _read_cached_volumes(csv_path)
         if csv_path.is_file() and not force_recompute
         else pd.DataFrame(columns=VOLUME_COLUMNS)
     )
+
+    # Localiza máscaras em disco e retorna apenas o cache se o dataset estiver ausente.
     try:
         root = (
             Path(base_path) if base_path is not None else resolve_imagecas_base_path()
@@ -255,6 +324,8 @@ def load_or_compute_artery_volumes(
         if img_id in inventory:
             raise ValueError(f"ID ImageCAS duplicado: {img_id}")
         inventory[img_id] = path
+
+    # Preserva resultados antigos ausentes no disco e enfileira exames pendentes.
     rows: dict[int, dict[str, Any]] = {
         int(row["IMG_ID"]): {str(key): value for key, value in row.items()}
         for row in cached.to_dict(orient="records")

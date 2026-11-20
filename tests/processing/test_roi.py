@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 
-from utils.utils.roi import mask_bounding_box_slices
+from utils.utils.roi import mask_bounding_box_slices, mask_voxel_bbox_slices
 
 
 class MaskBoundingBoxSlicesTests(unittest.TestCase):
@@ -63,6 +63,29 @@ class MaskBoundingBoxSlicesTests(unittest.TestCase):
                 self.assertRaisesRegex(ValueError, "margem"),
             ):
                 mask_bounding_box_slices(mask, (1.0, 1.0, 1.0), margin)
+
+
+class MaskVoxelBboxSlicesTests(unittest.TestCase):
+    def test_returns_none_for_empty_mask_and_clamps_padding_to_bounds(self):
+        self.assertIsNone(
+            mask_voxel_bbox_slices(np.zeros((4, 5, 6), dtype=bool), pad_voxels=2)
+        )
+
+        mask = np.zeros((6, 7, 8), dtype=np.uint8)
+        mask[2:4, 3:5, 0:2] = 1
+        self.assertEqual(
+            mask_voxel_bbox_slices(mask, pad_voxels=2),
+            (slice(0, 6), slice(1, 7), slice(0, 4)),
+        )
+
+    def test_rejects_invalid_ndim_or_negative_or_non_int_padding(self):
+        with self.assertRaisesRegex(ValueError, "tridimensional"):
+            mask_voxel_bbox_slices(np.ones((2, 2), dtype=bool), pad_voxels=1)
+        for bad_pad in (-1, 1.5, True):
+            with self.subTest(pad=bad_pad), self.assertRaises(ValueError):
+                mask_voxel_bbox_slices(
+                    np.ones((2, 2, 2), dtype=bool), pad_voxels=bad_pad
+                )
 
 
 if __name__ == "__main__":

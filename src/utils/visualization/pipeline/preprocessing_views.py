@@ -12,6 +12,20 @@ def _resolve_stage_image(
     center_slice: int,
     mode: Literal["slice", "mip"],
 ) -> tuple[NDArray, str]:
+    """Extrai a imagem 2D e o rótulo descritivo conforme o modo de visualização.
+
+    Args:
+        volume (NDArray[Any]): Volume 3D ``(Y, X, Z)`` de uma etapa de
+            pré-processamento.
+        center_slice (int): Índice da fatia axial central usado no modo
+            ``"slice"``.
+        mode (Literal["slice", "mip"]): Modo de projeção: ``"slice"`` para fatia
+            única ou ``"mip"`` para projeção máxima axial.
+
+    Returns:
+        tuple[NDArray[Any], str]: Imagem 2D resultante e texto descritivo do
+        modo.
+    """
     if mode == "slice":
         return volume[:, :, center_slice], f"fatia {center_slice}"
     return np.max(volume, axis=2), "MIP axial"
@@ -28,11 +42,28 @@ def plot_stage(
     cmap: str = "gray",
     dpi: int = 100,
 ) -> None:
-    """Plota uma etapa de pre-processamento para um unico caso."""
+    """Plota uma etapa de pré-processamento para um único caso.
+
+    Args:
+        preprocessed (dict[int, dict[str, Any]]): Dicionário indexado por
+            ``img_id`` contendo os volumes intermediários e ``center_slice``.
+        stage_key (str): Chave do volume de etapa dentro de
+            ``preprocessed[img_id]``.
+        stage_title (str): Nome legível da etapa usado no título principal.
+        img_id (int): Identificador do exame em ``preprocessed``.
+        mode (Literal["slice", "mip"]): Modo de exibição (``"slice"`` ou
+            ``"mip"``).
+        show_title (bool): Se ``True``, adiciona o título geral na figura.
+        show_subtitle (bool): Se ``True``, adiciona subtítulo com ID e modo.
+        cmap (str): Nome do mapa de cores do Matplotlib.
+        dpi (int): Resolução da figura em pontos por polegada.
+    """
+    # Seleciona o volume da etapa e extrai a fatia central ou MIP axial.
     volume = preprocessed[img_id][stage_key]
     center_slice = preprocessed[img_id]["center_slice"]
     image_to_show, mode_text = _resolve_stage_image(volume, center_slice, mode)
 
+    # Plota a imagem 2D e ajusta títulos e margens antes de exibir.
     plt.figure(figsize=(6, 5), dpi=dpi)
     plt.imshow(image_to_show, cmap=cmap, origin="upper")
 
@@ -57,13 +88,23 @@ def plot_pipeline_preprocessing_stages(
     *,
     dpi: int = 110,
 ) -> None:
-    """Plota as quatro etapas de pré-processamento exibidas no pipeline interativo."""
+    """Plota lado a lado as quatro etapas de pré-processamento do pipeline.
+
+    Args:
+        image_data (dict[str, Any]): Dicionário de dados do caso contendo as
+            chaves ``image``, ``down_image``, ``threshold_mask`` e
+            ``lcc_image``.
+        slice_idx (int): Índice da fatia axial exibida nas etapas reamostradas.
+        dpi (int): Resolução da figura em pontos por polegada.
+    """
+    # Recupera os volumes de cada etapa e limita o índice à profundidade bruta.
     image = image_data["image"]
     down_image = image_data["down_image"]
     threshold_mask = image_data["threshold_mask"]
     lcc_image = image_data["lcc_image"]
     raw_slice_idx = min(slice_idx, image.shape[2] - 1)
 
+    # Renderiza as quatro etapas lado a lado para inspeção visual.
     fig, axes = plt.subplots(1, 4, figsize=(18, 5), dpi=dpi)
     axes[0].imshow(image[:, :, raw_slice_idx], cmap="gray")
     axes[0].set_title("Imagem original")
@@ -89,7 +130,22 @@ def plot_preprocessing_grid(
     cmap: str = "gray",
     dpi: int = 100,
 ) -> None:
-    """Plota grid das etapas de pre-processamento em fatia, MIP ou ambos."""
+    """Plota grade comparativa das etapas de pré-processamento por caso.
+
+    Args:
+        preprocessed (dict[int, dict[str, Any]]): Dicionário indexado por ID com
+            ``down_image``, ``thresh_image``, ``lcc_image`` e ``center_slice``.
+        ids_to_plot (Iterable[int] | None): Sequência de IDs a incluir; ``None``
+            seleciona todos os IDs ordenados.
+        mode (Literal["slice", "mip", "both"]): Modo de visualização por coluna
+            (``"slice"``, ``"mip"`` ou ``"both"``).
+        show_title (bool): Se ``True``, adiciona título geral acima da grade.
+        show_subtitle (bool): Se ``True``, adiciona subtítulo com ID, etapa e
+            modo.
+        cmap (str): Nome do mapa de cores do Matplotlib.
+        dpi (int): Resolução da figura em pontos por polegada.
+    """
+    # Define a lista de IDs e os modos de exibição por coluna.
     if ids_to_plot is None:
         ids_to_plot = sorted(preprocessed.keys())
     else:
@@ -109,6 +165,7 @@ def plot_preprocessing_grid(
     else:
         display_modes = [mode]
 
+    # Dimensiona a grade de subplots e normaliza o arranjo 2D de eixos.
     n_rows = len(stages)
     n_cols = len(ids_to_plot) * len(display_modes)
     fig, axes = plt.subplots(n_rows, n_cols, figsize=(5 * n_cols, 4 * n_rows), dpi=dpi)
@@ -120,6 +177,7 @@ def plot_preprocessing_grid(
     elif n_cols == 1:
         axes = np.array([[ax] for ax in axes])
 
+    # Preenche linhas por etapa e colunas por caso/modo de projeção.
     for row, (stage_key, stage_title) in enumerate(stages):
         col = 0
         for img_id in ids_to_plot:
@@ -139,6 +197,7 @@ def plot_preprocessing_grid(
                 ax.axis("off")
                 col += 1
 
+    # Configura título principal conforme o modo e exibe a grade.
     if show_title:
         if mode == "slice":
             header = "Grid das etapas de pre-processamento (fatia central)"

@@ -1,10 +1,11 @@
 """Funções auxiliares para extração de regiões de interesse em volumes 3D."""
 
 from collections.abc import Sequence
-from typing import Any, Optional, Tuple
+from typing import Any
 
 import numpy as np
 from numpy.typing import NDArray
+from scipy.ndimage import find_objects
 
 
 def mask_bounding_box_slices(
@@ -12,13 +13,28 @@ def mask_bounding_box_slices(
     spacing: Sequence[float],
     margin_mm: float,
 ) -> tuple[slice, slice, slice]:
-    """Calcula o recorte 3D da máscara com uma margem física por eixo."""
+    """Calcula o recorte 3D da máscara com uma margem física por eixo.
+
+    Args:
+        mask (NDArray[Any]): Máscara binária 3D não vazia em que a ROI será calculada.
+        spacing (Sequence[float]): Espaçamento físico em ``mm`` alinhado aos 3 eixos
+            de ``mask``.
+        margin_mm (float): Margem física não negativa (em ``mm``) adicionada em cada
+            direção.
+
+    Returns:
+        tuple[slice, slice, slice]: Tupla com os três slices ``(s0, s1, s2)``
+            limitados ao shape de ``mask``.
+    """
+    # Valida a dimensionalidade da máscara e obtém a bounding box sem margem.
     mask_array = np.asarray(mask)
     if mask_array.ndim != 3:
         raise ValueError("A máscara deve ser tridimensional.")
-    if not np.any(mask_array):
+    bounds = find_objects(mask_array != 0, max_label=1)[0]
+    if bounds is None:
         raise ValueError("A máscara não pode estar vazia.")
 
+    # Valida o espaçamento físico positivo e a margem em milímetros.
     spacing_array = np.asarray(tuple(spacing), dtype=float)
     if spacing_array.shape != (3,):
         raise ValueError("O espaçamento deve conter exatamente três valores.")
@@ -29,90 +45,67 @@ def mask_bounding_box_slices(
     if not np.isfinite(resolved_margin) or resolved_margin < 0:
         raise ValueError("A margem deve ser finita e não negativa.")
 
-    coordinates = np.argwhere(mask_array != 0)
+    # Converte a margem física em voxels por eixo (arredondamento para cima).
     margin_voxels = np.ceil(resolved_margin / spacing_array).astype(int)
-    lower = np.maximum(coordinates.min(axis=0) - margin_voxels, 0)
-    upper = np.minimum(
-        coordinates.max(axis=0) + margin_voxels + 1,
-        np.asarray(mask_array.shape),
-    )
-    return (
-        slice(int(lower[0]), int(upper[0])),
-        slice(int(lower[1]), int(upper[1])),
-        slice(int(lower[2]), int(upper[2])),
-    )
 
-
-def extract_square_region(
-    image: NDArray, x_min: int, x_max: int, y_min: int, y_max: int
-) -> NDArray:
-    """Extrai uma ROI retangular de um volume 3D.
-
-    Argumentos:        image: Volume 3D com shape (H, W, D) ou similar.
-        x_min/x_max/y_min/y_max: Coordenadas inteiras da ROI.
-
-    Retorna:        Sub-volume recortado como NDArray.
-    """
-    h, w, _ = image.shape
-
-    x_min = max(0, x_min)
-    x_max = min(h, x_max)
-    y_min = max(0, y_min)
-    y_max = min(w, y_max)
-
-    if x_min >= x_max or y_min >= y_max:
-        raise ValueError(
-            "Coordenadas inválidas: x_min deve ser menor que x_max e y_min deve ser menor que y_max"
+    def padded(axis: int) -> slice:
+        """Recorta o slice do eixo respeitando os limites do volume."""
+        margin = int(margin_voxels[axis])
+        return slice(
+            max(0, bounds[axis].start - margin),
+            min(mask_array.shape[axis], bounds[axis].stop + margin),
         )
 
-    return image[x_min:x_max, y_min:y_max, :]
+    return padded(0), padded(1), padded(2)
 
 
-def extract_circular_region(
-    image: NDArray,
-    center: Optional[Tuple[int, int]] = None,
-    radius: Optional[int] = None,
-    mask_background: bool = True,
-) -> NDArray:
-    """Extrai uma ROI circular de um volume 3D mascarando cada fatia 2D.
+def mask_voxel_bbox_slices(
+    mask: NDArray[Any],
+    pad_voxels: int = 0,
+) -> tuple[slice, slice, slice] | None:
+    """Calcula a bounding box 3D da máscara com margem fixa em voxels.
 
-    Argumentos:        image: Volume 3D (H, W, D).
-        center: Tupla (y, x) do centro; se None usa centro da imagem.
-        radius: Raio em pixels; se None usa min(H,W)//4.
-        mask_background: Se True, aplica máscara circular nas fatias.
+    Args:
+        mask (NDArray[Any]): Máscara binária 3D onde a região de interesse é avaliada.
+        pad_voxels (int): Margem inteira não negativa (em voxels) adicionada a cada
+            eixo.
 
-    Retorna:        Sub-volume (com máscara aplicada se solicitado).
+    Returns:
+        tuple[slice, slice, slice] | None: Tupla ``(s0, s1, s2)`` limitada ao shape
+            de ``mask``, ou ``None`` se vazia.
     """
-    h, w, _ = image.shape
+    # Garante volume 3D e margem em voxels inteira não negativa (rejeitando bool).
+    mask_array = np.asarray(mask)
+    if mask_array.ndim != 3:
+        raise ValueError("A máscara deve ser tridimensional.")
+    if isinstance(pad_voxels, bool) or int(pad_voxels) != pad_voxels or pad_voxels < 0:
+        raise ValueError("pad_voxels deve ser um inteiro não negativo.")
 
-    resolved_center = center if center is not None else (h // 2, w // 2)
-    resolved_radius = radius if radius is not None else min(h, w) // 4
+    # Extrai a bounding box inicial e interrompe com None caso a máscara esteja vazia.
+    pad = int(pad_voxels)
+    bounds = find_objects(mask_array != 0, max_label=1)
+    if not bounds or bounds[0] is None:
+        return None
+    bbox = bounds[0]
 
-    x_min = max(0, resolved_center[0] - resolved_radius)
-    x_max = min(h, resolved_center[0] + resolved_radius)
-    y_min = max(0, resolved_center[1] - resolved_radius)
-    y_max = min(w, resolved_center[1] + resolved_radius)
-    sub_volume = image[x_min:x_max, y_min:y_max, :]
-
-    if mask_background:
-        sub_h, sub_w = sub_volume.shape[0], sub_volume.shape[1]
-        sub_center = (sub_h // 2, sub_w // 2)
-
-        y, x = np.ogrid[:sub_h, :sub_w]
-        dist_from_center = (x - sub_center[1]) ** 2 + (y - sub_center[0]) ** 2
-        mask = dist_from_center <= resolved_radius**2
-
-        masked_volume = np.zeros_like(sub_volume)
-        for z in range(sub_volume.shape[2]):
-            masked_volume[:, :, z] = sub_volume[:, :, z] * mask
-
-        return masked_volume
-
-    return sub_volume
+    # Expande a caixa pela margem solicitada sem ultrapassar as bordas do volume.
+    return (
+        slice(
+            max(0, bbox[0].start - pad),
+            min(mask_array.shape[0], bbox[0].stop + pad),
+        ),
+        slice(
+            max(0, bbox[1].start - pad),
+            min(mask_array.shape[1], bbox[1].stop + pad),
+        ),
+        slice(
+            max(0, bbox[2].start - pad),
+            min(mask_array.shape[2], bbox[2].stop + pad),
+        ),
+    )
 
 
 __all__ = [
-    "extract_circular_region",
-    "extract_square_region",
     "mask_bounding_box_slices",
+    "mask_voxel_bbox_slices",
 ]

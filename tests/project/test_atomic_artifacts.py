@@ -10,7 +10,7 @@ import pandas as pd
 
 from utils.project.results import make_json_safe as legacy_make_json_safe
 from utils.project.results.io import save_dataframe_atomic
-from utils.project.runtime.run_logging import add_run_file_handler
+from utils.project.runtime.run_reporting import add_run_file_handler
 from utils.utils.json_io import load_json_file, make_json_safe, save_json_atomic
 
 

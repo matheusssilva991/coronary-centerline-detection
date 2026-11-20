@@ -5,14 +5,6 @@ segmentação ou visualização: configuração, splits do dataset,
 ambiente de notebooks e persistência de resultados.
 """
 
-from .config import (
-    deep_update_dict,
-    load_config_json,
-    normalize_runtime_config,
-    save_config_json,
-    scale_config_to_resolution,
-    serialize_config_for_json,
-)
 from utils.project.datasets.ccta import (
     align_ccta_volume_to_imagecas_view,
     discover_ccta_dataset,
@@ -27,10 +19,18 @@ from utils.project.datasets.imagecas import get_data_splits
 from utils.project.runtime.notebook_env import (
     configure_notebook_environment,
     get_default_split_paths,
-    get_refined_pipeline_split_paths,
     load_notebook_pipeline_config,
     resolve_existing_path,
     resolve_imagecas_base_path,
+)
+
+from .config import (
+    deep_update_dict,
+    load_config_json,
+    normalize_runtime_config,
+    save_config_json,
+    scale_config_to_resolution,
+    serialize_config_for_json,
 )
 
 __all__ = [
@@ -42,7 +42,6 @@ __all__ = [
     "discover_orcascore_acquisitions",
     "get_data_splits",
     "get_default_split_paths",
-    "get_refined_pipeline_split_paths",
     "load_config_json",
     "load_ccta_aorta_ground_truth",
     "load_ccta_volume",

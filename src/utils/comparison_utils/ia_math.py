@@ -1,3 +1,5 @@
+"""Carregamento, pareamento e agregação para comparar resultados de IA e do método matemático."""
+
 from pathlib import Path
 from typing import Any
 
@@ -8,13 +10,30 @@ from ..project.results import add_internal_result_aliases
 
 
 def map_ia_resolution_to_target(ia_resolution: str) -> str:
-    """Mapeia a resolução da IA para a resolução matemática correspondente."""
+    """Mapeia a resolução da IA para a resolução matemática correspondente.
+
+    Args:
+        ia_resolution (str): Nome do bucket de resolução da IA (ex.: ``"mid"`` ou
+            ``"high"``).
+
+    Returns:
+        str: Resolução equivalente do método matemático (``"high_res"`` ou
+        ``"mid_res"``).
+    """
     # Mapeia bucket da IA para a resolucao usada no comparativo final.
     return "high_res" if ia_resolution == "high" else "mid_res"
 
 
 def prettify_method_label(method_name: str) -> str:
-    """Cria um rótulo de método legível para os eixos dos gráficos."""
+    """Cria um rótulo de método legível para os eixos dos gráficos.
+
+    Args:
+        method_name (str): Identificador técnico do método (ex.:
+            ``"pipeline_matematico"`` ou ``"mid::unet_ag"``).
+
+    Returns:
+        str: Rótulo formatado com siglas em caixa alta e prefixo de resolução.
+    """
     # Converte nome tecnico para rótulo de eixo.
     if method_name == "pipeline_matematico":
         # Nome fixo para o baseline matematico.
@@ -53,7 +72,18 @@ def load_ia_results_for_comparison(
     ia_results_base: str | Path,
     allowed_ia_resolutions: tuple[str, ...] = ("mid", "high"),
 ) -> tuple[pd.DataFrame, list[str]]:
-    """Carrega CSVs da IA de todos os folds e métodos."""
+    """Carrega CSVs da IA de todos os folds e métodos.
+
+    Args:
+        ia_results_base (str | Path): Diretório raiz contendo subdiretórios por
+            resolução e ``fold_*`` com CSVs de resultados da IA.
+        allowed_ia_resolutions (tuple[str, ...]): Resoluções da IA aceitas no
+            carregamento (padrão ``("mid", "high")``).
+
+    Returns:
+        tuple[pd.DataFrame, list[str]]: DataFrame padronizado com métricas da IA e
+        lista de diagnósticos sobre pastas ou CSVs ausentes ou inválidos.
+    """
     # Lê resultados IA e padroniza colunas para comparacao.
     ia_results_base = Path(ia_results_base)
     ia_frames = []
@@ -132,7 +162,16 @@ def load_ia_results_for_comparison(
 def load_math_results_for_comparison(
     math_paths: dict[str, Any],
 ) -> tuple[pd.DataFrame, list[str]]:
-    """Carrega resultados matemáticos das resoluções e splits selecionados."""
+    """Carrega resultados matemáticos das resoluções e splits selecionados.
+
+    Args:
+        math_paths (dict[str, Any]): Mapeamento de resolução alvo para caminhos de
+            CSV, DataFrames já carregados ou dicionários indexados por split.
+
+    Returns:
+        tuple[pd.DataFrame, list[str]]: DataFrame padronizado dos resultados
+        matemáticos e lista de avisos sobre arquivos ou schemas inválidos.
+    """
     # Lê resumos matemáticos no mesmo schema da IA.
     math_frames = []
     missing_math_files = []
@@ -197,11 +236,21 @@ def load_math_results_for_comparison(
 
 
 def _deduplicate_comparison_rows(comparison_raw: pd.DataFrame) -> pd.DataFrame:
-    """Mantém um Dice por combinação de fonte, método, resolução e imagem."""
+    """Mantém um Dice por combinação de fonte, método, resolução e imagem.
+
+    Args:
+        comparison_raw (pd.DataFrame): Tabela combinada contendo medições de
+            IA e método matemático antes da deduplicação.
+
+    Returns:
+        pd.DataFrame: Tabela deduplicada preservando o maior Dice válido por chave.
+    """
+    # Garante presença das colunas de chave antes de tentar remover duplicatas.
     required_cols = {"source", "target_resolution", "method", "img_id", "dice"}
     if not required_cols.issubset(comparison_raw.columns):
         return comparison_raw.copy()
 
+    # Remove linhas incompletas ou com Dice não numérico antes de ordenar.
     deduped = comparison_raw.dropna(
         subset=["source", "target_resolution", "method", "img_id", "dice"]
     ).copy()
@@ -210,6 +259,7 @@ def _deduplicate_comparison_rows(comparison_raw: pd.DataFrame) -> pd.DataFrame:
 
     deduped["dice"] = pd.to_numeric(deduped["dice"], errors="coerce")
     deduped = deduped.dropna(subset=["dice"])
+    # Ordena do maior para o menor Dice para manter o registro de topo por chave.
     deduped = deduped.sort_values(
         ["source", "target_resolution", "method", "img_id", "dice"],
         ascending=[True, True, True, True, False],
@@ -220,11 +270,22 @@ def _deduplicate_comparison_rows(comparison_raw: pd.DataFrame) -> pd.DataFrame:
 
 
 def get_common_ia_math_keys(comparison_raw: pd.DataFrame) -> pd.DataFrame:
-    """Retorna pares de resolução e imagem presentes nas duas fontes."""
+    """Retorna pares de resolução e imagem presentes nas duas fontes.
+
+    Args:
+        comparison_raw (pd.DataFrame): Tabela combinada de resultados da IA e
+            do método matemático.
+
+    Returns:
+        pd.DataFrame: Pares únicos ``(target_resolution, img_id)`` presentes
+        simultaneamente em IA e matemática.
+    """
+    # Verifica colunas mínimas necessárias para identificar chaves compartilhadas.
     required_cols = {"source", "target_resolution", "img_id"}
     if not required_cols.issubset(comparison_raw.columns):
         return pd.DataFrame(columns=["target_resolution", "img_id"])
 
+    # Extrai pares únicos de resolução e imagem para cada fonte separadamente.
     ia_keys = (
         comparison_raw.loc[
             comparison_raw["source"] == "ia", ["target_resolution", "img_id"]
@@ -243,13 +304,23 @@ def get_common_ia_math_keys(comparison_raw: pd.DataFrame) -> pd.DataFrame:
     if ia_keys.empty or math_keys.empty:
         return pd.DataFrame(columns=["target_resolution", "img_id"])
 
+    # Faz interseção interna mantendo apenas exames avaliados nas duas abordagens.
     return ia_keys.merge(
         math_keys, on=["target_resolution", "img_id"], how="inner"
     ).drop_duplicates()
 
 
 def filter_to_common_ia_math_ids(comparison_raw: pd.DataFrame) -> pd.DataFrame:
-    """Mantém imagens disponíveis nas duas fontes para cada resolução."""
+    """Mantém imagens disponíveis nas duas fontes para cada resolução.
+
+    Args:
+        comparison_raw (pd.DataFrame): Tabela combinada de resultados da IA e
+            do pipeline matemático.
+
+    Returns:
+        pd.DataFrame: Subconjunto deduplicado restrito às chaves comuns às
+        duas fontes por resolução.
+    """
     comparison_raw = _deduplicate_comparison_rows(comparison_raw)
     common_keys = get_common_ia_math_keys(comparison_raw)
     if common_keys.empty:
@@ -261,7 +332,16 @@ def filter_to_common_ia_math_ids(comparison_raw: pd.DataFrame) -> pd.DataFrame:
 
 
 def build_comparison_agg_df(comparison_raw: pd.DataFrame) -> pd.DataFrame:
-    """Agrega métricas de Dice por resolução, fonte e método."""
+    """Agrega métricas de Dice por resolução, fonte e método.
+
+    Args:
+        comparison_raw (pd.DataFrame): Tabela bruta combinando resultados por
+            imagem da IA e do método matemático.
+
+    Returns:
+        pd.DataFrame: Resumo estatístico com contagem, média, desvio-padrão,
+        mediana, quartis e cobertura de folds por método e resolução.
+    """
     if comparison_raw.empty:
         # Mantém contrato de retorno mesmo sem entrada.
         return pd.DataFrame()

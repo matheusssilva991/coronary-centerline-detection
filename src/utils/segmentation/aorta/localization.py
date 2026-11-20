@@ -4,11 +4,12 @@ Este módulo detecta e rastreia candidatos circulares da aorta entre fatias
 usando Canny + transformada de Hough com restrições de continuidade geométrica.
 """
 
+from typing import Any, Optional, Sequence, Tuple
+
 import numpy as np
+from numpy.typing import ArrayLike, NDArray
 from skimage import feature
 from skimage.transform import hough_circle, hough_circle_peaks
-from typing import Any, Optional, Sequence, Tuple
-from numpy.typing import ArrayLike, NDArray
 
 OUT_OF_TOLERANCE = "out_of_tolerance"
 
@@ -18,7 +19,19 @@ def _circle_geometry_departure(
     reference: dict[str, float],
     pixel_spacing: float,
 ) -> tuple[float, float]:
-    """Mede o afastamento de raio e centro em relação a uma referência."""
+    """Mede o afastamento de raio e centro em relação a uma referência.
+
+    Args:
+        circle (dict[str, Any]): Círculo avaliado contendo ``radius``, ``center_x`` e
+            ``center_y``.
+        reference (dict[str, float]): Geometria de referência com ``radius``,
+            ``center_x`` e ``center_y`` em pixels.
+        pixel_spacing (float): Espaçamento médio no plano XY, em ``mm/px``.
+
+    Returns:
+        tuple[float, float]: Diferença absoluta de raio e distância euclidiana entre
+            centros, em ``mm``.
+    """
     radius_mm = abs(float(circle["radius"]) - reference["radius"]) * pixel_spacing
     center_mm = float(
         np.hypot(
@@ -35,7 +48,18 @@ def _circle_step_geometry(
     current: dict[str, Any],
     pixel_spacing: float,
 ) -> tuple[float, float]:
-    """Calcula mudanças físicas de raio e centro normalizadas por fatia."""
+    """Calcula mudanças físicas de raio e centro normalizadas por fatia.
+
+    Args:
+        previous (dict[str, Any]): Círculo da fatia anterior na trajetória.
+        current (dict[str, Any]): Círculo da fatia atual na trajetória.
+        pixel_spacing (float): Espaçamento médio no plano XY, em ``mm/px``.
+
+    Returns:
+        tuple[float, float]: Variação absoluta de raio e deslocamento de centro por
+            fatia, em ``mm/fatia``.
+    """
+    # Normaliza o afastamento geométrico pelo salto axial entre as duas fatias.
     slice_distance = max(
         abs(int(current["slice_index"]) - int(previous["slice_index"])),
         1,
@@ -54,7 +78,16 @@ def _circle_step_geometry(
 
 
 def _median_circle_reference(circles: Sequence[dict[str, Any]]) -> dict[str, float]:
-    """Resume uma janela estável da trajetória por medianas geométricas."""
+    """Resume uma janela estável da trajetória por medianas geométricas.
+
+    Args:
+        circles (Sequence[dict[str, Any]]): Janela de círculos usada para estimar a
+            posição e o raio estáveis.
+
+    Returns:
+        dict[str, float]: Dicionário com medianas de ``radius``, ``center_x`` e
+            ``center_y`` em pixels.
+    """
     return {
         "radius": float(np.median([float(circle["radius"]) for circle in circles])),
         "center_x": float(np.median([float(circle["center_x"]) for circle in circles])),
@@ -67,7 +100,20 @@ def _find_incompatible_tail_start(
     pixel_spacing: float,
     config: dict[str, Any],
 ) -> int | None:
-    """Localiza uma cauda que se afasta persistentemente da trajetória anterior."""
+    """Localiza uma cauda que se afasta persistentemente da trajetória anterior.
+
+    Args:
+        circles (Sequence[dict[str, Any]]): Trajetória ordenada de círculos da aorta ao
+            longo do eixo axial.
+        pixel_spacing (float): Espaçamento médio no plano XY, em ``mm/px``.
+        config (dict[str, Any]): Parâmetros de janela, persistência, tolerâncias físicas
+            e confiança mínima da Hough.
+
+    Returns:
+        int | None: Índice inicial da cauda incompatível em ``circles``, ou ``None`` se
+            nenhum desvio persistente for encontrado.
+    """
+    # Configura janelas de referência/persistência e limites axiais de busca da cauda.
     reference_window = max(3, int(config.get("reference_window", 5)))
     persistence_window = max(3, int(config.get("persistence_window", 5)))
     persistence_required = min(
@@ -91,6 +137,7 @@ def _find_incompatible_tail_start(
     max_center_step = float(config.get("max_center_step_mm", 8.0))
     min_accumulator = float(config.get("min_hough_accumulator", 0.408))
 
+    # Procura uma transição abrupta seguida de divergência persistente na janela.
     for index in range(search_start, search_stop):
         previous = circles[index - 1]
         current = circles[index]
@@ -105,6 +152,7 @@ def _find_incompatible_tail_start(
         if not transition_is_abrupt:
             continue
 
+        # Compara a janela posterior com a mediana anterior por geometria e acumulador.
         reference = _median_circle_reference(circles[index - reference_window : index])
         incompatible = 0
         geometry_incompatible = 0
@@ -144,13 +192,30 @@ def extrapolate_stable_circle_tail(
 ) -> list[dict[str, Any]]:
     """Prolonga uma trajetória estável sem reutilizar a cauda rejeitada.
 
-    A tendência por fatia é estimada pela mediana das últimas diferenças de
-    centro e raio. Os deslocamentos ficam limitados pelas mesmas tolerâncias
-    físicas usadas para detectar uma cauda incompatível.
+    Estima a tendência por fatia pela mediana das diferenças recentes e limita o
+    deslocamento acumulado às tolerâncias físicas informadas.
+
+    Args:
+        stable_circles (Sequence[dict[str, Any]]): Sequência ordenada de círculos
+            estáveis antes do corte.
+        synthetic_slices (int): Quantidade máxima de fatias sintéticas geradas abaixo
+            do último círculo.
+        pixel_spacing (float): Espaçamento médio no plano XY em ``mm/px``.
+        reference_window (int): Número de círculos finais usados para estimar a
+            inclinação mediana.
+        max_radius_step_mm (float): Limite físico por fatia para variação do raio, em
+            ``mm``.
+        max_center_step_mm (float): Limite físico por fatia para deslocamento do centro
+            no plano XY, em ``mm``.
+
+    Returns:
+        list[dict[str, Any]]: Lista de círculos sintéticos com ``interpolated=True`` e
+            metadados do filtro.
     """
     if synthetic_slices <= 0 or not stable_circles:
         return []
 
+    # Seleciona a janela final estável e define os índices das fatias sintéticas.
     reference = list(stable_circles[-max(2, reference_window) :])
     last = reference[-1]
     last_slice = int(last["slice_index"])
@@ -160,6 +225,7 @@ def extrapolate_stable_circle_tail(
     if not target_slices:
         return []
 
+    # Estima a tendência mediana por fatia para centro, raio e acumulador.
     slopes: dict[str, list[float]] = {
         "center_x": [],
         "center_y": [],
@@ -191,6 +257,7 @@ def extrapolate_stable_circle_tail(
     center_step_limit_px = max_center_step_mm / pixel_spacing
     synthetic: list[dict[str, Any]] = []
 
+    # Projeta cada fatia sintética mantendo o desvio acumulado dentro do limite físico.
     for target_slice in target_slices:
         delta_slice = target_slice - last_slice
         center_x = float(last["center_x"]) + median_slopes["center_x"] * delta_slice
@@ -237,10 +304,24 @@ def filter_aorta_circle_trajectory(
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     """Filtra caudas incompatíveis da trajetória da aorta.
 
-    O detector percorre o volume das fatias finais para as iniciais. Portanto,
-    uma cauda removida corresponde ao trecho final do rastreamento, depois que
-    a Hough deixa de acompanhar de forma consistente a trajetória inicial.
+    O detector percorre o volume das fatias finais para as iniciais; uma cauda
+    removida corresponde ao trecho final após perda de consistência da Hough.
+
+    Args:
+        detected_circles (Sequence[dict[str, Any]]): Sequência de círculos detectados
+            pela Hough ao longo das fatias.
+        pixel_spacing (float): Espaçamento médio no plano XY em ``mm/px``.
+        image_slice_count (int): Número total de fatias axiais do volume (usado na
+            cobertura).
+        filter_config (dict[str, Any] | None): Subdicionário do filtro de trajetória
+            (``method``, tolerâncias e extrapolação); ``None`` mantém inalterado.
+
+    Returns:
+        tuple[list[dict[str, Any]], dict[str, Any]]: Tupla
+            ``(filtered_circles, diagnostics)`` com a trajetória filtrada e diagnósticos
+            do corte.
     """
+    # Ordena a trajetória de cima para baixo e inicializa os diagnósticos padrão.
     config = filter_config or {}
     method = str(config.get("method", "none"))
     original = sorted(
@@ -265,6 +346,7 @@ def filter_aorta_circle_trajectory(
         ),
         "aorta_circle_filter_reason": "disabled" if method == "none" else "unchanged",
     }
+    # Valida método e parâmetros físicos antes de avaliar cortes na trajetória.
     if method == "none" or len(original) < 3:
         return original, diagnostics
     if method != "robust":
@@ -303,6 +385,7 @@ def filter_aorta_circle_trajectory(
             trim_start_slice = None
             tail_start = None
             trim_rejected = True
+        # Aplica o corte validado e extrapola a extremidade estável quando configurado.
         if not trim_rejected:
             if tail_start is None:
                 raise RuntimeError("O início da cauda não foi definido para o corte.")
@@ -319,6 +402,7 @@ def filter_aorta_circle_trajectory(
                 max_center_step_mm=float(config.get("max_center_step_mm", 8.0)),
             )
 
+    # Monta a trajetória resultante e atualiza o dicionário de diagnóstico do filtro.
     filtered = [dict(circle) for circle in trimmed]
     filtered.extend(synthetic_tail)
     applied = bool(trimmed_count)
@@ -362,7 +446,19 @@ def _interpolate_missing_circles(
     next_circle: dict,
     missing_slice_indices: Sequence[int],
 ) -> list[dict]:
-    """Interpola círculos para fatias puladas entre duas detecções válidas."""
+    """Interpola círculos para fatias puladas entre duas detecções válidas.
+
+    Args:
+        previous_circle (dict[str, Any]): Último círculo válido antes da lacuna axial.
+        next_circle (dict[str, Any]): Primeiro círculo válido após a lacuna axial.
+        missing_slice_indices (Sequence[int]): Índices das fatias intermediárias sem
+            detecção.
+
+    Returns:
+        list[dict[str, Any]]: Lista de círculos interpolados linearmente com
+            ``interpolated=True``.
+    """
+    # Evita divisão por zero caso as duas referências apontem para a mesma fatia.
     previous_slice = int(previous_circle["slice_index"])
     next_slice = int(next_circle["slice_index"])
     denominator = next_slice - previous_slice
@@ -401,7 +497,17 @@ def _interpolate_missing_circles(
 def _calculate_distances_vectorized(
     cx: ArrayLike, cy: ArrayLike, ref_x: float, ref_y: float
 ) -> NDArray[Any]:
-    """Calcula distâncias euclidianas de forma vetorizada usando NumPy broadcasting."""
+    """Calcula distâncias euclidianas de forma vetorizada usando NumPy broadcasting.
+
+    Args:
+        cx (ArrayLike): Coordenadas ``x`` dos centros candidatos (em pixels).
+        cy (ArrayLike): Coordenadas ``y`` dos centros candidatos (em pixels).
+        ref_x (float): Coordenada ``x`` de referência (em pixels).
+        ref_y (float): Coordenada ``y`` de referência (em pixels).
+
+    Returns:
+        NDArray[Any]: Array de distâncias euclidianas (em pixels) até a referência.
+    """
     cx_arr = np.asarray(cx)
     cy_arr = np.asarray(cy)
     return np.sqrt((cx_arr - ref_x) ** 2 + (cy_arr - ref_y) ** 2)
@@ -413,7 +519,20 @@ def _detect_circles_in_slice(
     total_num_peaks: int,
     canny_sigma: float,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """Detecta círculos em uma fatia usando Canny e Hough na CPU."""
+    """Detecta círculos em uma fatia usando Canny e Hough na CPU.
+
+    Args:
+        img_slice (NDArray[Any]): Fatia axial 2D pré-processada no formato ``(y, x)``.
+        hough_radii (Sequence[float]): Raios candidatos (em pixels) testados pela
+            transformada de Hough.
+        total_num_peaks (int): Número máximo de picos retornados na fatia.
+        canny_sigma (float): Desvio-padrão gaussiano (em pixels) do detector de bordas
+            Canny.
+
+    Returns:
+        Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]: Tupla
+            ``(accums, cx, cy, radii)`` com os melhores picos da Hough na fatia.
+    """
     edges = feature.canny(img_slice.astype(float), sigma=canny_sigma)
 
     # A Hough recebe o mapa binário de bordas e devolve os melhores círculos.
@@ -427,7 +546,19 @@ def _select_initial_circle_candidate(
     img_shape: Sequence[int],
     quadrant_offset: Sequence[int],
 ) -> int | None:
-    """Seleciona o primeiro pico da Hough no quadrante anatômico esperado."""
+    """Seleciona o primeiro pico da Hough no quadrante anatômico esperado.
+
+    Args:
+        cx (ArrayLike): Coordenadas ``x`` dos picos da Hough na fatia inicial.
+        cy (ArrayLike): Coordenadas ``y`` dos picos da Hough na fatia inicial.
+        img_shape (Sequence[int]): Dimensões ``(altura, largura)`` da fatia axial.
+        quadrant_offset (Sequence[int]): Deslocamento ``(dx, dy)`` em pixels que ajusta
+            o quadrante anatômico da busca inicial.
+
+    Returns:
+        int | None: Índice do primeiro pico dentro do quadrante esperado ou ``None`` se
+            nenhum candidato atender ao critério.
+    """
     height, width = img_shape
     center_x = (width // 2) - quadrant_offset[0]
     center_y = (height // 2) + quadrant_offset[1]
@@ -452,7 +583,23 @@ def _select_circle_candidate(
     radius_tolerance: float,
     distance_tolerance: float,
 ) -> Tuple[int, float]:
-    """Seleciona o candidato válido mais próximo do círculo anterior."""
+    """Seleciona o candidato válido mais próximo do círculo anterior.
+
+    Args:
+        cx (ArrayLike): Coordenadas ``x`` dos círculos candidatos na fatia (em pixels).
+        cy (ArrayLike): Coordenadas ``y`` dos círculos candidatos na fatia (em pixels).
+        radii (ArrayLike): Raios dos círculos candidatos (em pixels).
+        ref_x (float): Coordenada ``x`` do círculo de referência (em pixels).
+        ref_y (float): Coordenada ``y`` do círculo de referência (em pixels).
+        ref_radius (float): Raio do círculo de referência (em pixels).
+        radius_tolerance (float): Variação máxima permitida para o raio (em pixels).
+        distance_tolerance (float): Deslocamento máximo permitido para o centro (em
+            pixels).
+
+    Returns:
+        Tuple[int, float]: Tupla ``(best_idx, distance)`` com o índice escolhido e a
+            distância euclidiana em pixels até a referência.
+    """
     distances = _calculate_distances_vectorized(cx, cy, ref_x, ref_y)
     radii_arr = np.asarray(radii, dtype=float)
     radius_diff = np.abs(radii_arr - ref_radius)
@@ -476,7 +623,20 @@ def _is_circle_within_tolerance(
     radius_tolerance: float,
     distance_tolerance: float,
 ) -> bool:
-    """Valida se raio e distância estão dentro das tolerâncias definidas."""
+    """Valida se raio e distância estão dentro das tolerâncias definidas.
+
+    Args:
+        circle_radius (float): Raio do círculo candidato (em pixels).
+        circle_distance (float): Distância euclidiana até o centro de referência (em
+            pixels).
+        ref_radius (float): Raio do círculo de referência (em pixels).
+        radius_tolerance (float): Variação máxima aceita para o raio (em pixels).
+        distance_tolerance (float): Deslocamento máximo aceito para o centro (em
+            pixels).
+
+    Returns:
+        bool: ``True`` se distância e diferença de raio estiverem dentro dos limites.
+    """
     radius_diff = abs(circle_radius - ref_radius)
     return circle_distance <= distance_tolerance and radius_diff <= radius_tolerance
 
@@ -490,7 +650,21 @@ def _compute_local_roi_bounds(
     radius_tolerance: float,
     local_roi_padding: int,
 ) -> Tuple[int, int, int, int]:
-    """Calcula os limites de ROI local para busca de círculos na fatia."""
+    """Calcula os limites de ROI local para busca de círculos na fatia.
+
+    Args:
+        img_shape (Sequence[int]): Dimensões ``(altura, largura)`` da fatia axial.
+        ref_x (float): Coordenada ``x`` do círculo de referência (em pixels).
+        ref_y (float): Coordenada ``y`` do círculo de referência (em pixels).
+        ref_radius (float): Raio do círculo de referência (em pixels).
+        distance_tolerance (float): Tolerância de deslocamento do centro (em pixels).
+        radius_tolerance (float): Tolerância de variação do raio (em pixels).
+        local_roi_padding (int): Margem extra (em pixels) adicionada ao raio de busca.
+
+    Returns:
+        Tuple[int, int, int, int]: Limites recortados ``(x_min, x_max, y_min, y_max)``
+            dentro da fatia.
+    """
     height, width = img_shape
 
     # A ROI cobre o círculo anterior, a tolerância de movimento e uma margem extra.
@@ -502,46 +676,13 @@ def _compute_local_roi_bounds(
     cx = int(round(ref_x))
     cy = int(round(ref_y))
 
+    # Garante que os limites da ROI permaneçam dentro das dimensões da fatia.
     x_min = max(0, cx - half_size)
     x_max = min(width, cx + half_size)
     y_min = max(0, cy - half_size)
     y_max = min(height, cy + half_size)
 
     return x_min, x_max, y_min, y_max
-
-
-def _process_initial_circle(
-    img_slice: NDArray[Any],
-    hough_radii: Sequence[float],
-    initial_circle: dict,
-    neighbor_distance_threshold: float,
-    total_num_peaks: int,
-    canny_sigma: float,
-) -> dict:
-    """Refina o círculo inicial com base em vizinhos próximos."""
-    # Reexecuta a detecção na fatia inicial para agregar candidatos próximos.
-    accums, cx, cy, radii = _detect_circles_in_slice(
-        img_slice, hough_radii, total_num_peaks, canny_sigma
-    )
-
-    ref_x, ref_y, ref_radius = refine_circle_with_neighbors(
-        cx,
-        cy,
-        radii,
-        initial_circle["center_x"],
-        initial_circle["center_y"],
-        neighbor_distance_threshold,
-    )
-
-    if ref_radius is None:
-        ref_radius = initial_circle["radius"]
-
-    return {
-        "center_x": ref_x,
-        "center_y": ref_y,
-        "radius": ref_radius,
-        "accum": initial_circle["accum"],
-    }
 
 
 def _process_slice(
@@ -557,7 +698,33 @@ def _process_slice(
     local_roi_padding: int = 20,
     verbose: bool = True,
 ) -> dict[str, Any] | str | None:
-    """Processa uma fatia e retorna o melhor círculo rastreado (evita detecção duplicada)."""
+    """Processa uma fatia e retorna o melhor círculo rastreado.
+
+    Args:
+        img_slice (NDArray[Any]): Fatia axial 2D pré-processada no formato ``(y, x)``.
+        hough_radii (Sequence[float]): Raios candidatos (em pixels) testados pela
+            transformada de Hough.
+        reference_circle (dict[str, Any]): Círculo da última fatia válida com
+            ``center_x``, ``center_y`` e ``radius``.
+        radius_tolerance (float): Variação máxima permitida para o raio (em pixels).
+        distance_tolerance (float): Deslocamento máximo permitido para o centro (em
+            pixels).
+        neighbor_distance_threshold (float): Distância máxima (em pixels) para média
+            local de candidatos vizinhos.
+        total_num_peaks (int): Número máximo de picos avaliados pela Hough na fatia.
+        canny_sigma (float): Desvio-padrão gaussiano (em pixels) do detector de bordas
+            Canny.
+        use_local_roi (bool): Se ``True``, restringe a busca à ROI local ao redor de
+            ``reference_circle``.
+        local_roi_padding (int): Margem adicional (em pixels) para o recorte da ROI
+            local.
+        verbose (bool): Se ``True``, imprime aviso quando o melhor candidato excede as
+            tolerâncias.
+
+    Returns:
+        dict[str, Any] | str | None: Dicionário do círculo refinado,
+            ``OUT_OF_TOLERANCE`` se divergir ou ``None`` se nenhum pico for detectado.
+    """
     ref_x = reference_circle["center_x"]
     ref_y = reference_circle["center_y"]
     ref_radius = reference_circle["radius"]
@@ -665,7 +832,25 @@ def detect_initial_circle(
     total_num_peaks: int = 10,
     canny_sigma: float = 3,
 ) -> Optional[dict]:
-    """Detecta o círculo inicial da aorta em uma fatia de referência."""
+    """Detecta o círculo inicial da aorta em uma fatia de referência.
+
+    Args:
+        img_slice (NDArray[Any]): Fatia axial 2D pré-processada no formato ``(y, x)``.
+        hough_radii (Sequence[float]): Raios candidatos (em pixels) testados pela
+            transformada de Hough.
+        quadrant_offset (Sequence[int]): Deslocamento ``(dx, dy)`` em pixels que define
+            o quadrante anatômico esperado da busca inicial.
+        total_num_peaks (int): Quantidade máxima de picos retornados pela Hough na
+            fatia.
+        canny_sigma (float): Desvio-padrão gaussiano (em pixels) do detector de bordas
+            Canny.
+
+    Returns:
+        Optional[dict[str, float]]: Dicionário
+            ``{"center_x", "center_y", "radius", "accum"}`` ou ``None`` se nada for
+            encontrado.
+    """
+    # Extrai candidatos circulares na fatia de referência via Canny e Hough.
     accums, cx, cy, radii = _detect_circles_in_slice(
         img_slice, hough_radii, total_num_peaks, canny_sigma
     )
@@ -673,6 +858,7 @@ def detect_initial_circle(
     if len(accums) == 0:
         return None
 
+    # Seleciona o primeiro pico posicionado no quadrante anatômico esperado.
     idx = _select_initial_circle_candidate(
         cx,
         cy,
@@ -698,7 +884,25 @@ def get_initial_circle_diagnostics(
     canny_sigma: float = 3,
     neighbor_distance_threshold: float = 5,
 ) -> dict:
-    """Retorna o círculo inicial, os candidatos da fatia e o círculo refinado."""
+    """Retorna o círculo inicial, os candidatos da fatia e o círculo refinado.
+
+    Args:
+        img_slice (NDArray[Any]): Fatia axial 2D pré-processada no formato ``(y, x)``.
+        hough_radii (Sequence[float]): Raios candidatos (em pixels) testados pela
+            transformada de Hough.
+        quadrant_offset (Sequence[int]): Deslocamento ``(dx, dy)`` em pixels do
+            quadrante inicial da busca.
+        total_num_peaks_initial (int): Quantidade máxima de picos retornados pela Hough.
+        canny_sigma (float): Desvio-padrão gaussiano (em pixels) do detector de bordas
+            Canny.
+        neighbor_distance_threshold (float): Distância máxima (em pixels) para incluir
+            vizinhos no refinamento médio.
+
+    Returns:
+        dict[str, Any]: Dicionário com ``initial_circle``, ``refined_circle``,
+            ``candidates`` e ``refinement_candidates``.
+    """
+    # Executa a Hough uma única vez para inspecionar todos os picos iniciais da fatia.
     accums, cx, cy, radii = _detect_circles_in_slice(
         img_slice, hough_radii, total_num_peaks_initial, canny_sigma
     )
@@ -744,6 +948,7 @@ def get_initial_circle_diagnostics(
         if distances[idx] <= neighbor_distance_threshold
     ]
 
+    # Calcula o círculo refinado pela média dos vizinhos e serializa os candidatos.
     refined_x, refined_y, refined_radius = refine_circle_with_neighbors(
         cx,
         cy,
@@ -788,7 +993,21 @@ def refine_circle_with_neighbors(
     ref_y: float,
     distance_threshold: float = 5,
 ) -> Tuple[float, float, Optional[float]]:
-    """Refina centro e raio pela média dos círculos vizinhos próximos (vetorizado)."""
+    """Refina centro e raio pela média dos círculos vizinhos próximos.
+
+    Args:
+        cx (ArrayLike): Coordenadas ``x`` dos círculos candidatos na fatia (em pixels).
+        cy (ArrayLike): Coordenadas ``y`` dos círculos candidatos na fatia (em pixels).
+        radii (ArrayLike): Raios dos círculos candidatos (em pixels).
+        ref_x (float): Coordenada ``x`` do círculo de referência (em pixels).
+        ref_y (float): Coordenada ``y`` do círculo de referência (em pixels).
+        distance_threshold (float): Raio máximo de distância euclidiana (em pixels) para
+            incluir vizinhos.
+
+    Returns:
+        Tuple[float, float, Optional[float]]: Tupla ``(x_mean, y_mean, radius_mean)``,
+            com ``radius_mean=None`` se nenhum vizinho for encontrado.
+    """
     distances = _calculate_distances_vectorized(cx, cy, ref_x, ref_y)
     mask = distances <= distance_threshold
 
@@ -824,12 +1043,42 @@ def detect_aorta_circles(
     interpolate_missed_circles: bool = True,
     verbose: bool = True,
 ) -> list:
-    """Detecta círculos da aorta ao longo do volume 3D fatia a fatia.
+    """Detecta e rastreia círculos da aorta fatia a fatia por transformada de Hough.
 
-    Argumentos:        interpolate_missed_circles: Preenche por interpolação linear as fatias
-            sem detecção quando uma nova detecção válida aparece antes do limite
-            de misses consecutivos.
+    Args:
+        img_volume (NDArray[Any]): Volume 3D pré-processado no formato ``(y, x, z)``.
+        hough_radii (Sequence[float]): Raios candidatos (em pixels) testados em cada
+            fatia pela Hough.
+        pixel_spacing (float): Espaçamento médio no plano XY (``mm/px``) para converter
+            tolerâncias físicas em pixels.
+        tol_radius_mm (float): Variação máxima de raio entre fatias consecutivas, em
+            ``mm``.
+        tol_distance_mm (float): Deslocamento máximo do centro entre fatias
+            consecutivas, em ``mm``.
+        max_slice_miss_threshold (int): Máximo de fatias consecutivas sem detecção antes
+            de interromper o rastreamento.
+        neighbor_distance_threshold (float): Distância máxima (em pixels) para média
+            local de candidatos vizinhos.
+        quadrant_offset (Sequence[int]): Deslocamento ``(dx, dy)`` em pixels do
+            quadrante esperado para o círculo inicial.
+        total_num_peaks_initial (int): Máximo de picos da Hough avaliados na primeira
+            fatia.
+        total_num_peaks (int): Máximo de picos da Hough avaliados nas demais fatias.
+        canny_sigma (float): Desvio-padrão gaussiano (em pixels) do detector de bordas
+            Canny.
+        use_local_roi (bool): Se ``True``, restringe a busca ao redor do círculo
+            anterior.
+        local_roi_padding (int): Margem (em pixels) adicionada ao redor do raio de
+            referência na ROI local.
+        interpolate_missed_circles (bool): Se ``True``, preenche por interpolação linear
+            lacunas curtas quando a aorta reaparece antes do limite.
+        verbose (bool): Se ``True``, imprime mensagens de diagnóstico no console.
+
+    Returns:
+        list[dict[str, Any]]: Lista de dicionários por fatia com ``slice_index``,
+            ``center_x``, ``center_y``, ``radius`` e ``accum``.
     """
+    # Valida dimensionalidade do volume e parâmetros obrigatórios do rastreamento.
     if img_volume.ndim != 3:
         raise ValueError(f"img_volume deve ser 3D, recebido shape={img_volume.shape}")
     if len(hough_radii) == 0:
@@ -840,38 +1089,55 @@ def detect_aorta_circles(
     num_slices = img_volume.shape[2]
     first_slice_idx = num_slices - 1
 
+    # Converte tolerâncias físicas (mm) para pixels da resolução atual.
     radius_tolerance = tol_radius_mm / pixel_spacing
     distance_tolerance = tol_distance_mm / pixel_spacing
 
-    # O ImageCAS usado aqui tem a aorta nas fatias finais; começa pelo fim do volume.
-    initial_circle = detect_initial_circle(
-        img_volume[:, :, first_slice_idx],
+    # Etapa 1: ancora a aorta na última fatia axial (região superior do exame ImageCAS).
+    initial_slice = img_volume[:, :, first_slice_idx]
+    accums, cx, cy, radii = _detect_circles_in_slice(
+        initial_slice,
         hough_radii,
-        quadrant_offset,
         total_num_peaks_initial,
         canny_sigma,
     )
+    initial_idx = (
+        _select_initial_circle_candidate(
+            cx,
+            cy,
+            initial_slice.shape,
+            quadrant_offset,
+        )
+        if len(accums) > 0
+        else None
+    )
 
-    if initial_circle is None:
+    if initial_idx is None:
         if verbose:
             print("Nenhum círculo inicial detectado.")
         return []
 
-    # Refina a primeira detecção antes de usá-la como referência do rastreamento.
-    refined_initial = _process_initial_circle(
-        img_volume[:, :, first_slice_idx],
-        hough_radii,
-        initial_circle,
+    # Etapa 2: refina posição e raio iniciais combinando candidatos próximos.
+    ref_x, ref_y, ref_radius = refine_circle_with_neighbors(
+        cx,
+        cy,
+        radii,
+        float(cx[initial_idx]),
+        float(cy[initial_idx]),
         neighbor_distance_threshold,
-        total_num_peaks_initial,
-        canny_sigma,
     )
+    refined_initial = {
+        "center_x": ref_x,
+        "center_y": ref_y,
+        "radius": float(radii[initial_idx]) if ref_radius is None else ref_radius,
+        "accum": float(accums[initial_idx]),
+    }
 
     detected_circles = [{"slice_index": first_slice_idx, **refined_initial}]
     miss_counter = 0
     pending_missed_slices: list[int] = []
 
-    # Caminha fatia a fatia usando sempre o último círculo válido como referência.
+    # Etapa 3: rastreia para baixo fatia a fatia usando sempre o último círculo válido.
     for slice_idx in range(first_slice_idx - 1, -1, -1):
         reference_circle = detected_circles[-1]
         result = _process_slice(

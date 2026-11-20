@@ -13,23 +13,18 @@ from nibabel.loadsave import load as load_nifti
 from nibabel.loadsave import save as save_nifti
 from nibabel.nifti1 import Nifti1Image
 
-from experiments.mmwhs_test_aorta import (
+from utils.project.evaluation.mmwhs_official_aorta import (
+    OFFICIAL_AORTA_METHOD,
+    AortaPrediction,
+    aorta_dice_result_path,
     evaluate_with_wine,
-    load_run_config,
+    parse_aorta_dice,
+    parse_label_dice_output,
     predict_aorta,
     restore_native_mask,
     save_prediction,
-    select_test_record,
     validate_saved_prediction,
     verify_run_result,
-)
-from utils.project.evaluation.mmwhs_official_aorta import (
-    AortaPrediction,
-    OFFICIAL_AORTA_METHOD,
-    parse_dice_lo,
-    parse_aorta_dice,
-    parse_label_dice_output,
-    aorta_dice_result_path,
 )
 
 
@@ -38,49 +33,6 @@ class MmwhsTestAortaTest(unittest.TestCase):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
         self.root = Path(temporary.name)
-
-    def test_loads_frozen_run_and_rejects_other_exam(self):
-        run_dir = self.root / "run"
-        config_dir = run_dir / "config"
-        config_dir.mkdir(parents=True)
-        (config_dir / "effective_pipeline_config.json").write_text(
-            json.dumps({"DOWNSCALE_FACTORS": [1, 1, 1], "USE_GPU": True})
-        )
-        (config_dir / "run_manifest.json").write_text(
-            json.dumps(
-                {
-                    "dataset": "mmwhs",
-                    "resolution": "high",
-                    "selected_exams": [{"subset": "test", "exam_id": "ct_test_2001"}],
-                }
-            )
-        )
-
-        config, resolution = load_run_config(run_dir, "ct_test_2001")
-
-        self.assertEqual(resolution, "high")
-        self.assertEqual(config["DOWNSCALE_FACTORS"], (1, 1, 1))
-        self.assertFalse(config["USE_GPU"])
-        with self.assertRaisesRegex(ValueError, "não pertence"):
-            load_run_config(run_dir, "ct_test_2002")
-
-    def test_selects_only_existing_ct_test_id(self):
-        inventory = pd.DataFrame(
-            {
-                "subset": ["train", "test"],
-                "exam_id": ["ct_train_1001", "ct_test_2001"],
-            }
-        )
-        with patch(
-            "experiments.mmwhs_test_aorta.discover_ccta_dataset",
-            return_value=inventory,
-        ):
-            record = select_test_record(self.root, "ct_test_2001")
-            self.assertEqual(record["exam_id"], "ct_test_2001")
-            with self.assertRaisesRegex(ValueError, "Use um ID"):
-                select_test_record(self.root, "ct_train_1001")
-            with self.assertRaisesRegex(ValueError, "encontrados 0"):
-                select_test_record(self.root, "ct_test_2002")
 
     @patch(
         "utils.project.evaluation.mmwhs_official_aorta.segment_aorta_with_diagnostics"
@@ -178,22 +130,6 @@ class MmwhsTestAortaTest(unittest.TestCase):
         )
         with self.assertRaisesRegex(ValueError, "não reproduz"):
             verify_run_result(self.root, "ct_test_2001", prediction)
-
-    def test_parses_official_aorta_column_and_rejects_wrong_identity(self):
-        path = self.root / "ct_test_2001_dice.xls"
-        path.write_text(
-            "0\t0\t0\t0\t0\t0.632263\t0\t0.076495\t\tct2001\t--decodeseg2\t\n",
-            encoding="ascii",
-        )
-        self.assertAlmostEqual(parse_dice_lo(path, "ct_test_2001"), 0.632263)
-        with self.assertRaisesRegex(ValueError, "Identidade"):
-            parse_dice_lo(path, "ct_test_2002")
-        path.write_text(
-            "0\t0\t0\t0\t0\tnan\t0\t0.076495\t\tct2001\t--decodeseg2\t\n",
-            encoding="ascii",
-        )
-        with self.assertRaisesRegex(ValueError, "fora de"):
-            parse_dice_lo(path, "ct_test_2001")
 
     @patch(
         "utils.project.evaluation.mmwhs_official_aorta._wine_path",

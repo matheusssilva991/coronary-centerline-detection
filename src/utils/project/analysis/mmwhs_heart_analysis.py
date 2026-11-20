@@ -38,7 +38,20 @@ def select_mmwhs_heart_exams(
     random_seed: int = 42,
     exam_ids: Sequence[str] | None = None,
 ) -> pd.DataFrame:
-    """Seleciona pares CT/label de treino por IDs ou sorteio reproduzível."""
+    """Seleciona pares CT/label de treino por IDs ou sorteio reproduzível.
+
+    Args:
+        inventory (pd.DataFrame): Inventário CCTA consolidado contendo exames MM-WHS.
+        n_exams (int | None): Quantidade sorteada quando ``exam_ids`` é ``None``;
+            ``None`` preserva todos os pares disponíveis.
+        random_seed (int): Semente aleatória usada na amostragem sem reposição.
+        exam_ids (Sequence[str] | None): Sequência explícita de ``exam_id`` de treino
+            a retornar no lugar da amostragem.
+
+    Returns:
+        pd.DataFrame: Subconjunto ordenado com os pares CT/label selecionados.
+    """
+    # Filtra exames de treino MM-WHS cujos arquivos de rótulo existem no disco.
     train = inventory.loc[
         require_series_column(inventory, "dataset").eq("MM-WHS")
         & require_series_column(inventory, "subset").eq("train")
@@ -48,11 +61,15 @@ def select_mmwhs_heart_exams(
         lambda path: isinstance(path, (str, Path)) and Path(path).is_file()
     )
     train = train.loc[available].sort_values("exam_id").reset_index(drop=True)
+
+    # Garante unicidade dos IDs e existência de ao menos um exame válido.
     ids = require_series_column(train, "exam_id")
     if ids.isna().any() or ids.duplicated().any():
         raise ValueError("O inventário contém IDs de treino ausentes ou duplicados.")
     if train.empty:
         raise ValueError("Nenhum par CT/label de treino MM-WHS está disponível.")
+
+    # Seleciona IDs explícitos ou realiza amostragem determinística sem reposição.
     if exam_ids is not None:
         requested = list(exam_ids)
         if not requested or len(set(requested)) != len(requested):
@@ -80,7 +97,16 @@ def load_mmwhs_heart_volume(
 
     A canonicalização apenas reordena/inverte eixos. Não reamostra volumes.
     Pares com shapes ou affines incompatíveis são rejeitados.
+
+    Args:
+        image_path (str | Path): Caminho da imagem CT NIfTI do MM-WHS.
+        label_path (str | Path): Caminho do arquivo de rótulos cardíacos NIfTI.
+
+    Returns:
+        tuple[NDArray[np.float32], NDArray[Any], tuple[float, float, float]]: Tupla
+            ``(image, label, spacing)`` em orientação canônica RAS.
     """
+    # Carrega pares NIfTI, reorienta para RAS e exige mesma grade física.
     raw_image, raw_label = load_raw_img_and_label(str(image_path), str(label_path))
     if raw_label is None:
         raise ValueError(f"Label MM-WHS ausente: {label_path}")
@@ -92,6 +118,7 @@ def load_mmwhs_heart_volume(
         image_nii.affine, label_nii.affine, rtol=0, atol=1e-5
     ):
         raise ValueError(f"Imagem e label possuem geometria incompatível: {image_path}")
+
     # dataobj aplica slope/intercept do NIfTI, incluindo offsets como −1024 HU.
     image = np.asarray(image_nii.dataobj, dtype=np.float32)
     label = np.asanyarray(label_nii.dataobj)
@@ -105,14 +132,30 @@ def _region_masks(
     spacing: Sequence[float],
     margin_mm: float,
 ) -> Iterator[tuple[str, str, int | None, tuple[slice, ...], NDArray[np.bool_]]]:
-    """Produz máscaras por região sem armazenar todas as máscaras do volume."""
+    """Produz máscaras por região sem armazenar todas as máscaras do volume.
+
+    Args:
+        label (NDArray[Any]): Volume 3D de rótulos cardíacos MM-WHS.
+        spacing (Sequence[float]): Espaçamento físico ``(sx, sy, sz)`` em milímetros.
+        margin_mm (float): Margem em milímetros ao redor do coração para o recorte do
+            fundo local.
+
+    Returns:
+        Iterator[tuple[str, str, int | None, tuple[slice, ...], NDArray[np.bool_]]]: Tuplas
+            ``(chave_regiao, nome_regiao, valor_label, fatias, mascara)`` por região.
+    """
+    # Valida que todas as classes presentes pertencem ao conjunto oficial do MM-WHS.
     present = np.unique(label)
     unknown = present[~np.isin(present, (0, *MMWHS_HEART_LABEL_SPECS))]
     if unknown.size:
         raise ValueError(f"Valores de label MM-WHS desconhecidos: {unknown.tolist()}")
+
+    # Calcula a caixa delimitadora cardíaca com margem física para o fundo local.
     heart = np.isin(label, tuple(MMWHS_HEART_LABEL_SPECS))
     crop = mask_bounding_box_slices(heart, spacing, margin_mm)
     full = (slice(None),) * 3
+
+    # Produz sob demanda cada estrutura cardíaca, coração completo e fundos.
     for value, (name, _) in MMWHS_HEART_LABEL_SPECS.items():
         yield f"label_{value}", name, value, full, label == value
     yield "heart", COMBINED_REGION_NAMES["heart"], None, full, heart
@@ -149,7 +192,25 @@ def summarize_hu_region(
 
     Valores não finitos ficam fora das estatísticas; os finitos fora dos bins
     continuam no denominador da densidade. Regiões vazias não recebem HU zero.
+
+    Args:
+        image (NDArray[Any]): Volume 3D com intensidades em HU.
+        mask (NDArray[Any]): Máscara booleana 3D da região avaliada.
+        spacing (Sequence[float]): Espaçamento físico ``(sx, sy, sz)`` em milímetros.
+        exam_id (str): Identificador do exame analisado.
+        region (str): Chave programática da região.
+        region_name (str): Nome legível da região para exibição.
+        bin_edges (NDArray[Any] | None): Bordas estritamente crescentes em HU;
+            ``None`` usa intervalo padrão de ``-1500`` a ``3000`` HU.
+        percentiles (tuple[float, float] | None): Par opcional de percentis extras
+            ``(inferior, superior)`` entre ``0`` e ``100``.
+        label_value (int | None): Código numérico da classe no rótulo original.
+
+    Returns:
+        tuple[dict[str, Any], pd.DataFrame]: Par ``(summary_row, histogram)`` com
+            métricas da região e densidades por bin HU.
     """
+    # Valida dimensionalidade, espaçamento positivo, bordas dos bins e percentis.
     if image.ndim != 3 or image.shape != mask.shape:
         raise ValueError("Imagem e máscara devem ser 3D e possuir o mesmo shape.")
     spacing_array = np.asarray(spacing, dtype=float)
@@ -177,6 +238,8 @@ def summarize_hu_region(
         raise ValueError(
             "Os percentis devem satisfazer 0 <= inferior < superior <= 100."
         )
+
+    # Extrai intensidades da máscara, remove não finitos e conta extremos fora dos bins.
     values = image[np.asarray(mask, dtype=bool)]
     voxel_count = int(values.size)
     finite = np.isfinite(values)
@@ -185,6 +248,8 @@ def summarize_hu_region(
     valid_count = int(values.size)
     below = int(np.count_nonzero(values < edges[0]))
     above = int(np.count_nonzero(values > edges[-1]))
+
+    # Inicializa metadados da região e preenche estatísticas somente se houver voxels.
     row: dict[str, Any] = {
         "exam_id": exam_id,
         "region": region,
@@ -237,6 +302,8 @@ def summarize_hu_region(
             row.update(
                 lower_percentile_hu=float(qs[5]), upper_percentile_hu=float(qs[6])
             )
+
+    # Calcula contagens e densidade normalizada pelo total de voxels finitos.
     counts, _ = np.histogram(values, bins=edges)
     histogram = pd.DataFrame(
         {
@@ -267,11 +334,27 @@ def summarize_mmwhs_heart_hu(
     Valores não finitos são contados e excluídos das estatísticas. A densidade
     considera todos os voxels finitos, inclusive os que ficam fora dos bins.
     Labels ausentes recebem estatísticas vazias e não contribuem ao agregado.
+
+    Args:
+        image (NDArray[Any]): Volume CT 3D em unidades Hounsfield.
+        label (NDArray[Any]): Volume 3D de rótulos cardíacos MM-WHS alinhado à imagem.
+        spacing (Sequence[float]): Espaçamento físico ``(sx, sy, sz)`` em milímetros.
+        exam_id (str): Identificador do exame avaliado.
+        margin_mm (float): Margem física em milímetros ao redor do coração para o
+            fundo local.
+        bin_edges (NDArray[Any] | None): Bordas explícitas dos bins HU; ``None`` usa
+            o intervalo padrão.
+
+    Returns:
+        tuple[pd.DataFrame, pd.DataFrame]: Par ``(statistics, histograms)`` para todas
+            as regiões anatômicas e combinadas do exame.
     """
     if image.ndim != 3 or image.shape != label.shape:
         raise ValueError("Imagem e label devem ser 3D e possuir o mesmo shape.")
     rows: list[dict[str, Any]] = []
     histograms: list[pd.DataFrame] = []
+
+    # Processa cada máscara sob demanda liberando-a logo após resumir os HU.
     for region, name, value, slices, mask in _region_masks(label, spacing, margin_mm):
         row, histogram = summarize_hu_region(
             image[slices],
@@ -293,11 +376,23 @@ def aggregate_mmwhs_heart_hu(
     statistics: pd.DataFrame,
     histograms: pd.DataFrame,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Combina estatísticas e densidades com o mesmo peso por exame válido."""
+    """Combina estatísticas e densidades com o mesmo peso por exame válido.
+
+    Args:
+        statistics (pd.DataFrame): Estatísticas individuais por exame e região.
+        histograms (pd.DataFrame): Histogramas individuais por exame, região e bin.
+
+    Returns:
+        tuple[pd.DataFrame, pd.DataFrame]: Par ``(summary, densities)`` com médias
+            inter-exames e densidade média por bin.
+    """
+    # Garante ausência de linhas duplicadas por exame/região antes de agregar.
     if statistics.duplicated(["exam_id", "region"]).any():
         raise ValueError("Estatísticas contêm regiões duplicadas para um exame.")
     if histograms.duplicated(["exam_id", "region", "bin_center_hu"]).any():
         raise ValueError("Histogramas contêm bins duplicados para um exame/região.")
+
+    # Agrega métricas inter-exames dando o mesmo peso a cada exame válido.
     rows: list[dict[str, Any]] = []
     for _, group in statistics.groupby("region", sort=False):
         valid = group.loc[numeric_series(group, "valid_voxel_count").gt(0)]
@@ -329,6 +424,8 @@ def aggregate_mmwhs_heart_hu(
                 ),
             }
         )
+
+    # Calcula a densidade média por bin entre exames válidos para cada região.
     densities = histograms.groupby(
         ["region", "region_name", "bin_center_hu"], sort=False, as_index=False
     ).agg(density=("density", "mean"))

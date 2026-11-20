@@ -12,6 +12,7 @@ import pandas as pd
 from nibabel.loadsave import save as save_nifti
 from nibabel.nifti1 import Nifti1Image
 
+from eda.intensity.view.aorta_hu_threshold_views import plot_hu_threshold_examples
 from utils.project.analysis.aorta_hu_analysis import (
     HU_REGION_NAMES,
     HuReferenceVolume,
@@ -35,12 +36,6 @@ from utils.visualization.images.hu_threshold import (
     hu_axial_mip,
     reference_axial_slices,
 )
-
-
-from tests.notebook_helpers import load_presentation_helpers
-
-_presentation = load_presentation_helpers("aorta_hu_threshold_comparison")
-plot_hu_threshold_examples = _presentation["plot_hu_threshold_examples"]
 
 
 class AortaHuAnalysisTest(unittest.TestCase):

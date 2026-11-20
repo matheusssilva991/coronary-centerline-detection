@@ -1,3 +1,5 @@
+"""Visualização interativa 3D em K3D de máscaras, óstios e mapas de rótulos."""
+
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any, Optional, Sequence, cast
@@ -18,7 +20,23 @@ def visualize_3d_k3d(
     save_html_path: Optional[str] = None,
     display_plot: bool = True,
 ) -> Any:
-    """Renderiza uma máscara 3D em k3d usando marching cubes."""
+    """Renderiza uma máscara 3D em K3D usando o algoritmo marching cubes.
+
+    Args:
+        mask_3d (NDArray[Any]): Volume binário 3D ``(Y, X, Z)`` a renderizar.
+        spacing (Sequence[float]): Espaçamento dos voxels ``(dy, dx, dz)`` em
+            mm usado quando ``use_physical_coords`` é ``True``.
+        color (int): Cor hexadecimal RGB da malha 3D (por exemplo, ``0xFF0000``).
+        opacity (float): Opacidade da malha no intervalo ``[0.0, 1.0]``.
+        use_physical_coords (bool): Se ``True``, escala a cena em milímetros
+            usando ``spacing``; caso contrário usa coordenadas em pixels.
+        save_html_path (str | None): Caminho opcional para salvar o snapshot
+            HTML; ``None`` não grava arquivo em disco.
+        display_plot (bool): Se ``True``, exibe o widget interativo do K3D.
+
+    Returns:
+        Any: Objeto ``k3d.Plot`` contendo a malha gerada.
+    """
     # Define unidade de coordenada (mm ou pixel).
     if use_physical_coords:
         dy, dx, dz = tuple(float(s) for s in spacing)
@@ -51,123 +69,8 @@ def visualize_3d_k3d(
         name="Máscara 3D",
     )
 
-    # Adiciona malha e renderiza.
+    # Adiciona malha, exporta HTML opcional e renderiza.
     plot += mesh
-    if save_html_path is not None:
-        with open(save_html_path, "w", encoding="utf-8") as html_file:
-            html_file.write(plot.get_snapshot())
-
-    if display_plot:
-        plot.display()
-    return plot
-
-
-def visualize_aorta_with_ostia(
-    aorta_mask: NDArray[Any],
-    ostia_left: Sequence[float],
-    ostia_right: Sequence[float],
-    spacing: Sequence[float] = (1, 1, 1),
-    label_mask: Optional[NDArray[Any]] = None,
-    use_physical_coords: bool = True,
-    save_html_path: Optional[str] = None,
-    display_plot: bool = True,
-) -> Any:
-    """Renderiza a aorta 3D com marcação dos óstios e rótulo opcional."""
-
-    # Define unidade de coordenada (mm ou pixel).
-    if use_physical_coords:
-        dy, dx, dz = tuple(float(s) for s in spacing)
-        axes_labels = ["Y (mm)", "X (mm)", "Z (mm)"]
-    else:
-        dy, dx, dz = 1.0, 1.0, 1.0
-        axes_labels = ["Y (pixels)", "X (pixels)", "Z (pixels)"]
-
-    # Inicializa cena com aorta, label opcional e óstios.
-    plot = cast(
-        Any,
-        create_plot(
-            name="Aorta + Óstios + Label",
-            height=800,
-            grid_visible=True,
-            axes=axes_labels,
-        ),
-    )
-
-    # Extrai malha da aorta predita.
-    verts, faces, _, _ = measure.marching_cubes(
-        aorta_mask.astype(float), level=0.5, spacing=(dy, dx, dz)
-    )
-
-    mesh_pred = k3d.mesh(
-        verts.astype(np.float32),
-        faces.astype(np.uint32),
-        color=0xFF5555,
-        opacity=0.3,
-        name="Aorta Predita",
-    )
-    # Camada principal da cena.
-    plot += mesh_pred
-
-    if label_mask is not None:
-        # Se houver label, adiciona malha de referência.
-        verts_label, faces_label, _, _ = measure.marching_cubes(
-            label_mask.astype(float), level=0.5, spacing=(dy, dx, dz)
-        )
-
-        mesh_label = k3d.mesh(
-            verts_label.astype(np.float32),
-            faces_label.astype(np.uint32),
-            color=0x55FF55,
-            opacity=0.3,
-            name="Ground Truth",
-        )
-        # Cor distinta para comparar com a predição.
-        plot += mesh_label
-
-    pos_left = np.array(
-        [
-            [
-                float(ostia_left[0] * dy),
-                float(ostia_left[1] * dx),
-                float(ostia_left[2] * dz),
-            ]
-        ],
-        dtype=np.float32,
-    )
-    # Converte coordenada do óstio esquerdo.
-    point_left = k3d.points(
-        positions=pos_left,
-        point_size=12.0,
-        color=0xFFFF00,
-        name=(
-            f"Óstio Esquerdo\ny={ostia_left[0]}, x={ostia_left[1]}, z={ostia_left[2]}"
-        ),
-    )
-    # Marca o óstio esquerdo.
-    plot += point_left
-
-    pos_right = np.array(
-        [
-            [
-                float(ostia_right[0] * dy),
-                float(ostia_right[1] * dx),
-                float(ostia_right[2] * dz),
-            ]
-        ],
-        dtype=np.float32,
-    )
-    # Converte coordenada do óstio direito.
-    point_right = k3d.points(
-        positions=pos_right,
-        point_size=12.0,
-        color=0x00FFFF,
-        name=(
-            f"Óstio Direito\ny={ostia_right[0]}, x={ostia_right[1]}, z={ostia_right[2]}"
-        ),
-    )
-    # Marca o óstio direito.
-    plot += point_right
-
     if save_html_path is not None:
         with open(save_html_path, "w", encoding="utf-8") as html_file:
             html_file.write(plot.get_snapshot())
@@ -187,12 +90,27 @@ def _add_mask_mesh(
     name: str,
     smoothing_iterations: int = 0,
 ) -> None:
-    """Adiciona uma máscara 3D ao plot quando ela contém voxels."""
+    """Adiciona a malha de uma máscara 3D ao plot K3D quando ela contém voxels.
+
+    Args:
+        plot (Any): Instância ``k3d.Plot`` que receberá a nova malha.
+        mask (NDArray[Any]): Volume 3D cujos voxels positivos definem a
+            superfície.
+        spacing (Sequence[float]): Espaçamento entre voxels aplicado na extração
+            da malha.
+        color (int): Cor hexadecimal RGB da malha.
+        opacity (float): Opacidade da superfície no intervalo ``[0.0, 1.0]``.
+        name (str): Nome exibido na legenda de objetos da cena K3D.
+        smoothing_iterations (int): Número de passos de suavização Laplaciana
+            aplicados aos vértices; ``0`` preserva a malha bruta.
+    """
+    # Converte para máscara booleana e evita gerar malha para volumes vazios.
     mask_bool = np.asarray(mask) > 0
     if not np.any(mask_bool):
         print(f"Máscara vazia ignorada: {name}")
         return
 
+    # Extrai a superfície isovalor com marching cubes no espaçamento informado.
     verts, faces, _, _ = measure.marching_cubes(
         mask_bool.astype(float), level=0.5, spacing=spacing
     )
@@ -208,6 +126,7 @@ def _add_mask_mesh(
             np.add.at(sums, source, verts[target])
             means = sums / np.maximum(degree[:, None], 1)
             verts = verts + 0.15 * (means - verts)
+    # Adiciona a malha triangulada à cena K3D.
     plot += k3d.mesh(
         verts.astype(np.float32),
         faces.astype(np.uint32),
@@ -228,7 +147,28 @@ def visualize_label_map_3d(
     display_plot: bool = True,
     plot_name: str = "Estruturas rotuladas",
 ) -> Any:
-    """Renderiza em uma cena K3D os valores presentes de um mapa de rótulos."""
+    """Renderiza em uma cena K3D os rótulos presentes em um mapa 3D.
+
+    Args:
+        label_map (NDArray[Any]): Volume 3D de rótulos inteiros por voxel.
+        label_specs (Mapping[int, tuple[str, int]]): Mapeamento de código de
+            rótulo para ``(nome, cor_hex)``.
+        spacing (Sequence[float]): Espaçamento dos voxels em mm usado quando
+            ``use_physical_coords`` é ``True``.
+        opacity (float): Opacidade compartilhada por todas as malhas no
+            intervalo ``[0.0, 1.0]``.
+        use_physical_coords (bool): Se ``True``, aplica ``spacing`` em
+            milímetros; caso contrário usa coordenadas unitárias em pixels.
+        save_html_path (str | Path | None): Caminho opcional para salvar o
+            gráfico em HTML; ``None`` ignora a exportação.
+        display_plot (bool): Se ``True``, exibe a cena K3D após montar as
+            malhas.
+        plot_name (str): Título identificador da cena K3D.
+
+    Returns:
+        Any: Objeto ``k3d.Plot`` populado com as malhas dos rótulos encontrados.
+    """
+    # Valida dimensionalidade do volume, espaçamento positivo e faixa de opacidade.
     label_array = np.asarray(label_map)
     if label_array.ndim != 3:
         raise ValueError("O mapa de rótulos deve ser tridimensional.")
@@ -243,6 +183,7 @@ def visualize_label_map_3d(
     if not np.isfinite(resolved_opacity) or not 0 <= resolved_opacity <= 1:
         raise ValueError("A opacidade deve ser um valor finito entre 0 e 1.")
 
+    # Filtra apenas os rótulos configurados que efetivamente ocorrem no volume.
     present_specs = [
         (int(label_value), name, int(color))
         for label_value, (name, color) in label_specs.items()
@@ -251,6 +192,7 @@ def visualize_label_map_3d(
     if not present_specs:
         raise ValueError("Nenhum dos rótulos selecionados está presente no volume.")
 
+    # Define escala física ou em pixels e cria a cena K3D compartilhada.
     if use_physical_coords:
         mesh_spacing = tuple(float(value) for value in spacing_values)
         axes_labels = ["X (mm)", "Y (mm)", "Z (mm)"]
@@ -267,6 +209,7 @@ def visualize_label_map_3d(
             axes=axes_labels,
         ),
     )
+    # Gera e anexa uma malha separada para cada rótulo presente.
     for label_value, name, color in present_specs:
         _add_mask_mesh(
             plot,
@@ -277,6 +220,7 @@ def visualize_label_map_3d(
             name=name,
         )
 
+    # Exporta snapshot HTML e exibe o plot conforme parâmetros.
     if save_html_path is not None:
         save_k3d_plot_html(plot, save_html_path)
     if display_plot:
@@ -292,10 +236,21 @@ def _add_ostium_point(
     color: int,
     name: str,
 ) -> None:
-    """Adiciona um ponto de óstio ao plot quando a coordenada existe."""
+    """Adiciona um marcador pontual de óstio ao plot K3D quando informado.
+
+    Args:
+        plot (Any): Instância ``k3d.Plot`` onde o ponto será inserido.
+        ostium (Sequence[float] | None): Coordenada ``(y, x, z)`` em voxels do
+            óstio; ``None`` não adiciona ponto à cena.
+        spacing (Sequence[float]): Fatores de escala ``(dy, dx, dz)`` aplicados
+            à coordenada do óstio.
+        color (int): Cor hexadecimal RGB do marcador.
+        name (str): Prefixo do nome exibido no painel de objetos do K3D.
+    """
     if ostium is None:
         return
 
+    # Converte a coordenada do óstio para o sistema da cena e adiciona marcador.
     dy, dx, dz = tuple(float(s) for s in spacing)
     position = np.array(
         [[float(ostium[0] * dy), float(ostium[1] * dx), float(ostium[2] * dz)]],
@@ -321,7 +276,31 @@ def visualize_aorta_ostia_artery(
     display_plot: bool = True,
     plot_name: str = "Aorta + óstios + artéria",
 ) -> Any:
-    """Renderiza aorta, óstios, artéria predita e referência no mesmo plot 3D."""
+    """Renderiza aorta, óstios, artéria predita e referência em um mesmo plot 3D.
+
+    Args:
+        aorta_mask (NDArray[Any]): Máscara binária 3D ``(Y, X, Z)`` da aorta.
+        ostia_left (Sequence[float] | None): Coordenada ``(y, x, z)`` do óstio
+            esquerdo em voxels, ou ``None`` se ausente.
+        ostia_right (Sequence[float] | None): Coordenada ``(y, x, z)`` do óstio
+            direito em voxels, ou ``None`` se ausente.
+        artery_mask (NDArray[Any] | None): Máscara 3D predita das artérias
+            coronárias; ``None`` omite a camada predita.
+        label_artery (NDArray[Any] | None): Máscara 3D de referência
+            (ground truth) das artérias; ``None`` omite a camada de referência.
+        spacing (Sequence[float]): Espaçamento dos voxels ``(dy, dx, dz)`` em
+            mm.
+        use_physical_coords (bool): Se ``True``, renderiza em milímetros; caso
+            contrário usa coordenadas em pixels.
+        save_html_path (str | None): Caminho opcional para gravar a cena como
+            HTML.
+        display_plot (bool): Se ``True``, exibe o gráfico K3D ao final.
+        plot_name (str): Nome atribuído à cena K3D.
+
+    Returns:
+        Any: Objeto ``k3d.Plot`` com as camadas anatômicas adicionadas.
+    """
+    # Seleciona escala física (mm) ou em pixels e inicializa a cena K3D.
     if use_physical_coords:
         dy, dx, dz = tuple(float(s) for s in spacing)
         mesh_spacing = (dy, dx, dz)
@@ -334,6 +313,7 @@ def visualize_aorta_ostia_artery(
         Any,
         create_plot(name=plot_name, height=800, grid_visible=True, axes=axes_labels),
     )
+    # Adiciona malhas da aorta e, quando disponíveis, referência e predição arterial.
     _add_mask_mesh(
         plot,
         aorta_mask,
@@ -361,6 +341,7 @@ def visualize_aorta_ostia_artery(
             name="Artéria predita",
         )
 
+    # Sobrepõe os marcadores dos óstios esquerdo e direito.
     _add_ostium_point(
         plot,
         ostia_left,
@@ -376,6 +357,7 @@ def visualize_aorta_ostia_artery(
         name="Óstio direito",
     )
 
+    # Salva o snapshot HTML e exibe a cena interativa se solicitado.
     if save_html_path is not None:
         with open(save_html_path, "w", encoding="utf-8") as html_file:
             html_file.write(plot.get_snapshot())
@@ -402,8 +384,37 @@ def visualize_binary_masks_comparison(
     mesh_smoothing_iterations: int = 0,
     camera: Sequence[float] | None = None,
 ) -> Any:
-    """Renderiza duas máscaras binárias comparáveis no mesmo gráfico 3D."""
+    """Renderiza duas máscaras binárias comparáveis no mesmo gráfico 3D.
 
+    Args:
+        reference_mask (NDArray[Any]): Máscara binária 3D ``(Y, X, Z)`` de
+            referência.
+        predicted_mask (NDArray[Any]): Máscara binária 3D ``(Y, X, Z)`` predita,
+            com o mesmo shape de ``reference_mask``.
+        spacing (Sequence[float]): Espaçamento dos voxels ``(dy, dx, dz)`` em
+            mm.
+        use_physical_coords (bool): Se ``True``, escala as malhas em
+            milímetros; caso contrário usa coordenadas em pixels.
+        save_html_path (str | Path | None): Caminho opcional para exportar a
+            cena em HTML; ``None`` não grava arquivo.
+        display_plot (bool): Se ``True``, exibe o plot K3D interativo.
+        plot_name (str): Título identificador da cena K3D.
+        reference_name (str): Rótulo da máscara de referência no painel do K3D.
+        predicted_name (str): Rótulo da máscara predita no painel do K3D.
+        reference_color (int): Cor hexadecimal RGB da malha de referência.
+        predicted_color (int): Cor hexadecimal RGB da malha predita.
+        reference_opacity (float): Opacidade da malha de referência em
+            ``[0.0, 1.0]``.
+        predicted_opacity (float): Opacidade da malha predita em ``[0.0, 1.0]``.
+        mesh_smoothing_iterations (int): Número de iterações de suavização
+            aplicadas às superfícies; ``0`` mantém a malha sem suavização.
+        camera (Sequence[float] | None): Vetor de 9 valores finitos para
+            posicionar a câmera K3D; ``None`` mantém ajuste automático.
+
+    Returns:
+        Any: Objeto ``k3d.Plot`` contendo ambas as máscaras sobrepostas.
+    """
+    # Valida suavização, câmera e consistência geométrica entre as duas máscaras.
     if (
         mesh_smoothing_iterations < 0
         or int(mesh_smoothing_iterations) != mesh_smoothing_iterations
@@ -420,6 +431,7 @@ def visualize_binary_masks_comparison(
     if not np.any(reference) or not np.any(prediction):
         raise ValueError("As máscaras de comparação não podem estar vazias.")
 
+    # Define escala em milímetros ou pixels e cria a cena com câmera opcional.
     if use_physical_coords:
         dy, dx, dz = tuple(float(s) for s in spacing)
         axes_labels = ["Y (mm)", "X (mm)", "Z (mm)"]
@@ -436,6 +448,7 @@ def visualize_binary_masks_comparison(
         plot.camera_auto_fit = False
         plot.camera = list(camera)
 
+    # Constrói e adiciona as malhas de referência e predição à cena.
     _add_mask_mesh(
         plot,
         reference,
@@ -455,6 +468,7 @@ def visualize_binary_masks_comparison(
         smoothing_iterations=int(mesh_smoothing_iterations),
     )
 
+    # Exporta o HTML interativo e exibe a cena quando configurado.
     if save_html_path is not None:
         save_k3d_plot_html(plot, save_html_path)
 
@@ -463,39 +477,13 @@ def visualize_binary_masks_comparison(
     return plot
 
 
-def visualize_arteries_comparison(
-    label_mask: NDArray[Any],
-    predicted_mask: NDArray[Any],
-    spacing: Sequence[float] = (1, 1, 1),
-    use_physical_coords: bool = True,
-    save_html_path: Optional[str] = None,
-    display_plot: bool = True,
-    plot_name: str = "Artéria original vs predita",
-    label_color: int = 0x00FF00,
-    predicted_color: int = 0xFF0000,
-    label_opacity: float = 0.35,
-    predicted_opacity: float = 0.35,
-) -> Any:
-    """Renderiza a artéria de referência e a predita no mesmo gráfico 3D."""
-    return visualize_binary_masks_comparison(
-        label_mask,
-        predicted_mask,
-        spacing=spacing,
-        use_physical_coords=use_physical_coords,
-        save_html_path=save_html_path,
-        display_plot=display_plot,
-        plot_name=plot_name,
-        reference_name="Label",
-        predicted_name="Predita",
-        reference_color=label_color,
-        predicted_color=predicted_color,
-        reference_opacity=label_opacity,
-        predicted_opacity=predicted_opacity,
-    )
-
-
 def save_k3d_plot_html(plot: Any, html_path: str | Path) -> None:
-    """Salva um gráfico K3D como HTML independente."""
+    """Salva um gráfico K3D como arquivo HTML independente.
+
+    Args:
+        plot (Any): Instância ``k3d.Plot`` cujo snapshot HTML será exportado.
+        html_path (str | Path): Caminho de destino do arquivo HTML.
+    """
     output_path = Path(html_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(plot.get_snapshot(), encoding="utf-8")

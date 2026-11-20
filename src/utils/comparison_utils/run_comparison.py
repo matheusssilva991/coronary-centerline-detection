@@ -8,21 +8,27 @@ from typing import Any
 
 import pandas as pd
 
-from ..project.dataframe import require_series_column, to_numeric_series
 from utils.project.results.schema import (
+    OSTIA_SUCCESS_STATUSES,
     add_internal_result_aliases,
     normalize_ostia_status,
     summarize_results_df,
 )
+
+from ..project.dataframe import require_series_column, to_numeric_series
 from .io import load_split_results
 from .paired_statistics import adjust_holm, compare_paired_dice
 
 
-OSTIA_SUCCESS_STATUSES = frozenset({"both_correct", "both_tolerable"})
-
-
 def _as_bool_series(series: pd.Series) -> pd.Series:
-    """Converte flags persistidas sem tratar qualquer texto como verdadeiro."""
+    """Converte flags persistidas sem tratar qualquer texto como verdadeiro.
+
+    Args:
+        series (pd.Series): Série contendo booleanos ou literais textuais em CSV.
+
+    Returns:
+        pd.Series: Série booleana normalizada.
+    """
     return series.map(
         lambda value: (
             value
@@ -33,14 +39,20 @@ def _as_bool_series(series: pd.Series) -> pd.Series:
 
 
 def ostia_success_mask(results: pd.DataFrame) -> pd.Series:
-    """Retorna um booleano por exame usando a regra canônica dos óstios."""
+    """Retorna um booleano por exame usando a regra canônica dos óstios.
+
+    Args:
+        results (pd.DataFrame): Tabela de resultados por exame contendo
+            ``ostia_status`` ou as flags ``both_correct`` e ``both_tolerable``.
+
+    Returns:
+        pd.Series: Máscara booleana de sucesso na detecção de ambos os óstios.
+    """
     normalized = add_internal_result_aliases(results)
     if "ostia_status" in normalized.columns:
         status = require_series_column(normalized, "ostia_status")
         if status.notna().any():
-            return status.map(normalize_ostia_status).isin(
-                tuple(OSTIA_SUCCESS_STATUSES)
-            )
+            return status.map(normalize_ostia_status).isin(OSTIA_SUCCESS_STATUSES)
 
     if {"both_correct", "both_tolerable"}.issubset(normalized.columns):
         return _as_bool_series(
@@ -58,7 +70,23 @@ def load_validated_comparison_runs(
     valid_splits: Sequence[str] = ("train", "val", "test"),
     require_matching_ids: bool = True,
 ) -> dict[tuple[str, str], pd.DataFrame]:
-    """Carrega e valida a matriz de variantes e splits usada nas comparações."""
+    """Carrega e valida a matriz de variantes e splits usada nas comparações.
+
+    Args:
+        split_paths_by_variant (Mapping[str, Mapping[str, str | Path]]): Mapa de
+            variante e split para o diretório numérico de resultados.
+        expected_images (Mapping[str, int]): Quantidade esperada de exames por
+            split para validar completude da coorte.
+        valid_splits (Sequence[str]): Splits obrigatórios carregados para cada
+            variante.
+        require_matching_ids (bool): Se ``True``, exige conjunto idêntico de
+            ``IMG_ID`` entre variantes dentro de cada split.
+
+    Returns:
+        dict[tuple[str, str], pd.DataFrame]: Dicionário indexado por
+        ``(variante, split)`` com tabelas validadas e coluna ``ostia_success``.
+    """
+    # Carrega cada par variante/split e valida completude, IDs e faixa de Dice.
     frames: dict[tuple[str, str], pd.DataFrame] = {}
     for variant, split_paths in split_paths_by_variant.items():
         for split in valid_splits:
@@ -90,6 +118,7 @@ def load_validated_comparison_runs(
             frame["ostia_success"] = ostia_success_mask(frame)
             frames[variant, split] = frame
 
+    # Garante pareamento exato de IMG_ID entre todas as variantes de cada split.
     if require_matching_ids:
         for split in valid_splits:
             split_frames = [
@@ -114,7 +143,21 @@ def build_dice_ostia_overview(
     variant_labels: Mapping[str, str] | None = None,
     split_labels: Mapping[str, str] | None = None,
 ) -> pd.DataFrame:
-    """Monta uma linha compacta de Dice e óstios por variante e split."""
+    """Monta uma linha compacta de Dice e óstios por variante e split.
+
+    Args:
+        frames (Mapping[tuple[str, str], pd.DataFrame]): Mapa de
+            ``(variante, split)`` para DataFrames validados.
+        variant_labels (Mapping[str, str] | None): Rótulos legíveis opcionais por
+            nome de variante.
+        split_labels (Mapping[str, str] | None): Rótulos legíveis opcionais por
+            nome de split.
+
+    Returns:
+        pd.DataFrame: Tabela resumo com total de imagens, Dice médio e taxa de
+        sucesso dos óstios.
+    """
+    # Agrega métricas globais de Dice e sucesso dos óstios para cada variante e split.
     variant_names = variant_labels or {}
     split_names = split_labels or {}
     rows = []
@@ -145,7 +188,25 @@ def compare_paired_run_matrix(
     alpha: float = 0.05,
     comparison_kwargs: Mapping[str, Any] | None = None,
 ) -> pd.DataFrame:
-    """Compara pares de runs e aplica Holm à família completa de testes."""
+    """Compara pares de runs e aplica Holm à família completa de testes.
+
+    Args:
+        frames (Mapping[tuple[str, str], pd.DataFrame]): Mapa de
+            ``(variante, split)`` para DataFrames validados.
+        comparisons (Sequence[tuple[str, str]]): Pares ``(referência, candidato)``
+            a comparar em cada split.
+        valid_splits (Sequence[str]): Splits avaliados na matriz comparativa.
+        split_labels (Mapping[str, str] | None): Rótulos legíveis opcionais por
+            nome de split.
+        alpha (float): Limiar de significância aplicado aos p-valores ajustados.
+        comparison_kwargs (Mapping[str, Any] | None): Parâmetros adicionais
+            repassados para ``compare_paired_dice``.
+
+    Returns:
+        pd.DataFrame: Matriz com métricas pareadas, p-valor ajustado ``p_holm``
+        e coluna booleana ``significant``.
+    """
+    # Executa comparações pareadas de Dice para cada split e par configurado.
     split_names = split_labels or {}
     kwargs = dict(comparison_kwargs or {})
     rows = []
@@ -171,6 +232,7 @@ def compare_paired_run_matrix(
                     ),
                 }
             )
+    # Aplica ajuste de Holm-Bonferroni sobre todos os testes da matriz.
     result = pd.DataFrame(rows)
     result["p_holm"] = adjust_holm(require_series_column(result, "p_value"))
     result["significant"] = require_series_column(result, "p_holm").lt(alpha)

@@ -12,13 +12,11 @@ from external_ccta_batch_pipeline import (
     build_parser,
     run,
 )
-from utils.project.evaluation.mmwhs_aorta_evaluation import (
+from utils.project.evaluation.mmwhs_official_aorta import (
+    LEGACY_WHS_METHOD,
+    OFFICIAL_AORTA_METHOD,
     evaluate_test_aorta_result,
     official_evaluation_complete,
-)
-from utils.project.evaluation.mmwhs_official_aorta import (
-    OFFICIAL_AORTA_METHOD,
-    LEGACY_WHS_METHOD,
 )
 
 
@@ -54,9 +52,9 @@ class MmwhsOfficialAortaBatchTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "diverge"):
                 official_evaluation_complete(row, root)
 
-    @patch("utils.project.evaluation.mmwhs_aorta_evaluation.predict_aorta")
-    @patch("utils.project.evaluation.mmwhs_aorta_evaluation.validate_saved_prediction")
-    @patch("utils.project.evaluation.mmwhs_aorta_evaluation.evaluate_with_wine")
+    @patch("utils.project.evaluation.mmwhs_official_aorta.predict_aorta")
+    @patch("utils.project.evaluation.mmwhs_official_aorta.validate_saved_prediction")
+    @patch("utils.project.evaluation.mmwhs_official_aorta.evaluate_with_wine")
     def test_reuses_exported_mask_without_rebuilding(
         self, evaluate, _validate, predict
     ):
@@ -130,10 +128,10 @@ class MmwhsOfficialAortaBatchTest(unittest.TestCase):
             record = pd.Series({"exam_id": exam_id, "path": "/dataset/image.nii.gz"})
             with (
                 patch(
-                    "utils.project.evaluation.mmwhs_aorta_evaluation.validate_saved_prediction"
+                    "utils.project.evaluation.mmwhs_official_aorta.validate_saved_prediction"
                 ),
                 patch(
-                    "utils.project.evaluation.mmwhs_aorta_evaluation.evaluate_with_wine",
+                    "utils.project.evaluation.mmwhs_official_aorta.evaluate_with_wine",
                     side_effect=RuntimeError("Wine indisponível"),
                 ),
             ):

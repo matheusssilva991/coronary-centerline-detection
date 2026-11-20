@@ -7,23 +7,23 @@ from typing import Any, cast
 
 import numpy as np
 import pandas as pd
+
 from utils.project.evaluation.artery_distances import (
-    DISTANCE_RESULT_COLUMNS,
+    DISTANCE_METRIC_COLUMNS,
+    LEGACY_DISTANCE_COLUMNS,
     summarize_artery_distances,
 )
-
 from utils.project.results.columns import (
-    ARTERY_BRANCH_COLUMNS,
     CANONICAL_COLUMN_NAMES,
     OSTIA_STATUS_PORTUGUESE_LABELS,
     READABLE_BOOL_COLUMNS,
     READABLE_COLUMN_NAMES,
-    RESOURCE_COLUMNS,
     RESULT_COLUMNS,
     STATUS_LABELS,
     STATUS_PORTUGUESE_LABELS,
 )
 
+OSTIA_SUCCESS_STATUSES = frozenset({"both_correct", "both_tolerable"})
 
 OSTIA_STATUS_ALIASES: dict[str, str] = {
     "not_evaluated": "not_evaluated",
@@ -77,7 +77,14 @@ RESULT_STATUS_ALIASES: dict[str, str] = {
 
 
 def _status_key(value: Any) -> str | None:
-    """Converte um status escalar em chave snake case sem acentos."""
+    """Converte um status escalar em chave snake case sem acentos.
+
+    Args:
+        value (Any): Valor de status bruto a normalizar.
+
+    Returns:
+        str | None: Chave em minúsculas com underscores, ou ``None`` se ausente.
+    """
     if value is None or pd.isna(value):
         return None
     normalized = unicodedata.normalize("NFKD", str(value).strip().casefold())
@@ -91,19 +98,40 @@ def _status_key(value: Any) -> str | None:
 
 
 def normalize_ostia_status(value: Any) -> str | None:
-    """Normaliza status atuais e legados dos óstios para códigos em inglês."""
+    """Normaliza status atuais e legados dos óstios para códigos em inglês.
+
+    Args:
+        value (Any): Valor textual ou legado representando o status dos óstios.
+
+    Returns:
+        str | None: Código canônico em inglês dos óstios, ou ``None`` se ausente.
+    """
     key = _status_key(value)
     return None if key is None else OSTIA_STATUS_ALIASES.get(key, key)
 
 
 def normalize_result_status(value: Any) -> str | None:
-    """Normaliza status atuais e legados dos resultados para códigos em inglês."""
+    """Normaliza status atuais e legados dos resultados para códigos em inglês.
+
+    Args:
+        value (Any): Valor textual ou legado representando o status geral do exame.
+
+    Returns:
+        str | None: Código canônico em inglês do resultado, ou ``None`` se ausente.
+    """
     key = _status_key(value)
     return None if key is None else RESULT_STATUS_ALIASES.get(key, key)
 
 
 def ostia_status_label_pt(value: Any) -> str:
-    """Retorna o rótulo em português de um status dos óstios."""
+    """Retorna o rótulo em português de um status dos óstios.
+
+    Args:
+        value (Any): Código atual ou legado do status dos óstios.
+
+    Returns:
+        str: Rótulo legível em português correspondente ao status (ou ``"sem status"``).
+    """
     normalized = normalize_ostia_status(value)
     if normalized is None:
         return "sem status"
@@ -111,7 +139,14 @@ def ostia_status_label_pt(value: Any) -> str:
 
 
 def result_status_label_pt(value: Any) -> str:
-    """Retorna o rótulo em português de um status de resultado."""
+    """Retorna o rótulo em português de um status de resultado.
+
+    Args:
+        value (Any): Código atual ou legado do status do resultado.
+
+    Returns:
+        str: Rótulo legível em português correspondente ao status (ou ``"sem status"``).
+    """
     normalized = normalize_result_status(value)
     if normalized is None:
         return "sem status"
@@ -119,10 +154,28 @@ def result_status_label_pt(value: Any) -> str:
 
 
 def _readable_column_name(column: str) -> str:
+    """Retorna o nome legível associado a uma coluna interna do schema.
+
+    Args:
+        column (str): Nome interno da coluna de resultado.
+
+    Returns:
+        str: Nome legível para exportação ou o próprio nome original.
+    """
     return READABLE_COLUMN_NAMES.get(column, column)
 
 
 def _get_result_value(result: dict[str, Any], column: str, default: Any = None) -> Any:
+    """Busca o valor de uma coluna aceitando chave interna ou nome legível.
+
+    Args:
+        result (dict[str, Any]): Dicionário com os campos de resultado de um exame.
+        column (str): Nome interno da coluna procurada.
+        default (Any): Valor padrão retornado quando nenhuma das chaves existe.
+
+    Returns:
+        Any: Valor associado à coluna encontrada ou ``default``.
+    """
     if column in result:
         return result.get(column)
 
@@ -134,7 +187,14 @@ def _get_result_value(result: dict[str, Any], column: str, default: Any = None) 
 
 
 def _as_bool_value(value: Any) -> bool:
-    """Converte flags escalares atuais e legadas em booleanos."""
+    """Converte flags escalares atuais e legadas em booleanos.
+
+    Args:
+        value (Any): Valor booleano, numérico ou textual a converter.
+
+    Returns:
+        bool: Booleano equivalente para marcadores positivos em PT e EN.
+    """
     if isinstance(value, bool):
         return value
     if value is None:
@@ -149,7 +209,14 @@ def _as_bool_value(value: Any) -> bool:
 
 
 def _as_optional_float(value: Any) -> float | None:
-    """Converte um valor escalar para float, preservando ausentes como None."""
+    """Converte um valor escalar para float, preservando ausentes como None.
+
+    Args:
+        value (Any): Valor escalar bruto a converter para ponto flutuante.
+
+    Returns:
+        float | None: Número convertido ou ``None`` quando nulo, NaN ou inválido.
+    """
     if value is None:
         return None
     try:
@@ -160,11 +227,27 @@ def _as_optional_float(value: Any) -> float | None:
 
 
 def _format_bool_readable(value: Any) -> str:
+    """Formata uma flag booleana para exibição padronizada em CSV.
+
+    Args:
+        value (Any): Valor booleano ou legado a formatar.
+
+    Returns:
+        str: Texto ``"yes"`` quando verdadeiro ou ``"no"`` caso contrário.
+    """
     return "yes" if _as_bool_value(value) else "no"
 
 
 def make_readable_results_dataframe(df: pd.DataFrame) -> pd.DataFrame:
-    """Converte colunas técnicas do resultado para nomes/valores mais legíveis."""
+    """Converte colunas técnicas do resultado para nomes/valores mais legíveis.
+
+    Args:
+        df (pd.DataFrame): DataFrame com colunas internas de resultado do pipeline.
+
+    Returns:
+        pd.DataFrame: Cópia com colunas renomeadas, flags formatadas e status
+            normalizados.
+    """
     # Renomeia em uma cópia para não alterar o DataFrame usado pelo pipeline.
     readable_df = df.rename(columns=READABLE_COLUMN_NAMES).copy()
 
@@ -173,6 +256,7 @@ def make_readable_results_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     for column in READABLE_BOOL_COLUMNS.intersection(dataframe_columns):
         readable_df[column] = readable_df[column].map(_format_bool_readable)
 
+    # Garante códigos de status uniformizados após a renomeação das colunas.
     if "ostia_detection_status" in readable_df.columns:
         readable_df["ostia_detection_status"] = readable_df[
             "ostia_detection_status"
@@ -184,7 +268,14 @@ def make_readable_results_dataframe(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def select_per_image_result_columns(df: pd.DataFrame) -> pd.DataFrame:
-    """Mantém somente resultados e diagnósticos que pertencem a cada exame."""
+    """Mantém somente resultados e diagnósticos que pertencem a cada exame.
+
+    Args:
+        df (pd.DataFrame): DataFrame bruto ou legado com resultados por exame.
+
+    Returns:
+        pd.DataFrame: DataFrame projetado com apenas as colunas esperadas por imagem.
+    """
     readable_df = make_readable_results_dataframe(df)
     if "effective_upper_threshold_hu" not in readable_df.columns:
         # Runs antigos registravam o threshold efetivo como ``max_threshold_hu``.
@@ -196,7 +287,9 @@ def select_per_image_result_columns(df: pd.DataFrame) -> pd.DataFrame:
         readable_df["effective_upper_threshold_hu"] = readable_df[
             "effective_upper_threshold_hu"
         ].fillna(readable_df["max_threshold_hu"])
+    # Projeta apenas as colunas do contrato por imagem, preenchendo ausentes com None.
     result_columns = [_readable_column_name(column) for column in RESULT_COLUMNS]
+    result_columns.extend(c for c in LEGACY_DISTANCE_COLUMNS if c in readable_df)
     for column in result_columns:
         if column not in readable_df.columns:
             readable_df[column] = None
@@ -204,7 +297,16 @@ def select_per_image_result_columns(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def add_internal_result_aliases(df: pd.DataFrame) -> pd.DataFrame:
-    """Adiciona aliases internos sem remover as colunas legíveis persistidas."""
+    """Adiciona aliases internos sem remover as colunas legíveis persistidas.
+
+    Args:
+        df (pd.DataFrame): DataFrame carregado de CSV com colunas legíveis ou
+            internas.
+
+    Returns:
+        pd.DataFrame: Cópia com colunas internas populadas e status normalizados.
+    """
+    # Normaliza status existentes antes de mapear colunas para aliases internos.
     normalized_df = df.copy()
     if "ostia_detection_status" in normalized_df.columns:
         normalized_df["ostia_detection_status"] = normalized_df[
@@ -236,6 +338,16 @@ def _series_from_aliases(
     column: str,
     dtype: Any = None,
 ) -> pd.Series:
+    """Obtém uma coluna por nome interno ou alias legível, ou retorna série vazia.
+
+    Args:
+        df (pd.DataFrame): DataFrame de resultados consultado.
+        column (str): Nome interno da coluna desejada.
+        dtype (Any): Tipo padrão utilizado caso nenhuma candidata exista no DataFrame.
+
+    Returns:
+        pd.Series: Série encontrada no DataFrame ou série vazia indexada com ``dtype``.
+    """
     column_candidates = (column, _readable_column_name(column))
     for column_candidate in column_candidates:
         if column_candidate in df.columns:
@@ -244,7 +356,14 @@ def _series_from_aliases(
 
 
 def classify_result_status(result: dict[str, Any]) -> str:
-    """Classifica uma linha de resultado no rótulo textual usado nos CSVs."""
+    """Classifica uma linha de resultado no rótulo textual usado nos CSVs.
+
+    Args:
+        result (dict[str, Any]): Dicionário com desfecho dos óstios e erros.
+
+    Returns:
+        str: Rótulo de status padronizado definido em ``STATUS_LABELS``.
+    """
     if result.get("ostia_status") == "not_found":
         return STATUS_LABELS["not_found"]
     if result.get("both_correct", False):
@@ -258,8 +377,46 @@ def classify_result_status(result: dict[str, Any]) -> str:
     return STATUS_LABELS["none_correct"]
 
 
+_EXTRA_RESULT_ROW_COLUMNS: tuple[str, ...] = (
+    "artery_segmentation_method",
+    "threshold_mode",
+    "fuzzy_mask_strategy",
+    "min_threshold",
+    "max_threshold",
+    "lower_threshold_method",
+    "lower_threshold_percentile",
+    "aorta_circle_filter_method",
+)
+_ROW_BOOL_COLUMNS: frozenset[str] = frozenset(
+    {
+        "aorta_circle_filter_applied",
+        "ostia_found",
+        "segmentation_attempted",
+        "proceeded_with_bad_ostia",
+        "both_correct",
+        "both_tolerable",
+        "left_intersects",
+        "right_intersects",
+    }
+)
+_ROW_DEFAULTS: dict[str, Any] = {
+    "artery_segmentation_method": "region_growing",
+    "aorta_circle_filter_method": "none",
+    "aorta_circle_filter_synthetic_tail_count": 0,
+    "aorta_circle_filter_trimmed_tail_count": 0,
+    "aorta_segmentation_feedback": "insufficient_data",
+}
+
+
 def build_result_row(result: dict[str, Any]) -> dict[str, Any]:
-    """Converte um resultado bruto do pipeline em uma linha CSV padronizada."""
+    """Converte um resultado bruto do pipeline em uma linha CSV padronizada.
+
+    Args:
+        result (dict[str, Any]): Dicionário bruto produzido pelo pipeline para um exame.
+
+    Returns:
+        dict[str, Any]: Linha normalizada contendo todas as colunas previstas no schema.
+    """
     effective_upper_threshold_hu = _get_result_value(
         result, "effective_upper_threshold_hu"
     )
@@ -267,250 +424,19 @@ def build_result_row(result: dict[str, Any]) -> dict[str, Any]:
         # Permite retomar runs normais antigos que salvavam apenas max_threshold_hu.
         effective_upper_threshold_hu = _get_result_value(result, "max_threshold")
 
-    row = {
-        # Métricas e diagnósticos da segmentação arterial.
-        "IMG_ID": result.get("IMG_ID"),
-        **{column: _get_result_value(result, column) for column in RESOURCE_COLUMNS},
-        **{
-            column: _get_result_value(result, column)
-            for column in DISTANCE_RESULT_COLUMNS
-        },
-        "dice_artery": _get_result_value(result, "dice_artery"),
-        "dice_artery_before_morphology": _get_result_value(
-            result, "dice_artery_before_morphology"
-        ),
-        "dice_artery_after_morphology": _get_result_value(
-            result, "dice_artery_after_morphology"
-        ),
-        "dice_artery_after_closing": _get_result_value(
-            result, "dice_artery_after_closing"
-        ),
-        "dice_artery_closing_delta": _get_result_value(
-            result, "dice_artery_closing_delta"
-        ),
-        "dice_artery_dilation_delta": _get_result_value(
-            result, "dice_artery_dilation_delta"
-        ),
-        "dice_artery_morphology_delta": _get_result_value(
-            result, "dice_artery_morphology_delta"
-        ),
-        "artery_voxels": _get_result_value(result, "artery_voxels"),
-        "artery_voxels_before_morphology": _get_result_value(
-            result, "artery_voxels_before_morphology"
-        ),
-        "artery_voxels_after_morphology": _get_result_value(
-            result, "artery_voxels_after_morphology"
-        ),
-        "artery_voxels_after_closing": _get_result_value(
-            result, "artery_voxels_after_closing"
-        ),
-        "artery_segmentation_method": _get_result_value(
-            result, "artery_segmentation_method", "region_growing"
-        ),
-        **{
-            column: _get_result_value(result, column)
-            for column in ARTERY_BRANCH_COLUMNS
-        },
-        "fc_processed_voxels": _get_result_value(result, "fc_processed_voxels"),
-        "fc_effective_alpha": _get_result_value(result, "fc_effective_alpha"),
-        "fc_object_seed_count": _get_result_value(result, "fc_object_seed_count"),
-        "fc_candidate_voxels_final": _get_result_value(
-            result, "fc_candidate_voxels_final"
-        ),
-        # Parâmetros efetivos e volumes intermediários do pré-processamento.
-        "threshold_mode": _get_result_value(result, "threshold_mode"),
-        "fuzzy_mask_strategy": _get_result_value(result, "fuzzy_mask_strategy"),
-        "min_threshold": _get_result_value(result, "min_threshold"),
-        "max_threshold": _get_result_value(result, "max_threshold"),
-        "effective_upper_threshold_hu": effective_upper_threshold_hu,
-        "lower_threshold_method": _get_result_value(result, "lower_threshold_method"),
-        "lower_threshold_percentile": _get_result_value(
-            result, "lower_threshold_percentile"
-        ),
-        "threshold_voxels": _get_result_value(result, "threshold_voxels"),
-        "lcc_voxels": _get_result_value(result, "lcc_voxels"),
-        "image_slice_count": _get_result_value(result, "image_slice_count"),
-        "image_voxels": _get_result_value(result, "image_voxels"),
-        "aorta_circle_count": _get_result_value(result, "aorta_circle_count"),
-        "aorta_detected_circle_count": _get_result_value(
-            result, "aorta_detected_circle_count"
-        ),
-        "aorta_interpolated_circle_count": _get_result_value(
-            result, "aorta_interpolated_circle_count"
-        ),
-        "aorta_circle_first_slice": _get_result_value(
-            result, "aorta_circle_first_slice"
-        ),
-        "aorta_circle_last_slice": _get_result_value(result, "aorta_circle_last_slice"),
-        "aorta_circle_coverage": _get_result_value(result, "aorta_circle_coverage"),
-        "aorta_circle_radius_min_px": _get_result_value(
-            result, "aorta_circle_radius_min_px"
-        ),
-        "aorta_circle_radius_max_px": _get_result_value(
-            result, "aorta_circle_radius_max_px"
-        ),
-        "aorta_circle_radius_mean_px": _get_result_value(
-            result, "aorta_circle_radius_mean_px"
-        ),
-        "aorta_circle_radius_median_px": _get_result_value(
-            result, "aorta_circle_radius_median_px"
-        ),
-        "aorta_circle_radius_std_px": _get_result_value(
-            result, "aorta_circle_radius_std_px"
-        ),
-        "aorta_circle_radius_p10_px": _get_result_value(
-            result, "aorta_circle_radius_p10_px"
-        ),
-        "aorta_circle_radius_p90_px": _get_result_value(
-            result, "aorta_circle_radius_p90_px"
-        ),
-        "aorta_circle_radius_min_mm": _get_result_value(
-            result, "aorta_circle_radius_min_mm"
-        ),
-        "aorta_circle_radius_max_mm": _get_result_value(
-            result, "aorta_circle_radius_max_mm"
-        ),
-        "aorta_circle_radius_mean_mm": _get_result_value(
-            result, "aorta_circle_radius_mean_mm"
-        ),
-        "aorta_circle_radius_median_mm": _get_result_value(
-            result, "aorta_circle_radius_median_mm"
-        ),
-        "aorta_circle_radius_std_mm": _get_result_value(
-            result, "aorta_circle_radius_std_mm"
-        ),
-        "aorta_circle_radius_p10_mm": _get_result_value(
-            result, "aorta_circle_radius_p10_mm"
-        ),
-        "aorta_circle_radius_p90_mm": _get_result_value(
-            result, "aorta_circle_radius_p90_mm"
-        ),
-        "aorta_detected_circle_radius_median_mm": _get_result_value(
-            result, "aorta_detected_circle_radius_median_mm"
-        ),
-        "aorta_interpolated_circle_radius_median_mm": _get_result_value(
-            result, "aorta_interpolated_circle_radius_median_mm"
-        ),
-        "aorta_circle_radius_first_mm": _get_result_value(
-            result, "aorta_circle_radius_first_mm"
-        ),
-        "aorta_circle_radius_last_mm": _get_result_value(
-            result, "aorta_circle_radius_last_mm"
-        ),
-        "aorta_circle_radius_max_step_change_mm": _get_result_value(
-            result, "aorta_circle_radius_max_step_change_mm"
-        ),
-        "aorta_circle_radius_p90_step_change_mm": _get_result_value(
-            result, "aorta_circle_radius_p90_step_change_mm"
-        ),
-        "aorta_circle_mean_hough_accumulator": _get_result_value(
-            result, "aorta_circle_mean_hough_accumulator"
-        ),
-        "aorta_circle_lower_radius_bound_fraction": _get_result_value(
-            result, "aorta_circle_lower_radius_bound_fraction"
-        ),
-        "aorta_circle_upper_radius_bound_fraction": _get_result_value(
-            result, "aorta_circle_upper_radius_bound_fraction"
-        ),
-        "aorta_circle_filter_method": _get_result_value(
-            result, "aorta_circle_filter_method", "none"
-        ),
-        "aorta_circle_filter_applied": _as_bool_value(
-            _get_result_value(result, "aorta_circle_filter_applied", False)
-        ),
-        "aorta_circle_original_count": _get_result_value(
-            result, "aorta_circle_original_count"
-        ),
-        "aorta_circle_used_count": _get_result_value(result, "aorta_circle_used_count"),
-        "aorta_circle_filter_synthetic_tail_count": _get_result_value(
-            result, "aorta_circle_filter_synthetic_tail_count", 0
-        ),
-        "aorta_circle_filter_trimmed_tail_count": _get_result_value(
-            result, "aorta_circle_filter_trimmed_tail_count", 0
-        ),
-        "aorta_circle_filter_trim_start_slice": _get_result_value(
-            result, "aorta_circle_filter_trim_start_slice"
-        ),
-        "aorta_circle_filter_detected_tail_start_slice": _get_result_value(
-            result, "aorta_circle_filter_detected_tail_start_slice"
-        ),
-        "aorta_circle_filter_original_coverage": _get_result_value(
-            result, "aorta_circle_filter_original_coverage"
-        ),
-        "aorta_circle_filter_used_coverage": _get_result_value(
-            result, "aorta_circle_filter_used_coverage"
-        ),
-        "aorta_circle_filter_reason": _get_result_value(
-            result, "aorta_circle_filter_reason"
-        ),
-        "aorta_mask_voxels": _get_result_value(result, "aorta_mask_voxels"),
-        "aorta_segmented_slice_count": _get_result_value(
-            result, "aorta_segmented_slice_count"
-        ),
-        "aorta_voxels_per_segmented_slice": _get_result_value(
-            result, "aorta_voxels_per_segmented_slice"
-        ),
-        "aorta_volume_fraction": _get_result_value(result, "aorta_volume_fraction"),
-        "aorta_level_set_initial_voxel_count": _get_result_value(
-            result, "aorta_level_set_initial_voxel_count"
-        ),
-        "aorta_level_set_raw_voxel_count": _get_result_value(
-            result, "aorta_level_set_raw_voxel_count"
-        ),
-        "aorta_level_set_initial_volume_fraction": _get_result_value(
-            result, "aorta_level_set_initial_volume_fraction"
-        ),
-        "aorta_level_set_raw_volume_fraction": _get_result_value(
-            result, "aorta_level_set_raw_volume_fraction"
-        ),
-        "aorta_level_set_iterations_used": _get_result_value(
-            result, "aorta_level_set_iterations_used"
-        ),
-        "aorta_level_set_circle_fill_q25": _get_result_value(
-            result, "aorta_level_set_circle_fill_q25"
-        ),
-        "aorta_level_set_circle_area_ratio_p90": _get_result_value(
-            result, "aorta_level_set_circle_area_ratio_p90"
-        ),
-        "aorta_slice_area_jump_p95": _get_result_value(
-            result, "aorta_slice_area_jump_p95"
-        ),
-        "aorta_segmentation_feedback": _get_result_value(
-            result,
-            "aorta_segmentation_feedback",
-            "insufficient_data",
-        ),
-        # Resultado da localização e validação dos óstios.
-        "ostia_found": _as_bool_value(_get_result_value(result, "ostia_found", False)),
-        "ostia_status": normalize_ostia_status(
-            _get_result_value(result, "ostia_status")
-        ),
-        "segmentation_attempted": _as_bool_value(
-            _get_result_value(result, "segmentation_attempted", False)
-        ),
-        "proceeded_with_bad_ostia": _as_bool_value(
-            _get_result_value(result, "proceeded_with_bad_ostia", False)
-        ),
-        "skip_reason": _get_result_value(result, "skip_reason"),
-        "ostia_error": _get_result_value(result, "ostia_error"),
-        "both_correct": _as_bool_value(
-            _get_result_value(result, "both_correct", False)
-        ),
-        "both_tolerable": _as_bool_value(
-            _get_result_value(result, "both_tolerable", False)
-        ),
-        "left_intersects": _as_bool_value(
-            _get_result_value(result, "left_intersects", False)
-        ),
-        "right_intersects": _as_bool_value(
-            _get_result_value(result, "right_intersects", False)
-        ),
-        "left_dist_mm": _get_result_value(result, "left_dist_mm"),
-        "right_dist_mm": _get_result_value(result, "right_dist_mm"),
-        "ostia_left": _get_result_value(result, "ostia_left"),
-        "ostia_right": _get_result_value(result, "ostia_right"),
-        "error": _get_result_value(result, "error", None),
-    }
+    # Preenche cada coluna do schema normalizando flags booleanas, status e defaults.
+    row: dict[str, Any] = {"IMG_ID": result.get("IMG_ID")}
+    for column in (*RESULT_COLUMNS, *_EXTRA_RESULT_ROW_COLUMNS):
+        if column in {"IMG_ID", "status"}:
+            continue
+        if column == "effective_upper_threshold_hu":
+            row[column] = effective_upper_threshold_hu
+        elif column in _ROW_BOOL_COLUMNS:
+            row[column] = _as_bool_value(_get_result_value(result, column, False))
+        elif column == "ostia_status":
+            row[column] = normalize_ostia_status(_get_result_value(result, column))
+        else:
+            row[column] = _get_result_value(result, column, _ROW_DEFAULTS.get(column))
     row["status"] = normalize_result_status(
         result.get("status") or classify_result_status(row)
     )
@@ -518,64 +444,60 @@ def build_result_row(result: dict[str, Any]) -> dict[str, Any]:
 
 
 def make_result_dataframe(results: list[dict[str, Any]]) -> pd.DataFrame:
-    """Converte lista de resultados em DataFrame formatado."""
+    """Converte lista de resultados em DataFrame formatado.
+
+    Args:
+        results (list[dict[str, Any]]): Lista de resultados individuais brutos.
+
+    Returns:
+        pd.DataFrame: DataFrame estruturado com colunas canônicas e históricas.
+    """
     rows = [build_result_row(result) for result in results]
-    return pd.DataFrame(rows, columns=RESULT_COLUMNS)
-
-
-def add_config_columns(df: pd.DataFrame, config: dict[str, Any]) -> pd.DataFrame:
-    """Adiciona ao DataFrame as colunas de configuração salvas no CSV."""
-    df = df.copy()
-    # Registra opções que ajudam a reproduzir e comparar execuções futuras.
-    circle_config = config.get("CIRCLE_DETECTION", {})
-    level_set_config = config.get("LEVEL_SET", {})
-    df["downscale_method"] = config.get("DOWNSCALE_METHOD", "N/A")
-    df["opencv_interpolation"] = (
-        config.get("OPENCV_INTERPOLATION", "N/A")
-        if config.get("DOWNSCALE_METHOD") == "opencv"
-        else "N/A"
-    )
-    df["downscale_factors"] = str(config.get("DOWNSCALE_FACTORS", "N/A"))
-    df["max_threshold_percentile"] = config.get("MAX_THRESHOLD_PERCENTILE", "N/A")
-    thresholding_config = config.get("THRESHOLDING", {})
-    df["threshold_mode"] = thresholding_config.get("method", "normal")
-    df["lcc_per_slice"] = True
-    df["lcc_mode"] = "per_slice"
-    df["aorta_miss_count"] = circle_config.get("max_slice_miss_threshold", "N/A")
-    df["configured_aorta_hough_radii_start_px"] = circle_config.get(
-        "radii_start_px",
-        "N/A",
-    )
-    df["configured_aorta_hough_radii_end_px"] = circle_config.get(
-        "radii_end_px",
-        "N/A",
-    )
-    df["aorta_interpolate_missed_circles"] = circle_config.get(
-        "interpolate_missed_circles", "N/A"
-    )
-    df["aorta_trajectory_radius_factor"] = level_set_config.get(
-        "trajectory_radius_factor"
-    )
-    df["aorta_trajectory_axial_margin_slices"] = level_set_config.get(
-        "trajectory_axial_margin_slices", 0
-    )
-    df["aorta_opening_radius"] = level_set_config.get("leak_removal_radius", 0)
-    return df
+    historical = [
+        c for c in LEGACY_DISTANCE_COLUMNS if any(c in row for row in results)
+    ]
+    for row, original in zip(rows, results):
+        row.update({c: original.get(c) for c in historical})
+    return pd.DataFrame(rows, columns=[*RESULT_COLUMNS, *historical])
 
 
 def _bool_series(df: pd.DataFrame, column: str) -> pd.Series:
+    """Obtém uma coluna booleana por alias e converte seus valores.
+
+    Args:
+        df (pd.DataFrame): DataFrame com resultados por exame.
+        column (str): Nome interno da coluna booleana buscada.
+
+    Returns:
+        pd.Series: Série com valores booleanos convertidos.
+    """
     series = _series_from_aliases(df, column, dtype=bool)
     return series.map(_as_bool_value)
 
 
 def _numeric_series(df: pd.DataFrame, column: str) -> pd.Series:
-    """Converte uma coluna e seus aliases em uma Series numérica anulável."""
+    """Converte uma coluna e seus aliases em uma Series numérica anulável.
+
+    Args:
+        df (pd.DataFrame): DataFrame com resultados por exame.
+        column (str): Nome interno da coluna numérica buscada.
+
+    Returns:
+        pd.Series: Série numérica com ausentes ou inválidos convertidos em ``NaN``.
+    """
     series = _series_from_aliases(df, column, dtype=float)
     return series.map(_as_optional_float)
 
 
 def _scalar_float(value: Any) -> float:
-    """Converte uma redução numérica do pandas em float escalar."""
+    """Converte uma redução numérica do pandas em float escalar.
+
+    Args:
+        value (Any): Resultado escalar de agregação numérica (pandas ou NumPy).
+
+    Returns:
+        float: Valor convertido para ``float`` nativo.
+    """
     array = np.asarray(value)
     if array.ndim != 0:
         raise ValueError("Era esperado um valor numérico escalar.")
@@ -588,7 +510,18 @@ def _numeric_stats(
     *,
     include_sum: bool = False,
 ) -> dict[str, Any]:
-    """Calcula estatísticas estáveis para uma medição opcional por exame."""
+    """Calcula estatísticas estáveis para uma medição opcional por exame.
+
+    Args:
+        df (pd.DataFrame): DataFrame com resultados por exame.
+        column (str): Nome interno da coluna numérica a sumarizar.
+        include_sum (bool): Se ``True``, inclui o somatório total (``<prefix>_sum``).
+
+    Returns:
+        dict[str, Any]: Dicionário prefixado com contagem, média, desvio, mediana,
+            quartis e extremos.
+    """
+    # Filtra observações válidas e devolve estatísticas nulas se não houver medições.
     values = _numeric_series(df, column).dropna()
     prefix = _readable_column_name(column)
     stats: dict[str, Any] = {f"{prefix}_count": int(len(values))}
@@ -599,6 +532,7 @@ def _numeric_stats(
             stats[f"{prefix}_sum"] = None
         return stats
 
+    # Calcula tendência central, dispersão, quartis e soma opcional para a coorte.
     stats.update(
         {
             f"{prefix}_mean": _scalar_float(values.mean()),
@@ -616,7 +550,14 @@ def _numeric_stats(
 
 
 def summarize_results_df(df: pd.DataFrame) -> dict[str, Any]:
-    """Calcula contagens e métricas agregadas de um DataFrame de resultados."""
+    """Calcula contagens e métricas agregadas de um DataFrame de resultados.
+
+    Args:
+        df (pd.DataFrame): DataFrame consolidado com resultados dos exames.
+
+    Returns:
+        dict[str, Any]: Dicionário com contagens, percentuais, distâncias e Dice.
+    """
     # Resolve aliases primeiro para aceitar tanto CSVs legíveis quanto internos.
     both_correct_series = _bool_series(df, "both_correct")
     both_tolerable_series = _bool_series(df, "both_tolerable")
@@ -727,7 +668,10 @@ def summarize_results_df(df: pd.DataFrame) -> dict[str, Any]:
         summary[f"{column}_mean"] = float(values.mean()) if len(values) else None
 
     distances = summarize_artery_distances(df)
-    for column in ("artery_hd_mm", "artery_ahd_mm"):
+    for column in (
+        *DISTANCE_METRIC_COLUMNS,
+        *(c for c in LEGACY_DISTANCE_COLUMNS if c in df),
+    ):
         summary.update(
             {f"{column}_{key}": value for key, value in distances[column].items()}
         )

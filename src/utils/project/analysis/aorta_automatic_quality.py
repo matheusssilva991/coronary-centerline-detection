@@ -1,23 +1,23 @@
 """Carrega e compara diagnósticos persistidos da aorta entre bancos e coortes."""
 
+import json
 from collections.abc import Sequence
 from dataclasses import dataclass
-import json
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
-from utils.project.analysis.external_aorta_assessment import (
+from utils.project.analysis.external_visual_assessment import (
     AORTA_FEEDBACK_LABELS,
     AORTA_FEEDBACK_ORDER,
 )
-from utils.project.evaluation.mmwhs_protocol import (
+from utils.project.evaluation.mmwhs_official_aorta import (
     LEGACY_WHS_METHOD,
     OFFICIAL_AORTA_METHOD,
 )
-from utils.project.runtime.notebook_env import get_default_split_paths
 from utils.project.results.schema import normalize_ostia_status
+from utils.project.runtime.notebook_env import get_default_split_paths
 
 IMAGECAS_AORTA_GROUPS = ("Adequada", "Com alertas", "Indeterminada")
 OSTIA_OUTCOMES = {
@@ -68,7 +68,18 @@ def default_aorta_feedback_sources(
 
     Uma raiz externa explícita mantém a seleção dos runs externos corrigidos,
     sem recorrer aos locais se o arquivo solicitado estiver ausente.
+
+    Args:
+        repo_root (Path): Diretório raiz do repositório para localizar resultados
+            canônicos do ImageCAS.
+        external_root (Path | None): Diretório raiz opcional com runs externos
+            corrigidos; ``None`` usa os runs locais em ``output/segmentation/runs``.
+
+    Returns:
+        list[AortaFeedbackSource]: Fontes configuradas para ImageCAS, MM-WHS e
+            OrCaScore por resolução e split.
     """
+    # Mapeia os splits canônicos do ImageCAS usando os tamanhos fixos de referência.
     canonical = get_default_split_paths(repo_root)
     splits = json.loads((repo_root / "config/imagecas_splits.json").read_text())[
         "splits"
@@ -87,6 +98,8 @@ def default_aorta_feedback_sources(
                     len(splits[subset]),
                 )
             )
+
+    # Seleciona caminhos dos runs externos corrigidos ou recorre aos locais padrão.
     external_runs = {
         ("MM-WHS", "mid"): "mmwhs/mid_res/2026-10-06_07-53-03",
         ("MM-WHS", "high"): "mmwhs/high_res/2026-10-06_08-33-19",
@@ -104,6 +117,8 @@ def default_aorta_feedback_sources(
                 "high",
             ): "high_res/external_ccta/orcascore/2026-09-22_19-12-41",
         }
+
+    # Registra os runs externos por split, marcando validação como não aplicável.
     for (dataset, resolution), run in external_runs.items():
         for subset in ("train", "val", "test"):
             expected = (20 if dataset == "MM-WHS" else 32) if subset == "train" else 40
@@ -129,12 +144,21 @@ def load_aorta_feedback_sources(
     """Normaliza CSVs ImageCAS/externos e informa a cobertura de cada fonte.
 
     Coluna ausente difere de feedback vazio por exame. Somente o segundo recebe
-    o rótulo 'Sem feedback'; nenhum diagnóstico é recalculado nesta análise.
+    o rótulo ``'Sem feedback'``; nenhum diagnóstico é recalculado nesta análise.
+
+    Args:
+        sources (Sequence[AortaFeedbackSource]): Sequência de fontes de coortes a
+            validar e carregar.
+
+    Returns:
+        tuple[pd.DataFrame, pd.DataFrame]: Par ``(records, coverage)`` com os exames
+            padronizados e o resumo de cobertura por coorte.
     """
     frames = []
     coverage = []
     identities = set()
     for source in sources:
+        # Impede coortes repetidas e resolve o run original pelo manifesto quando existe.
         group = dict(
             zip(
                 GROUP_COLUMNS,
@@ -155,6 +179,8 @@ def load_aorta_feedback_sources(
                 source_run = str(
                     json.loads(manifest.read_text()).get("source_run", run_dir)
                 )
+
+        # Inicializa o registro de cobertura com status padrão antes da leitura do CSV.
         row = {
             **group,
             "source_path": str(source.path) if source.path is not None else "",
@@ -166,6 +192,7 @@ def load_aorta_feedback_sources(
             "status": "Não se aplica" if not source.applicable else "Arquivo ausente",
         }
         if source.applicable and source.path is not None and source.path.is_file():
+            # Lê o CSV e valida coluna de ID, banco, subconjunto e unicidade.
             raw = pd.read_csv(source.path, dtype="string")
             id_column = "IMG_ID" if source.dataset == "ImageCAS" else "exam_id"
             if id_column not in raw:
@@ -185,6 +212,8 @@ def load_aorta_feedback_sources(
             ids = raw[id_column].str.strip()
             if ids.isna().any() or ids.eq("").any() or ids.duplicated().any():
                 raise ValueError(f"{source.path}: IDs ausentes ou duplicados")
+
+            # Distingue coluna de diagnóstico ausente de feedback vazio por exame.
             available = "aorta_segmentation_feedback" in raw
             feedback = (
                 raw["aorta_segmentation_feedback"].str.strip().replace("", pd.NA)
@@ -196,6 +225,8 @@ def load_aorta_feedback_sources(
                 raise ValueError(
                     f"{source.path}: feedback desconhecido: {sorted(unknown)}"
                 )
+
+            # Constrói o quadro normalizado anexando metadados e desfechos extras.
             frame = pd.DataFrame(
                 {"image_id": ids, "aorta_segmentation_feedback": feedback}
             )
@@ -222,6 +253,8 @@ def load_aorta_feedback_sources(
                     else values
                 )
             frames.append(frame.loc[:, RECORD_COLUMNS])
+
+            # Atualiza cobertura observada e confere excedente frente ao esperado.
             row.update(
                 exam_count=len(raw),
                 with_feedback=int(feedback.notna().sum()) if available else pd.NA,
@@ -238,6 +271,8 @@ def load_aorta_feedback_sources(
                     raise ValueError(f"{source.path}: coorte excede o tamanho esperado")
                 row["missing_count"] = source.expected_count - len(raw)
         coverage.append(row)
+
+    # Consolida registros individuais e tabela final de cobertura.
     records = (
         pd.concat(frames, ignore_index=True)
         if frames
@@ -259,7 +294,16 @@ def load_aorta_feedback_sources(
 
 
 def summarize_imagecas_aorta_ostia(records: pd.DataFrame) -> pd.DataFrame:
-    """Cruza diagnóstico e status salvo dos óstios, incluindo não avaliados."""
+    """Cruza diagnóstico e status salvo dos óstios, incluindo não avaliados.
+
+    Args:
+        records (pd.DataFrame): Tabela consolidada de registros das fontes.
+
+    Returns:
+        pd.DataFrame: Tabela cruzada entre grupos de feedback da aorta e desfechos
+            dos óstios com contagens e percentuais.
+    """
+    # Filtra ImageCAS e consolida os diagnósticos da aorta nos três grupos analíticos.
     imagecas = records.loc[records["dataset"].eq("ImageCAS")].copy()
     imagecas["aorta_group"] = (
         imagecas["aorta_segmentation_feedback"]
@@ -272,6 +316,8 @@ def summarize_imagecas_aorta_ostia(records: pd.DataFrame) -> pd.DataFrame:
         )
         .fillna("Indeterminada")
     )
+
+    # Normaliza status de óstios e converte erros ou ausências para not_evaluated.
     statuses = imagecas["ostia_status"].map(normalize_ostia_status)
     unknown = set(statuses.dropna()) - set(OSTIA_OUTCOMES) - {"error", "pipeline_error"}
     if unknown:
@@ -279,6 +325,8 @@ def summarize_imagecas_aorta_ostia(records: pd.DataFrame) -> pd.DataFrame:
     imagecas["ostia_status"] = statuses.where(statuses.isin(OSTIA_OUTCOMES)).fillna(
         "not_evaluated"
     )
+
+    # Tabula contagens por desfecho, soma aceitos e calcula percentuais por grupo.
     rows = []
     for key, cohort in imagecas.groupby(GROUP_COLUMNS, sort=False):
         for aorta_group in IMAGECAS_AORTA_GROUPS:
@@ -316,7 +364,16 @@ def compare_mmwhs_aorta_dice(
 
     Retorna casos com elegibilidade, resumo por feedback e cobertura por coorte.
     A ausência de Dice nunca vira zero. O corte é inclusivo e exploratório.
+
+    Args:
+        records (pd.DataFrame): Registros consolidados das coortes carregadas.
+        threshold (float): Limiar inclusivo exploratório de Dice entre ``0`` e ``1``.
+
+    Returns:
+        tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]: Tupla ``(cases, summary,
+            coverage)`` com casos elegíveis, estatísticas por feedback e cobertura.
     """
+    # Valida o corte de Dice e prepara os casos MM-WHS de treino e teste.
     if not np.isfinite(threshold) or not 0 <= threshold <= 1:
         raise ValueError("O corte de Dice deve estar entre 0 e 1.")
     cases = records.loc[
@@ -327,6 +384,8 @@ def compare_mmwhs_aorta_dice(
     cases["aorta_dice"] = dice
     cases["dice_eligible"] = False
     coverage = []
+
+    # Aplica regras distintas entre treino e teste oficial, bloqueando protocolo legado.
     for key, group in cases.groupby(GROUP_COLUMNS, sort=False):
         if group["subset"].iloc[0] == "train":
             evaluated = (
@@ -360,6 +419,8 @@ def compare_mmwhs_aorta_dice(
                 if corrected
                 else "Indisponível: protocolo de teste não corrigido ou misturado"
             )
+
+        # Marca elegibilidade por caso e consolida o status de cobertura da coorte.
         cases.loc[group.index, "dice_eligible"] = eligible
         valid_count = int(eligible.sum())
         if status == "Disponível" and valid_count != len(group):
@@ -375,6 +436,8 @@ def compare_mmwhs_aorta_dice(
                 "source_path": group["source_path"].iloc[0],
             }
         )
+
+    # Resume mediana e proporções acima/abaixo do limiar por categoria de feedback.
     rows = []
     for key, group in cases.groupby([*GROUP_COLUMNS, "feedback"], sort=False):
         valid = group.loc[group["dice_eligible"], "aorta_dice"]
@@ -426,9 +489,20 @@ def compare_mmwhs_aorta_dice(
 
 
 def summarize_aorta_feedback(records: pd.DataFrame) -> pd.DataFrame:
-    """Conta categorias por coorte, incluindo feedback vazio no denominador."""
+    """Conta categorias por coorte, incluindo feedback vazio no denominador.
+
+    Args:
+        records (pd.DataFrame): Registros individuais com coluna ``diagnostic_available``
+            e ``feedback``.
+
+    Returns:
+        pd.DataFrame: Contagens absolutas e percentuais por coorte e status.
+    """
+    # Considera apenas fontes em que a coluna de diagnóstico foi persistida.
     rows = []
     available = records.loc[records["diagnostic_available"].eq(True)]
+
+    # Tabula todas as categorias na ordem oficial preservando vazios no total.
     for key, frame in available.groupby(GROUP_COLUMNS, sort=False):
         counts = frame["feedback"].value_counts()
         for status in AORTA_FEEDBACK_ORDER:
@@ -454,9 +528,19 @@ def summarize_aorta_feedback_comparison(
 
     Fontes sem coluna de diagnóstico não entram no agregado. O Geral fica
     parcial quando algum banco aplicável não contribui; registros com feedback
-    vazio continuam no denominador como 'Sem feedback'. Exames ausentes do CSV
+    vazio continuam no denominador como ``'Sem feedback'``. Exames ausentes do CSV
     são descritos separadamente pela contagem esperada.
+
+    Args:
+        records (pd.DataFrame): Registros individuais carregados das fontes.
+        coverage (pd.DataFrame): Tabela de cobertura retornada por
+            ``load_aorta_feedback_sources``.
+
+    Returns:
+        tuple[pd.DataFrame, pd.DataFrame]: Par ``(comparison, compared_coverage)``
+            acrescido das linhas do agregado ``Geral``.
     """
+    # Garante ausência de coortes duplicadas, agregados prévios ou fontes sem cobertura.
     if coverage.duplicated(GROUP_COLUMNS).any():
         raise ValueError("Coortes duplicadas na cobertura.")
     if coverage["dataset"].eq("Geral").any() or records["dataset"].eq("Geral").any():
@@ -466,6 +550,8 @@ def summarize_aorta_feedback_comparison(
     known = set(map(tuple, coverage[GROUP_COLUMNS].to_numpy()))
     if not set(map(tuple, totals[GROUP_COLUMNS].to_numpy())).issubset(known):
         raise ValueError("Há diagnósticos sem identificação na cobertura.")
+
+    # Agrega apenas coortes aplicáveis dentro da mesma referência, resolução e split.
     aggregate_rows = []
     aggregate_coverage = []
     keys = ["reference", "resolution", "subset"]
@@ -482,6 +568,8 @@ def summarize_aorta_feedback_comparison(
         available = total > 0
         complete = available and set(included) == set(applicable["dataset"])
         expected = applicable["expected_count"]
+
+        # Registra cobertura do agregado Geral distinguindo status parcial e completo.
         aggregate_coverage.append(
             {
                 **group,
@@ -517,6 +605,8 @@ def summarize_aorta_feedback_comparison(
                         "percent": 100 * count / total,
                     }
                 )
+
+    # Anexa linhas agregadas aos resumos individuais mantendo a ordem de colunas.
     comparison = pd.concat(
         [summary, pd.DataFrame(aggregate_rows, columns=summary.columns)],
         ignore_index=True,
@@ -530,10 +620,19 @@ def summarize_aorta_feedback_comparison(
 def compare_aorta_resolutions(
     records: pd.DataFrame,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Pareia IDs por coorte e expõe exames exclusivos de cada resolução."""
+    """Pareia IDs por coorte e expõe exames exclusivos de cada resolução.
+
+    Args:
+        records (pd.DataFrame): Registros individuais com a coluna ``resolution``.
+
+    Returns:
+        tuple[pd.DataFrame, pd.DataFrame]: Par ``(paired, coverage)`` contendo casos
+            pareados entre ``mid`` e ``high`` e lista de IDs exclusivos.
+    """
     paired_frames = []
     coverage = []
     for key, frame in records.groupby(["reference", "dataset", "subset"], sort=False):
+        # Separa os lados mid e high exigindo unicidade de image_id em cada resolução.
         group = dict(zip(["reference", "dataset", "subset"], key, strict=True))
         sides = []
         for resolution in ("mid", "high"):
@@ -541,6 +640,8 @@ def compare_aorta_resolutions(
             if side["image_id"].duplicated().any():
                 raise ValueError(f"IDs duplicados no pareamento: {key}, {resolution}")
             sides.append(side.set_index("image_id"))
+
+        # Identifica interseção e IDs exclusivos de cada resolução para a cobertura.
         mid, high = sides
         common = mid.index.intersection(high.index)
         coverage.append(
@@ -557,6 +658,8 @@ def compare_aorta_resolutions(
                 ),
             }
         )
+
+        # Constrói o DataFrame pareado com feedback e disponibilidade nas duas resoluções.
         paired = (
             pd.DataFrame(
                 {

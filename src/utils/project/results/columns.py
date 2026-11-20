@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from utils.project.runtime.resource_monitor import RESOURCE_COLUMNS
 from utils.project.evaluation.artery_distances import DISTANCE_RESULT_COLUMNS
+from utils.project.runtime.resource_monitor import RESOURCE_COLUMNS
 
 ARTERY_BRANCH_COLUMNS = [
     "artery_left_raw_voxels",
@@ -105,8 +105,7 @@ RESULT_COLUMNS: list[str] = [
     "status",
 ]
 
-READABLE_COLUMN_NAMES: dict[str, str] = {
-    **{column: column for column in DISTANCE_RESULT_COLUMNS},
+_COLUMN_RENAMES: dict[str, str] = {
     "dice_artery": "artery_dice",
     "dice_artery_before_morphology": "artery_dice_before_morphology",
     "dice_artery_after_closing": "artery_dice_after_closing",
@@ -118,74 +117,12 @@ READABLE_COLUMN_NAMES: dict[str, str] = {
     "artery_voxels_before_morphology": "artery_voxel_count_before_morphology",
     "artery_voxels_after_closing": "artery_voxel_count_after_closing",
     "artery_voxels_after_morphology": "artery_voxel_count_after_morphology",
-    "artery_segmentation_method": "artery_segmentation_method",
-    "fc_processed_voxels": "fc_processed_voxels",
-    "fc_effective_alpha": "fc_effective_alpha",
-    "fc_object_seed_count": "fc_object_seed_count",
-    "fc_candidate_voxels_final": "fc_candidate_voxels_final",
-    "threshold_mode": "threshold_mode",
-    "fuzzy_mask_strategy": "fuzzy_mask_strategy",
     "min_threshold": "min_threshold_hu",
     "max_threshold": "max_threshold_hu",
-    "lower_threshold_method": "lower_threshold_method",
-    "lower_threshold_percentile": "lower_threshold_percentile",
     "threshold_voxels": "threshold_voxel_count",
     "lcc_voxels": "lcc_voxel_count",
-    "image_slice_count": "image_slice_count",
     "image_voxels": "image_voxel_count",
-    "aorta_circle_count": "aorta_circle_count",
-    "aorta_detected_circle_count": "aorta_detected_circle_count",
-    "aorta_interpolated_circle_count": "aorta_interpolated_circle_count",
-    "aorta_circle_first_slice": "aorta_circle_first_slice",
-    "aorta_circle_last_slice": "aorta_circle_last_slice",
-    "aorta_circle_coverage": "aorta_circle_coverage",
-    "aorta_circle_radius_min_px": "aorta_circle_radius_min_px",
-    "aorta_circle_radius_max_px": "aorta_circle_radius_max_px",
-    "aorta_circle_radius_mean_px": "aorta_circle_radius_mean_px",
-    "aorta_circle_radius_median_px": "aorta_circle_radius_median_px",
-    "aorta_circle_radius_std_px": "aorta_circle_radius_std_px",
-    "aorta_circle_radius_p10_px": "aorta_circle_radius_p10_px",
-    "aorta_circle_radius_p90_px": "aorta_circle_radius_p90_px",
-    "aorta_circle_radius_min_mm": "aorta_circle_radius_min_mm",
-    "aorta_circle_radius_max_mm": "aorta_circle_radius_max_mm",
-    "aorta_circle_radius_mean_mm": "aorta_circle_radius_mean_mm",
-    "aorta_circle_radius_median_mm": "aorta_circle_radius_median_mm",
-    "aorta_circle_radius_std_mm": "aorta_circle_radius_std_mm",
-    "aorta_circle_radius_p10_mm": "aorta_circle_radius_p10_mm",
-    "aorta_circle_radius_p90_mm": "aorta_circle_radius_p90_mm",
-    "aorta_detected_circle_radius_median_mm": "aorta_detected_circle_radius_median_mm",
-    "aorta_interpolated_circle_radius_median_mm": "aorta_interpolated_circle_radius_median_mm",
-    "aorta_circle_radius_first_mm": "aorta_circle_radius_first_mm",
-    "aorta_circle_radius_last_mm": "aorta_circle_radius_last_mm",
-    "aorta_circle_radius_max_step_change_mm": "aorta_circle_radius_max_step_change_mm",
-    "aorta_circle_radius_p90_step_change_mm": "aorta_circle_radius_p90_step_change_mm",
-    "aorta_circle_mean_hough_accumulator": "aorta_circle_mean_hough_accumulator",
-    "aorta_circle_lower_radius_bound_fraction": "aorta_circle_lower_radius_bound_fraction",
-    "aorta_circle_upper_radius_bound_fraction": "aorta_circle_upper_radius_bound_fraction",
-    "aorta_circle_filter_method": "aorta_circle_filter_method",
-    "aorta_circle_filter_applied": "aorta_circle_filter_applied",
-    "aorta_circle_original_count": "aorta_circle_original_count",
-    "aorta_circle_used_count": "aorta_circle_used_count",
-    "aorta_circle_filter_synthetic_tail_count": "aorta_circle_filter_synthetic_tail_count",
-    "aorta_circle_filter_trimmed_tail_count": "aorta_circle_filter_trimmed_tail_count",
-    "aorta_circle_filter_trim_start_slice": "aorta_circle_filter_trim_start_slice",
-    "aorta_circle_filter_detected_tail_start_slice": "aorta_circle_filter_detected_tail_start_slice",
-    "aorta_circle_filter_original_coverage": "aorta_circle_filter_original_coverage",
-    "aorta_circle_filter_used_coverage": "aorta_circle_filter_used_coverage",
-    "aorta_circle_filter_reason": "aorta_circle_filter_reason",
     "aorta_mask_voxels": "aorta_mask_voxel_count",
-    "aorta_segmented_slice_count": "aorta_segmented_slice_count",
-    "aorta_voxels_per_segmented_slice": "aorta_voxels_per_segmented_slice",
-    "aorta_volume_fraction": "aorta_volume_fraction",
-    "aorta_level_set_initial_voxel_count": "aorta_level_set_initial_voxel_count",
-    "aorta_level_set_raw_voxel_count": "aorta_level_set_raw_voxel_count",
-    "aorta_level_set_initial_volume_fraction": "aorta_level_set_initial_volume_fraction",
-    "aorta_level_set_raw_volume_fraction": "aorta_level_set_raw_volume_fraction",
-    "aorta_level_set_iterations_used": "aorta_level_set_iterations_used",
-    "aorta_level_set_circle_fill_q25": "aorta_level_set_circle_fill_q25",
-    "aorta_level_set_circle_area_ratio_p90": "aorta_level_set_circle_area_ratio_p90",
-    "aorta_slice_area_jump_p95": "aorta_slice_area_jump_p95",
-    "aorta_segmentation_feedback": "aorta_segmentation_feedback",
     "ostia_found": "ostia_detected",
     "ostia_status": "ostia_detection_status",
     "segmentation_attempted": "artery_segmentation_run",
@@ -201,14 +138,43 @@ READABLE_COLUMN_NAMES: dict[str, str] = {
     "ostia_left": "left_ostium",
     "ostia_right": "right_ostium",
     "error": "pipeline_error",
-    "downscale_method": "downscale_method",
-    "opencv_interpolation": "opencv_interpolation",
-    "downscale_factors": "downscale_factors",
-    "max_threshold_percentile": "max_threshold_percentile",
-    "lcc_per_slice": "lcc_per_slice",
-    "lcc_mode": "lcc_mode",
-    "aorta_miss_count": "aorta_miss_count",
-    "aorta_interpolate_missed_circles": "aorta_interpolate_missed_circles",
+}
+
+_EXTRA_IDENTITY_COLUMNS: tuple[str, ...] = (
+    "artery_segmentation_method",
+    "threshold_mode",
+    "fuzzy_mask_strategy",
+    "lower_threshold_method",
+    "lower_threshold_percentile",
+    "aorta_circle_filter_method",
+    "downscale_method",
+    "opencv_interpolation",
+    "downscale_factors",
+    "max_threshold_percentile",
+    "lcc_per_slice",
+    "lcc_mode",
+    "aorta_miss_count",
+    "aorta_interpolate_missed_circles",
+)
+
+_OMITTED_READABLE_COLUMNS: frozenset[str] = frozenset(
+    {
+        "IMG_ID",
+        *RESOURCE_COLUMNS,
+        *ARTERY_BRANCH_COLUMNS,
+        "effective_upper_threshold_hu",
+        "status",
+    }
+)
+
+READABLE_COLUMN_NAMES: dict[str, str] = {
+    **{
+        column: _COLUMN_RENAMES.get(column, column)
+        for column in RESULT_COLUMNS
+        if column not in _OMITTED_READABLE_COLUMNS
+    },
+    **_COLUMN_RENAMES,
+    **{column: column for column in _EXTRA_IDENTITY_COLUMNS},
 }
 
 # Campos antigos que descrevem a configuração do run, não uma medição do exame.

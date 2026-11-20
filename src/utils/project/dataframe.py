@@ -9,7 +9,15 @@ import pandas as pd
 
 
 def require_series_column(frame: pd.DataFrame, column: Hashable) -> pd.Series:
-    """Retorna uma coluna única e rejeita nomes duplicados no DataFrame."""
+    """Retorna uma coluna única e rejeita nomes duplicados no DataFrame.
+
+    Args:
+        frame (pd.DataFrame): DataFrame tabular de entrada.
+        column (Hashable): Nome ou chave da coluna exigida.
+
+    Returns:
+        pd.Series: Série única correspondente à coluna solicitada.
+    """
     values = frame[column]
     if isinstance(values, pd.DataFrame):
         raise ValueError(f"A coluna {column!r} está duplicada.")
@@ -17,7 +25,15 @@ def require_series_column(frame: pd.DataFrame, column: Hashable) -> pd.Series:
 
 
 def numeric_series(frame: pd.DataFrame, column: Hashable) -> pd.Series:
-    """Converte uma coluna única para valores numéricos anuláveis."""
+    """Converte uma coluna única para valores numéricos anuláveis.
+
+    Args:
+        frame (pd.DataFrame): DataFrame tabular de entrada.
+        column (Hashable): Nome ou chave da coluna numérica.
+
+    Returns:
+        pd.Series: Série numérica com entradas inválidas convertidas para ``NaN``.
+    """
     return to_numeric_series(require_series_column(frame, column))
 
 
@@ -26,7 +42,16 @@ def to_numeric_series(
     *,
     errors: Literal["raise", "coerce"] = "coerce",
 ) -> pd.Series:
-    """Converte uma Series e preserva explicitamente seu tipo tabular."""
+    """Converte uma Series e preserva explicitamente seu tipo tabular.
+
+    Args:
+        values (pd.Series): Série de entrada a converter para tipo numérico.
+        errors (Literal["raise", "coerce"]): Política para valores não numéricos
+            (``"coerce"`` gera ``NaN`` e ``"raise"`` lança exceção).
+
+    Returns:
+        pd.Series: Série numérica resultante da conversão.
+    """
     converted = pd.to_numeric(values, errors=errors)
     if not isinstance(converted, pd.Series):
         raise TypeError("A conversão numérica não retornou uma Series.")

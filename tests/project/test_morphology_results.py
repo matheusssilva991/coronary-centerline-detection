@@ -20,7 +20,6 @@ from utils.project.results.schema import (
     make_result_dataframe,
     summarize_results_df,
 )
-from utils.project.results.summary import build_run_summary_row
 from utils.segmentation.pipeline.orchestration import _load_previous_batches
 
 
@@ -86,15 +85,6 @@ class MorphologyResultsTests(TestCase):
         self.assertEqual(summary["dice_artery_after_closing_mean"], 0.8)
         self.assertEqual(summary["dice_artery_dilation_delta_mean"], -0.2)
         self.assertEqual(summary["artery_voxel_count_after_closing_count"], 1)
-        row = build_run_summary_row(
-            frame,
-            run_dir=Path("runs/mid_res/run"),
-            split_name="train",
-            expected_image_count=2,
-        )
-        self.assertEqual(row["dice_artery_after_closing_mean"], 0.8)
-        self.assertEqual(row["dice_artery_closing_delta_count"], 1)
-        self.assertEqual(row["artery_voxel_count_after_closing_mean"], 100)
         metadata = build_metadata_results(frame, [])
         self.assertEqual(
             metadata["dice"]["after_closing"], {"mean": 0.8, "valid_exam_count": 1}

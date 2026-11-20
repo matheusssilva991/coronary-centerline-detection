@@ -8,19 +8,22 @@ from pathlib import Path
 
 import pandas as pd
 
-from utils.project.runtime.paths import find_repository_root
-
 from utils.project.config import (
     load_config_json,
     scale_config_to_resolution,
 )
-from utils.project.results.paths import results_filename
+from utils.project.results.io import results_filename
+from utils.project.runtime.paths import find_repository_root
 
 
 def configure_notebook_environment(chdir_to_src: bool = True) -> Path:
     """Adiciona `src` ao caminho e opcionalmente altera o diretório atual.
 
-    Retorna o caminho da raiz do repositório.
+    Args:
+        chdir_to_src (bool): Se ``True``, altera o diretório de trabalho para ``src/``.
+
+    Returns:
+        Path: Caminho da raiz do repositório encontrada.
     """
     repo_root = find_repository_root(Path(__file__))
     src_dir = repo_root / "src"
@@ -39,7 +42,17 @@ def resolve_existing_path(
     candidates: list[Path],
     description: str,
 ) -> Path:
-    """Resolve um caminho por variável de ambiente ou candidatos locais."""
+    """Resolve um caminho por variável de ambiente ou candidatos locais.
+
+    Args:
+        env_var (str): Nome da variável de ambiente verificada com prioridade.
+        candidates (list[Path]): Caminhos locais alternativos testados em ordem.
+        description (str): Descrição legível do recurso exibida em mensagens de erro.
+
+    Returns:
+        Path: Primeiro caminho existente encontrado.
+    """
+    # Prioriza o caminho configurado explicitamente na variável de ambiente.
     env_value = os.environ.get(env_var)
     if env_value:
         path = Path(env_value).expanduser()
@@ -49,6 +62,7 @@ def resolve_existing_path(
             f"{description} definido em {env_var} não existe: {path}"
         )
 
+    # Recorre aos caminhos candidatos locais quando a variável não está definida.
     resolved = next((path for path in candidates if path.exists()), None)
     if resolved is not None:
         return resolved
@@ -61,7 +75,11 @@ def resolve_existing_path(
 
 
 def resolve_imagecas_base_path() -> Path:
-    """Resolve o diretório ImageCAS com arquivos ``*.img.nii.gz``."""
+    """Resolve o diretório ImageCAS com arquivos ``*.img.nii.gz``.
+
+    Returns:
+        Path: Diretório raiz existente do conjunto ImageCAS.
+    """
     return resolve_existing_path(
         "IMAGECAS_BASE_PATH",
         [
@@ -82,6 +100,13 @@ def load_notebook_pipeline_config(
     Preserva a ordem aplicada historicamente no ``main.ipynb``: carrega o
     JSON, força fatores unitários em alta resolução e, por fim, escala os
     parâmetros espaciais.
+
+    Args:
+        config_file (str | Path): Caminho do arquivo JSON de configuração base.
+        resolution (str): Perfil de resolução desejado (``"mid"`` ou ``"high"``).
+
+    Returns:
+        dict[str, Any]: Configuração carregada e escalada para a resolução solicitada.
     """
     if resolution not in {"mid", "high"}:
         raise ValueError("resolution deve ser 'mid' ou 'high'.")
@@ -98,13 +123,31 @@ def load_notebook_pipeline_config(
 
 
 def _numeric_result_dir(path: Path) -> Path:
-    """Resolve o subdiretório numérico ou preserva caminhos legados."""
+    """Resolve o subdiretório numérico ou preserva caminhos legados.
+
+    Args:
+        path (Path): Diretório raiz de um run ou split.
+
+    Returns:
+        Path: Subdiretório ``numeric/`` quando existente, ou o próprio ``path`` em
+            layouts legados.
+    """
     numeric_dir = path / "numeric"
     return numeric_dir if numeric_dir.exists() else path
 
 
 def _latest_split_result_dir(parent: Path, split: str) -> Path | None:
-    """Localiza o resultado consolidado mais recente de um split."""
+    """Localiza o resultado consolidado mais recente de um split.
+
+    Args:
+        parent (Path): Diretório pai de um split contendo runs diretos ou com
+            timestamp.
+        split (str): Nome do split buscado (``train``, ``val`` ou ``test``).
+
+    Returns:
+        Path | None: Diretório numérico válido mais recente encontrado, ou ``None``
+            se ausente.
+    """
     results_name = results_filename(split)
     candidates = []
 
@@ -117,6 +160,7 @@ def _latest_split_result_dir(parent: Path, split: str) -> Path | None:
         has_results = (numeric_dir / results_name).is_file()
         if not has_results:
             has_results = (numeric_dir / f"ostios_{split}_results.csv").is_file()
+        # Em summaries legados, confirma IMG_ID para distinguir tabelas agregadas.
         has_legacy_results = False
         if legacy_summary.is_file() and not has_results:
             try:
@@ -136,7 +180,16 @@ def _resolve_split_result_dir(
     resolution: str,
     split: str,
 ) -> Path | None:
-    """Resolve somente a referência canônica, sem recorrer a outro run."""
+    """Resolve somente a referência canônica, sem recorrer a outro run.
+
+    Args:
+        repo_root (Path): Caminho raiz do repositório.
+        resolution (str): Nome da pasta de resolução (``mid_res`` ou ``high_res``).
+        split (str): Nome do split buscado.
+
+    Returns:
+        Path | None: Diretório numérico canônico encontrado, ou ``None`` se ausente.
+    """
     canonical_parent = repo_root / "output/segmentation/canonical" / resolution / split
     return _latest_split_result_dir(canonical_parent, split)
 
@@ -148,6 +201,13 @@ def get_default_split_paths(repo_root: Path) -> dict[str, dict[str, Path]]:
     Combinações ausentes de resolução e split são omitidas, sem substituição
     por runs fora de canonical. A escolha oficial pertence aos arquivos/links
     de canonical, não a uma lista duplicada em código.
+
+    Args:
+        repo_root (Path): Caminho raiz do repositório.
+
+    Returns:
+        dict[str, dict[str, Path]]: Mapeamento por resolução (``mid_res``,
+            ``high_res``) e split para os diretórios disponíveis.
     """
     result: dict[str, dict[str, Path]] = {"mid_res": {}, "high_res": {}}
     for resolution in result:
@@ -161,10 +221,3 @@ def get_default_split_paths(repo_root: Path) -> dict[str, dict[str, Path]]:
                 result[resolution][split] = resolved
 
     return result
-
-
-def get_refined_pipeline_split_paths(
-    repo_root: Path,
-) -> dict[str, dict[str, Path]]:
-    """Alias público para a referência oficial, sem lista própria de runs."""
-    return get_default_split_paths(repo_root)

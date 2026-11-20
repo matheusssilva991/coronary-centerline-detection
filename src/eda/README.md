@@ -1,13 +1,15 @@
 # Notebooks de EDA
 
 Esta pasta reúne análises exploratórias, comparações de resultados e figuras
-metodológicas do pipeline coronário. Os notebooks não substituem os scripts de
-experimentos: eles leem resultados já produzidos ou executam poucos casos para
+metodológicas do pipeline coronário. Os notebooks leem resultados já produzidos ou executam poucos casos para
 inspeção qualitativa.
 
-As funções de apresentação exclusivas de cada análise ficam em células marcadas
-com `presentation-helpers` no próprio notebook. Carregamento, validação, cálculos
-e visualizações genéricas continuam nos módulos `utils` compartilhados.
+As funções de apresentação exclusivas de notebooks mais extensos ficam em submódulos
+`view` dentro da respectiva subpasta de categoria (`src/eda/<grupo>/view/<analise>_views.py`),
+importados em células marcadas com `presentation-helpers`, enquanto notebooks leves
+com 1 ou 2 funções curtas podem mantê-las diretamente nessa célula. Carregamento,
+validação, cálculos e visualizações genéricas continuam nos módulos `utils`
+compartilhados.
 
 Os resumos por conjunto, a leitura de variantes, os pareamentos e as estatísticas
 ficam em `utils.comparison_utils`, sem dependências de apresentação. Os módulos
@@ -28,6 +30,24 @@ dataset fora dos caminhos conhecidos, configure:
 ```bash
 export IMAGECAS_BASE_PATH=/caminho/para/ImageCAS/1-1000
 ```
+
+### Análises que usam a revisão visual histórica da aorta
+
+Quatro notebooks leem as classificações manuais por exame do catálogo
+`config/aorta_visual_reviews.json`. Ele contém os IDs revisados, as observações
+e os caminhos das execuções correspondentes. As seguintes análises precisam
+dele para reproduzir a seleção dos exames ou as tabelas de revisão visual.
+
+- [Cobertura dos círculos por fatia](aorta/aorta_circle_slice_analysis.ipynb)
+- [Volume e qualidade da aorta](aorta/aorta_volume_quality_analysis.ipynb)
+- [Comparação da aorta e dos óstios](comparisons/aorta_ostia_pipeline_comparison.ipynb)
+- [Comparação de intensidades HU](intensity/aorta_hu_threshold_comparison.ipynb)
+
+O catálogo foi restaurado da revisão `4ce263f` em 20/11/2026. As fontes usadas
+pelas seleções atuais desses notebooks estão disponíveis. Algumas variantes
+antigas do catálogo já tiveram seus runs removidos; a ausência dessas fontes
+está registrada em `output/segmentation/results_catalog.json`. A limpeza
+preserva os resultados usados pelas revisões disponíveis.
 
 ## Catálogo
 
@@ -54,6 +74,7 @@ export IMAGECAS_BASE_PATH=/caminho/para/ImageCAS/1-1000
 
 | Notebook | Objetivo | Entrada principal | Saída | Custo |
 |---|---|---|---|---|
+| [imagecas_artery_distance_analysis.ipynb](results/imagecas_artery_distance_analysis.ipynb) | Conferir AHD e HD de superfície em controles sintéticos e em um exame ImageCAS | Exame e rótulo ImageCAS, configuração do pipeline e CSV canônico selecionável | Comparação entre KD-tree e EDT, histogramas de distâncias e malhas K3D da predição, referência e faixas de distância | Alto para prever a artéria, baixo para consultar o CSV |
 | [external_aorta_assessment.ipynb](results/external_aorta_assessment.ipynb) | Comparar avaliações visuais mid/high por treino e teste no MM-WHS e OrCaScore e Dice da aorta no treino e teste MM-WHS | `avaliacao_visual.xlsx` e `results_all.csv` dos quatro runs | Avaliação visual, Dice separado por protocolo e alertas contextualizados por exame; comparação automática no notebook dedicado | Baixo |
 | [segmentation_results_eda.ipynb](results/segmentation_results_eda.ipynb) | Status e distâncias dos óstios, Dice e HD/AHD arteriais | `canonical` por split; candidato high/teste explícito na seção de HD/AHD | Tabelas e gráficos, com comparação mid/high por ID | Baixo |
 | [split_resolution_analysis.ipynb](results/split_resolution_analysis.ipynb) | Comparar train/val/test entre mid e high | Referências oficiais de `canonical` | Tabelas e gráficos; tempos ausentes permanecem indisponíveis | Baixo |

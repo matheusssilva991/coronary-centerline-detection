@@ -1,20 +1,19 @@
-import numpy as np
-from skimage.filters import ridges, gaussian
+"""Cálculo de vesselness de Frangi em 3D com aceleração opcional em GPU e normalização."""
+
 import warnings
 from typing import Any, Optional, Sequence, cast
-from numpy.typing import ArrayLike, NDArray
 
-# Importa utilitários de GPU centralizados
+import numpy as np
+from numpy.typing import ArrayLike, NDArray
+from skimage.filters import gaussian, ridges
+
+from ..utils import normalize_image, robust_normalize
 from .gpu_utils import (
-    to_gpu,
-    to_cpu,
     GPU_AVAILABLE,
+    to_cpu,
+    to_gpu,
 )
 
-# Importa funções de normalização
-from ..utils import normalize_image, robust_normalize
-
-# Importa cucim filters se GPU disponível
 gpu_filters = None
 if GPU_AVAILABLE:
     try:
@@ -29,6 +28,15 @@ if GPU_AVAILABLE:
 
 
 def _as_sigma_sequence(sigmas: ArrayLike) -> list[float]:
+    """Converte e valida a sequência de sigmas positivos para o filtro multiescala.
+
+    Args:
+        sigmas (ArrayLike): Escalas gaussianas (em voxels) informadas como escalar ou
+            sequência.
+
+    Returns:
+        list[float]: Lista validada de sigmas positivos em ponto flutuante.
+    """
     sigma_values = np.atleast_1d(np.asarray(sigmas, dtype=float)).tolist()
 
     if not sigma_values:
@@ -40,6 +48,12 @@ def _as_sigma_sequence(sigmas: ArrayLike) -> list[float]:
 
 
 def _validate_normalization_method(normalization: str) -> None:
+    """Valida o método de normalização suportado pelo filtro de Frangi.
+
+    Args:
+        normalization (str): Nome do método de normalização pós-filtro (``none``,
+            ``robust`` ou ``minmax``).
+    """
     if normalization not in {"none", "robust", "minmax"}:
         raise ValueError(
             f"Método de normalização '{normalization}' inválido. "
@@ -48,6 +62,16 @@ def _validate_normalization_method(normalization: str) -> None:
 
 
 def _apply_normalization(array: Any, normalization: str) -> Any:
+    """Aplica normalização opcional ao mapa de vesselness gerado.
+
+    Args:
+        array (Any): Mapa de vesselness calculado em CPU ou GPU.
+        normalization (str): Método desejado (``none``, ``robust`` ou ``minmax``).
+
+    Returns:
+        Any: Array normalizado segundo o método selecionado, preservando o dispositivo
+            quando ``normalization`` é ``none``.
+    """
     _validate_normalization_method(normalization)
     if normalization == "robust":
         return robust_normalize(array)
@@ -68,27 +92,34 @@ def get_vesselness(
     gpu: Optional[bool] = None,
     return_cpu: bool = True,
 ) -> NDArray[Any]:
-    """
-    Calcula o mapa de vesselness usando o filtro de Frangi.
-    Usa GPU se disponível, caso contrário usa CPU.
+    """Calcula o mapa de vesselness 3D pelo filtro de Frangi, usando GPU se disponível.
 
-    Argumentos:        image: Imagem 3D de entrada (NumPy ou CuPy array)
-        sigmas: Range de sigmas para multi-escala
-        alpha: Sensibilidade a estruturas blob (0.1-1.0, padrão 0.5)
-        beta: Sensibilidade ao ruído de fundo (0.1-1.0, padrão 0.5)
-        gamma: Sensibilidade ao contraste (padrão None)
-        black_ridges: Se True, detecta estruturas escuras
-        normalization: Método de normalização ('robust', 'minmax', 'none')
-            - 'robust': Ignora outliers usando percentis (padrão)
-            - 'minmax': Normalização simples [0, 1]
-            - 'none': Sem normalização
-        smooth_sigma: Sigma opcional para suavização gaussiana antes do Frangi.
-            Use 0 para desativar.
-        gpu: Se None (padrão), detecta automaticamente. Se True, força GPU. Se False, força CPU.
-        return_cpu: Se True, converte resultado GPU para NumPy antes de retornar.
+    Args:
+        image (Any): Volume 3D de entrada (CPU ou GPU), tipicamente pré-processado em
+            HU.
+        sigmas (Sequence[float]): Escalas gaussianas positivas (em voxels) usadas no
+            filtro multiescala.
+        alpha (float): Sensibilidade da razão de Frangi entre estruturas tubulares e
+            laminares.
+        beta (float): Sensibilidade da razão de Frangi que distingue estruturas tipo
+            bolha.
+        gamma (Optional[float]): Escala de contraste de fundo; ``None`` usa estimativa
+            automática do filtro.
+        black_ridges (bool): Se ``True``, realça estruturas escuras em vez de vasos
+            claros.
+        normalization (str): Método pós-filtro (``none``, ``robust`` por percentis ou
+            ``minmax``).
+        smooth_sigma (float): Desvio-padrão gaussiano (em voxels) da suavização prévia;
+            ``0`` desativa.
+        gpu (Optional[bool]): Preferência de backend; ``None`` detecta automaticamente e
+            booleanos forçam GPU ou CPU com fallback.
+        return_cpu (bool): Se ``True``, converte o resultado para NumPy antes de
+            retornar.
 
-    Retorna:        vesselness_norm: Mapa de vesselness normalizado (ou não), como NumPy array
+    Returns:
+        NDArray[Any]: Mapa 3D de vesselness com o mesmo shape de ``image``.
     """
+    # Valida escalas e método de normalização antes de selecionar o backend.
     sigma_values = _as_sigma_sequence(sigmas)
     _validate_normalization_method(normalization)
     use_gpu_flag = gpu if gpu is not None else GPU_AVAILABLE
@@ -98,6 +129,7 @@ def get_vesselness(
         try:
             filters_gpu = cast(Any, gpu_filters)
             image_gpu = to_gpu(image)
+            # Aplica suavização prévia opcional e executa o filtro multiescala na GPU.
             frangi_input = (
                 filters_gpu.gaussian(
                     image_gpu,

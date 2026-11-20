@@ -1,11 +1,17 @@
 """Calcula resumos arteriais e dos óstios por conjunto e resolução."""
 
-import numpy as np
-import pandas as pd
 from typing import Any, Dict, Optional, Sequence
 
+import numpy as np
+import pandas as pd
+
 from utils.project.dataframe import numeric_series
+from utils.project.evaluation.artery_distances import (
+    ADDITIONAL_DISTANCE_METRICS,
+    summarize_artery_distances,
+)
 from utils.project.results.schema import (
+    OSTIA_SUCCESS_STATUSES,
     normalize_ostia_status,
     ostia_status_label_pt,
 )
@@ -14,8 +20,45 @@ ARTERY_SURFACE_METRICS = {"artery_hd_mm": "HD", "artery_ahd_mm": "AHD"}
 ARTERY_SURFACE_STATUS = "artery_distance_metrics_status"
 
 
+def additional_distance_summary_rows(
+    frame: pd.DataFrame | None,
+) -> list[dict[str, Any]]:
+    """Resume as distâncias adicionais disponíveis, com denominador por métrica.
+
+    Args:
+        frame (pd.DataFrame | None): Tabela de resultados por exame contendo
+            eventuais colunas de distâncias adicionais.
+
+    Returns:
+        list[dict[str, Any]]: Lista de linhas com contagem válida, média e mediana
+        em milímetros para cada métrica disponível.
+    """
+    if frame is None or not any(
+        column in frame for column in ADDITIONAL_DISTANCE_METRICS
+    ):
+        return []
+    summary = summarize_artery_distances(frame)
+    return [
+        {
+            "Métrica": label,
+            "Exames válidos": summary[column]["count"],
+            "Média (mm)": summary[column]["mean"],
+            "Mediana (mm)": summary[column]["median"],
+        }
+        for column, label in ADDITIONAL_DISTANCE_METRICS.items()
+        if summary[column]["count"]
+    ]
+
+
 def has_artery_surface_distances(frame: pd.DataFrame | None) -> bool:
-    """Identifica resultados com as colunas de distância e status."""
+    """Identifica resultados com as colunas de distância e status.
+
+    Args:
+        frame (pd.DataFrame | None): DataFrame de resultados por exame.
+
+    Returns:
+        bool: ``True`` quando as colunas de status e distâncias HD/AHD existem.
+    """
     return frame is not None and {
         ARTERY_SURFACE_STATUS,
         *ARTERY_SURFACE_METRICS,
@@ -23,12 +66,22 @@ def has_artery_surface_distances(frame: pd.DataFrame | None) -> bool:
 
 
 def artery_surface_distance_cases(frame: pd.DataFrame | None) -> pd.DataFrame:
-    """Retorna exames com HD e AHD válidos, indexados pelo ID do exame."""
+    """Retorna exames com HD e AHD válidos, indexados pelo ID do exame.
+
+    Args:
+        frame (pd.DataFrame | None): Tabela de resultados por exame com status e
+            métricas de distância de superfície.
+
+    Returns:
+        pd.DataFrame: Tabela indexada por ``IMG_ID`` contendo ``artery_hd_mm``,
+        ``artery_ahd_mm`` e ``dice_artery`` para casos geometricamente válidos.
+    """
     if frame is None or not has_artery_surface_distances(frame):
         return pd.DataFrame(
             columns=[*ARTERY_SURFACE_METRICS, "dice_artery"],
             index=pd.Index([], name="IMG_ID"),
         )
+    # Valida unicidade dos IDs e mantém apenas linhas com status de superfície ok.
     if frame["IMG_ID"].isna().any() or frame["IMG_ID"].duplicated().any():
         raise ValueError("A comparação de HD/AHD exige IDs presentes e únicos.")
     evaluated = frame.loc[frame[ARTERY_SURFACE_STATUS].eq("ok")].set_index("IMG_ID")
@@ -40,6 +93,7 @@ def artery_surface_distance_cases(frame: pd.DataFrame | None) -> pd.DataFrame:
         cases["dice_artery"] = dice.where(dice.between(0, 1))
     else:
         cases["dice_artery"] = np.nan
+    # Garante coerência geométrica das distâncias (AHD não negativa e HD >= AHD).
     hd = cases["artery_hd_mm"]
     ahd = cases["artery_ahd_mm"]
     return cases.loc[np.isfinite(hd) & np.isfinite(ahd) & ahd.ge(0) & hd.ge(ahd)]
@@ -48,7 +102,18 @@ def artery_surface_distance_cases(frame: pd.DataFrame | None) -> pd.DataFrame:
 def summarize_artery_surface_distance_cases(
     source: pd.DataFrame | None, cases: pd.DataFrame
 ) -> dict[str, Any]:
-    """Resume a cobertura e as distâncias usando somente os exames válidos."""
+    """Resume a cobertura e as distâncias usando somente os exames válidos.
+
+    Args:
+        source (pd.DataFrame | None): Tabela completa original usada para medir o
+            denominador total do CSV e a disponibilidade das colunas.
+        cases (pd.DataFrame): Subconjunto previamente filtrado de casos válidos.
+
+    Returns:
+        dict[str, Any]: Resumo com contagem total, válidos, status de cobertura,
+        médias/medianas de HD e AHD e Dice médio.
+    """
+    # Calcula indicadores de cobertura e agrega médias e medianas das distâncias.
     row: dict[str, Any] = {
         "Exames no CSV": len(source) if source is not None else None,
         "Exames válidos": len(cases),
@@ -70,36 +135,66 @@ def summarize_artery_surface_distance_cases(
 def pair_artery_surface_distance_cases(
     mid: pd.DataFrame, high: pd.DataFrame
 ) -> pd.DataFrame:
-    """Pareia exames válidos nas duas resoluções pelo ID, em um único split."""
+    """Pareia exames válidos nas duas resoluções pelo ID, em um único split.
+
+    Args:
+        mid (pd.DataFrame): Casos válidos em resolução média indexados por ``IMG_ID``.
+        high (pd.DataFrame): Casos válidos em alta resolução indexados por ``IMG_ID``.
+
+    Returns:
+        pd.DataFrame: Tabela com junção interna 1:1 e sufixos ``_mid`` e ``_high``.
+    """
     columns = list(ARTERY_SURFACE_METRICS)
     return mid[columns].join(
         high[columns], how="inner", lsuffix="_mid", rsuffix="_high", validate="1:1"
     )
 
 
-def _normalize_success_status(value: Any) -> str | None:
-    """Normaliza rótulos legados e legíveis para status internos."""
-    return normalize_ostia_status(value)
-
-
 def _success_status_series(
     df_split: pd.DataFrame,
     status_column: str,
 ) -> pd.Series:
-    """Retorna status normalizados dos óstios priorizando o alias canônico."""
+    """Retorna status normalizados dos óstios priorizando o alias canônico.
+
+    Args:
+        df_split (pd.DataFrame): DataFrame de resultados de um split.
+        status_column (str): Nome da coluna alternativa caso ``ostia_status`` não
+            exista.
+
+    Returns:
+        pd.Series: Série com os códigos normalizados de status dos óstios.
+    """
     source_column = "ostia_status" if "ostia_status" in df_split else status_column
-    return df_split[source_column].map(_normalize_success_status)
+    return df_split[source_column].map(normalize_ostia_status)
 
 
 def _has_success_status_column(df_split: pd.DataFrame, status_column: str) -> bool:
-    """Verifica se existe um status legível ou canônico dos óstios."""
+    """Verifica se existe um status legível ou canônico dos óstios.
+
+    Args:
+        df_split (pd.DataFrame): DataFrame de resultados de um split.
+        status_column (str): Nome da coluna alternativa de status dos óstios.
+
+    Returns:
+        bool: ``True`` quando ``ostia_status`` ou ``status_column`` está presente.
+    """
     return "ostia_status" in df_split or status_column in df_split
 
 
 def summarize_surface_distances_with_successful_ostia(
     source: pd.DataFrame | None, cases: pd.DataFrame
 ) -> dict[str, Any]:
-    """Resume HD e AHD dos exames com ambos os óstios corretos ou toleráveis."""
+    """Resume HD e AHD dos exames com ambos os óstios corretos ou toleráveis.
+
+    Args:
+        source (pd.DataFrame | None): Tabela original contendo o status dos óstios.
+        cases (pd.DataFrame): Casos com HD e AHD válidos indexados por ``IMG_ID``.
+
+    Returns:
+        dict[str, Any]: Resumo com total de óstios bem-sucedidos, casos com
+        distâncias válidas e média/mediana de HD e AHD nesse recorte.
+    """
+    # Filtra exames com ambos os óstios corretos ou toleráveis na tabela origem.
     valid = cases.iloc[:0]
     success_count: int | None = None
     if source is not None:
@@ -108,10 +203,11 @@ def summarize_surface_distances_with_successful_ostia(
         )
         if _has_success_status_column(source, status_column):
             successful = _success_status_series(source, status_column).isin(
-                ["both_correct", "both_tolerable"]
+                OSTIA_SUCCESS_STATUSES
             )
             success_count = int(successful.sum())
             valid = cases.loc[cases.index.isin(source.loc[successful, "IMG_ID"])]
+    # Resume HD e AHD sobre a interseção com os exames que possuem superfície válida.
     summary = {
         "Ambos corretos ou toleráveis": success_count,
         "Exames com HD e AHD válidos": len(valid),
@@ -123,17 +219,36 @@ def summarize_surface_distances_with_successful_ostia(
 
 
 def _normalized_success_statuses(success_status: Sequence[str]) -> list[str]:
-    """Normaliza rótulos solicitados preservando a ordem de exibição."""
+    """Normaliza rótulos solicitados preservando a ordem de exibição.
+
+    Args:
+        success_status (Sequence[str]): Sequência de rótulos de sucesso a
+            normalizar.
+
+    Returns:
+        list[str]: Rótulos normalizados na mesma ordem, omitindo valores nulos.
+    """
     return [
         normalized
         for status in success_status
-        if (normalized := _normalize_success_status(status)) is not None
+        if (normalized := normalize_ostia_status(status)) is not None
     ]
 
 
 def _get_split_df(
     data_by_resolution: Optional[Dict[str, Any]], resolution: str, split_name: str
 ) -> Optional[pd.DataFrame]:
+    """Obtém o DataFrame de resultados de um par resolução/split, se existir.
+
+    Args:
+        data_by_resolution (dict[str, Any] | None): Mapa aninhado de resolução e
+            split para DataFrames de resultados.
+        resolution (str): Chave da resolução desejada (ex.: ``"high"`` ou ``"mid"``).
+        split_name (str): Nome do split desejado.
+
+    Returns:
+        pd.DataFrame | None: DataFrame do par solicitado ou ``None`` se ausente.
+    """
     if data_by_resolution is None:
         return None
     resolution_data = data_by_resolution.get(resolution, {})
@@ -146,9 +261,24 @@ def build_success_status_summary_by_subset(
     success_status: Sequence[str],
     status_column: str = "status",
 ) -> pd.DataFrame:
-    """Resume os acertos por status usando o total do split como denominador."""
+    """Resume os acertos por status usando o total do split como denominador.
+
+    Args:
+        data_by_resolution (dict[str, Any] | None): Estrutura aninhada mapeando
+            resolução e split para DataFrames de resultados.
+        split_name (str): Nome do split resumido entre resoluções.
+        success_status (Sequence[str]): Rótulos considerados sucesso para
+            contabilização detalhada.
+        status_column (str): Nome da coluna alternativa de status caso
+            ``ostia_status`` esteja ausente.
+
+    Returns:
+        pd.DataFrame: Tabela com quantidade, percentual do total e totais por
+        categoria de sucesso e resolução.
+    """
     rows = []
 
+    # Itera sobre as resoluções registrando placeholder quando faltam dados válidos.
     for resolution in ["high", "mid"]:
         df_split = _get_split_df(data_by_resolution, resolution, split_name)
         if (
@@ -169,6 +299,7 @@ def build_success_status_summary_by_subset(
             )
             continue
 
+        # Normaliza e contabiliza cada categoria de acerto usando o total do split.
         total_images = len(df_split)
         normalized_status = _success_status_series(df_split, status_column)
         normalized_success = _normalized_success_statuses(success_status)
@@ -194,6 +325,7 @@ def build_success_status_summary_by_subset(
                 }
             )
 
+        # Acrescenta a linha consolidada com o total de acertos da resolução.
         success_percentage = (
             100 * total_success / total_images if total_images > 0 else 0.0
         )
@@ -206,39 +338,6 @@ def build_success_status_summary_by_subset(
                 "percentual_do_total": round(success_percentage, 2),
                 "total_acertos": total_success,
                 "total_imagens": total_images,
-            }
-        )
-
-    return pd.DataFrame(rows)
-
-
-def build_dice_summary_by_subset(
-    data_by_resolution: Optional[Dict[str, Any]],
-    split_name: str,
-    dice_column: str = "dice_artery",
-) -> pd.DataFrame:
-    """Retorna um resumo de Dice por resolução para um subset."""
-    rows = []
-
-    for resolution in ["high", "mid"]:
-        df_split = _get_split_df(data_by_resolution, resolution, split_name)
-        if df_split is None or df_split.empty or dice_column not in df_split.columns:
-            dice_values = pd.Series(dtype=float)
-        else:
-            dice_values = pd.to_numeric(df_split[dice_column], errors="coerce").dropna()
-
-        rows.append(
-            {
-                "resolution": resolution.upper(),
-                "split": str(split_name).upper(),
-                "count": int(dice_values.shape[0]),
-                "mean": float(dice_values.mean()) if not dice_values.empty else pd.NA,
-                "median": float(dice_values.median())
-                if not dice_values.empty
-                else pd.NA,
-                "std": float(dice_values.std()) if not dice_values.empty else pd.NA,
-                "min": float(dice_values.min()) if not dice_values.empty else pd.NA,
-                "max": float(dice_values.max()) if not dice_values.empty else pd.NA,
             }
         )
 

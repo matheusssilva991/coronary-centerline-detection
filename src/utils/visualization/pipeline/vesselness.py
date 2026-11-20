@@ -16,7 +16,14 @@ def display_vesselness_summary(
     title: str,
     cmap: str = "gray",
 ) -> None:
-    """Imprime estatísticas e plota a MIP de um mapa de vesselness."""
+    """Imprime estatísticas descritivas e plota a MIP de um mapa de vesselness.
+
+    Args:
+        vesselness (NDArray[Any]): Volume 3D com escores de vesselness.
+        label (str): Rótulo impresso antes das estatísticas no terminal.
+        title (str): Título exibido na figura de projeções MIP.
+        cmap (str): Nome do mapa de cores passado para ``plot_mip_projection``.
+    """
     print(
         f"{label}: "
         f"min={vesselness.min():.4f}, "
@@ -32,9 +39,27 @@ def compute_vesselness_maps(
     ostia_config: Optional[dict[str, Any]] = None,
     artery_config: Optional[dict[str, Any]] = None,
 ) -> dict[int, dict[str, NDArray]]:
-    """Computa mapas de vesselness para ostios e arterias a partir da imagem LCC."""
+    """Computa mapas de vesselness para óstios e artérias a partir da imagem LCC.
+
+    Args:
+        preprocessed (dict[int, dict[str, Any]]): Dicionário indexado por ID
+            contendo ao menos a chave ``lcc_image``.
+        ids_to_plot (Iterable[int] | None): IDs dos casos a processar; ``None``
+            processa todos os IDs disponíveis em ordem crescente.
+        ostia_config (dict[str, Any] | None): Hiperparâmetros do filtro de
+            Frangi para óstios (``sigmas``, ``alpha``, ``beta``, ``gamma`` e
+            ``normalization``); ``None`` usa valores padrão.
+        artery_config (dict[str, Any] | None): Hiperparâmetros do filtro de
+            Frangi para artérias (``sigmas``, ``alpha``, ``beta``, ``gamma`` e
+            ``normalization``); ``None`` usa valores padrão.
+
+    Returns:
+        dict[int, dict[str, NDArray[Any]]]: Dicionário por ID com os volumes 3D
+        nas chaves ``"vesselness_ostia"`` e ``"vesselness_artery"``.
+    """
     from utils.processing.frangi import get_vesselness
 
+    # Define IDs alvo e parâmetros padrão de Frangi para óstios e artérias.
     if ids_to_plot is None:
         ids_to_plot = sorted(preprocessed.keys())
 
@@ -56,6 +81,7 @@ def compute_vesselness_maps(
             "normalization": "none",
         }
 
+    # Calcula os dois mapas de vesselness a partir da imagem LCC de cada caso.
     vessel_maps: dict[int, dict[str, NDArray]] = {}
     for img_id in ids_to_plot:
         lcc_image = preprocessed[img_id]["lcc_image"]
@@ -86,42 +112,6 @@ def compute_vesselness_maps(
     return vessel_maps
 
 
-def plot_vesselness_mip_grid(
-    vessel_maps: dict[int, dict[str, NDArray]],
-    ids_to_plot: Optional[Iterable[int]] = None,
-    map_key: Literal["vesselness_ostia", "vesselness_artery"] = "vesselness_artery",
-    title: str = "Mapa de vasos (MIP axial)",
-    cmap: str = "gray",
-    dpi: int = 100,
-) -> None:
-    """Plota MIP axial dos mapas de vesselness para uma lista de IDs."""
-    if ids_to_plot is None:
-        ids_to_plot = sorted(vessel_maps.keys())
-    else:
-        ids_to_plot = list(ids_to_plot)
-    if len(ids_to_plot) == 0:
-        raise ValueError("ids_to_plot não pode ser vazio.")
-
-    fig, axes = plt.subplots(
-        1, len(ids_to_plot), figsize=(7 * len(ids_to_plot), 5), dpi=dpi
-    )
-    if len(ids_to_plot) == 1:
-        axes = [axes]
-
-    for idx, img_id in enumerate(ids_to_plot):
-        mip = np.max(vessel_maps[img_id][map_key], axis=2)
-        ax = axes[idx]
-        im = ax.imshow(mip, cmap=cmap, origin="upper")
-        ax.set_title(f"ID {img_id}")
-        ax.axis("off")
-        plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
-
-    plt.suptitle(title, fontsize=14)
-    plt.tight_layout(rect=(0, 0, 1, 0.95))
-    plt.show()
-    plt.close(fig)
-
-
 def plot_vesselness_mip(
     vessel_maps: dict[int, dict[str, NDArray]],
     img_id: int,
@@ -133,7 +123,24 @@ def plot_vesselness_mip(
     show_colorbar: bool = True,
     dpi: int = 100,
 ) -> None:
-    """Plota MIP axial de um mapa de vesselness para um unico ID."""
+    """Plota a MIP axial de um mapa de vesselness para um único caso.
+
+    Args:
+        vessel_maps (dict[int, dict[str, NDArray[Any]]]): Mapas de vesselness
+            indexados por ID, no formato retornado por
+            ``compute_vesselness_maps``.
+        img_id (int): Identificador do exame a visualizar.
+        map_key (Literal["vesselness_ostia", "vesselness_artery"]): Chave do
+            mapa selecionado (``"vesselness_ostia"`` ou
+            ``"vesselness_artery"``).
+        title (str): Título principal exibido quando ``show_title`` é ``True``.
+        cmap (str): Nome do mapa de cores do Matplotlib.
+        show_title (bool): Se ``True``, adiciona título geral acima do gráfico.
+        show_subtitle (bool): Se ``True``, exibe o ID do exame no subtítulo.
+        show_colorbar (bool): Se ``True``, inclui barra de escala lateral.
+        dpi (int): Resolução da figura em pontos por polegada.
+    """
+    # Projeta o máximo ao longo do eixo axial e renderiza a imagem 2D.
     mip = np.max(vessel_maps[img_id][map_key], axis=2)
 
     plt.figure(figsize=(7, 5), dpi=dpi)
@@ -144,6 +151,7 @@ def plot_vesselness_mip(
 
     plt.axis("off")
 
+    # Adiciona barra de cores, ajusta layout e exibe o gráfico.
     if show_colorbar:
         plt.colorbar(im, fraction=0.046, pad=0.04)
 

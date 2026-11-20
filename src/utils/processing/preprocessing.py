@@ -6,11 +6,11 @@ pelas etapas de segmentação.
 """
 
 import warnings
+from typing import Any, Optional, Sequence, Tuple, cast
 
 import cv2
 import numpy as np
 import scipy.ndimage as ndi
-from typing import Any, Optional, Sequence, Tuple, cast
 from numpy.typing import NDArray
 
 from ..project.config import IMAGE_GRID_LABEL_PROTOCOL, LEGACY_LABEL_PROTOCOL
@@ -18,7 +18,16 @@ from .gpu_utils import GPU_AVAILABLE, cu_ndi, to_cpu, to_gpu
 
 
 def _find_largest_component_label(labeled_array: NDArray[Any]) -> Optional[int]:
-    """Retorna o rótulo do maior componente conectado, excluindo o fundo."""
+    """Retorna o rótulo do maior componente conectado, excluindo o fundo.
+
+    Args:
+        labeled_array (NDArray[Any]): Array inteiro de rótulos retornado por
+            ``scipy.ndimage.label``.
+
+    Returns:
+        Optional[int]: Rótulo do componente com mais voxels ou ``None`` se só houver
+            fundo.
+    """
     comp_sizes = np.bincount(labeled_array.ravel())
     comp_sizes[0] = 0
 
@@ -31,7 +40,18 @@ def _find_largest_component_label(labeled_array: NDArray[Any]) -> Optional[int]:
 def downscale_image_ndi(
     image: NDArray[Any], factors: Sequence[float], order: int = 3
 ) -> NDArray[Any]:
-    """Reduz a resolução da imagem usando scipy.ndimage.zoom."""
+    """Reduz a resolução da imagem usando ``scipy.ndimage.zoom``.
+
+    Args:
+        image (NDArray[Any]): Imagem ou volume NumPy a redimensionar.
+        factors (Sequence[float]): Fatores divisores de redução por eixo alinhados ao
+            shape de ``image``.
+        order (int): Ordem da interpolação spline de ``scipy.ndimage.zoom``
+            (``0`` equivale a vizinho mais próximo).
+
+    Returns:
+        NDArray[Any]: Array NumPy redimensionado conforme os fatores informados.
+    """
     zoom_factors = tuple(1.0 / f for f in factors)
     return np.asarray(ndi.zoom(image, zoom=zoom_factors, order=order))
 
@@ -39,15 +59,32 @@ def downscale_image_ndi(
 def downscale_image_opencv(
     image: NDArray[Any], factors: Sequence[float], interpolation: int = cv2.INTER_LINEAR
 ) -> NDArray[Any]:
-    """Reduz a resolução de imagem 2D/3D usando OpenCV resize."""
+    """Reduz a resolução de imagem 2D/3D usando ``cv2.resize``.
+
+    Args:
+        image (NDArray[Any]): Imagem 2D ou volume 3D a redimensionar.
+        factors (Sequence[float]): Fatores divisores de redução por eixo alinhados ao
+            shape de ``image``.
+        interpolation (int): Código de interpolação do OpenCV (ex.:
+            ``cv2.INTER_LINEAR``).
+
+    Returns:
+        NDArray[Any]: Array redimensionado preservando o dtype de ``image``.
+    """
+    # Caso 2D: devolve cópia para fator unitário ou redimensiona em uma passagem.
     if image.ndim == 2:
+        if tuple(float(f) for f in factors[:2]) == (1.0, 1.0):
+            return image.copy()
         new_shape = (
             int(image.shape[1] / factors[1]),
             int(image.shape[0] / factors[0]),
         )
         return cv2.resize(image, new_shape, interpolation=interpolation)
 
+    # Caso 3D: calcula as dimensões alvo e separa a redução entre XY e profundidade z.
     if image.ndim == 3:
+        if tuple(float(f) for f in factors) == (1.0, 1.0, 1.0):
+            return image.copy()
         factor_x, factor_y, factor_z = factors
         new_shape_xy = (
             int(image.shape[1] / factor_y),
@@ -94,7 +131,22 @@ def downscale_image(
     use_opencv: bool = False,
     opencv_interpolation: Optional[int] = None,
 ) -> NDArray[Any]:
-    """Downscale otimizado com suporte opcional a OpenCV e GPU."""
+    """Reduz a resolução de imagem/volume com suporte opcional a OpenCV e GPU.
+
+    Args:
+        image (NDArray[Any]): Imagem 2D ou volume 3D de entrada.
+        factors (Sequence[float]): Fatores divisores de redução por eixo alinhados ao
+            shape de ``image``.
+        order (int): Ordem da interpolação spline usada no caminho SciPy/CuPy.
+        use_opencv (bool): Se ``True``, usa OpenCV por planos em vez de SciPy/CuPy
+            ``zoom``.
+        opencv_interpolation (Optional[int]): Código ``cv2.INTER_*``; ``None`` seleciona
+            ``cv2.INTER_LINEAR``.
+
+    Returns:
+        NDArray[Any]: Array redimensionado segundo o backend selecionado.
+    """
+    # Prioriza o caminho OpenCV por fatias quando configurado.
     if use_opencv:
         if opencv_interpolation is None:
             opencv_interpolation = cv2.INTER_LINEAR
@@ -125,11 +177,27 @@ def downscale_label(
     *,
     allow_gpu_zoom: bool = False,
 ) -> NDArray[Any]:
-    """Amostra classes discretas na grade da imagem ou reproduz o zoom histórico."""
+    """Amostra classes discretas na grade da imagem ou reproduz o zoom histórico.
+
+    Args:
+        label (NDArray[Any]): Volume 3D de rótulos inteiros alinhado à imagem original.
+        config (dict[str, Any]): Configuração efetiva contendo ``DOWNSCALE_FACTORS``,
+            ``DOWNSCALE_METHOD`` e ``LABEL_RESAMPLING``.
+        allow_gpu_zoom (bool): Se ``True``, permite usar CuPy ``zoom`` ordem ``0`` no
+            caminho não-OpenCV.
+
+    Returns:
+        NDArray[Any]: Volume de rótulos reamostrado preservando os valores inteiros das
+            classes.
+    """
+    # Valida o protocolo de reamostragem e evita trabalho extra para fator unitário.
     factors = config["DOWNSCALE_FACTORS"]
     protocol = config.get("LABEL_RESAMPLING", IMAGE_GRID_LABEL_PROTOCOL)
     if protocol not in (IMAGE_GRID_LABEL_PROTOCOL, LEGACY_LABEL_PROTOCOL):
         raise ValueError(f"Protocolo de redução dos rótulos desconhecido: {protocol}")
+    if tuple(float(f) for f in factors) == (1.0, 1.0, 1.0):
+        return np.asarray(label).copy()
+    # Seleciona interpolação discreta via OpenCV ou zoom ordem 0 para manter classes.
     if protocol == IMAGE_GRID_LABEL_PROTOCOL and config["DOWNSCALE_METHOD"] == "opencv":
         interpolation = (
             cv2.INTER_NEAREST
@@ -142,19 +210,20 @@ def downscale_label(
     return downscale_image_ndi(label, factors, order=0)
 
 
-def threshold_image(
-    image: NDArray[Any], min_val: float = -300, max_val: float = 675
-) -> Tuple[NDArray[Any], NDArray[Any]]:
-    """Aplica máscara de threshold por faixa inclusiva de HU/intensidade."""
-    thresh_mask = (image >= min_val) & (image <= max_val)
-    thresh_img = thresh_mask * image
-    return thresh_img, thresh_mask
-
-
 def threshold_image_with_offset(
     image: NDArray[Any], min_val: float = -300, max_val: float = 675
 ) -> Tuple[NDArray[Any], NDArray[Any], float]:
-    """Aplica o limiar e desloca os valores válidos para uma faixa positiva."""
+    """Aplica o limiar e desloca os valores válidos para uma faixa positiva.
+
+    Args:
+        image (NDArray[Any]): Imagem ou volume NumPy (em HU quando CCTA).
+        min_val (float): Limite inferior inclusivo de intensidade, em HU.
+        max_val (float): Limite superior inclusivo de intensidade, em HU.
+
+    Returns:
+        Tuple[NDArray[Any], NDArray[Any], float]: Tupla
+            ``(thresh_img, thresh_mask, offset)`` com fundo zerado antes do LCC.
+    """
     offset = np.abs(min_val)
 
     # Cria a máscara e preserva zero fora da faixa selecionada.
@@ -168,7 +237,18 @@ def threshold_image_with_offset(
 def largest_connected_component(
     image: NDArray[Any], mask: NDArray[Any]
 ) -> Tuple[NDArray[Any], NDArray[Any]]:
-    """Mantém apenas o maior componente conectado e o aplica à imagem."""
+    """Mantém apenas o maior componente conectado e o aplica à imagem.
+
+    Args:
+        image (NDArray[Any]): Imagem ou volume NumPy previamente limiarizado com fundo
+            zerado.
+        mask (NDArray[Any]): Máscara binária 2D ou 3D correspondente aos candidatos
+            ativos.
+
+    Returns:
+        Tuple[NDArray[Any], NDArray[Any]]: Tupla ``(lcc_img, largest_comp_mask)`` (ou
+            a entrada inalterada se a máscara estiver vazia).
+    """
     # Rotula os componentes para selecionar aquele com maior número de voxels.
     labeled_array, num_features = cast(
         tuple[NDArray[Any], int],
@@ -177,6 +257,7 @@ def largest_connected_component(
     if num_features == 0:
         return image, mask
 
+    # Seleciona o rótulo predominante e aplica sua máscara sobre a imagem de entrada.
     largest_comp_label = _find_largest_component_label(labeled_array)
     if largest_comp_label is None:
         return image, mask
@@ -193,20 +274,20 @@ def build_lcc_image_from_mask(
     offset: float,
     per_slice: bool = True,
 ) -> Tuple[NDArray[Any], NDArray[Any]]:
-    """Aplica uma máscara externa e preserva a maior componente conectada.
+    """Aplica uma máscara binária e extrai o maior componente conectado (LCC).
 
-    Esta função reproduz a etapa de LCC do pré-processamento clássico para
-    qualquer máscara candidata, incluindo máscaras geradas por threshold fuzzy.
-    O offset mantém intensidades negativas distinguíveis do fundo
-    durante a extração do componente conectado.
+    Args:
+        volume (NDArray[Any]): Volume 3D original (em HU) sobre o qual a máscara é
+            aplicada.
+        mask (NDArray[Any]): Máscara binária 3D dos voxels candidatos.
+        offset (float): Deslocamento somado temporariamente antes do LCC para separar
+            valores negativos do fundo.
+        per_slice (bool): Se ``True``, extrai o LCC em cada fatia axial; se ``False``,
+            em 3D global.
 
-    Argumentos:        volume: Volume 3D já reduzido para a resolução de trabalho.
-        mask: Máscara binária candidata.
-        offset: Valor somado aos voxels válidos antes do LCC.
-        per_slice: Se True, calcula o LCC em cada fatia axial; caso contrário,
-            calcula um único LCC no volume inteiro.
-
-    Retorna:        Tupla com a imagem filtrada pelo LCC e a máscara do LCC.
+    Returns:
+        Tuple[NDArray[Any], NDArray[Any]]: Tupla ``(lcc_image, lcc_mask)`` em
+            ``float32`` e booleano com o offset já subtraído.
     """
     # Recria a imagem limiarizada a partir da máscara candidata.
     thresholded = np.zeros_like(volume, dtype=np.float32)
@@ -226,6 +307,7 @@ def build_lcc_image_from_mask(
         # Alternativa global em 3D para comparar uma seleção mais restritiva.
         lcc_image, lcc_mask = largest_connected_component(thresholded, mask)
 
+    # Remove o offset temporário para devolver as intensidades na escala original.
     return (lcc_image - offset).astype(np.float32), lcc_mask.astype(bool)
 
 
@@ -239,7 +321,28 @@ def run_core_preprocessing_pipeline(
     use_opencv: bool = False,
     opencv_interpolation: Optional[int] = None,
 ) -> Tuple[NDArray[Any], NDArray[Any], NDArray[Any], Tuple[int, int]]:
-    """Executa pipeline com downscale, threshold adaptativo e maior componente conectado."""
+    """Executa pipeline de downscale, threshold adaptativo e maior componente.
+
+    Args:
+        image (NDArray[Any]): Volume 3D bruto de entrada (tipicamente em HU).
+        downscale_factors (Sequence[float]): Fatores divisores de redução por eixo
+            alinhados ao shape de ``image``.
+        min_threshold (int): Limiar inferior inclusivo em HU.
+        max_threshold_percentile (float): Percentil superior usado para definir o teto
+            de intensidade.
+        lcc_per_slice (bool): Se ``True``, aplica LCC por fatia axial; se ``False``, em
+            3D global.
+        order (int): Ordem da interpolação spline quando ``use_opencv=False``.
+        use_opencv (bool): Se ``True``, usa OpenCV no downscaling em vez de SciPy.
+        opencv_interpolation (Optional[int]): Código ``cv2.INTER_*``; ``None`` usa
+            ``cv2.INTER_LINEAR``.
+
+    Returns:
+        Tuple[NDArray[Any], NDArray[Any], NDArray[Any], Tuple[int, int]]: Tupla
+            ``(down_image, thresh_image, lcc_image, thresh_vals)`` com o volume
+            reduzido, limiarizado, filtrado por LCC e os limiares aplicados.
+    """
+    # Reduz a resolução espacial do volume pelo backend selecionado.
     if use_opencv:
         if opencv_interpolation is None:
             opencv_interpolation = cv2.INTER_LINEAR
@@ -255,6 +358,7 @@ def run_core_preprocessing_pipeline(
         int(np.percentile(down_image, max_threshold_percentile)),
     )
 
+    # Limiariza o volume e desloca valores válidos para faixa positiva antes do LCC.
     thresh_image, thresh_mask, offset = threshold_image_with_offset(
         down_image, *thresh_vals
     )
@@ -270,6 +374,7 @@ def run_core_preprocessing_pipeline(
     else:
         lcc_image, _ = largest_connected_component(thresh_image, thresh_mask)
 
+    # Subtrai o offset para restaurar as intensidades relativas originais.
     lcc_image -= offset
 
     return down_image, thresh_image, lcc_image, thresh_vals
@@ -282,6 +387,5 @@ __all__ = [
     "build_lcc_image_from_mask",
     "largest_connected_component",
     "run_core_preprocessing_pipeline",
-    "threshold_image",
     "threshold_image_with_offset",
 ]

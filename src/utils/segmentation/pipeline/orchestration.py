@@ -11,16 +11,7 @@ from pathlib import Path
 import pandas as pd
 from tqdm import tqdm
 
-from utils.project.runtime.resource_monitor import (
-    ResourceMonitor,
-    persist_resource_diagnostics,
-)
-
-from utils.segmentation.aorta.diagnostics import (
-    summarize_aorta_circles as summarize_aorta_circles,
-    summarize_aorta_volume as summarize_aorta_volume,
-)
-
+from utils.project.evaluation.artery_distances import pending_artery_distance_metrics
 from utils.project.results import (
     duration_breakdown,
     get_batch_result_file,
@@ -29,19 +20,20 @@ from utils.project.results import (
     save_results,
     summarize_batch_timing_records,
 )
+from utils.project.runtime.resource_monitor import (
+    ResourceMonitor,
+    persist_resource_diagnostics,
+)
 from utils.segmentation.pipeline.arteries import segment_arteries_from_ostia
-from utils.project.evaluation.artery_distances import pending_artery_distance_metrics
-from utils.segmentation.aorta.segmentation import classify_aorta_segmentation_feedback
 from utils.segmentation.pipeline.detection import (
     detect_and_evaluate_ostia,
-    locate_and_filter_aorta_circles,
-    segment_aorta_with_diagnostics,
+    locate_and_segment_aorta,
 )
 from utils.segmentation.pipeline.preprocessing import (
     compute_vesselness,
     load_and_preprocess_image,
 )
-from utils.segmentation.pipeline.visuals import save_segmentation_visual
+from utils.visualization.pipeline.pipeline_artifacts import save_segmentation_visual
 
 logger = logging.getLogger(__name__)
 
@@ -142,7 +134,14 @@ IMAGE_RESULT_DEFAULTS = {
 
 
 def _new_image_result(img_id):
-    """Cria o registro completo com os defaults de uma imagem."""
+    """Cria o registro completo com os defaults de uma imagem.
+
+    Args:
+        img_id (int | str): Identificador do exame no ImageCAS.
+
+    Returns:
+        dict[str, Any]: Dicionário inicializado com ``IMG_ID`` e campos padrão.
+    """
     return {"IMG_ID": img_id, **IMAGE_RESULT_DEFAULTS}
 
 
@@ -151,7 +150,19 @@ def _preprocessing_result_fields(
     image_slice_count,
     image_voxel_count=None,
 ):
-    """Converte detalhes do pré-processamento nos campos persistidos."""
+    """Converte detalhes do pré-processamento nos campos persistidos.
+
+    Args:
+        preprocessing_details (dict[str, Any]): Metadados retornados por
+            ``load_and_preprocess_image``.
+        image_slice_count (int): Número de fatias axiais do volume pós-downscaling.
+        image_voxel_count (int | None): Total opcional de voxels do volume processado.
+
+    Returns:
+        dict[str, Any]: Subconjunto de campos tabulares de pré-processamento e
+            dimensões do exame.
+    """
+    # Copia as métricas do threshold/LCC e registra as dimensões do volume processado.
     detail_keys = (
         "threshold_mode",
         "fuzzy_mask_strategy",
@@ -171,23 +182,17 @@ def _preprocessing_result_fields(
     return fields
 
 
-def _circle_result_fields(
-    detected_circles,
-    image_slice_count,
-    scaled_spacing=None,
-    circle_config=None,
-):
-    """Compatibilidade interna para o antigo nome do resumo de círculos."""
-    return summarize_aorta_circles(
-        detected_circles,
-        image_slice_count,
-        scaled_spacing,
-        circle_config,
-    )
-
-
 def _ostia_result_fields(ostia_eval):
-    """Converte a avaliação dos óstios nos campos persistidos."""
+    """Converte a avaliação dos óstios nos campos persistidos.
+
+    Args:
+        ostia_eval (dict[str, Any]): Resultado retornado por
+            ``detect_and_evaluate_ostia``.
+
+    Returns:
+        dict[str, Any]: Campos tabulares de coordenadas, distâncias e status dos óstios.
+    """
+    # Determina o status consolidado do par de óstios em relação à referência.
     both_correct = bool(ostia_eval["both_correct"])
     both_tolerable = bool(ostia_eval["both_tolerable"])
     if both_correct:
@@ -197,6 +202,7 @@ def _ostia_result_fields(ostia_eval):
     else:
         status = "found_but_wrong"
 
+    # Normaliza coordenadas para tuplas inteiras e extrai distâncias e flags.
     return {
         "ostia_left": (
             tuple(map(int, ostia_eval["ostia_left"]))
@@ -223,15 +229,25 @@ def _ostia_result_fields(ostia_eval):
 
 
 def process_image(img_id, config, base_path, visual_output_dir=None):
-    """Processa uma imagem completa e retorna o dicionário de resultados.
+    """Executa o fluxo completo do pipeline para um exame ImageCAS e agrega métricas.
 
-    Fluxo por imagem:
-    1. carrega e pré-processa o volume;
-    2. calcula vesselness para detecção dos óstios;
-    3. detecta círculos e segmenta a aorta;
-    4. seleciona/avalia os óstios;
-    5. segmenta as artérias a partir dos óstios.
+    Sequência: pré-processamento, localização/segmentação da aorta, vesselness e
+    detecção/avaliação de óstios e segmentação arterial.
+
+    Args:
+        img_id (int | str): Identificador do exame no ImageCAS.
+        config (dict[str, Any]): Configuração efetiva normalizada e já escalada para a
+            resolução.
+        base_path (Path | str): Diretório raiz contendo as imagens e rótulos do
+            dataset.
+        visual_output_dir (Path | str | None): Diretório opcional onde visualizações
+            3D HTML são salvas.
+
+    Returns:
+        dict[str, Any]: Dicionário com métricas, diagnósticos de etapas, telemetria e
+            eventual mensagem de erro.
     """
+    # Inicializa o registro com defaults e inicia o monitoramento de RAM/tempo.
     result = _new_image_result(img_id)
     result.update(pending_artery_distance_metrics(config))
     monitor = ResourceMonitor(config)
@@ -254,54 +270,23 @@ def process_image(img_id, config, base_path, visual_output_dir=None):
             )
         )
 
-        # Calcula o mapa de vasos usado para selecionar candidatos de óstios.
+        # Localiza a aorta, filtra a trajetória, segmenta e consolida diagnósticos.
+        aorta_stage = locate_and_segment_aorta(
+            lcc_image,
+            downscale_factors,
+            scaled_spacing,
+            config,
+            circle_summary_source="original",
+            require_non_empty=False,
+        )
+        aorta_mask = aorta_stage.aorta_mask
+        result.update(aorta_stage.diagnostics)
+
+        # Calcula o mapa de vasos só após segmentar a aorta para reduzir pico de RAM.
         vesselness_ostios = compute_vesselness(
             lcc_image,
             vesselness_config=config["VESSELNESS_AORTA"],
             use_gpu=config.get("USE_GPU", False),
-        )
-
-        # Localiza a aorta por círculos em fatias consecutivas.
-        circle_tracking = locate_and_filter_aorta_circles(
-            lcc_image,
-            downscale_factors,
-            scaled_spacing,
-            config["CIRCLE_DETECTION"],
-        )
-        circle_summary = summarize_aorta_circles(
-            circle_tracking.original_circles,
-            result["image_slice_count"],
-            scaled_spacing,
-            config["CIRCLE_DETECTION"],
-        )
-        result.update(circle_summary)
-
-        # Filtra somente a trajetória consumida pelas etapas seguintes. O
-        # resumo acima continua descrevendo a saída original do detector.
-        detected_circles = circle_tracking.filtered_circles
-        result.update(circle_tracking.filter_diagnostics)
-        # Segmenta a aorta uma vez com a trajetória selecionada pelo filtro.
-        aorta_segmentation = segment_aorta_with_diagnostics(
-            lcc_image,
-            detected_circles,
-            config["LEVEL_SET"],
-            use_gpu=config.get("USE_GPU", False),
-        )
-        aorta_mask = aorta_segmentation.mask
-        result.update(aorta_segmentation.diagnostics)
-        # Relaciona a máscara da aorta ao volume processado completo.
-        result.update(
-            summarize_aorta_volume(
-                aorta_mask,
-                result["image_voxels"],
-            )
-        )
-        # Gera apenas um alerta de qualidade; a classificação não modifica a máscara.
-        result["aorta_segmentation_feedback"] = classify_aorta_segmentation_feedback(
-            result.get("aorta_level_set_circle_fill_q25"),
-            result.get("aorta_level_set_circle_area_ratio_p90"),
-            result.get("aorta_volume_fraction"),
-            config.get("LEVEL_SET", {}).get("quality_feedback"),
         )
 
         try:
@@ -314,6 +299,7 @@ def process_image(img_id, config, base_path, visual_output_dir=None):
                 config,
             )
         except ValueError as ostia_exc:
+            # Registra falha na busca de óstios e gera visual diagnóstico se habilitado.
             result["ostia_status"] = "not_found"
             result["ostia_error"] = str(ostia_exc)
             result["skip_reason"] = "ostia_not_found"
@@ -330,6 +316,8 @@ def process_image(img_id, config, base_path, visual_output_dir=None):
                     spacing=scaled_spacing,
                 )
             return result
+        finally:
+            del vesselness_ostios
 
         result.update(_ostia_result_fields(ostia_eval))
 
@@ -355,6 +343,7 @@ def process_image(img_id, config, base_path, visual_output_dir=None):
                 spacing=scaled_spacing,
             )
 
+        # Descarta máscaras volumétricas antes de retornar os campos tabulares.
         del aorta_mask
         artery_metrics.pop("artery_mask", None)
         artery_metrics.pop("raw_artery_mask", None)
@@ -369,7 +358,18 @@ def process_image(img_id, config, base_path, visual_output_dir=None):
 
 
 def _resolve_batch_plan(ids, config, resume_from_batch):
-    """Calcula quantidade, tamanho e índice inicial dos lotes."""
+    """Calcula quantidade, tamanho e índice inicial dos lotes.
+
+    Args:
+        ids (Sequence[int | str]): Lista ordenada de IDs de exames do split.
+        config (dict[str, Any]): Configuração efetiva contendo ``NUM_BATCHES``.
+        resume_from_batch (int): Número do lote (base 1) para retomada, ou ``0`` para
+            executar do início.
+
+    Returns:
+        tuple[int, int, int]: Tupla ``(num_batches, batch_size, start_batch_index)``.
+    """
+    # Ajusta a quantidade de lotes ao total de exames e valida o ponto de retomada.
     num_batches = config.get("NUM_BATCHES") or 5
     if num_batches <= 0:
         num_batches = 5
@@ -383,13 +383,24 @@ def _resolve_batch_plan(ids, config, resume_from_batch):
             f"lotes ({num_batches})."
         )
 
+    # Calcula o tamanho de cada lote e o índice base-0 de início.
     batch_size = max(1, math.ceil(len(ids) / num_batches))
     start_batch_index = resume_from_batch - 1 if resume_from_batch > 0 else 0
     return num_batches, batch_size, start_batch_index
 
 
 def _load_previous_batches(output_dir, split_name, start_batch_index):
-    """Carrega lotes anteriores necessários para uma retomada consistente."""
+    """Carrega lotes anteriores necessários para uma retomada consistente.
+
+    Args:
+        output_dir (Path | str): Diretório numérico onde os CSVs de lote estão salvos.
+        split_name (str): Nome do split usado nos arquivos de resultado.
+        start_batch_index (int): Índice base-0 do primeiro lote a ser reprocessado.
+
+    Returns:
+        tuple[list[dict[str, Any]], list[int]]: Tupla ``(all_results,
+            batches_processed)`` com os registros e números dos lotes recuperados.
+    """
     all_results = []
     batches_processed = []
     missing_batches = []
@@ -432,7 +443,22 @@ def _process_and_save_batch(
     output_dir,
     visual_output_dir=None,
 ):
-    """Processa um lote e persiste resultados e duração imediatamente."""
+    """Processa um lote e persiste resultados e duração imediatamente.
+
+    Args:
+        batch_ids (Sequence[int | str]): IDs de exames pertencentes ao lote atual.
+        batch_number (int): Número do lote atual (base 1).
+        num_batches (int): Total de lotes planejados para o split.
+        split_name (str): Nome do split usado nos arquivos e manifests.
+        config (dict[str, Any]): Configuração efetiva normalizada da execução.
+        base_path (Path | str): Diretório raiz do dataset ImageCAS.
+        output_dir (Path | str): Diretório numérico de saída para CSVs e manifests.
+        visual_output_dir (Path | str | None): Diretório opcional para HTMLs 3D.
+
+    Returns:
+        list[dict[str, Any]]: Lista de dicionários de resultado das imagens do lote.
+    """
+    # Registra o instante inicial do lote para calcular a duração após a escrita.
     batch_started_at = datetime.now().isoformat(timespec="seconds")
     batch_start_time = time.time()
     logger.info(
@@ -501,7 +527,28 @@ def run_pipeline(
     resume_from_batch=0,
     visual_output_dir=None,
 ):
-    """Processa imagens em lotes com uma config runtime já escalada para a resolução."""
+    """Executa o pipeline em lotes e consolida resultados e tempos de execução.
+
+    Args:
+        ids (Sequence[int | str]): Lista ordenada de IDs de exames ImageCAS a
+            processar.
+        split_name (str): Nome do split (usado nos arquivos de lote, manifests e logs).
+        config (dict[str, Any]): Configuração runtime normalizada e já escalada para a
+            resolução.
+        base_path (Path | str): Diretório raiz do dataset ImageCAS.
+        output_dir (Path | str | None): Diretório numérico obrigatório onde os CSVs e
+            manifests de lote são salvos.
+        resume_from_batch (int): Número do lote (base 1) para retomada, ou ``0`` para
+            execução do início.
+        visual_output_dir (Path | str | None): Diretório opcional onde visualizações
+            3D HTML são gravadas.
+
+    Returns:
+        dict[str, Any]: Dicionário com ``details``, ``execution_time``,
+            ``execution_time_breakdown``, ``batches_processed``, ``batch_timings``,
+            ``batch_timing_summary`` e ``is_batched``.
+    """
+    # Valida pré-condições de entrada e define o plano de divisão em lotes.
     start_time = time.time()
 
     if not ids:

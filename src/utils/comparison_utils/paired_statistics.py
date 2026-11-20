@@ -8,7 +8,14 @@ from ..project.dataframe import require_series_column, to_numeric_series
 
 
 def _scalar_float(value: object) -> float:
-    """Converte um resultado numérico escalar e rejeita vetores inesperados."""
+    """Converte um resultado numérico escalar e rejeita vetores inesperados.
+
+    Args:
+        value (object): Resultado escalar obtido de testes ou agregações.
+
+    Returns:
+        float: Valor convertido para ``float`` nativo do Python.
+    """
     array = np.asarray(value)
     if array.ndim != 0:
         raise ValueError("Era esperado um resultado estatístico escalar.")
@@ -22,7 +29,18 @@ def _bootstrap_mean_confidence_interval(
     samples: int,
     random_state: int,
 ) -> tuple[float, float]:
-    """Estima o IC percentil da média preservando o pareamento dos deltas."""
+    """Estima o IC percentil da média preservando o pareamento dos deltas.
+
+    Args:
+        values (np.ndarray): Vetor 1D com diferenças pareadas entre métodos.
+        confidence_level (float): Nível de confiança desejado em ``(0, 1)``.
+        samples (int): Número de reamostragens bootstrap.
+        random_state (int): Semente do gerador pseudoaleatório.
+
+    Returns:
+        tuple[float, float]: Limites inferior e superior do intervalo de confiança.
+    """
+    # Valida parâmetros do bootstrap e trata vetores sem variância.
     if samples <= 0:
         raise ValueError("bootstrap_samples deve ser maior que zero.")
     if not 0 < confidence_level < 1:
@@ -40,6 +58,7 @@ def _bootstrap_mean_confidence_interval(
         sampled = rng.choice(values, size=(stop - start, len(values)), replace=True)
         bootstrap_means[start:stop] = sampled.mean(axis=1)
 
+    # Calcula os quantis bilaterais da distribuição bootstrap das médias.
     alpha = 1 - confidence_level
     lower, upper = np.quantile(
         bootstrap_means,
@@ -64,7 +83,21 @@ def compare_paired_dice(
     são reportados como pares excluídos, nunca convertidos em Dice zero.
     O efeito rank-biserial positivo favorece o candidato. Diferenças são
     arredondadas a 12 casas para evitar desempates numéricos artificiais.
+
+    Args:
+        baseline (pd.DataFrame): Resultados por exame do método de referência.
+        candidate (pd.DataFrame): Resultados por exame do método candidato.
+        id_column (str): Nome da coluna identificadora usada no pareamento.
+        dice_column (str): Nome da coluna numérica com o coeficiente Dice.
+        bootstrap_samples (int): Quantidade de reamostragens bootstrap para o IC.
+        confidence_level (float): Nível de confiança bilateral do intervalo.
+        random_state (int): Semente aleatória para reprodutibilidade do bootstrap.
+
+    Returns:
+        dict[str, float | int]: Resumo pareado com contagens, estatísticas dos
+        dois métodos, IC da média dos deltas, efeito rank-biserial e p-valor.
     """
+    # Valida IDs e valores de Dice de ambas as tabelas e indexa pelo ID.
     frames = []
     for frame in (baseline, candidate):
         data = frame.copy()
@@ -84,12 +117,14 @@ def compare_paired_dice(
             raise TypeError("A indexação dos resultados não retornou um DataFrame.")
         frames.append(require_series_column(indexed, dice_column))
 
+    # Alinha os exames por ID e descarta pares com ausência antes dos testes.
     aligned = pd.concat(frames, axis=1, keys=["baseline", "candidate"])
     paired = aligned.dropna()
     if paired.empty:
         raise ValueError("Sem pares validos para comparar Dice.")
     baseline_values = require_series_column(paired, "baseline")
     candidate_values = require_series_column(paired, "candidate")
+    # Calcula diferenças pareadas, Wilcoxon bilateral e efeito rank-biserial.
     delta = candidate_values - baseline_values
     ranked_delta = delta.round(12)
     nonzero = ranked_delta[ranked_delta.ne(0)]
@@ -103,6 +138,7 @@ def compare_paired_dice(
         p_value = _scalar_float(p_value_value)
         ranks = rankdata(nonzero.abs())
         effect = float(np.sum(ranks * np.sign(nonzero)) / ranks.sum())
+    # Estima o intervalo de confiança bootstrap para a média das diferenças.
     ci_low, ci_high = _bootstrap_mean_confidence_interval(
         delta.to_numpy(dtype=float),
         confidence_level=confidence_level,
@@ -136,7 +172,14 @@ def compare_paired_dice(
 
 
 def adjust_holm(p_values: pd.Series) -> pd.Series:
-    """Controla múltiplas comparações e preserva os índices da tabela."""
+    """Controla múltiplas comparações e preserva os índices da tabela.
+
+    Args:
+        p_values (pd.Series): Série contendo os p-valores brutos dos testes.
+
+    Returns:
+        pd.Series: P-valores ajustados por Holm-Bonferroni nos índices originais.
+    """
     ordered = p_values.sort_values()
     factors = np.arange(len(ordered), 0, -1)
     return (ordered * factors).cummax().clip(upper=1).reindex(p_values.index)

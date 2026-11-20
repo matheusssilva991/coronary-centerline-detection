@@ -6,13 +6,13 @@ from pathlib import Path
 
 import pandas as pd
 
-from utils.project.results.external import (
-    load_mmwhs_train_aorta_dice,
-    load_mmwhs_test_aorta_dice,
-)
 from utils.project.evaluation.mmwhs_official_aorta import (
-    OFFICIAL_AORTA_METHOD,
     LEGACY_WHS_METHOD,
+    OFFICIAL_AORTA_METHOD,
+)
+from utils.project.results.external import (
+    load_mmwhs_test_aorta_dice,
+    load_mmwhs_train_aorta_dice,
 )
 
 

@@ -17,7 +17,15 @@ DEFAULT_SPLIT_CONFIG_PATH = (
 
 
 def list_dataset_image_ids(base_path: str | Path) -> List[int]:
-    """Lista todos os IDs ImageCAS disponíveis, em ordem numérica."""
+    """Lista todos os IDs ImageCAS disponíveis em ordem numérica.
+
+    Args:
+        base_path (str | Path): Diretório contendo os volumes ``*.img.nii.gz`` do
+            ImageCAS.
+
+    Returns:
+        List[int]: Lista ordenada de identificadores numéricos encontrados.
+    """
     dataset_path = Path(base_path)
     img_files = sorted(
         dataset_path.glob("*.img.nii.gz"),
@@ -34,7 +42,17 @@ def _load_fixed_splits(
     split_config_path: Path,
     available_ids: List[int],
 ) -> Tuple[List[int], List[int], List[int]]:
-    """Carrega IDs fixos dos splits e os valida contra o banco."""
+    """Carrega IDs fixos dos splits e os valida contra o banco.
+
+    Args:
+        split_config_path (Path): Caminho do arquivo JSON com os splits fixos.
+        available_ids (List[int]): Identificadores disponíveis no diretório do banco.
+
+    Returns:
+        Tuple[List[int], List[int], List[int]]: Tupla ``(train_ids, val_ids, test_ids)``
+            consistente com o conjunto em disco.
+    """
+    # Carrega o JSON e verifica a existência das três chaves obrigatórias.
     data = json.loads(split_config_path.read_text(encoding="utf-8"))
     splits = data.get("splits", {})
     required_keys = ("train", "val", "test")
@@ -79,7 +97,16 @@ def _should_use_default_fixed_splits(
     val_size: float,
     random_state: int,
 ) -> bool:
-    """Usa splits fixos do ImageCAS apenas com parâmetros canônicos."""
+    """Usa splits fixos do ImageCAS apenas com parâmetros canônicos.
+
+    Args:
+        test_size (float): Fração solicitada para o split de teste.
+        val_size (float): Fração solicitada para o split de validação.
+        random_state (int): Semente aleatória solicitada.
+
+    Returns:
+        bool: ``True`` quando os parâmetros coincidem com os padrões e o JSON existe.
+    """
     return (
         test_size == DEFAULT_TEST_SIZE
         and val_size == DEFAULT_VAL_SIZE
@@ -95,13 +122,22 @@ def get_data_splits(
     random_state: int = DEFAULT_RANDOM_STATE,
     split_config_path: Optional[Union[str, Path]] = None,
 ) -> Tuple[List[int], List[int], List[int], List[int]]:
-    """Divide o dataset em treino, validação e teste.
+    """Retorna ``(train_ids, val_ids, test_ids, all_ids)`` para o dataset ImageCAS.
 
-    Com os parâmetros canônicos, usa ``config/imagecas_splits.json`` para manter
-    os mesmos IDs entre execuções e refactors. Ao informar ``split_config_path``,
-    o arquivo indicado é usado independentemente dos demais parâmetros.
+    Com os parâmetros canônicos, usa ``config/imagecas_splits.json``; ao passar
+    ``split_config_path``, carrega os IDs diretamente desse arquivo.
 
-    Retorna:        (train_ids, val_ids, test_ids, all_ids)
+    Args:
+        base_path (str): Diretório raiz contendo os volumes do ImageCAS.
+        test_size (float): Fração destinada ao conjunto de teste quando dinâmica.
+        val_size (float): Fração do restante destinada à validação quando dinâmica.
+        random_state (int): Semente aleatória para reprodutibilidade do sorteio.
+        split_config_path (Optional[Union[str, Path]]): Caminho opcional de arquivo JSON
+            com splits fixos explícitos.
+
+    Returns:
+        Tuple[List[int], List[int], List[int], List[int]]: Tupla contendo os IDs de
+            treino, validação, teste e o conjunto completo.
     """
     # A listagem compartilhada também sustenta o modo full sem criar splits.
     all_ids = list_dataset_image_ids(base_path)

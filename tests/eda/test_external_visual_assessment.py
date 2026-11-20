@@ -11,8 +11,8 @@ from utils.project.analysis.external_visual_assessment import (
     attach_assessment_subsets,
     load_assessment_subset_lookup,
     load_external_visual_assessments,
-    summarize_visual_status,
     summarize_visual_overview,
+    summarize_visual_status,
 )
 from utils.project.dataframe import require_series_column
 

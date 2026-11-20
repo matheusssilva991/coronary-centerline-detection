@@ -2,6 +2,7 @@
 
 import math
 from typing import Any, Mapping, Sequence
+
 import numpy as np
 from numpy.typing import NDArray
 
@@ -9,10 +10,22 @@ from numpy.typing import NDArray
 def _describe_circle_radii(
     values: Sequence[float], unit: str
 ) -> dict[str, float | None]:
-    """Calcula estatísticas robustas para uma sequência de raios."""
+    """Calcula estatísticas robustas para uma sequência de raios.
+
+    Args:
+        values (Sequence[float]): Sequência de raios válidos da aorta na unidade
+            informada.
+        unit (str): Sufixo da unidade usado nas chaves de saída (ex.: ``px`` ou
+            ``mm``).
+
+    Returns:
+        dict[str, float | None]: Dicionário com mínimo, máximo, média, mediana,
+            desvio-padrão e percentis 10 e 90 (ou ``None`` se vazio).
+    """
     prefix = "aorta_circle_radius_"
     suffix = f"_{unit}"
     keys = ("min", "max", "mean", "median", "std", "p10", "p90")
+    # Preenche as chaves com None quando não há raios válidos na coleção.
     if not values:
         return {f"{prefix}{key}{suffix}": None for key in keys}
 
@@ -29,12 +42,27 @@ def _describe_circle_radii(
 
 
 def _median_or_none(values: Sequence[float]) -> float | None:
-    """Retorna a mediana como float ou ``None`` para coleção vazia."""
+    """Retorna a mediana como float ou ``None`` para coleção vazia.
+
+    Args:
+        values (Sequence[float]): Coleção numérica de valores válidos.
+
+    Returns:
+        float | None: Mediana em ponto flutuante ou ``None`` se ``values`` for vazia.
+    """
     return float(np.median(values)) if values else None
 
 
 def _mean_or_none(values: Sequence[float]) -> float | None:
-    """Retorna a média como float ou ``None`` para coleção vazia."""
+    """Retorna a média como float ou ``None`` para coleção vazia.
+
+    Args:
+        values (Sequence[float]): Coleção numérica de valores válidos.
+
+    Returns:
+        float | None: Média aritmética em ponto flutuante ou ``None`` se ``values`` for
+            vazia.
+    """
     return float(np.mean(values)) if values else None
 
 
@@ -44,7 +72,26 @@ def summarize_aorta_circles(
     scaled_spacing: Sequence[float] | None = None,
     circle_config: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Resume cobertura, raios e continuidade do rastreamento da aorta."""
+    """Resume cobertura, raios e continuidade do rastreamento da aorta.
+
+    Args:
+        detected_circles (Sequence[Mapping[str, Any]]): Sequência de círculos
+            detectados ou filtrados por fatia.
+        image_slice_count (int): Total de fatias axiais (eixo ``z``) do volume de
+            trabalho.
+        scaled_spacing (Sequence[float] | None): Espaçamento físico após downscaling
+            (usa os dois primeiros eixos em ``mm`` para converter raios); ``None`` omite
+            métricas em ``mm``.
+        circle_config (Mapping[str, Any] | None): Configuração da Hough usada para medir
+            saturação nos limites ``radii_start_px``/``radii_end_px``; ``None`` omite
+            essas frações.
+
+    Returns:
+        dict[str, Any]: Dicionário com contagens, cobertura axial, estatísticas de
+            raios (px/mm), variação entre fatias e frações de saturação nos extremos da
+            Hough.
+    """
+    # Separa índices de fatia e contagens entre círculos detectados e interpolados.
     circle_slices = [
         int(circle["slice_index"])
         for circle in detected_circles
@@ -73,6 +120,7 @@ def summarize_aorta_circles(
         else []
     )
 
+    # Calcula estatísticas separadas para raios detectados diretamente e interpolados.
     detected_valid = [
         circle
         for circle in valid_circles
@@ -131,6 +179,7 @@ def summarize_aorta_circles(
                 np.mean(np.isclose(detected_array, upper_bound))
             )
 
+    # Consolida o dicionário final com métricas globais e distribuições de raios.
     accumulators = [
         float(circle["accum"])
         for circle in detected_valid
@@ -173,7 +222,18 @@ def summarize_aorta_circles(
 def summarize_aorta_volume(
     aorta_mask: NDArray[Any], image_voxel_count: int
 ) -> dict[str, Any]:
-    """Calcula a ocupação total e por fatia da máscara final da aorta."""
+    """Calcula a ocupação total e por fatia da máscara final da aorta.
+
+    Args:
+        aorta_mask (NDArray[Any]): Máscara binária 3D segmentada da aorta.
+        image_voxel_count (int): Número total de voxels do volume de trabalho; ``0``
+            retorna ``None`` nas razões.
+
+    Returns:
+        dict[str, Any]: Dicionário com ``aorta_mask_voxels``,
+            ``aorta_segmented_slice_count``, ``aorta_voxels_per_segmented_slice`` e
+            ``aorta_volume_fraction``.
+    """
     aorta_mask_voxels = int(aorta_mask.sum())
     segmented_slice_count = int(aorta_mask.any(axis=(0, 1)).sum())
     return {

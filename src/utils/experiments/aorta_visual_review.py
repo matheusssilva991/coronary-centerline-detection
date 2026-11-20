@@ -9,15 +9,15 @@ from typing import Any, Collection
 import numpy as np
 import pandas as pd
 
+from utils.project.results.io import results_filename
+from utils.project.results.schema import normalize_ostia_status
+
 from ..comparison_utils.io import load_split_results
 from ..project.dataframe import (
     numeric_series,
     require_series_column,
     to_numeric_series,
 )
-from utils.project.results.paths import results_filename
-from utils.project.results.schema import normalize_ostia_status
-
 
 AORTA_REVIEW_ID_FIELDS = (
     "aorta_good_ids",
@@ -30,7 +30,15 @@ OSTIA_REVIEW_ID_FIELDS = (
 
 
 def load_aorta_visual_reviews(path: str | Path) -> dict[str, Any]:
-    """Carrega o catálogo visual e valida cada variante e split."""
+    """Carrega o catálogo visual e valida cada variante e split.
+
+    Args:
+        path (str | Path): Caminho do arquivo JSON com o catálogo de revisões.
+
+    Returns:
+        dict[str, Any]: Estrutura JSON validada contendo grupos por variante e
+        split.
+    """
     review_path = Path(path)
     data = json.loads(review_path.read_text(encoding="utf-8"))
     variants = data.get("variants")
@@ -50,7 +58,18 @@ def get_aorta_visual_review(
     variant: str,
     split: str,
 ) -> dict[str, Any]:
-    """Retorna uma revisão com IDs em conjuntos e chaves de notas inteiras."""
+    """Retorna uma revisão com IDs em conjuntos e chaves de notas inteiras.
+
+    Args:
+        catalog (dict[str, Any]): Catálogo carregado por
+            ``load_aorta_visual_reviews``.
+        variant (str): Nome da variante desejada.
+        split (str): Nome do split desejado.
+
+    Returns:
+        dict[str, Any]: Dicionário da revisão com conjuntos de IDs inteiros e
+        notas indexadas por ``IMG_ID`` inteiro.
+    """
     try:
         raw_review = catalog["variants"][variant][split]
     except KeyError as exc:
@@ -58,6 +77,7 @@ def get_aorta_visual_review(
             f"Review not found for variant={variant!r}, split={split!r}."
         ) from exc
 
+    # Converte listas de IDs e chaves das notas para inteiros visando buscas O(1).
     review = dict(raw_review)
     for field in (*AORTA_REVIEW_ID_FIELDS, *OSTIA_REVIEW_ID_FIELDS):
         if field in raw_review:
@@ -73,7 +93,16 @@ def resolve_aorta_review_results_path(
     review: dict[str, Any],
     split: str,
 ) -> Path:
-    """Resolve o CSV por imagem associado a uma entrada do catálogo."""
+    """Resolve o CSV por imagem associado a uma entrada do catálogo.
+
+    Args:
+        repo_root (str | Path): Raiz do repositório usada com ``review["run_dir"]``.
+        review (dict[str, Any]): Dicionário de revisão contendo ``run_dir``.
+        split (str): Nome do split associado ao arquivo de resultados.
+
+    Returns:
+        Path: Caminho do CSV atual por imagem ou do arquivo legado equivalente.
+    """
     numeric_dir = Path(repo_root) / review["run_dir"] / "numeric"
     current = numeric_dir / results_filename(split)
     legacy = numeric_dir / f"ostios_{split}_results.csv"
@@ -89,7 +118,16 @@ def add_aorta_extent_metrics(dataframe: pd.DataFrame) -> pd.DataFrame:
 
     Valores positivos em ``segmented_minus_circle_slices`` indicam uma máscara
     final mais extensa que a trajetória; valores negativos indicam retração.
+
+    Args:
+        dataframe (pd.DataFrame): Tabela de resultados contendo contagens de
+            fatias da imagem, dos círculos e da aorta segmentada.
+
+    Returns:
+        pd.DataFrame: Cópia enriquecida com frações de cobertura axial, delta de
+        fatias e posições normalizadas da trajetória quando disponíveis.
     """
+    # Valida colunas obrigatórias e evita divisões por zero nas razões axiais.
     df = dataframe.copy()
     required = {
         "image_slice_count",
@@ -106,6 +144,7 @@ def add_aorta_extent_metrics(dataframe: pd.DataFrame) -> pd.DataFrame:
     valid_image_slices = image_slices.where(image_slices.gt(0))
     valid_circle_slices = circle_slices.where(circle_slices.gt(0))
 
+    # Calcula frações axiais e diferenças entre a máscara segmentada e os círculos.
     df["circle_slice_fraction"] = circle_slices / valid_image_slices
     df["segmented_slice_fraction"] = segmented_slices / valid_image_slices
     df["segmented_minus_circle_slices"] = segmented_slices - circle_slices
@@ -113,6 +152,7 @@ def add_aorta_extent_metrics(dataframe: pd.DataFrame) -> pd.DataFrame:
         segmented_slices - circle_slices
     ) / valid_circle_slices
 
+    # Adiciona percentual volumétrico e posições normalizadas quando disponíveis.
     if "aorta_volume_fraction" in df.columns:
         df["aorta_volume_percentage"] = (
             numeric_series(df, "aorta_volume_fraction") * 100.0
@@ -138,7 +178,24 @@ def load_aorta_review_cohort(
     required_columns: Collection[str] = (),
     use_reviewed_ostia_labels: bool = False,
 ) -> pd.DataFrame:
-    """Carrega um run revisado e adiciona rótulos visuais, de óstios e axiais."""
+    """Carrega um run revisado e adiciona rótulos visuais, de óstios e axiais.
+
+    Args:
+        repo_root (str | Path): Raiz do repositório para resolver o diretório do run.
+        review (dict[str, Any]): Entrada de revisão obtida via
+            ``get_aorta_visual_review``.
+        split (str): Nome do split carregado.
+        cohort_name (str | None): Nome opcional para a coluna ``coorte``; se
+            ``None``, utiliza o valor de ``split``.
+        required_columns (Collection[str]): Colunas extras exigidas no CSV.
+        use_reviewed_ostia_labels (bool): Se ``True``, utiliza ``ostia_bad_ids``
+            da revisão manual em vez do status registrado no CSV.
+
+    Returns:
+        pd.DataFrame: Tabela ordenada por ``IMG_ID`` com rótulos visuais da
+        aorta, desfecho dos óstios e métricas de extensão axial.
+    """
+    # Carrega o CSV do run revisado e verifica presença das colunas exigidas.
     results_path = resolve_aorta_review_results_path(repo_root, review, split)
     numeric_dir = results_path.parent
     dataframe = load_split_results({"mid_res": {split: numeric_dir}}, "mid_res", split)
@@ -149,6 +206,7 @@ def load_aorta_review_cohort(
     if missing:
         raise ValueError(f"Missing result columns for {split!r}: {sorted(missing)}")
 
+    # Garante correspondência exata entre os IDs do CSV e os grupos revisados.
     df = dataframe.copy()
     image_ids = to_numeric_series(require_series_column(df, "IMG_ID"), errors="raise")
     df["IMG_ID"] = image_ids.astype(int)
@@ -164,6 +222,7 @@ def load_aorta_review_cohort(
             f"unclassified={sorted(observed_ids - expected_ids)}"
         )
 
+    # Anexa qualidade visual, notas manuais, desfecho dos óstios e métricas axiais.
     df["visual_aorta_quality"] = np.where(
         image_ids.isin(tuple(good_ids)), "boa", "ruim"
     )
@@ -190,7 +249,14 @@ def load_aorta_review_cohort(
 
 
 def _validate_review(review: Any, variant: str, split: str) -> None:
-    """Rejeita classificações manuais incompletas ou contraditórias."""
+    """Rejeita classificações manuais incompletas ou contraditórias.
+
+    Args:
+        review (Any): Entrada de revisão lida do catálogo JSON.
+        variant (str): Nome da variante usado em mensagens de erro.
+        split (str): Nome do split usado em mensagens de erro.
+    """
+    # Garante presença de run_dir e dos campos obrigatórios de revisão da aorta.
     if not isinstance(review, dict) or not review.get("run_dir"):
         raise ValueError(f"Missing run_dir for variant={variant!r}, split={split!r}.")
     missing = [field for field in AORTA_REVIEW_ID_FIELDS if field not in review]
@@ -199,6 +265,7 @@ def _validate_review(review: Any, variant: str, split: str) -> None:
             f"Missing review fields for variant={variant!r}, split={split!r}: {missing}"
         )
 
+    # Converte IDs e exige par completo caso a revisão de óstios esteja presente.
     groups = {
         field: {int(img_id) for img_id in review[field]}
         for field in (*AORTA_REVIEW_ID_FIELDS, *OSTIA_REVIEW_ID_FIELDS)
@@ -210,6 +277,7 @@ def _validate_review(review: Any, variant: str, split: str) -> None:
             f"Incomplete ostia labels for variant={variant!r}, split={split!r}."
         )
 
+    # Verifica ausência de sobreposições e cobertura idêntica entre aorta e óstios.
     subjects = ["aorta"]
     if all(ostia_fields_present):
         subjects.append("ostia")

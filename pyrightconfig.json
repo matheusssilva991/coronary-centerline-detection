@@ -11,16 +11,10 @@
     "output"
   ],
   "ignore": [
-    "src/experiments/fuzzy_pipeline_comparison.py",
-    "src/experiments/pipeline_parameter_validation.py",
-    "src/experiments/threshold_parameter_sweep.py",
     "src/utils/comparison_utils/bad_cases.py",
-    "src/utils/comparison_utils/failure_analysis.py",
     "src/utils/comparison_utils/ia_math.py",
     "src/utils/comparison_utils/ostia_scenarios.py",
-    "src/utils/experiments/fuzzy_pipeline_comparison.py",
     "src/utils/experiments/parameter_validation.py",
-    "src/utils/experiments/sweep_common.py",
     "src/utils/project/results/__init__.py",
     "src/utils/visualization/bad_cases.py",
     "src/utils/visualization/category.py",

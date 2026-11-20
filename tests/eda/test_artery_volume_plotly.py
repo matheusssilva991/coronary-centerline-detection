@@ -1,34 +1,20 @@
 """Valida os estados Plotly sem kernel interativo nem dados volumétricos."""
 
-from pathlib import Path
 import unittest
 
-import nbformat
-import numpy as np
 import pandas as pd
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-from scipy.stats import gaussian_kde
+
+from eda.images.view.artery_volume_views import (
+    plot_volume_band_performance,
+    plot_volume_dice_delta,
+    plot_volume_dice_panels,
+    plot_volume_histogram,
+)
 
 
 class VolumeDicePlotlyTest(unittest.TestCase):
     def setUp(self):
-        notebook = nbformat.read(
-            Path(__file__).resolve().parents[2]
-            / "src/eda/images/artery_volume_analysis.ipynb",
-            as_version=4,
-        )
-        self.scope = {
-            "go": go,
-            "make_subplots": make_subplots,
-            "volume_plot_xlim": (0, 15),
-            "np": np,
-            "pd": pd,
-            "gaussian_kde": gaussian_kde,
-            "PLOT_SPLIT": "test",
-        }
-        cell = next(c for c in notebook.cells if c.id == "volume-dice-presentation")
-        exec(cell.source, self.scope)
+        self.volume_plot_xlim = (0, 15)
         self.data = pd.DataFrame(
             {
                 "IMG_ID": [1, 2, 3, 1, 2, 4],
@@ -57,10 +43,11 @@ class VolumeDicePlotlyTest(unittest.TestCase):
         )
 
     def _plot(self, data=None, pairs=None):
-        return self.scope["plot_volume_dice_panels"](
+        return plot_volume_dice_panels(
             self.data if data is None else data,
             self.pairs if pairs is None else pairs,
             "Volume × Dice",
+            volume_plot_xlim=self.volume_plot_xlim,
         )
 
     def test_cohort_menu_preserves_ids_counts_and_limits(self):
@@ -121,23 +108,26 @@ class VolumeDicePlotlyTest(unittest.TestCase):
         self.assertEqual(fig.layout.annotations[1].text, "High (N=0)")
 
     def test_histogram_counts_statistics_and_constant_values(self):
-        plot = self.scope["plot_volume_histogram"]
         limits = {"exam_count": 4, "lower_limit_ml": 0, "upper_limit_ml": 10}
         values = pd.DataFrame({"volume_ml": [1, 2, 3, 8]})
-        fig = plot(values, limits, 5)
+        fig = plot_volume_histogram(values, limits, 5)
         self.assertEqual(sum(fig.data[0].y), 4)
         self.assertEqual(len(fig.data[0].x), 5)
         self.assertEqual(list(fig.data[2].x), [3.5, 3.5])
         self.assertEqual(list(fig.data[3].x), [2.5, 2.5])
-        constant = plot(values.assign(volume_ml=2), limits, 5)
+        constant = plot_volume_histogram(values.assign(volume_ml=2), limits, 5)
         self.assertFalse(
             any(trace.name == "Densidade suavizada" for trace in constant.data)
         )
         self.assertEqual(sum(constant.data[0].y), 4)
-        self.assertIsNone(plot(values.iloc[:0], limits, 5))
+        self.assertIsNone(plot_volume_histogram(values.iloc[:0], limits, 5))
 
     def test_delta_menu_preserves_sign_and_detailed_hover(self):
-        fig = self.scope["plot_volume_dice_delta"](self.pairs)
+        fig = plot_volume_dice_delta(
+            self.pairs,
+            split_name="test",
+            volume_plot_xlim=self.volume_plot_xlim,
+        )
         buttons = fig.layout.updatemenus[0].buttons
         for button, expected in ((buttons[0], [-0.1, 0.2]), (buttons[1], [-0.1])):
             traces = [
@@ -149,7 +139,11 @@ class VolumeDicePlotlyTest(unittest.TestCase):
         self.assertIn("Dice Mid", fig.data[0].hovertemplate)
         self.assertTrue(all(len(item) == 6 for t in fig.data for item in t.customdata))
         empty = self.pairs.assign(ostia_success_both=False)
-        fig = self.scope["plot_volume_dice_delta"](empty)
+        fig = plot_volume_dice_delta(
+            empty,
+            split_name="test",
+            volume_plot_xlim=self.volume_plot_xlim,
+        )
         self.assertIn(
             "Nenhum exame",
             fig.layout.updatemenus[0].buttons[1].args[1]["annotations"][0]["text"],
@@ -157,11 +151,12 @@ class VolumeDicePlotlyTest(unittest.TestCase):
 
     def test_predicted_volume_panels_have_identity_lines_and_equal_scales(self):
         data = self.data.assign(predicted_volume_ml=self.data.volume_ml * 1.2)
-        fig = self.scope["plot_volume_dice_panels"](
+        fig = plot_volume_dice_panels(
             data,
             self.pairs,
             "Predição × referência",
             y_column="predicted_volume_ml",
+            volume_plot_xlim=self.volume_plot_xlim,
         )
         self.assertEqual(len(fig.layout.shapes), 2)
         for shape in fig.layout.shapes:
@@ -175,14 +170,14 @@ class VolumeDicePlotlyTest(unittest.TestCase):
         from utils.comparison_utils.artery_volume import summarize_artery_volume_bands
 
         summary, _ = summarize_artery_volume_bands(self.data)
-        fig = self.scope["plot_volume_band_performance"](summary)
+        fig = plot_volume_band_performance(summary, split_name="test")
         self.assertEqual(len(fig.data), 4)
         self.assertIn("DP", fig.layout.annotations[0].text)
         self.assertEqual(fig.layout.yaxis2.range, (0, 100))
         self.assertEqual(
             sum(item[2] for t in fig.data if t.showlegend for item in t.customdata), 6
         )
-        self.assertIsNone(self.scope["plot_volume_band_performance"](pd.DataFrame()))
+        self.assertIsNone(plot_volume_band_performance(pd.DataFrame()))
 
 
 if __name__ == "__main__":

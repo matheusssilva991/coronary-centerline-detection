@@ -3,9 +3,12 @@
 import unittest
 
 import numpy as np
+from scipy import ndimage as ndi
+from skimage.morphology import ball
 
 from utils.segmentation.aorta.segmentation import (
     classify_aorta_segmentation_feedback,
+    remove_leaks_morphology,
 )
 from utils.segmentation.pipeline.detection import segment_aorta_with_diagnostics
 
@@ -47,6 +50,22 @@ class FixedAortaLevelSetTests(unittest.TestCase):
         self.assertEqual(int(result.mask.sum()), 0)
         self.assertEqual(result.diagnostics["aorta_level_set_iterations_used"], 26)
         self.assertIn("aorta_slice_area_jump_p95", result.diagnostics)
+
+    def test_remove_leaks_morphology_bbox_matches_full_volume_and_empty(self):
+        empty = np.zeros((10, 10, 10), dtype=np.uint8)
+        np.testing.assert_array_equal(
+            remove_leaks_morphology(empty, radius=2, use_gpu=False),
+            empty,
+        )
+
+        mask = np.zeros((15, 16, 17), dtype=np.uint8)
+        mask[0:6, 0:6, 0:6] = 1
+        mask[8:15, 10:16, 11:17] = 1
+        mask[7, 7, 7] = 1  # Vazamento fino isolado removido pela abertura
+
+        expected = ndi.binary_opening(mask, structure=ball(2)).astype(np.uint8)
+        actual = remove_leaks_morphology(mask, radius=2, use_gpu=False)
+        np.testing.assert_array_equal(actual, expected)
 
 
 if __name__ == "__main__":

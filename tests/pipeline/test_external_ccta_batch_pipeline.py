@@ -17,11 +17,11 @@ from external_ccta_batch_pipeline import (
     run,
     select_inventory,
 )
+from utils.project.evaluation.mmwhs_official_aorta import OFFICIAL_AORTA_METHOD
 from utils.project.results.external import (
     build_external_metadata,
     load_existing_results,
 )
-from utils.project.evaluation.mmwhs_official_aorta import OFFICIAL_AORTA_METHOD
 
 
 class ExternalCctaBatchPipelineTest(unittest.TestCase):
@@ -319,8 +319,8 @@ class ExternalCctaBatchPipelineTest(unittest.TestCase):
     @patch("external_ccta_batch_pipeline.segment_artery_masks_from_vesselness")
     @patch("external_ccta_batch_pipeline.detect_ostia")
     @patch("external_ccta_batch_pipeline.compute_vesselness")
-    @patch("external_ccta_batch_pipeline.segment_aorta_with_diagnostics")
-    @patch("external_ccta_batch_pipeline.locate_and_filter_aorta_circles")
+    @patch("utils.segmentation.pipeline.detection.segment_aorta_with_diagnostics")
+    @patch("utils.segmentation.pipeline.detection.locate_and_filter_aorta_circles")
     @patch("external_ccta_batch_pipeline.preprocess_ccta_volume")
     @patch("external_ccta_batch_pipeline.load_ccta_aorta_ground_truth")
     @patch("external_ccta_batch_pipeline.load_ccta_volume")
@@ -456,8 +456,8 @@ class ExternalCctaBatchPipelineTest(unittest.TestCase):
 
     @patch("external_ccta_batch_pipeline.detect_ostia")
     @patch("external_ccta_batch_pipeline.compute_vesselness")
-    @patch("external_ccta_batch_pipeline.segment_aorta_with_diagnostics")
-    @patch("external_ccta_batch_pipeline.locate_and_filter_aorta_circles")
+    @patch("utils.segmentation.pipeline.detection.segment_aorta_with_diagnostics")
+    @patch("utils.segmentation.pipeline.detection.locate_and_filter_aorta_circles")
     @patch("external_ccta_batch_pipeline.preprocess_ccta_volume")
     @patch("external_ccta_batch_pipeline.load_ccta_aorta_ground_truth")
     @patch("external_ccta_batch_pipeline.load_ccta_volume")

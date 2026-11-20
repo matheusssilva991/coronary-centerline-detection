@@ -190,7 +190,13 @@ dependencies = [
     { name = "scikit-learn" },
     { name = "scipy" },
     { name = "seaborn" },
+    { name = "simpleitk" },
     { name = "tqdm" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "nbstripout" },
 ]
 
 [package.metadata]
@@ -213,8 +219,12 @@ requires-dist = [
     { name = "scikit-learn", specifier = ">=1.8.0" },
     { name = "scipy", specifier = ">=1.17.1" },
     { name = "seaborn", specifier = ">=0.13.2" },
+    { name = "simpleitk", specifier = ">=2.5.8" },
     { name = "tqdm", specifier = ">=4.67.1" },
 ]
+
+[package.metadata.requires-dev]
+dev = [{ name = "nbstripout", specifier = ">=0.9.2" }]
 
 [[package]]
 name = "cucim-cu12"
@@ -793,6 +803,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/6d/fd/91545e604bc3dad7dca9ed03284086039b294c6b3d75c0d2fa45f9e9caf3/nbformat-5.10.4.tar.gz", hash = "sha256:322168b14f937a5d11362988ecac2a4952d3d8e3a2cbeb2319584631226d5b3a", size = 142749, upload-time = "2024-04-04T11:20:37.371Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a9/82/0340caa499416c78e5d8f5f05947ae4bc3cba53c9f038ab6e9ed964e22f1/nbformat-5.10.4-py3-none-any.whl", hash = "sha256:3b48d6c8fbca4b299bf3982ea7db1af21580e4fec269ad087b9e81588891200b", size = 78454, upload-time = "2024-04-04T11:20:34.895Z" },
+]
+
+[[package]]
+name = "nbstripout"
+version = "0.9.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "nbformat" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/38/4d/79077e0ae4c6a4d5a854f984d243bdcf22a220a5d47fee399160cda5f022/nbstripout-0.9.2.tar.gz", hash = "sha256:77ca8ddefd1f41d8d9560d79576b1e1a34b203cefd89a98574c6f0725edf160f", size = 32842, upload-time = "2026-11-17T21:45:31.181Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d8/91/221772f8073f70633f10ee42d9aa85b33e2d6e83cd066835a0a7bedfc407/nbstripout-0.9.2-py3-none-any.whl", hash = "sha256:55b5b708845d0bd61060e6281593e637496aca4bc459e05a99eb3d934cfba1be", size = 19140, upload-time = "2026-11-17T21:45:29.888Z" },
 ]
 
 [[package]]
@@ -1568,6 +1590,27 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/86/59/a451d7420a77ab0b98f7affa3a1d78a313d2f7281a57afb1a34bae8ab412/seaborn-0.13.2.tar.gz", hash = "sha256:93e60a40988f4d65e9f4885df477e2fdaff6b73a9ded434c1ab356dd57eefff7", size = 1457696, upload-time = "2024-01-25T13:21:52.551Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/83/11/00d3c3dfc25ad54e731d91449895a79e4bf2384dc3ac01809010ba88f6d5/seaborn-0.13.2-py3-none-any.whl", hash = "sha256:636f8336facf092165e27924f223d3c62ca560b1f2bb5dff7ab7fad265361987", size = 294914, upload-time = "2024-01-25T13:21:49.598Z" },
+]
+
+[[package]]
+name = "simpleitk"
+version = "2.5.8"
+source = { registry = "https://pypi.org/simple" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/2b/57/5364988d43d3a15117cb47f06e4375911558656cfc08e64c09a6de68d586/simpleitk-2.5.8-cp311-abi3-macosx_10_9_x86_64.whl", hash = "sha256:73d6dc23a1489d9eba383849dc6dfa7685162ca6f63cb48fb5f76485ddbd8ca1", size = 42670029, upload-time = "2026-11-19T01:17:01.594Z" },
+    { url = "https://files.pythonhosted.org/packages/8b/d8/ad4904627a37bf1c49713cc9ec137b242448b80463385f739b248f859698/simpleitk-2.5.8-cp311-abi3-macosx_11_0_arm64.whl", hash = "sha256:87d3f09c4da6fd0cd99609a2a00844d8d2b57b3c1514adb6c1a0300bfb0fa744", size = 38245501, upload-time = "2026-11-19T01:17:06.68Z" },
+    { url = "https://files.pythonhosted.org/packages/8c/b0/7dbece88a2a633941f6b29ce6885c7fa176ba5ea4e7e8d5e3eb9c7f970c9/simpleitk-2.5.8-cp311-abi3-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:4e04eaa8d910d9f2374767635c3571f3b0f9732c413110fffa81efc5f9d738a5", size = 48034182, upload-time = "2026-11-19T01:17:12.739Z" },
+    { url = "https://files.pythonhosted.org/packages/b8/be/66bb6a0119e86327e784fec32f586996760342d8cc53c3e5d143a8c34325/simpleitk-2.5.8-cp311-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:4c6e27e172daf8c4075b62c01c1b25e0fc69ef35a3453f23db031ab321a20cef", size = 52784762, upload-time = "2026-11-19T01:17:24.285Z" },
+    { url = "https://files.pythonhosted.org/packages/04/99/146fa0a4ef8f182ac2968255c45b3d22e735a224a88314f583d8f6e9181b/simpleitk-2.5.8-cp311-abi3-win_amd64.whl", hash = "sha256:7b439436a05e16c032812e11bad31215cd84fc7957ad20ad66f056f069683c9f", size = 18898765, upload-time = "2026-11-19T01:17:27.823Z" },
+    { url = "https://files.pythonhosted.org/packages/df/a9/88870226686c0bbe6f36dc07c7dd17669335b6a5cb39f6e12407bd0facae/simpleitk-2.5.8-cp314-cp314t-macosx_10_9_x86_64.whl", hash = "sha256:636e9a2077b308322ceef850e6d808f0a24a32af4f4aef98e2fde8867f3a2433", size = 42699811, upload-time = "2026-11-19T01:17:32.15Z" },
+    { url = "https://files.pythonhosted.org/packages/d1/ea/51ab168bb8f490feb98dab36e563683551b7c9a6e62f24a1852b1be52a8d/simpleitk-2.5.8-cp314-cp314t-macosx_11_0_arm64.whl", hash = "sha256:7849a6744c5d868a47dde05219ab66966987ebc52af615bca372c083d2f90567", size = 38239918, upload-time = "2026-11-19T01:17:36.044Z" },
+    { url = "https://files.pythonhosted.org/packages/8a/3f/2f86355680f632ee8dfdca674005ef3ae004f003155eb81c7d4b0687de7d/simpleitk-2.5.8-cp314-cp314t-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:77cc3b178b9a4c8ef4d880d6193fd2780907bcb79f617f9d511c699811b1ae3b", size = 47938062, upload-time = "2026-11-19T01:17:40.056Z" },
+    { url = "https://files.pythonhosted.org/packages/f2/e0/7387a3583788769a6722183e50f91b711855a32c9d455bdada36535b1fb4/simpleitk-2.5.8-cp314-cp314t-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:a5da180e72497140699042cacd5585f08007952f46c653f562d7943dfd9b21eb", size = 52609201, upload-time = "2026-11-19T01:17:44.244Z" },
+    { url = "https://files.pythonhosted.org/packages/0d/e5/fa2f54c18ffff57e56ffdaae9292be139332b3968fcd8d4eae328f056951/simpleitk-2.5.8-cp314-cp314t-win_amd64.whl", hash = "sha256:06038f02d89fdd0c0668dacacae27b7e1de3623d570bfacd8e941bc63929dd2d", size = 19498810, upload-time = "2026-11-19T01:17:47.526Z" },
+    { url = "https://files.pythonhosted.org/packages/cb/6a/22304e57c0ab1fd89fb411d297c89198f7f61bb9f8377255fc0c68c3c88b/simpleitk-2.5.8-cp315-cp315t-macosx_10_9_x86_64.whl", hash = "sha256:eb1775b6a8da680fd395307d48e91b762a0c94c165a4893ef32021f894b65bd3", size = 42698078, upload-time = "2026-11-19T01:17:54.876Z" },
+    { url = "https://files.pythonhosted.org/packages/db/c9/0a8083721bcc18276bcd52f7fd93033f9acedda9318136f83fb9a70801a9/simpleitk-2.5.8-cp315-cp315t-macosx_11_0_arm64.whl", hash = "sha256:63d0dfeac3ed392542ab1156e91e651d02a0d33ccbdd521bf9536e3e3d62547b", size = 38239063, upload-time = "2026-11-19T01:17:59.281Z" },
+    { url = "https://files.pythonhosted.org/packages/50/15/817320913110ab30b19cedd473a77cea5075fb7395de330773323739abd9/simpleitk-2.5.8-cp315-cp315t-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:758aebcfeec8f1cc0e9bda2266f0f5b5bbf3a1eacbcc66e2cbe16c2a28bf8005", size = 47947725, upload-time = "2026-11-19T01:18:04.2Z" },
+    { url = "https://files.pythonhosted.org/packages/86/91/6b201df83ed5941bd604355b1fb27f58a4432542678d892971da9ed0c830/simpleitk-2.5.8-cp315-cp315t-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:436a555a83bc37f7cf5a8544b9ad940ec161086e972902b460ea602bbc14b95c", size = 52655706, upload-time = "2026-11-19T01:18:09.375Z" },
 ]
 
 [[package]]

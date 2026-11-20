@@ -6,22 +6,33 @@ e labeling de componentes conectados, com aceleração automática por GPU quand
 disponível.
 """
 
+from typing import Any, Optional, Tuple, cast
+
 import numpy as np
 import scipy.ndimage as ndi
-from typing import Any, Optional, Tuple, cast
 from numpy.typing import NDArray
 
 from .gpu_utils import (
-    to_gpu,
-    to_cpu,
     GPU_AVAILABLE,
     cu_ndi,
+    to_cpu,
+    to_gpu,
 )
 
 
-# =============================================================================
-# Operações Morfológicas Básicas
-# =============================================================================
+def _use_gpu_ndi(gpu: Optional[bool]) -> bool:
+    """Resolve se a operação morfológica deve usar o backend CuPy.
+
+    Args:
+        gpu (Optional[bool]): Preferência explícita de execução em GPU; ``None`` usa
+            a detecção automática de disponibilidade.
+
+    Returns:
+        bool: ``True`` se a operação deve usar ``cupyx.scipy.ndimage`` na GPU;
+            ``False`` para executar na CPU.
+    """
+    requested = gpu if gpu is not None else GPU_AVAILABLE
+    return bool(requested and GPU_AVAILABLE and cu_ndi is not None)
 
 
 def binary_closing(
@@ -29,47 +40,31 @@ def binary_closing(
     structure: Optional[NDArray[Any]] = None,
     gpu: Optional[bool] = None,
 ) -> NDArray[np.uint8]:
+    """Aplica fechamento binário para preencher pequenas lacunas.
+
+    Executa dilatação seguida de erosão em GPU (CuPy) ou CPU (SciPy).
+
+    Args:
+        mask (NDArray[Any]): Máscara binária 2D ou 3D de entrada.
+        structure (Optional[NDArray[Any]]): Elemento estruturante; ``None`` usa a
+            conectividade padrão da biblioteca.
+        gpu (Optional[bool]): Preferência de backend; ``None`` detecta GPU
+            automaticamente e booleanos forçam CuPy ou SciPy na CPU.
+
+    Returns:
+        NDArray[np.uint8]: Máscara fechada na CPU com valores ``uint8``.
     """
-    Aplica fechamento binário com suporte automático a GPU.
-
-    Executa o fechamento na GPU, quando disponível, ou com SciPy na CPU.
-    Operação: dilação seguida de erosão, útil para fechar buracos pequenos.
-
-    Argumentos:        mask (np.ndarray or cp.ndarray): Máscara binária
-        structure (np.ndarray or cp.ndarray): Elemento estruturante
-        gpu (bool, optional): Se None, detecta automaticamente. Se True, força GPU.
-            Se False, força CPU.
-
-    Retorna:        np.ndarray: Resultado na CPU (dtype=uint8)
-
-    Exemplo:        >>> from skimage.morphology import ball
-        >>> mask = segment_aorta(volume)
-        >>> closed = binary_closing(mask, structure=ball(2))  # Usa GPU se disponível
-        >>> closed_cpu = binary_closing(mask, structure=ball(2), gpu=False)  # Força CPU
-
-    Observação:        - GPU é ~5-10x mais rápido que CPU para volumes grandes
-        - Fallback automático para CPU se GPU não disponível ou falhar
-        - Retorna sempre NumPy array na CPU para compatibilidade
-    """
-    use_gpu_flag = gpu if gpu is not None else GPU_AVAILABLE
-
-    if use_gpu_flag and GPU_AVAILABLE and cu_ndi is not None:
-        # GPU version
+    if _use_gpu_ndi(gpu):
+        assert cu_ndi is not None
         mask_gpu = to_gpu(mask)
+        struct_gpu = to_gpu(structure) if structure is not None else None
 
-        # Converter structure se necessário
-        if structure is not None:
-            struct_gpu = to_gpu(structure)
-        else:
-            struct_gpu = None
-
-        # Dilação seguida de erosão
+        # Fechamento em GPU: dilatação seguida de erosão antes de retornar à CPU.
         result = cu_ndi.binary_dilation(mask_gpu, structure=struct_gpu)
         result = cu_ndi.binary_erosion(result, structure=struct_gpu)
 
         return to_cpu(result).astype(np.uint8)
     else:
-        # CPU version (scipy)
         return ndi.binary_closing(mask, structure=structure).astype(np.uint8)
 
 
@@ -78,42 +73,26 @@ def binary_dilation(
     structure: Optional[NDArray[Any]] = None,
     gpu: Optional[bool] = None,
 ) -> NDArray[np.uint8]:
+    """Aplica dilatação binária para expandir regiões ou unir segmentos próximos.
+
+    Args:
+        mask (NDArray[Any]): Máscara binária 2D ou 3D de entrada.
+        structure (Optional[NDArray[Any]]): Elemento estruturante; ``None`` usa a
+            conectividade padrão da biblioteca.
+        gpu (Optional[bool]): Preferência de backend; ``None`` detecta GPU
+            automaticamente e booleanos forçam CuPy ou SciPy na CPU.
+
+    Returns:
+        NDArray[np.uint8]: Máscara dilatada na CPU com valores ``uint8``.
     """
-    Aplica dilatação binária com suporte automático a GPU.
-
-    Expande regiões em uma máscara binária. Útil para preencher lacunas
-    e conectar regiões próximas.
-
-    Argumentos:        mask (np.ndarray or cp.ndarray): Máscara binária
-        structure (np.ndarray or cp.ndarray): Elemento estruturante
-        gpu (bool, optional): Se None, detecta automaticamente. Se True, força GPU.
-            Se False, força CPU.
-
-    Retorna:        np.ndarray: Resultado na CPU (dtype=uint8)
-
-    Exemplo:        >>> from skimage.morphology import ball
-        >>> mask = segment_vessels(volume)
-        >>> dilated = binary_dilation(mask, structure=ball(1))
-
-    Observação:        - GPU é ~5-10x mais rápido que CPU
-        - Útil em pós-processamento de segmentação
-        - Combine com erosion para closing/opening
-    """
-    use_gpu_flag = gpu if gpu is not None else GPU_AVAILABLE
-
-    if use_gpu_flag and GPU_AVAILABLE and cu_ndi is not None:
-        # GPU version
+    if _use_gpu_ndi(gpu):
+        assert cu_ndi is not None
         mask_gpu = to_gpu(mask)
-
-        if structure is not None:
-            struct_gpu = to_gpu(structure)
-        else:
-            struct_gpu = None
+        struct_gpu = to_gpu(structure) if structure is not None else None
 
         result = cu_ndi.binary_dilation(mask_gpu, structure=struct_gpu)
         return to_cpu(result).astype(np.uint8)
     else:
-        # CPU version
         return ndi.binary_dilation(mask, structure=structure).astype(np.uint8)
 
 
@@ -122,77 +101,43 @@ def binary_erosion(
     structure: Optional[NDArray[Any]] = None,
     gpu: Optional[bool] = None,
 ) -> NDArray[np.uint8]:
+    """Aplica erosão binária para remover bordas finas e desconectar artefatos.
+
+    Args:
+        mask (NDArray[Any]): Máscara binária 2D ou 3D de entrada.
+        structure (Optional[NDArray[Any]]): Elemento estruturante; ``None`` usa a
+            conectividade padrão da biblioteca.
+        gpu (Optional[bool]): Preferência de backend; ``None`` detecta GPU
+            automaticamente e booleanos forçam CuPy ou SciPy na CPU.
+
+    Returns:
+        NDArray[np.uint8]: Máscara erodida na CPU com valores ``uint8``.
     """
-    Aplica erosão binária com suporte automático a GPU.
-
-    Reduz regiões em uma máscara binária. Útil para remover pequenos
-    artefatos e separar objetos conectados.
-
-    Argumentos:        mask (np.ndarray or cp.ndarray): Máscara binária
-        structure (np.ndarray or cp.ndarray): Elemento estruturante
-        gpu (bool, optional): Se None, detecta automaticamente. Se True, força GPU.
-            Se False, força CPU.
-
-    Retorna:        np.ndarray: Resultado na CPU (dtype=uint8)
-
-    Exemplo:        >>> from skimage.morphology import ball
-        >>> mask = segment_aorta(volume)
-        >>> eroded = binary_erosion(mask, structure=ball(2))
-
-    Observação:        - GPU é ~5-10x mais rápido que CPU
-        - Útil para remover ruído em máscaras
-        - Combine com dilation para opening/closing
-    """
-    use_gpu_flag = gpu if gpu is not None else GPU_AVAILABLE
-
-    if use_gpu_flag and GPU_AVAILABLE:
-        # GPU version
+    if _use_gpu_ndi(gpu):
+        assert cu_ndi is not None
         mask_gpu = to_gpu(mask)
-
-        if structure is not None:
-            struct_gpu = to_gpu(structure)
-        else:
-            struct_gpu = None
+        struct_gpu = to_gpu(structure) if structure is not None else None
 
         result = cu_ndi.binary_erosion(mask_gpu, structure=struct_gpu)
         return to_cpu(result).astype(np.uint8)
     else:
-        # CPU version
         return ndi.binary_erosion(mask, structure=structure).astype(np.uint8)
 
 
-# =============================================================================
-# Componentes conectados
-# =============================================================================
-
-
 def label(mask: NDArray[Any], gpu: Optional[bool] = None) -> Tuple[NDArray[Any], int]:
+    """Rotula componentes conectados na máscara binária de entrada.
+
+    Args:
+        mask (NDArray[Any]): Máscara binária 2D ou 3D de entrada.
+        gpu (Optional[bool]): Preferência de backend; ``None`` detecta GPU
+            automaticamente e booleanos forçam CuPy ou SciPy na CPU.
+
+    Returns:
+        Tuple[NDArray[Any], int]: Tupla ``(labeled_array, num_features)`` com rótulos
+            inteiros na CPU e total de componentes conectados.
     """
-    Rotula componentes conectados com suporte automático a GPU.
-
-    Identifica e rotula regiões conectadas em uma máscara binária.
-
-    Argumentos:        mask (np.ndarray or cp.ndarray): Máscara binária
-        gpu (bool, optional): Se None, detecta automaticamente. Se True, força GPU.
-            Se False, força CPU.
-
-    Retorna:        tuple: (labeled_array, num_features) onde:
-            - labeled_array (np.ndarray): Array com rótulos (0=fundo, 1,2,3...=componentes)
-            - num_features (int): Número de componentes encontrados
-
-    Exemplo:        >>> mask = threshold_volume(volume) > 0.5
-        >>> labeled, num_components = label(mask)
-        >>> print(f"Encontrados {num_components} componentes")
-        Encontrados 5 componentes
-
-    Observação:        - GPU é ~3-8x mais rápido que CPU
-        - Usa conectividade completa (26-vizinhança em 3D)
-        - Retorna sempre NumPy array na CPU
-    """
-    use_gpu_flag = gpu if gpu is not None else GPU_AVAILABLE
-
-    if use_gpu_flag and GPU_AVAILABLE:
-        # GPU version
+    if _use_gpu_ndi(gpu):
+        assert cu_ndi is not None
         mask_gpu = to_gpu(mask)
         labeled_gpu, num_features = cast(
             tuple[Any, int],
@@ -200,7 +145,6 @@ def label(mask: NDArray[Any], gpu: Optional[bool] = None) -> Tuple[NDArray[Any],
         )
         return to_cpu(labeled_gpu), int(num_features)
     else:
-        # CPU version
         labeled, count = cast(tuple[NDArray[Any], int], ndi.label(mask))
         return labeled, int(count)
 
@@ -208,33 +152,20 @@ def label(mask: NDArray[Any], gpu: Optional[bool] = None) -> Tuple[NDArray[Any],
 def keep_largest_component(
     mask: NDArray[Any], gpu: Optional[bool] = None
 ) -> NDArray[np.uint8]:
+    """Mantém apenas o maior componente conectado da máscara binária em ``uint8``.
+
+    Args:
+        mask (NDArray[Any]): Máscara binária 2D ou 3D de entrada.
+        gpu (Optional[bool]): Preferência de backend; ``None`` detecta GPU
+            automaticamente e booleanos forçam CuPy ou SciPy na CPU.
+
+    Returns:
+        NDArray[np.uint8]: Máscara ``uint8`` com apenas o maior componente conectado
+            (ou zerada se vazia).
     """
-    Mantém apenas o maior componente conectado da máscara binária.
-
-    Identifica todos os componentes conectados e retorna apenas o maior.
-    Útil para remover ruído e manter apenas a estrutura principal.
-
-    Argumentos:        mask (np.ndarray): Máscara binária de entrada
-        gpu (bool, optional): Se None, usa GPU se disponível. Se True, força GPU.
-            Se False, força CPU.
-
-    Retorna:        np.ndarray: Máscara binária (dtype=uint8) contendo apenas o maior
-            componente conectado
-
-    Exemplo:        >>> noisy_mask = segment_structure(volume)
-        >>> clean_mask = keep_largest_component(noisy_mask)
-        >>> print(f"Redução: {noisy_mask.sum()} → {clean_mask.sum()} voxels")
-        Redução: 45892 → 43210 voxels
-
-    Observação:        - Usa GPU automaticamente se disponível (3-8x mais rápido)
-        - Fallback para CPU se GPU não disponível
-        - Retorna máscara original (como uint8) se vazia
-        - Útil após segmentação para remover componentes espúrios
-    """
-    use_gpu_flag = gpu if gpu is not None else GPU_AVAILABLE
-
-    if use_gpu_flag and GPU_AVAILABLE and cu_ndi is not None:
-        # GPU version
+    # Rotula os componentes conectados na GPU ou CPU e retorna cedo se vazia.
+    if _use_gpu_ndi(gpu):
+        assert cu_ndi is not None
         mask_gpu = to_gpu(mask)
         labeled_gpu, num = cast(tuple[Any, int], cu_ndi.label(mask_gpu))
 
@@ -242,17 +173,16 @@ def keep_largest_component(
             return to_cpu(mask_gpu).astype(np.uint8)
 
         labeled = to_cpu(labeled_gpu)
-        mask_cpu = to_cpu(mask_gpu)
     else:
-        # CPU version
         labeled, num = cast(tuple[NDArray[Any], int], ndi.label(mask))
-        mask_cpu = mask
 
         if num == 0:
             return mask.astype(np.uint8) if isinstance(mask, np.ndarray) else mask
 
-    sizes = ndi.sum(mask_cpu, labeled, range(1, num + 1))
-    largest_label = np.argmax(sizes) + 1
+    # Ignora o rótulo de fundo (0) para selecionar o componente com mais voxels.
+    counts = np.bincount(labeled.ravel())
+    counts[0] = 0
+    largest_label = int(np.argmax(counts))
 
     return (labeled == largest_label).astype(np.uint8)
 
@@ -262,50 +192,37 @@ def binary_opening(
     structure: Optional[NDArray[Any]] = None,
     gpu: Optional[bool] = None,
 ) -> NDArray[np.uint8]:
+    """Aplica abertura binária para remover ruídos isolados em ``uint8``.
+
+    Executa erosão seguida de dilatação usando elemento estruturante padrão ``3x3x3``
+    quando nenhum kernel é fornecido, com fallback automático para CPU em falhas GPU.
+
+    Args:
+        input (NDArray[Any]): Máscara binária 2D ou 3D de entrada.
+        structure (Optional[NDArray[Any]]): Elemento estruturante; ``None`` utiliza um
+            cubo booleano ``3x3x3``.
+        gpu (Optional[bool]): Preferência de backend; ``None`` detecta GPU
+            automaticamente e booleanos forçam CuPy ou SciPy na CPU (com fallback).
+
+    Returns:
+        NDArray[np.uint8]: Máscara aberta na CPU com valores ``uint8``.
     """
-    Abertura binária: erosão seguida de dilatação.
-
-    Remove pequenos objetos (ruído) enquanto preserva estruturas grandes.
-    Opening = dilatação(erosão(imagem)).
-
-    Argumentos:        input (np.ndarray): Imagem binária de entrada
-        structure (np.ndarray, optional): Elemento estruturante.
-            Se None, usa um elemento simples (cubo/disco).
-        gpu (bool, optional): Se None, usa GPU se disponível. Se True, força GPU.
-            Se False, força CPU.
-
-    Retorna:        np.ndarray: Imagem após opening, como NumPy array
-
-    Exemplo:        >>> from skimage.morphology import ball
-        >>> mask = np.random.randint(0, 2, (64, 64, 64))
-        >>> opened = binary_opening(mask, structure=ball(2))
-        >>> print(f"Original: {mask.sum()}, Opened: {opened.sum()}")
-        Original: 16384, Opened: 15200
-
-    Observação:        - GPU: 5-10x mais rápido para volumes grandes
-        - CPU fallback automático se GPU falhar
-        - Útil para remover ruído sem afetar estruturas grandes
-        - Use após binarização para limpar a máscara
-    """
-    use_gpu_flag = gpu if gpu is not None else GPU_AVAILABLE
-
+    # Garante elemento estruturante 3D padrão quando nenhum kernel é informado.
     if structure is None:
-        # Usa elemento estruturante padrão (cubo 3x3x3)
         structure = np.ones((3, 3, 3), dtype=bool)
 
-    if use_gpu_flag and GPU_AVAILABLE:
+    if _use_gpu_ndi(gpu):
+        assert cu_ndi is not None
         try:
             input_gpu = to_gpu(input)
             struct_gpu = to_gpu(structure)
 
-            # Opening: erosão seguida de dilatação
+            # Abertura em GPU: erosão seguida de dilatação com fallback para SciPy em falhas de dispositivo.
             opened_gpu = cu_ndi.binary_erosion(input_gpu, structure=struct_gpu)
             opened_gpu = cu_ndi.binary_dilation(opened_gpu, structure=struct_gpu)
 
             return to_cpu(opened_gpu).astype(np.uint8)
         except Exception:
-            # Fallback para CPU
             return ndi.binary_opening(input, structure=structure).astype(np.uint8)
     else:
-        # CPU version
         return ndi.binary_opening(input, structure=structure).astype(np.uint8)

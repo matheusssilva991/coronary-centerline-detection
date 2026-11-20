@@ -31,11 +31,21 @@ from utils.project.evaluation.mmwhs_official_aorta import (
     EVALUATOR_FOLDER,
     OFFICIAL_AORTA_METHOD,
     AortaPrediction,
+    evaluate_test_aorta_result,
     has_aorta_mask,
+    official_evaluation_complete,
     preflight_evaluator,
     restore_native_mask,
     save_prediction,
     validate_saved_prediction,
+)
+from utils.project.results.external import (
+    build_external_metadata,
+    external_result_key,
+    is_terminal_external_result,
+    load_existing_results,
+    save_numeric_results,
+    upsert_external_result,
 )
 from utils.project.runtime.notebook_env import load_notebook_pipeline_config
 from utils.project.runtime.resource_monitor import (
@@ -46,24 +56,11 @@ from utils.project.runtime.resource_monitor import (
     read_resource_diagnostics,
     resource_metadata,
 )
-from utils.project.runtime.run_notification import notify_run_completion
-from utils.utils.json_io import load_json_file, save_json_atomic
-from utils.project.runtime.run_logging import add_run_file_handler
-from utils.project.results.external import (
-    external_result_key,
-    upsert_external_result,
-    save_numeric_results,
-    load_existing_results,
-    build_external_metadata,
-    is_terminal_external_result,
-)
-from utils.project.evaluation.mmwhs_aorta_evaluation import (
-    evaluate_test_aorta_result,
-    official_evaluation_complete,
-)
-from utils.segmentation.fuzzy.threshold import normalize_threshold_mode
-from utils.segmentation.aorta.segmentation import (
-    classify_aorta_segmentation_feedback,
+from utils.project.runtime.run_reporting import (
+    add_run_file_handler,
+    create_standard_run_dirs,
+    notify_run_completion,
+    notify_run_exception,
 )
 from utils.segmentation.pipeline.arteries import (
     evaluate_artery_postprocessing_stages,
@@ -71,25 +68,21 @@ from utils.segmentation.pipeline.arteries import (
 )
 from utils.segmentation.pipeline.detection import (
     detect_ostia,
-    locate_and_filter_aorta_circles,
-    segment_aorta_with_diagnostics,
-)
-from utils.segmentation.aorta.diagnostics import (
-    summarize_aorta_circles,
-    summarize_aorta_volume,
+    locate_and_segment_aorta,
 )
 from utils.segmentation.pipeline.preprocessing import (
     compute_vesselness,
     preprocess_ccta_volume,
 )
-from utils.segmentation.pipeline.visuals import save_segmentation_visual_to_path
+from utils.segmentation.thresholding import normalize_threshold_mode
+from utils.utils.json_io import load_json_file, save_json_atomic
 from utils.utils.metrics import dice_score
+from utils.visualization.images.volume import visualize_binary_masks_comparison
 from utils.visualization.pipeline.pipeline_artifacts import (
     save_detected_circles_figure,
+    save_segmentation_visual_to_path,
     save_stage_views,
 )
-from utils.visualization.images.volume import visualize_binary_masks_comparison
-
 
 LOGGER = logging.getLogger("external_ccta_batch_pipeline")
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -126,7 +119,15 @@ class RunPaths:
 
 
 def normalize_dataset_name(value: str) -> str:
-    """Normaliza aliases da CLI para os dois bancos suportados."""
+    """Normaliza aliases da CLI para os dois bancos CCTA externos suportados.
+
+    Args:
+        value (str): Texto informado em ``--dataset`` (ex.: ``orca``, ``whs``,
+            ``mm-whs``).
+
+    Returns:
+        str: Identificador canônico (``"orcascore"`` ou ``"mmwhs"``).
+    """
     normalized = value.strip().lower().replace("_", "-")
     aliases = {
         "orca": "orcascore",
@@ -143,7 +144,12 @@ def normalize_dataset_name(value: str) -> str:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    """Cria o parser da execução em lote de CCTA externas."""
+    """Cria o parser ``argparse`` para execução em lote de CCTA externas.
+
+    Returns:
+        argparse.ArgumentParser: Instância configurada de ``argparse.ArgumentParser``.
+    """
+    # Define os argumentos principais de seleção de banco, resolução e subset.
     parser = argparse.ArgumentParser(
         description=(
             "Executa o pipeline completo em todas as CCTA do OrCaScore ou MM-WHS "
@@ -169,6 +175,7 @@ def build_parser() -> argparse.ArgumentParser:
         choices=("all", "train", "test"),
         help="Por padrão processa train e test do banco selecionado.",
     )
+    # Configura caminhos de entrada/saída, arquivo de config, recorte de IDs e retomada.
     parser.add_argument(
         "--base-path",
         type=Path,
@@ -201,6 +208,7 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         help="Retoma uma execução e ignora exames já concluídos com sucesso.",
     )
+    # Configura modo de pré-processamento, GPU, geração de visuais e alinhamento externo.
     parser.add_argument(
         "--no-hu-threshold",
         action="store_true",
@@ -229,6 +237,7 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Interrompe no primeiro exame com erro.",
     )
+    # Registra opções de avaliação oficial da aorta no MM-WHS, notificações e recursos.
     parser.add_argument(
         "--test-aorta-dice",
         dest="evaluate_mmwhs_test_aorta",
@@ -262,7 +271,16 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def resolve_dataset_path(dataset: str, explicit_path: Path | None) -> Path:
-    """Resolve e valida a raiz do banco selecionado."""
+    """Resolve e valida o diretório raiz do dataset selecionado.
+
+    Args:
+        dataset (str): Nome canônico do dataset (``"orcascore"`` ou ``"mmwhs"``).
+        explicit_path (Path | None): Caminho opcional via CLI; ``None`` consulta
+            variável de ambiente e fallback padrão.
+
+    Returns:
+        Path: Caminho validado e existente do diretório do dataset.
+    """
     if explicit_path is not None:
         path = explicit_path.expanduser()
     else:
@@ -285,7 +303,20 @@ def create_run_paths(
     *,
     resume_dir: Path | None = None,
 ) -> RunPaths:
-    """Cria uma execução datada ou recupera uma execução existente."""
+    """Cria a estrutura de diretórios de uma execução nova ou abre uma existente.
+
+    Args:
+        output_root (Path): Diretório raiz para execuções externas quando
+            ``resume_dir`` é ``None``.
+        dataset (str): Nome canônico do dataset (usado no subdiretório do run).
+        resolution (str): Resolução da execução (``"mid"`` ou ``"high"``).
+        resume_dir (Path | None): Diretório existente para retomada, ou ``None``
+            para criar run datado.
+
+    Returns:
+        RunPaths: Objeto com diretórios ``run_dir``, ``numeric_dir``, ``config_dir``,
+            ``visual_dir`` e ``logs_dir``.
+    """
     if resume_dir is None:
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         run_dir = output_root / dataset / f"{resolution}_res" / timestamp
@@ -294,21 +325,7 @@ def create_run_paths(
         if not run_dir.is_dir():
             raise FileNotFoundError(f"Run para retomada não encontrado: {run_dir}")
 
-    paths = RunPaths(
-        run_dir=run_dir,
-        numeric_dir=run_dir / "numeric",
-        config_dir=run_dir / "config",
-        visual_dir=run_dir / "visual",
-        logs_dir=run_dir / "logs",
-    )
-    for directory in (
-        paths.run_dir,
-        paths.numeric_dir,
-        paths.config_dir,
-        paths.logs_dir,
-    ):
-        directory.mkdir(parents=True, exist_ok=True)
-    return paths
+    return RunPaths(**create_standard_run_dirs(run_dir))
 
 
 def select_inventory(
@@ -318,7 +335,22 @@ def select_inventory(
     exam_ids: Sequence[str] | None,
     limit: int | None,
 ) -> pd.DataFrame:
-    """Filtra o inventário mantendo uma ordem determinística."""
+    """Filtra o inventário CCTA mantendo ordem determinística entre retomadas.
+
+    Args:
+        inventory (pd.DataFrame): Tabela completa descoberta por
+            ``discover_ccta_dataset``.
+        subset (str): Recorte selecionado (``"all"``, ``"train"`` ou ``"test"``).
+        exam_ids (Sequence[str] | None): Sequência opcional de IDs específicos
+            mantidos no recorte.
+        limit (int | None): Quantidade máxima positiva de exames retida após
+            filtragem e ordenação.
+
+    Returns:
+        pd.DataFrame: Subconjunto do inventário ordenado por ``subset`` e ``exam_id``
+            com índice resetado.
+    """
+    # Filtra por subset e valida IDs explícitos antes da ordenação final.
     selected = inventory.copy()
     if subset != "all":
         selected = selected.loc[selected["subset"].eq(subset)]
@@ -330,6 +362,7 @@ def select_inventory(
         if missing:
             raise ValueError(f"IDs não encontrados no recorte selecionado: {missing}")
         selected = selected.loc[exam_ids_series.isin(tuple(requested))]
+    # Ordena train antes de test para manter sequência determinística entre retomadas.
     subset_values = require_series_column(selected, "subset")
     subset_order = subset_values.map(
         lambda value: {"train": 0, "test": 1}.get(str(value))
@@ -339,6 +372,7 @@ def select_inventory(
         .sort_values(["_subset_order", "exam_id"], kind="stable")
         .drop(columns="_subset_order")
     )
+    # Aplica eventual limite máximo e impede retornar inventário vazio.
     if limit is not None:
         if limit < 1:
             raise ValueError("--limit deve ser positivo.")
@@ -349,7 +383,16 @@ def select_inventory(
 
 
 def _coordinates_to_fields(prefix: str, coordinates: Any) -> dict[str, int | None]:
-    """Converte uma coordenada opcional em campos escalares nomeados."""
+    """Converte uma coordenada opcional em campos escalares nomeados.
+
+    Args:
+        prefix (str): Prefixo usado nos nomes das chaves (ex.: ``"ostia_left"``).
+        coordinates (Any): Sequência ``(y, x, z)`` da coordenada ou ``None``.
+
+    Returns:
+        dict[str, int | None]: Dicionário com ``{prefix}_y``, ``{prefix}_x`` e
+            ``{prefix}_z``.
+    """
     values = (
         tuple(int(value) for value in coordinates) if coordinates is not None else ()
     )
@@ -368,7 +411,16 @@ def _save_aorta_ground_truth_visual(
     prediction: Any,
     spacing: Sequence[float],
 ) -> None:
-    """Salva a comparação 3D entre a aorta de referência e a predita."""
+    """Salva a comparação 3D entre a aorta de referência e a predita.
+
+    Args:
+        output_path (Path): Caminho do arquivo HTML de comparação a gerar.
+        exam_label (str): Identificador textual do exame exibido no título.
+        ground_truth (Any): Máscara binária 3D de referência da aorta.
+        prediction (Any): Máscara binária 3D predita pelo pipeline.
+        spacing (Sequence[float]): Espaçamento físico em ``mm`` alinhado aos eixos
+            de visualização.
+    """
     visualize_binary_masks_comparison(
         ground_truth,
         prediction,
@@ -392,7 +444,17 @@ def _save_stage(
     vmin: float | None = None,
     vmax: float | None = None,
 ) -> None:
-    """Salva as vistas representativas de uma etapa intermediária."""
+    """Salva as vistas representativas de uma etapa intermediária.
+
+    Args:
+        exam_dir (Path | None): Diretório visual do exame; ``None`` desativa o
+            salvamento.
+        stage_name (str): Identificador da etapa usado no nome do arquivo.
+        volume (Any): Volume 3D ou máscara da etapa intermediária.
+        title (str): Título descritivo exibido na figura salva.
+        vmin (float | None): Limite inferior da escala de intensidades.
+        vmax (float | None): Limite superior da escala de intensidades.
+    """
     if exam_dir is None:
         return
     save_stage_views(
@@ -413,7 +475,25 @@ def process_external_exam(
     align_orcascore: bool = True,
     aorta_export_dir: Path | None = None,
 ) -> dict[str, Any]:
-    """Executa todas as etapas para um exame CCTA externo."""
+    """Executa todas as etapas do pipeline para um exame CCTA externo (OrCaScore ou MM-WHS).
+
+    Args:
+        record (Mapping[str, Any] | pd.Series): Registro do inventário com metadados
+            do exame (``dataset``, ``subset``, ``exam_id``, caminho e espaçamentos).
+        config (dict[str, Any]): Configuração efetiva normalizada e já escalada para
+            ``resolution``.
+        resolution (str): Resolução da execução (``"mid"`` ou ``"high"``).
+        visual_root (Path | None): Diretório raiz opcional para salvar vistas de
+            estágios e HTML 3D; ``None`` desativa visuais.
+        align_orcascore (bool): Se ``True``, aplica o alinhamento visual usado no
+            notebook externo.
+        aorta_export_dir (Path | None): Diretório opcional onde a predição nativa
+            NIfTI da aorta é salva para avaliação oficial.
+
+    Returns:
+        dict[str, Any]: Dicionário com ``status``, métricas/diagnósticos por etapa,
+            telemetria de recursos e ``execution_time_seconds``.
+    """
     started = time.perf_counter()
     dataset = str(record["dataset"])
     subset = str(record["subset"])
@@ -442,6 +522,7 @@ def process_external_exam(
     monitor.start()
 
     try:
+        # Etapa 1: carrega volume CCTA, ground truth opcional da aorta e alinha eixos à visão ImageCAS.
         native_image = load_ccta_volume(record).astype(np.float32, copy=False)
         native_aorta_ground_truth = load_ccta_aorta_ground_truth(record)
         if (
@@ -499,6 +580,7 @@ def process_external_exam(
             vmax=1000.0,
         )
 
+        # Etapa 2: pré-processamento (downscale, threshold e LCC) e exportação das vistas de depuração.
         image_data = preprocess_ccta_volume(
             image,
             spacing,
@@ -558,54 +640,35 @@ def process_external_exam(
             aorta_ground_truth,
         )
 
-        circle_tracking = locate_and_filter_aorta_circles(
+        # Etapa 3: localização/segmentação da aorta, exportação oficial MM-WHS test e avaliação de GT quando existir.
+        on_circles = (
+            (
+                lambda circles: save_detected_circles_figure(
+                    lcc_image,
+                    circles,
+                    exam_dir / "aorta_circles.png",
+                    vmin=-200.0,
+                    vmax=1000.0,
+                )
+            )
+            if exam_dir is not None
+            else None
+        )
+        aorta_stage = locate_and_segment_aorta(
             lcc_image,
             downscale_factors,
             scaled_spacing,
-            config["CIRCLE_DETECTION"],
+            config,
+            circle_summary_source="filtered",
+            require_non_empty=True,
+            on_circles_detected=on_circles,
         )
-        raw_circles = circle_tracking.original_circles
-        if not raw_circles:
-            raise RuntimeError("Nenhum círculo da aorta foi detectado.")
-        detected_circles = circle_tracking.filtered_circles
-        if not detected_circles:
-            raise RuntimeError("O filtro removeu todos os círculos da aorta.")
-        result["aorta_circle_count_before_filter"] = len(raw_circles)
-        result.update(circle_tracking.filter_diagnostics)
-        result.update(
-            summarize_aorta_circles(
-                detected_circles,
-                lcc_image.shape[2],
-                scaled_spacing,
-                config["CIRCLE_DETECTION"],
-            )
+        detected_circles = aorta_stage.circle_tracking.filtered_circles
+        aorta_mask = aorta_stage.aorta_mask.astype(np.uint8)
+        result["aorta_circle_count_before_filter"] = len(
+            aorta_stage.circle_tracking.original_circles
         )
-        if exam_dir is not None:
-            save_detected_circles_figure(
-                lcc_image,
-                detected_circles,
-                exam_dir / "aorta_circles.png",
-                vmin=-200.0,
-                vmax=1000.0,
-            )
-
-        aorta_segmentation = segment_aorta_with_diagnostics(
-            lcc_image,
-            detected_circles,
-            config["LEVEL_SET"],
-            use_gpu=config.get("USE_GPU", False),
-        )
-        aorta_mask = aorta_segmentation.mask.astype(np.uint8)
-        if not np.any(aorta_mask):
-            raise RuntimeError("A segmentação da aorta produziu uma máscara vazia.")
-        result.update(aorta_segmentation.diagnostics)
-        result.update(summarize_aorta_volume(aorta_mask, lcc_image.size))
-        result["aorta_segmentation_feedback"] = classify_aorta_segmentation_feedback(
-            result.get("aorta_level_set_circle_fill_q25"),
-            result.get("aorta_level_set_circle_area_ratio_p90"),
-            result.get("aorta_volume_fraction"),
-            config.get("LEVEL_SET", {}).get("quality_feedback"),
-        )
+        result.update(aorta_stage.diagnostics)
         voxel_volume_mm3 = float(np.prod(scaled_spacing))
         result["aorta_volume_ml"] = float(aorta_mask.sum() * voxel_volume_mm3 / 1000.0)
         if aorta_export_dir is not None and dataset == "MM-WHS" and subset == "test":
@@ -676,6 +739,7 @@ def process_external_exam(
             vmax=1.0,
         )
 
+        # Etapa 4: vesselness e detecção dos óstios (interrompe sem artérias se nenhum par for encontrado).
         vesselness_ostia = compute_vesselness(
             lcc_image,
             vesselness_config=config["VESSELNESS_AORTA"],
@@ -715,6 +779,7 @@ def process_external_exam(
         result.update(_coordinates_to_fields("ostia_right", ostia_right))
         vesselness_ostia = None
 
+        # Etapa 5: segmentação arterial, métricas de pós-processamento morfológico e HTML 3D combinado.
         vesselness_artery = compute_vesselness(
             lcc_image,
             vesselness_config=config["VESSELNESS_ARTERY"],
@@ -792,6 +857,7 @@ def process_external_exam(
             exam_dir.mkdir(parents=True, exist_ok=True)
             (exam_dir / "error.txt").write_text(str(error), encoding="utf-8")
     finally:
+        # Etapa 6: consolida diagnóstico de recursos, tempo de execução e resumo JSON do exame.
         monitor.finish(result)
         result["execution_time_seconds"] = float(time.perf_counter() - started)
         if exam_dir is not None:
@@ -807,7 +873,13 @@ def process_external_exam(
 
 
 def _configure_logging(logs_dir: Path, verbose: bool) -> None:
-    """Configura logs em arquivo e no terminal para a execução."""
+    """Configura logs em arquivo e no terminal para a execução.
+
+    Args:
+        logs_dir (Path): Diretório onde o arquivo ``pipeline.log`` será gravado.
+        verbose (bool): Se ``True``, habilita nível ``DEBUG``; caso contrário usa
+            ``INFO``.
+    """
     level = logging.DEBUG if verbose else logging.INFO
     formatter = logging.Formatter(
         "%(asctime)s %(levelname)s %(name)s [%(filename)s:%(lineno)d] %(message)s"
@@ -822,7 +894,16 @@ def _configure_logging(logs_dir: Path, verbose: bool) -> None:
 
 
 def run(args: argparse.Namespace) -> RunPaths:
-    """Executa a coorte externa selecionada e retorna seus diretórios."""
+    """Executa ou retoma a coorte externa selecionada e persiste resultados/metadados.
+
+    Args:
+        args (argparse.Namespace): Namespace CLI produzido por
+            ``build_parser().parse_args(...)``.
+
+    Returns:
+        RunPaths: Diretórios de saída do run criado ou retomado.
+    """
+    # Etapa 1: descobre inventário e valida requisitos de avaliação oficial MM-WHS antes de criar pastas.
     base_path = resolve_dataset_path(args.dataset, args.base_path)
     inventory = discover_ccta_dataset(args.dataset, base_path)
     selected = select_inventory(
@@ -867,6 +948,7 @@ def run(args: argparse.Namespace) -> RunPaths:
         if isinstance(record.get("label_path"), (str, Path))
     }
 
+    # Etapa 2: carrega a configuração efetiva ou valida compatibilidade completa ao retomar um run.
     config_path = paths.config_dir / "effective_pipeline_config.json"
     manifest_path = paths.config_dir / "run_manifest.json"
     if args.resume_dir is None:
@@ -949,6 +1031,7 @@ def run(args: argparse.Namespace) -> RunPaths:
             manifest_path,
         )
 
+    # Etapa 3: seleciona apenas os exames ainda pendentes (para reavaliação da aorta ou execução completa).
     rows = load_existing_results(paths.numeric_dir)
     if evaluation_only:
         existing_by_key = {external_result_key(row): row for row in rows}
@@ -1023,6 +1106,7 @@ def run(args: argparse.Namespace) -> RunPaths:
         ),
         metadata_path,
     )
+    # Etapa 4: processa cada exame pendente salvando CSV, metadados e diagnóstico de recursos a cada item.
     for position, record in enumerate(pending_records, start=1):
         LOGGER.info(
             "[%d/%d] Processando %s/%s",
@@ -1089,6 +1173,7 @@ def run(args: argparse.Namespace) -> RunPaths:
                 f"Falha no exame {record['exam_id']}: {result.get('error')}"
             )
 
+    # Etapa 5: calcula o estado terminal do run (complete / complete_with_errors / incomplete) e grava o metadata final.
     terminal_keys = {
         external_result_key(row)
         for row in rows
@@ -1123,7 +1208,15 @@ def run(args: argparse.Namespace) -> RunPaths:
 
 
 def _notify_external_result(args: argparse.Namespace, paths: RunPaths) -> None:
-    """Lê o metadata final e diferencia falhas científicas das avaliações."""
+    """Lê o metadata final e diferencia falhas científicas das avaliações.
+
+    Args:
+        args (argparse.Namespace): Namespace CLI com ``dataset``, ``subset`` e
+            ``resolution``.
+        paths (RunPaths): Diretórios do run contendo o arquivo ``metadata.json``
+            final.
+    """
+    # Lê contagens de falhas do pipeline e da avaliação oficial para resumir o desfecho.
     try:
         metadata = load_json_file(paths.run_dir / "metadata.json")
         state = str(metadata.get("state") or "incomplete")
@@ -1135,6 +1228,7 @@ def _notify_external_result(args: argparse.Namespace, paths: RunPaths) -> None:
             (metadata.get("ground_truth_metrics") or {}).get("aorta") or {}
         ).get("test_official") or {}
         evaluation_errors = int(official.get("error_exam_count") or 0)
+        # Rebaixa runs completos para complete_with_warnings se a avaliação oficial da aorta falhou em algum exame.
         details = [
             f"{int(metadata.get('processed_exam_count') or 0)} exame(s) processado(s)."
         ]
@@ -1149,6 +1243,7 @@ def _notify_external_result(args: argparse.Namespace, paths: RunPaths) -> None:
         state = "incomplete"
         details = ["Metadata final indisponível; confira o run."]
 
+    # Emite a notificação visual e sonora com o estado consolidado do lote.
     notify_run_completion(
         pipeline=args.dataset,
         split=args.subset,
@@ -1160,7 +1255,17 @@ def _notify_external_result(args: argparse.Namespace, paths: RunPaths) -> None:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    """Executa o batch externo e avisa sobre o resultado quando solicitado."""
+    """Ponto de entrada CLI do batch CCTA externo, com notificação opcional ao término.
+
+    Args:
+        argv (Sequence[str] | None): Lista opcional de argumentos da CLI; ``None``
+            lê ``sys.argv``.
+
+    Returns:
+        int: Código de saída do processo (``0`` em sucesso, ``1`` em erro
+            operacional esperado).
+    """
+    # Faz parsing dos argumentos da CLI e executa o lote tratando exceções.
     parser = build_parser()
     args = parser.parse_args(argv)
     try:
@@ -1168,20 +1273,19 @@ def main(argv: Sequence[str] | None = None) -> int:
     except BaseException as error:
         if args.notify:
             run_dir = getattr(args, "notification_run_dir", args.resume_dir)
-            notify_run_completion(
+            notify_run_exception(
+                error,
                 pipeline=args.dataset,
                 split=args.subset,
                 resolution=args.resolution,
                 run_dir=Path(run_dir) if run_dir is not None else None,
-                status="interrupted"
-                if isinstance(error, KeyboardInterrupt)
-                else "failed",
-                details="Consulte o terminal e os logs para detalhes.",
+                notifier=notify_run_completion,
             )
         if isinstance(error, (FileNotFoundError, ValueError, RuntimeError)):
             LOGGER.error("%s", error)
             return 1
         raise
+    # Envia notificação final de conclusão quando solicitada e exibe diretório do run.
     if args.notify:
         _notify_external_result(args, paths)
     print(f"Resultados salvos em: {paths.run_dir}")

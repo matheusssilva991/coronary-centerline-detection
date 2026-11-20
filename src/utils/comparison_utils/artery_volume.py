@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 from utils.comparison_utils.bad_cases import filter_correct_ostia_cases
 from utils.project.dataframe import require_series_column, to_numeric_series
@@ -16,11 +16,21 @@ from utils.project.results.schema import (
 
 
 def _prepare_result_dice(original: pd.DataFrame, group: str) -> pd.DataFrame:
-    """Normaliza Dice e sucesso dos óstios sem ocultar falhas documentadas."""
+    """Normaliza Dice e sucesso dos óstios sem ocultar falhas documentadas.
+
+    Args:
+        original (pd.DataFrame): Tabela bruta de resultados por exame de um grupo.
+        group (str): Identificador ``resolução/split`` usado em mensagens de erro.
+
+    Returns:
+        pd.DataFrame: Tabela com ``IMG_ID``, ``dice`` e ``ostia_success``.
+    """
+    # Padroniza aliases internos e valida unicidade dos identificadores de exame.
     frame = add_internal_result_aliases(original.copy())
     ids = require_series_column(frame, "IMG_ID")
     if ids.isna().any() or ids.duplicated().any():
         raise ValueError(f"IDs repetidos ou ausentes em {group}.")
+    # Converte Dice e atribui zero apenas a falhas documentadas sem métrica numérica.
     dice = to_numeric_series(
         require_series_column(frame, "dice_artery"), errors="raise"
     )
@@ -33,6 +43,7 @@ def _prepare_result_dice(original: pd.DataFrame, group: str) -> pd.DataFrame:
     dice = dice.mask(dice.isna() & failed, 0.0)
     if dice.isna().any() or not dice.between(0, 1).all():
         raise ValueError(f"Dice inválido ou ausente sem falha em {group}.")
+    # Identifica exames com óstios bem-sucedidos para compor a tabela normalizada.
     successful_ids = filter_correct_ostia_cases(frame)["IMG_ID"]
     return pd.DataFrame(
         {
@@ -53,7 +64,20 @@ def prepare_artery_volume_dice_data(
 
     Ausências de volume ou resolução são reportadas, não imputadas. O delta
     pareado é High menos Mid; zero é imputado apenas em falhas documentadas.
+
+    Args:
+        results_by_group (Mapping[tuple[str, str], pd.DataFrame]): Mapa de
+            ``(resolução, split)`` para DataFrames de resultados por exame.
+        classified_volumes (pd.DataFrame): Tabela com volumes arteriais de
+            referência e classificação de outliers por ``IMG_ID``.
+        split (str): Subconjunto avaliado (``"train"``, ``"val"``, ``"test"``
+            ou ``"all"``).
+
+    Returns:
+        tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]: Dados empilhados por
+        resolução, pares Mid/High por ``IMG_ID`` e resumo de cobertura.
     """
+    # Valida o split solicitado e os volumes arteriais de referência por exame.
     if split not in {"train", "val", "test", "all"}:
         raise ValueError("split deve ser train, val, test ou all.")
     selected_splits = ("train", "val", "test") if split == "all" else (split,)
@@ -69,6 +93,7 @@ def prepare_artery_volume_dice_data(
     if not volumes["volume_outlier_group"].isin(["low", "in_range", "high"]).all():
         raise ValueError("Classificação volumétrica inválida.")
     volumes["is_volume_outlier"] = volumes["volume_outlier_group"].ne("in_range")
+    # Consolida os resultados normalizados de cada split por resolução sem duplicar IDs.
     frames = {}
     for resolution in ("mid_res", "high_res"):
         parts = [
@@ -85,6 +110,7 @@ def prepare_artery_volume_dice_data(
         )
         if frames[resolution]["IMG_ID"].duplicated().any():
             raise ValueError(f"Há IDs compartilhados entre splits de {resolution}.")
+    # Cruza cada resolução com os volumes de referência e contabiliza ausências.
     rows, plotted = [], []
     for resolution, frame in frames.items():
         other = frames["high_res" if resolution == "mid_res" else "mid_res"]
@@ -139,7 +165,16 @@ def summarize_artery_volume_bands(
 
     Quantis repetidos são colapsados; volumes constantes formam uma faixa.
     O desvio-padrão é amostral e permanece ausente para grupos unitários.
+
+    Args:
+        data (pd.DataFrame): Tabela com ``resolution``, ``IMG_ID``, ``volume_ml``,
+            ``dice`` e ``ostia_success``.
+
+    Returns:
+        tuple[pd.DataFrame, pd.DataFrame]: Estatísticas por resolução e faixa
+        volumétrica e tabela com limites inferior e superior em mL.
     """
+    # Valida consistência dos volumes e unicidade por resolução antes de criar faixas.
     if data.empty:
         return pd.DataFrame(), pd.DataFrame()
     if data.duplicated(["resolution", "IMG_ID"]).any():
@@ -149,6 +184,7 @@ def summarize_artery_volume_bands(
     values = to_numeric_series(data["volume_ml"], errors="raise")
     if not np.isfinite(values).all() or values.lt(0).any():
         raise ValueError("Volumes devem ser finitos e não negativos.")
+    # Define bordas quartílicas usando um único volume por exame para evitar viés.
     grouped = data.assign(volume_ml=values)
     unique_volumes = grouped.drop_duplicates("IMG_ID")["volume_ml"]
     edges = np.unique(np.quantile(unique_volumes, [0, 0.25, 0.5, 0.75, 1]))
@@ -164,6 +200,7 @@ def summarize_artery_volume_bands(
         if len(edges) > 1
         else 1
     )
+    # Agrega métricas de Dice e sucesso dos óstios em cada faixa volumétrica.
     summary = (
         grouped.groupby(["resolution", "band"], observed=True)
         .agg(
@@ -192,6 +229,20 @@ def prepare_predicted_artery_volumes(
 
     Retorna as linhas com volume de referência e um relatório de cobertura.
     Dados ausentes/inválidos recebem status explícito, não predição zero.
+
+    Args:
+        results_by_group (Mapping[tuple[str, str], pd.DataFrame]): Mapa de
+            ``(resolução, split)`` para DataFrames de resultados por exame.
+        classified_volumes (pd.DataFrame): Tabela com volumes de referência e
+            espaçamentos físicos em mm por ``IMG_ID``.
+        configs_by_group (Mapping[tuple[str, str], Mapping[str, object]]): Mapas
+            de configuração por grupo contendo ``DOWNSCALE_FACTORS``.
+        split (str): Subconjunto avaliado (``"train"``, ``"val"``, ``"test"``
+            ou ``"all"``).
+
+    Returns:
+        tuple[pd.DataFrame, pd.DataFrame]: Tabela por exame com volume predito e
+        status explícito, além do relatório de cobertura por resolução.
     """
     if split == "all":
         # Valida IDs antes de reunir volumes calculados com configurações distintas.
@@ -209,6 +260,7 @@ def prepare_predicted_artery_volumes(
         ]
         combined = pd.concat([data for data, _ in parts], ignore_index=True)
         coverage = pd.concat([report for _, report in parts], ignore_index=True)
+        # Consolida os relatórios de cobertura dos três splits por resolução.
         rows = []
         for resolution in ("mid_res", "high_res"):
             reports = coverage.loc[coverage["resolution"].eq(resolution)]
@@ -230,6 +282,7 @@ def prepare_predicted_artery_volumes(
                 }
             )
         return combined, pd.DataFrame(rows)
+    # Reúne dados base por resolução e acopla os espaçamentos físicos em mm.
     data, _, coverage = prepare_artery_volume_dice_data(
         results_by_group,
         classified_volumes,
@@ -244,6 +297,7 @@ def prepare_predicted_artery_volumes(
     for resolution in ("mid_res", "high_res"):
         selected = data["resolution"].eq(resolution)
         frame = data.loc[selected]
+        # Valida fatores de redução espacial registrados na configuração do grupo.
         config = configs_by_group.get((resolution, split), {})
         try:
             factors = np.asarray(config.get("DOWNSCALE_FACTORS"), dtype=float)
@@ -274,6 +328,7 @@ def prepare_predicted_artery_volumes(
                 counts = pd.to_numeric(
                     frame["IMG_ID"].map(normalized[column]), errors="coerce"
                 )
+        # Verifica validade das contagens de voxels e dos espaçamentos para conversão.
         spacing = frame[spacing_columns].apply(pd.to_numeric, errors="coerce")
         valid_counts = (
             counts.notna() & np.isfinite(counts) & counts.ge(0) & counts.mod(1).eq(0)
@@ -289,6 +344,7 @@ def prepare_predicted_artery_volumes(
         data.loc[
             frame.index[valid_counts & ~valid_spacing], "prediction_volume_status"
         ] = "missing_or_invalid_spacing"
+        # Calcula o volume predito em mL quando fatores, espaçamento e contagem são válidos.
         if not valid_factors:
             data.loc[selected, "prediction_volume_status"] = (
                 "missing_or_invalid_factors"
@@ -303,6 +359,7 @@ def prepare_predicted_artery_volumes(
             valid &= np.isfinite(predicted)
             data.loc[frame.index[valid], "predicted_volume_ml"] = predicted.loc[valid]
             data.loc[frame.index[valid], "prediction_volume_status"] = "ok"
+        # Registra cobertura e distribuição dos status de predição para a resolução.
         status = data.loc[selected, "prediction_volume_status"]
         source_coverage = coverage.loc[coverage["resolution"].eq(resolution)].iloc[0]
         rows.append(
@@ -329,13 +386,25 @@ def compare_artery_volume_cohorts(
     Volumes ausentes são informados e preservados. Dice ausente vira zero
     somente em falhas documentadas; ausências sem diagnóstico são rejeitadas.
     As linhas ``all`` agregam splits disjuntos, não médias de médias.
+
+    Args:
+        results_by_group (Mapping[tuple[str, str], pd.DataFrame]): Mapa de
+            ``(resolução, split)`` individuais para DataFrames de resultados.
+        classified_volumes (pd.DataFrame): Tabela com ``IMG_ID`` e rótulo
+            ``volume_outlier_group`` (``"low"``, ``"in_range"`` ou ``"high"``).
+
+    Returns:
+        pd.DataFrame: Comparativo de Dice e sucesso dos óstios antes e depois da
+        exclusão dos outliers volumétricos por resolução e split.
     """
+    # Valida unicidade dos IDs e rótulos da classificação volumétrica.
     volume_ids = require_series_column(classified_volumes, "IMG_ID")
     if volume_ids.isna().any() or volume_ids.duplicated().any():
         raise ValueError("IDs repetidos ou ausentes na classificação volumétrica.")
     volume_info = classified_volumes.loc[:, ["IMG_ID", "volume_outlier_group"]]
     if not volume_info["volume_outlier_group"].isin(["low", "in_range", "high"]).all():
         raise ValueError("Classificação volumétrica inválida.")
+    # Normaliza resultados por split individual e constrói o agregado disjunto 'all'.
     groups: dict[tuple[str, str], pd.DataFrame] = {}
     by_resolution: dict[str, list[pd.DataFrame]] = {}
     for (resolution, split), original in results_by_group.items():
@@ -352,6 +421,7 @@ def compare_artery_volume_cohorts(
             raise ValueError(f"Há IDs compartilhados entre splits de {resolution}.")
         groups[resolution, "all"] = combined
 
+    # Calcula métricas antes e depois da remoção de outliers low/high para cada coorte.
     rows = []
     for (resolution, split), frame in groups.items():
         paired = frame.merge(
@@ -387,6 +457,7 @@ def compare_artery_volume_cohorts(
                 "delta_ostia_success_pp": after_success - before_success,
             }
         )
+    # Ordena a tabela comparativa pela sequência canônica de splits e resolução.
     result = pd.DataFrame(rows)
     if not result.empty:
         split_order = require_series_column(result, "split").map(

@@ -4,14 +4,11 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest import TestCase
 
-from utils.project.runtime.notebook_env import (
-    get_default_split_paths,
-    get_refined_pipeline_split_paths,
-)
+from utils.project.runtime.notebook_env import get_default_split_paths
 
 
 class CanonicalSplitPathsTests(TestCase):
-    def test_returns_only_canonical_results_and_preserves_public_alias(self):
+    def test_returns_only_canonical_results(self):
         with TemporaryDirectory() as directory:
             root = Path(directory)
             numeric = (
@@ -25,7 +22,6 @@ class CanonicalSplitPathsTests(TestCase):
             (unrelated / "results_val.csv").write_text("IMG_ID,artery_dice\n2,0.9\n")
             result = get_default_split_paths(root)
             self.assertEqual(result, {"mid_res": {"train": numeric}, "high_res": {}})
-            self.assertEqual(get_refined_pipeline_split_paths(root), result)
 
     def test_follows_high_reference_link_without_copying_results(self):
         with TemporaryDirectory() as directory:

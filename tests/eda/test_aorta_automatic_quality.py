@@ -1,9 +1,9 @@
 """Valida diagnósticos por coorte sem executar o pipeline de segmentação."""
 
 import json
-from pathlib import Path
 import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 import nbformat

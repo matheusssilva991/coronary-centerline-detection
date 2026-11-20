@@ -2,9 +2,15 @@ import unittest
 from unittest.mock import patch
 
 import matplotlib.pyplot as plt
-from matplotlib.patches import Rectangle
 import pandas as pd
+from matplotlib.patches import Rectangle
 
+from eda.comparisons.view.ia_vs_pipeline_views import plot_comparison_bar_by_resolution
+from eda.comparisons.view.segmentation_method_views import (
+    OSTIA_STATUS_COLUMNS,
+    plot_ostia_status_by_variant,
+)
+from eda.results.view.split_resolution_views import plot_subset_metric_by_resolution
 from tests.notebook_helpers import load_presentation_helpers
 
 
@@ -19,6 +25,8 @@ class LocalPresentationTest(unittest.TestCase):
             "ia_vs_pipeline_analysis",
             "segmentation_method_comparison",
             "aorta_hu_threshold_comparison",
+            "aorta_automatic_quality_assessment",
+            "aorta_volume_quality_analysis",
         ):
             with (
                 self.subTest(notebook=name),
@@ -27,11 +35,15 @@ class LocalPresentationTest(unittest.TestCase):
                 ),
             ):
                 namespace = load_presentation_helpers(name)
-                self.assertTrue(any(key.startswith("plot_") for key in namespace))
+                self.assertTrue(
+                    any(
+                        key.startswith(("plot_", "show_", "build_"))
+                        for key in namespace
+                    )
+                )
 
     @patch("matplotlib.pyplot.show")
     def test_subset_graph_preserves_values_and_labels(self, _show):
-        helpers = load_presentation_helpers("split_resolution_analysis")
         frame = pd.DataFrame(
             {
                 "disponivel": [True, True],
@@ -40,7 +52,7 @@ class LocalPresentationTest(unittest.TestCase):
                 "score": [0.3, 0.8],
             }
         )
-        axis = helpers["plot_subset_metric_by_resolution"](
+        axis = plot_subset_metric_by_resolution(
             frame, "score", "Dice", "Score", ["blue"]
         )
         self.assertEqual(
@@ -51,26 +63,8 @@ class LocalPresentationTest(unittest.TestCase):
             [tick.get_text() for tick in axis.get_xticklabels()], ["Treino", "Teste"]
         )
 
-    def test_bad_cases_intersection_remains_paired_by_id(self):
-        from utils.comparison_utils.bad_cases import analyze_bad_case_groups
-
-        mid = pd.DataFrame(
-            {
-                "IMG_ID": [1, 2, 3],
-                "dice_artery": [0.1, 0.8, 0.2],
-                "status": ["error", "both_correct", "none_correct"],
-            }
-        )
-        high = mid.iloc[::-1].copy()
-        result = analyze_bad_case_groups(
-            {("mid_res", "test"): mid, ("high_res", "test"): high}
-        )
-        self.assertEqual(result["paired"].iloc[0]["bad_both"], 2)
-        self.assertEqual(result["paired"].iloc[0]["common_ids"], 3)
-
     @patch("matplotlib.pyplot.show")
     def test_ia_comparison_keeps_means_by_method(self, _show):
-        helpers = load_presentation_helpers("ia_vs_pipeline_analysis")
         frame = pd.DataFrame(
             {
                 "target_resolution": ["mid", "mid"],
@@ -80,7 +74,7 @@ class LocalPresentationTest(unittest.TestCase):
                 "std_dice": [0.1, 0.2],
             }
         )
-        helpers["plot_comparison_bar_by_resolution"](frame, "mid")
+        plot_comparison_bar_by_resolution(frame, "mid")
         axis = plt.gca()
         heights = sorted(
             bar.get_height()
@@ -91,12 +85,11 @@ class LocalPresentationTest(unittest.TestCase):
         self.assertEqual(axis.get_ylim(), (0.0, 1.05))
 
     def test_variant_status_plot_keeps_counts(self):
-        helpers = load_presentation_helpers("segmentation_method_comparison")
         row: dict[str, str | int] = {"folder_variant": "baseline"}
-        for index, column in enumerate(helpers["OSTIA_STATUS_COLUMNS"]):
+        for index, column in enumerate(OSTIA_STATUS_COLUMNS):
             row[column] = index + 1
-        axis = helpers["plot_ostia_status_by_variant"](pd.DataFrame([row]))
+        axis = plot_ostia_status_by_variant(pd.DataFrame([row]))
         self.assertEqual(
             [bar.get_height() for bar in axis.patches],
-            list(range(1, len(helpers["OSTIA_STATUS_COLUMNS"]) + 1)),
+            list(range(1, len(OSTIA_STATUS_COLUMNS) + 1)),
         )

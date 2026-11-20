@@ -2,13 +2,16 @@ import unittest
 from unittest.mock import patch
 
 import numpy as np
+from scipy import ndimage as ndi
+from skimage.morphology import ball
 
+from utils.segmentation.artery_segmentation import _region_growing_from_seeds
 from utils.segmentation.pipeline.arteries import (
     evaluate_artery_postprocessing_stages,
     get_artery_postprocessing_stages,
     postprocess_artery_mask,
-    segment_artery_masks_from_vesselness,
     segment_arteries_from_vesselness,
+    segment_artery_masks_from_vesselness,
 )
 from utils.utils.metrics import dice_score
 
@@ -192,6 +195,52 @@ class ArteryPostprocessingTests(unittest.TestCase):
         self.assertEqual(result.method, "fuzzy_connectedness")
         self.assertEqual(result.details["processed_voxels"], 12)
         self.assertFalse(fuzzy_connectedness.call_args.kwargs["apply_postprocessing"])
+
+    def test_postprocessing_bbox_matches_full_volume_on_edges_and_empty_mask(self):
+        empty = np.zeros((10, 10, 10), dtype=np.uint8)
+        config = {"POSTPROCESSING": {"closing_radius": 2, "dilation_radius": 1}}
+        empty_stages = get_artery_postprocessing_stages(empty, config)
+        for mask in empty_stages.values():
+            np.testing.assert_array_equal(mask, empty)
+
+        edge = np.zeros((16, 17, 18), dtype=np.uint8)
+        edge[0:3, 0:3, 0:3] = 1
+        edge[0:3, 4:7, 0:3] = 1
+        edge[13:16, 14:17, 15:18] = 1
+        stages = get_artery_postprocessing_stages(edge, config)
+
+        expected_closed = ndi.binary_closing(edge > 0, structure=ball(2)).astype(
+            np.uint8
+        )
+        expected_final = ndi.binary_dilation(expected_closed, structure=ball(1)).astype(
+            np.uint8
+        )
+        np.testing.assert_array_equal(stages["raw_mask"], edge)
+        np.testing.assert_array_equal(stages["closed_mask"], expected_closed)
+        np.testing.assert_array_equal(stages["final_mask"], expected_final)
+
+    def test_region_growing_modes_and_sliding_window_match_expected_masks(self):
+        vesselness = np.zeros((7, 7, 7), dtype=np.float32)
+        vesselness[3, 3, 1:6] = np.array([1.0, 0.9, 0.85, 0.78, 0.72], dtype=np.float32)
+        vesselness[3, 4, 4] = 0.25  # Abaixo do piso mínimo
+
+        for window in (1, 3, "ALL"):
+            with self.subTest(comparison_window=window):
+                mask = _region_growing_from_seeds(
+                    vesselness,
+                    seeds=[(3, 3, 1)],
+                    threshold=0.25,
+                    min_vesselness=0.5,
+                    max_volume=100,
+                    relaxed_floor_factor=0.9,
+                    switch_at_voxels=3,
+                    comparison_window=window,
+                    smooth_relaxation=True,
+                    neighborhood=6,
+                )
+                expected = np.zeros_like(vesselness, dtype=np.uint8)
+                expected[3, 3, 1:6] = 1
+                np.testing.assert_array_equal(mask, expected)
 
 
 if __name__ == "__main__":

@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pandas as pd
 
-from utils.comparison_utils.io import load_experiment_variant_results
 from utils.comparison_utils.ia_math import load_math_results_for_comparison
+from utils.comparison_utils.io import load_experiment_variant_results
 from utils.comparison_utils.ostia_scenarios import load_math_results_for_ostia_scenario
 
 

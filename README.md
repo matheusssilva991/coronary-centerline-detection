@@ -29,7 +29,7 @@ coronary-centerline-detection/
 ├── README.md                   # Este arquivo
 ├── doc/                        # Documentação detalhada
 │   ├── manual_pipeline/        # Manual de uso das funções, organizado por etapa
-│   ├── Fluxograma das etapas centerline.md
+│   ├── fluxogramas/            # Fluxogramas das etapas (Markdown e PNG)
 │   └── Relatorio das etapas realizadas.md
 ├── src/                        # Código fonte
 │   ├── segmentation_pipeline.py    # Pipeline principal de processamento
@@ -57,7 +57,7 @@ coronary-centerline-detection/
 │       │   ├── aorta/              # Localização, segmentação e diagnósticos
 │       │   ├── fuzzy/              # Limiarização e conectividade fuzzy
 │       │   ├── pipeline/           # Etapas e coordenação dos pipelines
-│       │   └── *.py                # Artérias, óstios, limiar inferior e backends
+│       │   └── *.py                # Artérias, óstios e limiarização
 │       ├── processing/             # Pré-processamento, Frangi e GPU
 │       ├── visualization/          # Visualizações genéricas 2D/3D
 │       │   ├── images/             # Fatias, volumes e intensidades
@@ -242,10 +242,7 @@ antigos não recebem estimativas retrospectivas.
 São **máximos observados**, não picos exatos nem memória incremental exclusiva
 do exame: incluem pools/caches retidos entre exames e visuais habilitados.
 Nenhuma limpeza de memória é forçada. Para comparar métodos ou hardware,
-controle coorte, configuração e protocolo; o benchmark isolado em
-`src/experiments/pipeline_resource_benchmark.py` mantém seu worker independente,
-RSS máximo no ciclo de vida e seleção de GPU antes da inicialização CUDA.
-Seus números não são diretamente equivalentes aos deste monitor em lote.
+controle a coorte, a configuração e o protocolo de monitoramento.
 
 ### Notebooks Jupyter
 
@@ -415,8 +412,13 @@ Os resultados são salvos em:
 
 ### Parâmetros Principais
 
-Use [config/pipeline_config.json](config/pipeline_config.json) e sua
-[referência de parâmetros](config/README.md). Os blocos principais são:
+Em `config/`, [pipeline_config.json](config/pipeline_config.json) contém os
+parâmetros padrão de segmentação e [imagecas_splits.json](config/imagecas_splits.json)
+registra os IDs de treino, validação e teste do ImageCAS. Para consultar os
+parâmetros usados em um resultado histórico, abra o
+`config/effective_pipeline_config.json` da respectiva execução.
+
+A [referência de parâmetros](config/README.md) detalha os seguintes blocos.
 
 - `USE_GPU`, `DOWNSCALE_METHOD` e `DOWNSCALE_FACTORS`: backend e resolução.
 - `THRESHOLDING` e `LOWER_THRESHOLD`: seleção de candidatos no pré-processamento.
