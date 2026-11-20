@@ -41,3 +41,9 @@ output/segmentation/
   externa.
 
 Consulte primeiro o [catálogo](docs/README.md) antes de reutilizar um run.
+
+O [inventário de resultados](results_catalog.json) registra as fontes dos
+notebooks, os marcos históricos, os candidatos atuais e os arquivos retirados
+na limpeza de 20/11/2026, com seus tamanhos e hashes. O procedimento para medir
+as seis combinações mid no servidor está no
+[guia de execução](docs/structure/server_mid_comparison.md).

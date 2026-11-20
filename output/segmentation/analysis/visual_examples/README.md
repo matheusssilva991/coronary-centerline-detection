@@ -1,10 +1,8 @@
 # Exemplos visuais
 
-Visualizações qualitativas que não pertencem a uma única execução do pipeline.
+Os 14 HTMLs antigos de aorta e óstios foram removidos em 20/11/2026 após a
+conferência de consumidores nos notebooks, módulos, catálogos e documentação.
+Os caminhos, tamanhos e hashes estão em `../../results_catalog.json`.
 
-- `ostia_3d/`: HTMLs interativos contendo a aorta e os óstios de exames
-  selecionados.
-
-Quando uma visualização documenta especificamente um run, ela deve ficar em
-`runs/.../<timestamp>/visual/`. Esta pasta é reservada a exemplos reutilizados
-entre análises ou documentos.
+Visualizações vinculadas a uma execução devem usar o diretório `visual/` do
+respectivo run ou a raiz externa configurada em `--visual-output-dir`.

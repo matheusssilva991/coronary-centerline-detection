@@ -78,20 +78,24 @@ em vez de seguir automaticamente a referência móvel de `canonical`.
 
 ## Reexecução com todas as métricas atuais
 
-Os três CSVs mid atuais já contêm os novos diagnósticos e métricas. High ainda
-não tem HD/AHD e os estágios intermediários recentes. Para repetir referências,
-consulte a seção de reexecução em `src/experiments/README.md` e use
-`rebuild_canonical_metrics.py`.
+Os três CSVs mid atuais contêm os diagnósticos e as distâncias históricas de
+superfície. High conserva as referências anteriores; o candidato high/teste
+com HD/AHD é selecionado explicitamente na análise de distâncias dos notebooks.
 
-O script usa os mesmos IDs e o snapshot **já escalonado** de cada referência,
-sem carregar o `pipeline_config.json` corrente nem escalar parâmetros outra vez.
-Somente a avaliação HD/AHD é habilitada adicionalmente. Mid mantém o fluxo dos
-experimentos compartilhados; high mantém o pipeline principal. Os resultados
-são novas medições, não preenchimento retroativo dos CSVs antigos.
+Para preparar seis execuções mid no servidor com OpenCV e SciPy, siga o
+[guia da série padronizada](../docs/structure/server_mid_comparison.md).
+Ele usa cópias dos snapshots e dos IDs canônicos, com protocolo histórico dos
+rótulos. A execução ocorre pela CLI atual, cuja equivalência científica ainda
+precisa ser conferida nos controles.
+
+A opção `--distance-metrics` atual produz o protocolo 3, com HD/AvgHD da
+máscara inteira e HD95 de superfície. O HD/AHD desses CSVs canônicos usa a
+definição histórica de superfície descrita acima. Cada comparação deve
+identificar o protocolo e os denominadores válidos.
 
 Uma promoção validada move `current` para `before_<run-name>` no mesmo diretório,
 cria um link para o novo run e atualiza `references_manifest.json`, preservando
 a referência anterior no histórico. Os notebooks canônicos passam a ler o novo
 run; comparações históricas com fontes explícitas continuam usando os runs antigos.
 Falhas e etapas não executadas preservam métricas ausentes e status explicativos.
-Não são fabricados tempos de batch, valores de distância ou métricas de falhas.
+Tempos publicados devem vir dos manifests efetivamente medidos na execução.

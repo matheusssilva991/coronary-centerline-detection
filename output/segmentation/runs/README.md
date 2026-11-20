@@ -67,23 +67,16 @@ duplicados, `results_<split>.csv` é preservado para diagnóstico, mas o metadat
 de execução completa não é gerado; a divergência fica em
 `integrity_<split>.json`.
 
-## Migração do layout legado
+## Leitura do layout legado
 
-Inspecione primeiro e aplique explicitamente:
+Os leitores aceitam os nomes históricos dos CSVs, metadados e tempos por lote.
+Encontrar o mesmo número de lote nos dois formatos é tratado como erro.
+Use o snapshot de cada run para interpretar seus parâmetros e o protocolo de
+avaliação, inclusive nas execuções anteriores à refatoração.
 
-```bash
-uv run python src/experiments/migrate_run_result_layout.py
-uv run python src/experiments/migrate_run_result_layout.py --apply
-```
-
-O modo padrão não altera arquivos. Runs íntegros são projetados para a whitelist
-científica, recebem os nomes novos e têm metadata compacto regenerado. Antes
-de retirar colunas antigas de configuração, a migração preserva somente os
-rótulos principais no metadata; o restante permanece no snapshot efetivo.
-Leitores e retomadas continuam
-aceitando os nomes anteriores; encontrar o mesmo número de lote nos dois
-formatos é tratado como erro. Runs parciais já marcados permanecem intocados no
-layout legado até serem concluídos.
+O inventário e a relação das exclusões estão em
+[`results_catalog.json`](../results_catalog.json). A nova série de medição
+mid está descrita no [guia do servidor](../docs/structure/server_mid_comparison.md).
 
 ## Organizacao
 
