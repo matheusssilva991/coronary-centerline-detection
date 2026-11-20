@@ -40,23 +40,42 @@ rather than fixed `__file__.parents` offsets.
 - `uv run jupyter lab`: open the execution and EDA notebooks.
 - `PYTHONPATH=src uv run python -m unittest discover -s tests -p 'test_*.py'`:
   run all tests, including imports from the external CCTA pipeline.
-- `uv run ruff check src tests`: run static lint checks.
+- `uv run ruff check src tests` checks lint rules, including import ordering (`I`).
 - `uv run ruff format --check src tests`: verify formatting.
 - `pyright`: run basic type checking using `pyrightconfig.json`, when installed.
 
 ## Coding Style & Naming Conventions
 
-Use four-space indentation, type hints for public functions, concise docstrings,
-and comments only around non-obvious processing stages. Write docstrings and
-explanatory comments in Portuguese without translating contract keys or status
-codes. Ruff defines formatting and lint behavior. Use `snake_case` for modules,
-functions, variables, and test files; use `UPPER_CASE` for notebook/config constants.
-Prefer existing helpers
-over notebook-local duplicates. Keep reusable calculations in modules and
-analysis-specific presentation helpers in `src/eda/<group>/view/*_views.py`
-modules (or in notebook cells tagged `presentation-helpers` for lightweight
-notebooks with 1–2 helpers). Keep pipeline behavior controlled through JSON
-configuration or CLI flags rather than hard-coded experiment values.
+Use four-space indentation and type hints for public functions. Use `snake_case`
+for modules, functions, variables, and test files, and `UPPER_CASE` for notebook
+and configuration constants. Configure pipeline behavior through JSON or CLI flags.
+
+Start each public function's docstring with a sentence in Portuguese describing
+its result or effect. Use `Args:`, `Returns:`, and `Raises:` when callers need
+details about inputs, outputs, or exceptions. Keep parameter names, result keys,
+and status codes verbatim. A single sentence is enough for a simple helper.
+For scientific functions, document assumptions the signature cannot convey,
+such as axis order, spacing units, label values, or how empty masks are handled.
+
+Write inline comments in Portuguese where a decision affects interpretation or
+reproducibility. For example, explain why validation uses the threshold selected
+on training data. Skip comments that simply narrate assignments or loops.
+
+## EDA Notebooks
+
+Keep the analysis readable from top to bottom. Show the configuration, exam
+selection, calls that compute the results, and the resulting tables and figures.
+Reuse existing functions. Choose a module by what the function does, even if
+only one notebook uses it.
+
+- Put domain calculations and validation in `utils.project.analysis`, exam
+  pairing and statistics in `utils.comparison_utils`, and general-purpose plots
+  in `utils.visualization`.
+- A lightweight notebook may define one or two short presentation helpers in a
+  cell tagged `presentation-helpers`. For more extensive presentation code,
+  place the functions in `src/eda/<group>/view/<analysis>_views.py` and import
+  them in the tagged cell. Tests must be able to load that cell without opening
+  datasets or running the analysis.
 
 ## Testing Guidelines
 
@@ -66,6 +85,11 @@ plus regression tests proving unchanged masks when adding diagnostics or
 refactoring. Do not run the complete ImageCAS pipeline as a unit test. Validate
 edited notebooks with `nbformat`, compile their code cells, and clear embedded
 outputs before committing.
+
+Before refactoring an analysis, capture its tables and the data behind its
+plots. Compare both against the refactored outputs using the same saved inputs.
+Check exam IDs, exclusions, denominators, missing values, labels, and category
+order alongside the numeric results.
 
 Do not start scientific batches, reevaluate runs, or migrate historical results
 unless explicitly requested. When asked for a command, provide it without
