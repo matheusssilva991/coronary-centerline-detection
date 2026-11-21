@@ -1,0 +1,166 @@
+{
+  "metadata_schema_version": 4,
+  "run": {
+    "split": "val",
+    "resolution": "mid"
+  },
+  "configuration": {
+    "source": "effective_pipeline_config",
+    "sha256": "b2d2aa84b6e3c31df359be56f440c89ef17236487a888777a5edc2a2324716a1",
+    "snapshot_file": "../config/effective_pipeline_config.json",
+    "use_gpu": true,
+    "downscale_method": "opencv",
+    "downscale_factors": [
+      2,
+      2,
+      1
+    ],
+    "min_threshold_hu": -300,
+    "max_threshold_percentile": 99.9,
+    "threshold_method": "normal",
+    "artery_segmentation_method": "region_growing",
+    "artery_distance_metrics": {
+      "enabled": true,
+      "unit": "mm",
+      "stage": "after_morphology",
+      "point_set": "surface_voxel_centers",
+      "surface_connectivity": 6,
+      "exterior_is_background": true,
+      "hd_definition": "max_of_bidirectional_nearest_distances",
+      "ahd_definition": "arithmetic_mean_of_directed_means"
+    },
+    "resource_monitoring": {
+      "enabled": true,
+      "sampling_interval_seconds": 0.5,
+      "scope": "current_process_pid_per_exam_including_enabled_visuals",
+      "ram_method": "observed_resident_set_size_from_linux_proc_statm",
+      "vram_method": "observed_pid_allocations_nvidia_smi_all_devices",
+      "units": "bytes",
+      "query_timeout_seconds": 1.0,
+      "limitations": "Amostragem pode perder picos; inclui memória retida entre exames, não consumo incremental.",
+      "environments": {
+        "da266a4bccfe27ce": {
+          "host": "curupira",
+          "platform": "Linux-5.15.0-198-generic-x86_64-with-glibc2.35",
+          "python": "3.12.0",
+          "machine": "x86_64",
+          "cpu_count": 24,
+          "cuda_visible_devices": "1",
+          "physical_ram_bytes": 810203930624,
+          "cpu_model": "Intel(R) Xeon(R) Silver 4214 CPU @ 2.20GHz"
+        }
+      },
+      "gpu_device_uuids": [
+        "GPU-28f680ab-a209-6d9e-e7bd-ea96d960294e"
+      ],
+      "errors_by_exam": {
+        "407": {
+          "vram: TimeoutExpired: Command '['nvidia-smi', '--query-compute-apps=pid,gpu_uuid,used_gpu_memory', '--format=csv,noheader,nounits']' timed out after 1.0 seconds": 2
+        },
+        "140": {
+          "vram: TimeoutExpired: Command '['nvidia-smi', '--query-compute-apps=pid,gpu_uuid,used_gpu_memory', '--format=csv,noheader,nounits']' timed out after 1.0 seconds": 2
+        },
+        "456": {
+          "vram: TimeoutExpired: Command '['nvidia-smi', '--query-compute-apps=pid,gpu_uuid,used_gpu_memory', '--format=csv,noheader,nounits']' timed out after 1.0 seconds": 4
+        },
+        "89": {
+          "vram: TimeoutExpired: Command '['nvidia-smi', '--query-compute-apps=pid,gpu_uuid,used_gpu_memory', '--format=csv,noheader,nounits']' timed out after 1.0 seconds": 1
+        },
+        "727": {
+          "vram: TimeoutExpired: Command '['nvidia-smi', '--query-compute-apps=pid,gpu_uuid,used_gpu_memory', '--format=csv,noheader,nounits']' timed out after 1.0 seconds": 3
+        },
+        "959": {
+          "vram: TimeoutExpired: Command '['nvidia-smi', '--query-compute-apps=pid,gpu_uuid,used_gpu_memory', '--format=csv,noheader,nounits']' timed out after 1.0 seconds": 6
+        }
+      },
+      "metadata_error": null
+    }
+  },
+  "results": {
+    "execution_time": {
+      "seconds": 19721.90350151062,
+      "minutes": 328.69839169184365,
+      "hours": 5.478306528197394
+    },
+    "artery_distances": {
+      "status_counts": {
+        "ok": 265,
+        "not_evaluated": 5
+      },
+      "missing_status_count": 0,
+      "artery_hd_mm": {
+        "count": 265,
+        "mean": 43.16229004328248,
+        "std": 19.281593134952146,
+        "median": 38.58026475561413
+      },
+      "artery_ahd_mm": {
+        "count": 265,
+        "mean": 5.40480486500833,
+        "std": 8.381913621375507,
+        "median": 2.3626001226250053
+      }
+    },
+    "dice": {
+      "before_morphology": {
+        "mean": 0.3169710674996938,
+        "valid_exam_count": 265
+      },
+      "after_morphology": {
+        "mean": 0.6009457446924025,
+        "valid_exam_count": 270
+      },
+      "after_closing": {
+        "mean": 0.32274636855399014,
+        "valid_exam_count": 265
+      },
+      "closing_delta": {
+        "mean": 0.005775301054296287,
+        "valid_exam_count": 265
+      },
+      "dilation_delta": {
+        "mean": 0.2895379750948727,
+        "valid_exam_count": 265
+      }
+    },
+    "ostia": {
+      "processed_exam_count": 270,
+      "success": {
+        "count": 230,
+        "percent": 85.18518518518519
+      },
+      "types": {
+        "both_correct": {
+          "count": 49,
+          "percent": 18.14814814814815
+        },
+        "both_tolerable": {
+          "count": 181,
+          "percent": 67.03703703703704
+        },
+        "found_but_incorrect": {
+          "count": 35,
+          "percent": 12.962962962962962
+        },
+        "not_found": {
+          "count": 5,
+          "percent": 1.8518518518518516
+        },
+        "not_evaluated_or_error": {
+          "count": 0,
+          "percent": 0.0
+        }
+      },
+      "sides": {
+        "left_correct": {
+          "count": 194,
+          "percent": 71.85185185185186
+        },
+        "right_correct": {
+          "count": 65,
+          "percent": 24.074074074074073
+        }
+      }
+    }
+  }
+}

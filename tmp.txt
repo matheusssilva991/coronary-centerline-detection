@@ -1,0 +1,19 @@
+conda activate dac_gpu
+
+export CUDA_VISIBLE_DEVICES=0
+export IMAGECAS_BASE_PATH=/data04/home/mpmaia/ImageCAS/database/1-1000
+
+export CUDA_PATH="$CONDA_PREFIX/targets/x86_64-linux"
+export LD_LIBRARY_PATH="$CONDA_PREFIX/lib:$CUDA_PATH/lib"
+export LD_PRELOAD="$CUDA_PATH/lib/libcudart.so.12:$CUDA_PATH/lib/libnvrtc.so.12:$CUDA_PATH/lib/libnvJitLink.so.12"
+
+python -X faulthandler -u src/segmentation_pipeline.py \
+  --base-path "$IMAGECAS_BASE_PATH" \
+  --resolution mid --split test \
+  --split-config config/imagecas_splits.json \
+  --config-file output/segmentation/canonical/mid_res/test/current/config/effective_pipeline_config.json \
+  --config-replace \
+  --downscale-method scipy \
+  --gpu --distance-metrics --num-batches 5 \
+  --monitor-resources --resource-sampling-interval 0.5 \
+  --run-group server_mid_comparison/test/scipy_cubic

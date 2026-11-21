@@ -1,0 +1,146 @@
+{
+  "metadata_schema_version": 4,
+  "run": {
+    "split": "train",
+    "resolution": "mid"
+  },
+  "configuration": {
+    "source": "effective_pipeline_config",
+    "sha256": "517a1d1c8b8b780d85b27f5ef4905dbb47580eea84a992a8704614eef3d0cdb7",
+    "snapshot_file": "../config/effective_pipeline_config.json",
+    "use_gpu": true,
+    "downscale_method": "scipy",
+    "downscale_factors": [
+      2,
+      2,
+      1
+    ],
+    "min_threshold_hu": -300,
+    "max_threshold_percentile": 99.9,
+    "threshold_method": "normal",
+    "artery_segmentation_method": "region_growing",
+    "artery_distance_metrics": {
+      "enabled": true,
+      "unit": "mm",
+      "stage": "after_morphology",
+      "point_set": "surface_voxel_centers",
+      "surface_connectivity": 6,
+      "exterior_is_background": true,
+      "hd_definition": "max_of_bidirectional_nearest_distances",
+      "ahd_definition": "arithmetic_mean_of_directed_means"
+    },
+    "resource_monitoring": {
+      "enabled": true,
+      "sampling_interval_seconds": 0.5,
+      "scope": "current_process_pid_per_exam_including_enabled_visuals",
+      "ram_method": "observed_resident_set_size_from_linux_proc_statm",
+      "vram_method": "observed_pid_allocations_nvidia_smi_all_devices",
+      "units": "bytes",
+      "query_timeout_seconds": 1.0,
+      "limitations": "Amostragem pode perder picos; inclui memória retida entre exames, não consumo incremental.",
+      "environments": {
+        "da266a4bccfe27ce": {
+          "host": "curupira",
+          "platform": "Linux-5.15.0-198-generic-x86_64-with-glibc2.35",
+          "python": "3.12.0",
+          "machine": "x86_64",
+          "cpu_count": 24,
+          "cuda_visible_devices": "1",
+          "physical_ram_bytes": 810203930624,
+          "cpu_model": "Intel(R) Xeon(R) Silver 4214 CPU @ 2.20GHz"
+        }
+      },
+      "gpu_device_uuids": [
+        "GPU-28f680ab-a209-6d9e-e7bd-ea96d960294e"
+      ],
+      "errors_by_exam": {},
+      "metadata_error": null
+    }
+  },
+  "results": {
+    "execution_time": {
+      "seconds": 2788.9776232242584,
+      "minutes": 46.482960387070975,
+      "hours": 0.7747160064511829
+    },
+    "artery_distances": {
+      "status_counts": {
+        "ok": 30
+      },
+      "missing_status_count": 0,
+      "artery_hd_mm": {
+        "count": 30,
+        "mean": 41.028918086080395,
+        "std": 21.02428280927295,
+        "median": 36.829005927239606
+      },
+      "artery_ahd_mm": {
+        "count": 30,
+        "mean": 4.577525638696094,
+        "std": 4.845129716689471,
+        "median": 2.323911090337099
+      }
+    },
+    "dice": {
+      "before_morphology": {
+        "mean": 0.3267673604756418,
+        "valid_exam_count": 30
+      },
+      "after_morphology": {
+        "mean": 0.6155559024961341,
+        "valid_exam_count": 30
+      },
+      "after_closing": {
+        "mean": 0.3336147060497475,
+        "valid_exam_count": 30
+      },
+      "closing_delta": {
+        "mean": 0.006847345574105744,
+        "valid_exam_count": 30
+      },
+      "dilation_delta": {
+        "mean": 0.28194119644638643,
+        "valid_exam_count": 30
+      }
+    },
+    "ostia": {
+      "processed_exam_count": 30,
+      "success": {
+        "count": 27,
+        "percent": 90.0
+      },
+      "types": {
+        "both_correct": {
+          "count": 4,
+          "percent": 13.333333333333334
+        },
+        "both_tolerable": {
+          "count": 23,
+          "percent": 76.66666666666667
+        },
+        "found_but_incorrect": {
+          "count": 3,
+          "percent": 10.0
+        },
+        "not_found": {
+          "count": 0,
+          "percent": 0.0
+        },
+        "not_evaluated_or_error": {
+          "count": 0,
+          "percent": 0.0
+        }
+      },
+      "sides": {
+        "left_correct": {
+          "count": 22,
+          "percent": 73.33333333333333
+        },
+        "right_correct": {
+          "count": 5,
+          "percent": 16.666666666666664
+        }
+      }
+    }
+  }
+}

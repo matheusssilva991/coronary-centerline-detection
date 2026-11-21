@@ -1,0 +1,286 @@
+{
+  "environments": {
+    "da266a4bccfe27ce": {
+      "host": "curupira",
+      "platform": "Linux-5.15.0-198-generic-x86_64-with-glibc2.35",
+      "python": "3.12.0",
+      "machine": "x86_64",
+      "cpu_count": 24,
+      "cuda_visible_devices": "1",
+      "physical_ram_bytes": 810203930624,
+      "cpu_model": "Intel(R) Xeon(R) Silver 4214 CPU @ 2.20GHz"
+    }
+  },
+  "exams": {
+    "28": {
+      "pid": 4103198,
+      "sampling_interval_seconds": 0.5,
+      "gpu_device_uuids": [
+        "GPU-28f680ab-a209-6d9e-e7bd-ea96d960294e"
+      ],
+      "errors": {},
+      "environment_id": "da266a4bccfe27ce"
+    },
+    "380": {
+      "pid": 4103198,
+      "sampling_interval_seconds": 0.5,
+      "gpu_device_uuids": [
+        "GPU-28f680ab-a209-6d9e-e7bd-ea96d960294e"
+      ],
+      "errors": {},
+      "environment_id": "da266a4bccfe27ce"
+    },
+    "854": {
+      "pid": 4103198,
+      "sampling_interval_seconds": 0.5,
+      "gpu_device_uuids": [
+        "GPU-28f680ab-a209-6d9e-e7bd-ea96d960294e"
+      ],
+      "errors": {},
+      "environment_id": "da266a4bccfe27ce"
+    },
+    "937": {
+      "pid": 4103198,
+      "sampling_interval_seconds": 0.5,
+      "gpu_device_uuids": [
+        "GPU-28f680ab-a209-6d9e-e7bd-ea96d960294e"
+      ],
+      "errors": {},
+      "environment_id": "da266a4bccfe27ce"
+    },
+    "315": {
+      "pid": 4103198,
+      "sampling_interval_seconds": 0.5,
+      "gpu_device_uuids": [
+        "GPU-28f680ab-a209-6d9e-e7bd-ea96d960294e"
+      ],
+      "errors": {},
+      "environment_id": "da266a4bccfe27ce"
+    },
+    "428": {
+      "pid": 4103198,
+      "sampling_interval_seconds": 0.5,
+      "gpu_device_uuids": [
+        "GPU-28f680ab-a209-6d9e-e7bd-ea96d960294e"
+      ],
+      "errors": {},
+      "environment_id": "da266a4bccfe27ce"
+    },
+    "752": {
+      "pid": 4103198,
+      "sampling_interval_seconds": 0.5,
+      "gpu_device_uuids": [
+        "GPU-28f680ab-a209-6d9e-e7bd-ea96d960294e"
+      ],
+      "errors": {},
+      "environment_id": "da266a4bccfe27ce"
+    },
+    "13": {
+      "pid": 4103198,
+      "sampling_interval_seconds": 0.5,
+      "gpu_device_uuids": [
+        "GPU-28f680ab-a209-6d9e-e7bd-ea96d960294e"
+      ],
+      "errors": {},
+      "environment_id": "da266a4bccfe27ce"
+    },
+    "538": {
+      "pid": 4103198,
+      "sampling_interval_seconds": 0.5,
+      "gpu_device_uuids": [
+        "GPU-28f680ab-a209-6d9e-e7bd-ea96d960294e"
+      ],
+      "errors": {},
+      "environment_id": "da266a4bccfe27ce"
+    },
+    "965": {
+      "pid": 4103198,
+      "sampling_interval_seconds": 0.5,
+      "gpu_device_uuids": [
+        "GPU-28f680ab-a209-6d9e-e7bd-ea96d960294e"
+      ],
+      "errors": {},
+      "environment_id": "da266a4bccfe27ce"
+    },
+    "447": {
+      "pid": 4103198,
+      "sampling_interval_seconds": 0.5,
+      "gpu_device_uuids": [
+        "GPU-28f680ab-a209-6d9e-e7bd-ea96d960294e"
+      ],
+      "errors": {},
+      "environment_id": "da266a4bccfe27ce"
+    },
+    "836": {
+      "pid": 4103198,
+      "sampling_interval_seconds": 0.5,
+      "gpu_device_uuids": [
+        "GPU-28f680ab-a209-6d9e-e7bd-ea96d960294e"
+      ],
+      "errors": {},
+      "environment_id": "da266a4bccfe27ce"
+    },
+    "603": {
+      "pid": 4103198,
+      "sampling_interval_seconds": 0.5,
+      "gpu_device_uuids": [
+        "GPU-28f680ab-a209-6d9e-e7bd-ea96d960294e"
+      ],
+      "errors": {},
+      "environment_id": "da266a4bccfe27ce"
+    },
+    "676": {
+      "pid": 4103198,
+      "sampling_interval_seconds": 0.5,
+      "gpu_device_uuids": [
+        "GPU-28f680ab-a209-6d9e-e7bd-ea96d960294e"
+      ],
+      "errors": {},
+      "environment_id": "da266a4bccfe27ce"
+    },
+    "44": {
+      "pid": 4103198,
+      "sampling_interval_seconds": 0.5,
+      "gpu_device_uuids": [
+        "GPU-28f680ab-a209-6d9e-e7bd-ea96d960294e"
+      ],
+      "errors": {},
+      "environment_id": "da266a4bccfe27ce"
+    },
+    "129": {
+      "pid": 4103198,
+      "sampling_interval_seconds": 0.5,
+      "gpu_device_uuids": [
+        "GPU-28f680ab-a209-6d9e-e7bd-ea96d960294e"
+      ],
+      "errors": {},
+      "environment_id": "da266a4bccfe27ce"
+    },
+    "518": {
+      "pid": 4103198,
+      "sampling_interval_seconds": 0.5,
+      "gpu_device_uuids": [
+        "GPU-28f680ab-a209-6d9e-e7bd-ea96d960294e"
+      ],
+      "errors": {},
+      "environment_id": "da266a4bccfe27ce"
+    },
+    "793": {
+      "pid": 4103198,
+      "sampling_interval_seconds": 0.5,
+      "gpu_device_uuids": [
+        "GPU-28f680ab-a209-6d9e-e7bd-ea96d960294e"
+      ],
+      "errors": {},
+      "environment_id": "da266a4bccfe27ce"
+    },
+    "550": {
+      "pid": 4103198,
+      "sampling_interval_seconds": 0.5,
+      "gpu_device_uuids": [
+        "GPU-28f680ab-a209-6d9e-e7bd-ea96d960294e"
+      ],
+      "errors": {},
+      "environment_id": "da266a4bccfe27ce"
+    },
+    "631": {
+      "pid": 4103198,
+      "sampling_interval_seconds": 0.5,
+      "gpu_device_uuids": [
+        "GPU-28f680ab-a209-6d9e-e7bd-ea96d960294e"
+      ],
+      "errors": {},
+      "environment_id": "da266a4bccfe27ce"
+    },
+    "330": {
+      "pid": 4103198,
+      "sampling_interval_seconds": 0.5,
+      "gpu_device_uuids": [
+        "GPU-28f680ab-a209-6d9e-e7bd-ea96d960294e"
+      ],
+      "errors": {},
+      "environment_id": "da266a4bccfe27ce"
+    },
+    "90": {
+      "pid": 4103198,
+      "sampling_interval_seconds": 0.5,
+      "gpu_device_uuids": [
+        "GPU-28f680ab-a209-6d9e-e7bd-ea96d960294e"
+      ],
+      "errors": {},
+      "environment_id": "da266a4bccfe27ce"
+    },
+    "608": {
+      "pid": 4103198,
+      "sampling_interval_seconds": 0.5,
+      "gpu_device_uuids": [
+        "GPU-28f680ab-a209-6d9e-e7bd-ea96d960294e"
+      ],
+      "errors": {},
+      "environment_id": "da266a4bccfe27ce"
+    },
+    "887": {
+      "pid": 4103198,
+      "sampling_interval_seconds": 0.5,
+      "gpu_device_uuids": [
+        "GPU-28f680ab-a209-6d9e-e7bd-ea96d960294e"
+      ],
+      "errors": {},
+      "environment_id": "da266a4bccfe27ce"
+    },
+    "175": {
+      "pid": 4103198,
+      "sampling_interval_seconds": 0.5,
+      "gpu_device_uuids": [
+        "GPU-28f680ab-a209-6d9e-e7bd-ea96d960294e"
+      ],
+      "errors": {},
+      "environment_id": "da266a4bccfe27ce"
+    },
+    "760": {
+      "pid": 4103198,
+      "sampling_interval_seconds": 0.5,
+      "gpu_device_uuids": [
+        "GPU-28f680ab-a209-6d9e-e7bd-ea96d960294e"
+      ],
+      "errors": {},
+      "environment_id": "da266a4bccfe27ce"
+    },
+    "696": {
+      "pid": 4103198,
+      "sampling_interval_seconds": 0.5,
+      "gpu_device_uuids": [
+        "GPU-28f680ab-a209-6d9e-e7bd-ea96d960294e"
+      ],
+      "errors": {},
+      "environment_id": "da266a4bccfe27ce"
+    },
+    "194": {
+      "pid": 4103198,
+      "sampling_interval_seconds": 0.5,
+      "gpu_device_uuids": [
+        "GPU-28f680ab-a209-6d9e-e7bd-ea96d960294e"
+      ],
+      "errors": {},
+      "environment_id": "da266a4bccfe27ce"
+    },
+    "305": {
+      "pid": 4103198,
+      "sampling_interval_seconds": 0.5,
+      "gpu_device_uuids": [
+        "GPU-28f680ab-a209-6d9e-e7bd-ea96d960294e"
+      ],
+      "errors": {},
+      "environment_id": "da266a4bccfe27ce"
+    },
+    "344": {
+      "pid": 4103198,
+      "sampling_interval_seconds": 0.5,
+      "gpu_device_uuids": [
+        "GPU-28f680ab-a209-6d9e-e7bd-ea96d960294e"
+      ],
+      "errors": {},
+      "environment_id": "da266a4bccfe27ce"
+    }
+  }
+}

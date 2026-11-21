@@ -1,0 +1,179 @@
+{
+  "metadata_schema_version": 4,
+  "run": {
+    "split": "val",
+    "resolution": "mid"
+  },
+  "configuration": {
+    "source": "effective_pipeline_config",
+    "sha256": "be68d94be59600589504c3619f6b33a5f5eb969a0cd91c5c617fa05a69279616",
+    "snapshot_file": "../config/effective_pipeline_config.json",
+    "use_gpu": true,
+    "downscale_method": "scipy",
+    "downscale_factors": [
+      2,
+      2,
+      1
+    ],
+    "min_threshold_hu": -300,
+    "max_threshold_percentile": 99.9,
+    "threshold_method": "normal",
+    "artery_segmentation_method": "region_growing",
+    "artery_distance_metrics": {
+      "enabled": true,
+      "unit": "mm",
+      "stage": "after_morphology",
+      "point_set": "surface_voxel_centers",
+      "surface_connectivity": 6,
+      "exterior_is_background": true,
+      "hd_definition": "max_of_bidirectional_nearest_distances",
+      "ahd_definition": "arithmetic_mean_of_directed_means"
+    },
+    "resource_monitoring": {
+      "enabled": true,
+      "sampling_interval_seconds": 0.5,
+      "scope": "current_process_pid_per_exam_including_enabled_visuals",
+      "ram_method": "observed_resident_set_size_from_linux_proc_statm",
+      "vram_method": "observed_pid_allocations_nvidia_smi_all_devices",
+      "units": "bytes",
+      "query_timeout_seconds": 1.0,
+      "limitations": "Amostragem pode perder picos; inclui memória retida entre exames, não consumo incremental.",
+      "environments": {
+        "da266a4bccfe27ce": {
+          "host": "curupira",
+          "platform": "Linux-5.15.0-198-generic-x86_64-with-glibc2.35",
+          "python": "3.12.0",
+          "machine": "x86_64",
+          "cpu_count": 24,
+          "cuda_visible_devices": "1",
+          "physical_ram_bytes": 810203930624,
+          "cpu_model": "Intel(R) Xeon(R) Silver 4214 CPU @ 2.20GHz"
+        }
+      },
+      "gpu_device_uuids": [
+        "GPU-28f680ab-a209-6d9e-e7bd-ea96d960294e"
+      ],
+      "errors_by_exam": {
+        "983": {
+          "vram: TimeoutExpired: Command '['nvidia-smi', '--query-compute-apps=pid,gpu_uuid,used_gpu_memory', '--format=csv,noheader,nounits']' timed out after 1.0 seconds": 5
+        },
+        "594": {
+          "vram: TimeoutExpired: Command '['nvidia-smi', '--query-compute-apps=pid,gpu_uuid,used_gpu_memory', '--format=csv,noheader,nounits']' timed out after 1.0 seconds": 7
+        },
+        "316": {
+          "vram: TimeoutExpired: Command '['nvidia-smi', '--query-compute-apps=pid,gpu_uuid,used_gpu_memory', '--format=csv,noheader,nounits']' timed out after 1.0 seconds": 3
+        },
+        "446": {
+          "vram: TimeoutExpired: Command '['nvidia-smi', '--query-compute-apps=pid,gpu_uuid,used_gpu_memory', '--format=csv,noheader,nounits']' timed out after 1.0 seconds": 1
+        },
+        "674": {
+          "vram: TimeoutExpired: Command '['nvidia-smi', '--query-compute-apps=pid,gpu_uuid,used_gpu_memory', '--format=csv,noheader,nounits']' timed out after 1.0 seconds": 2
+        },
+        "992": {
+          "vram: TimeoutExpired: Command '['nvidia-smi', '--query-compute-apps=pid,gpu_uuid,used_gpu_memory', '--format=csv,noheader,nounits']' timed out after 1.0 seconds": 1
+        },
+        "515": {
+          "vram: TimeoutExpired: Command '['nvidia-smi', '--query-compute-apps=pid,gpu_uuid,used_gpu_memory', '--format=csv,noheader,nounits']' timed out after 1.0 seconds": 1
+        },
+        "162": {
+          "vram: TimeoutExpired: Command '['nvidia-smi', '--query-compute-apps=pid,gpu_uuid,used_gpu_memory', '--format=csv,noheader,nounits']' timed out after 1.0 seconds": 1
+        },
+        "396": {
+          "vram: TimeoutExpired: Command '['nvidia-smi', '--query-compute-apps=pid,gpu_uuid,used_gpu_memory', '--format=csv,noheader,nounits']' timed out after 1.0 seconds": 1
+        },
+        "490": {
+          "vram: TimeoutExpired: Command '['nvidia-smi', '--query-compute-apps=pid,gpu_uuid,used_gpu_memory', '--format=csv,noheader,nounits']' timed out after 1.0 seconds": 1
+        }
+      },
+      "metadata_error": null
+    }
+  },
+  "results": {
+    "execution_time": {
+      "seconds": 23118.739713430405,
+      "minutes": 385.31232855717343,
+      "hours": 6.421872142619557
+    },
+    "artery_distances": {
+      "status_counts": {
+        "ok": 266,
+        "prediction_empty": 2,
+        "not_evaluated": 2
+      },
+      "missing_status_count": 0,
+      "artery_hd_mm": {
+        "count": 266,
+        "mean": 42.6543412985019,
+        "std": 19.464693379848118,
+        "median": 38.136560451993304
+      },
+      "artery_ahd_mm": {
+        "count": 266,
+        "mean": 5.473240529809504,
+        "std": 8.590186565063624,
+        "median": 2.2985850369954424
+      }
+    },
+    "dice": {
+      "before_morphology": {
+        "mean": 0.31627319138457116,
+        "valid_exam_count": 268
+      },
+      "after_morphology": {
+        "mean": 0.6061273912570481,
+        "valid_exam_count": 270
+      },
+      "after_closing": {
+        "mean": 0.3224176998936392,
+        "valid_exam_count": 268
+      },
+      "closing_delta": {
+        "mean": 0.006144508509067958,
+        "valid_exam_count": 268
+      },
+      "dilation_delta": {
+        "mean": 0.2882330301041329,
+        "valid_exam_count": 268
+      }
+    },
+    "ostia": {
+      "processed_exam_count": 270,
+      "success": {
+        "count": 230,
+        "percent": 85.18518518518519
+      },
+      "types": {
+        "both_correct": {
+          "count": 47,
+          "percent": 17.40740740740741
+        },
+        "both_tolerable": {
+          "count": 183,
+          "percent": 67.77777777777779
+        },
+        "found_but_incorrect": {
+          "count": 38,
+          "percent": 14.074074074074074
+        },
+        "not_found": {
+          "count": 2,
+          "percent": 0.7407407407407408
+        },
+        "not_evaluated_or_error": {
+          "count": 0,
+          "percent": 0.0
+        }
+      },
+      "sides": {
+        "left_correct": {
+          "count": 193,
+          "percent": 71.48148148148148
+        },
+        "right_correct": {
+          "count": 69,
+          "percent": 25.555555555555554
+        }
+      }
+    }
+  }
+}
