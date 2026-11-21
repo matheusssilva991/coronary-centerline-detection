@@ -265,7 +265,7 @@ def _add_ostium_point(
 
 
 def visualize_aorta_ostia_artery(
-    aorta_mask: NDArray[Any],
+    aorta_mask: NDArray[Any] | None,
     ostia_left: Optional[Sequence[float]],
     ostia_right: Optional[Sequence[float]],
     artery_mask: Optional[NDArray[Any]] = None,
@@ -275,11 +275,15 @@ def visualize_aorta_ostia_artery(
     save_html_path: Optional[str] = None,
     display_plot: bool = True,
     plot_name: str = "Aorta + óstios + artéria",
+    *,
+    artery_name: str = "Artéria predita",
+    label_artery_name: str = "Artéria GT",
 ) -> Any:
     """Renderiza aorta, óstios, artéria predita e referência em um mesmo plot 3D.
 
     Args:
-        aorta_mask (NDArray[Any]): Máscara binária 3D ``(Y, X, Z)`` da aorta.
+        aorta_mask (NDArray[Any] | None): Máscara binária 3D ``(Y, X, Z)`` da
+            aorta. ``None`` omite a camada.
         ostia_left (Sequence[float] | None): Coordenada ``(y, x, z)`` do óstio
             esquerdo em voxels, ou ``None`` se ausente.
         ostia_right (Sequence[float] | None): Coordenada ``(y, x, z)`` do óstio
@@ -296,6 +300,8 @@ def visualize_aorta_ostia_artery(
             HTML.
         display_plot (bool): Se ``True``, exibe o gráfico K3D ao final.
         plot_name (str): Nome atribuído à cena K3D.
+        artery_name (str): Nome da malha em ``artery_mask``.
+        label_artery_name (str): Nome da malha em ``label_artery``.
 
     Returns:
         Any: Objeto ``k3d.Plot`` com as camadas anatômicas adicionadas.
@@ -314,14 +320,15 @@ def visualize_aorta_ostia_artery(
         create_plot(name=plot_name, height=800, grid_visible=True, axes=axes_labels),
     )
     # Adiciona malhas da aorta e, quando disponíveis, referência e predição arterial.
-    _add_mask_mesh(
-        plot,
-        aorta_mask,
-        spacing=mesh_spacing,
-        color=0xFF5555,
-        opacity=0.22,
-        name="Aorta",
-    )
+    if aorta_mask is not None:
+        _add_mask_mesh(
+            plot,
+            aorta_mask,
+            spacing=mesh_spacing,
+            color=0xFF5555,
+            opacity=0.22,
+            name="Aorta",
+        )
     if label_artery is not None:
         _add_mask_mesh(
             plot,
@@ -329,7 +336,7 @@ def visualize_aorta_ostia_artery(
             spacing=mesh_spacing,
             color=0x39B54A,
             opacity=0.34,
-            name="Artéria GT",
+            name=label_artery_name,
         )
     if artery_mask is not None:
         _add_mask_mesh(
@@ -338,7 +345,7 @@ def visualize_aorta_ostia_artery(
             spacing=mesh_spacing,
             color=0x2F80ED,
             opacity=0.44,
-            name="Artéria predita",
+            name=artery_name,
         )
 
     # Sobrepõe os marcadores dos óstios esquerdo e direito.

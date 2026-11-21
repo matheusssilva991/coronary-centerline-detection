@@ -561,7 +561,7 @@ class PipelineSimplificationTests(TestCase):
         summarize_timings,
     ):
         load_previous.return_value = ([{"IMG_ID": 1}], [1, 2])
-        process_batch.side_effect = lambda _, batch_number, *args: [
+        process_batch.side_effect = lambda _, batch_number, *args, **kwargs: [
             {"IMG_ID": batch_number}
         ]
         load_timings.return_value = []

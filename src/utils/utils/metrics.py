@@ -158,7 +158,7 @@ def surface_hd95(
     )
 
 
-def foreground_hausdorff_distances(
+def hausdorff_distances(
     prediction: NDArray[Any], reference: NDArray[Any], spacing: Sequence[float]
 ) -> tuple[float, float]:
     """Calcula HD e AvgHD nas máscaras inteiras não vazias, em milímetros.
@@ -187,6 +187,9 @@ def foreground_hausdorff_distances(
     distance = sitk.HausdorffDistanceImageFilter()
     distance.Execute(to_image(reference), to_image(prediction))
     return distance.GetHausdorffDistance(), distance.GetAverageHausdorffDistance()
+
+
+foreground_hausdorff_distances = hausdorff_distances
 
 
 def _dice_from_counts(intersection: int, total: int) -> float:
@@ -288,6 +291,7 @@ def print_segmentation_metrics(
 __all__ = [
     "SurfaceDistanceSamples",
     "foreground_hausdorff_distances",
+    "hausdorff_distances",
     "sample_surface_distances",
     "surface_hd95",
     "binary_segmentation_metrics",

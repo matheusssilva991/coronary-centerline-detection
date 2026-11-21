@@ -39,6 +39,11 @@ from utils.project.evaluation.mmwhs_official_aorta import (
     save_prediction,
     validate_saved_prediction,
 )
+from utils.project.results.artery_masks import (
+    ArteryMaskExport,
+    add_artery_mask_export_argument,
+    pending_artery_mask_export,
+)
 from utils.project.results.external import (
     build_external_metadata,
     external_result_key,
@@ -226,6 +231,7 @@ def build_parser() -> argparse.ArgumentParser:
         default=True,
         help="Salva os artefatos visuais por exame (habilitado por padrão).",
     )
+    add_artery_mask_export_argument(parser)
     parser.add_argument(
         "--align-orcascore",
         action=argparse.BooleanOptionalAction,
@@ -474,6 +480,7 @@ def process_external_exam(
     visual_root: Path | None,
     align_orcascore: bool = True,
     aorta_export_dir: Path | None = None,
+    artery_mask_export: ArteryMaskExport | None = None,
 ) -> dict[str, Any]:
     """Executa todas as etapas do pipeline para um exame CCTA externo (OrCaScore ou MM-WHS).
 
@@ -489,6 +496,8 @@ def process_external_exam(
             notebook externo.
         aorta_export_dir (Path | None): Diretório opcional onde a predição nativa
             NIfTI da aorta é salva para avaliação oficial.
+        artery_mask_export (ArteryMaskExport | None): Destino opcional da máscara
+            arterial final na grade processada.
 
     Returns:
         dict[str, Any]: Dicionário com ``status``, métricas/diagnósticos por etapa,
@@ -518,6 +527,8 @@ def process_external_exam(
         "aorta_evaluation_status": None,
         "aorta_evaluation_error": None,
     }
+    if artery_mask_export is not None:
+        result.update(pending_artery_mask_export())
     monitor = ResourceMonitor(config)
     monitor.start()
 
@@ -640,7 +651,7 @@ def process_external_exam(
             aorta_ground_truth,
         )
 
-        # Etapa 3: localização/segmentação da aorta, exportação oficial MM-WHS test e avaliação de GT quando existir.
+        # Etapa 3: localiza e segmenta a aorta e a avalia quando houver referência.
         on_circles = (
             (
                 lambda circles: save_detected_circles_figure(
@@ -811,6 +822,16 @@ def process_external_exam(
         closed_mask = artery_segmentation.closed_mask
         artery_mask = artery_segmentation.final_mask
         del vesselness_artery
+        if artery_mask_export is not None:
+            result.update(
+                artery_mask_export.save(
+                    exam_id,
+                    artery_mask,
+                    str(record["path"]),
+                    config,
+                    flipped_axes=flipped_axes,
+                )
+            )
         _save_stage(
             exam_dir,
             "07_artery_closed",
@@ -951,7 +972,9 @@ def run(args: argparse.Namespace) -> RunPaths:
     # Etapa 2: carrega a configuração efetiva ou valida compatibilidade completa ao retomar um run.
     config_path = paths.config_dir / "effective_pipeline_config.json"
     manifest_path = paths.config_dir / "run_manifest.json"
+    requested_mask_export = getattr(args, "save_artery_masks", None)
     if args.resume_dir is None:
+        artery_masks_enabled = bool(requested_mask_export)
         config = load_notebook_pipeline_config(args.config_file, args.resolution)
         if args.no_hu_threshold:
             thresholding = dict(config.get("THRESHOLDING", {}))
@@ -964,6 +987,16 @@ def run(args: argparse.Namespace) -> RunPaths:
                 "run_manifest.json."
             )
         manifest = load_json_file(manifest_path)
+        # Runs históricos não passam a reprocessar exames por uma opção nova implícita.
+        artery_masks_enabled = bool(manifest.get("artery_masks_enabled", False))
+        if (
+            requested_mask_export is not None
+            and requested_mask_export != artery_masks_enabled
+        ):
+            raise ValueError(
+                "--save-artery-masks diverge da opção salva. Crie um novo run para "
+                "alterar a exportação arterial."
+            )
         expected_identity = (args.dataset, args.resolution, args.subset)
         saved_identity = (
             manifest.get("dataset"),
@@ -1024,6 +1057,7 @@ def run(args: argparse.Namespace) -> RunPaths:
                 "selected_subset": args.subset,
                 "visuals_enabled": bool(args.visuals),
                 "orcascore_visual_alignment": bool(args.align_orcascore),
+                "artery_masks_enabled": artery_masks_enabled,
                 "config_source": config_source,
                 "selected_exams": selected_exam_records,
                 "resource_monitoring": resource_metadata(config),
@@ -1031,7 +1065,25 @@ def run(args: argparse.Namespace) -> RunPaths:
             manifest_path,
         )
 
-    # Etapa 3: seleciona apenas os exames ainda pendentes (para reavaliação da aorta ou execução completa).
+    def mask_export(subset: str) -> ArteryMaskExport:
+        return ArteryMaskExport(
+            paths.run_dir,
+            str(DATASET_SPECS[args.dataset]["display_name"]),
+            subset,
+            args.resolution,
+        )
+
+    def is_complete(row: Mapping[str, Any]) -> bool:
+        if not is_terminal_external_result(row, aorta_ground_truth_keys):
+            return False
+        if not artery_masks_enabled or row.get("status") == "ostia_not_found":
+            return True
+        subset, exam_id = external_result_key(row)
+        return row.get("artery_mask_status") == "saved" and mask_export(
+            subset
+        ).has_saved_prediction(exam_id)
+
+    # Etapa 3: seleciona exames pendentes para o pipeline ou a avaliação oficial.
     rows = load_existing_results(paths.numeric_dir)
     if evaluation_only:
         existing_by_key = {external_result_key(row): row for row in rows}
@@ -1066,11 +1118,7 @@ def run(args: argparse.Namespace) -> RunPaths:
             )
         ]
     else:
-        completed = {
-            external_result_key(row)
-            for row in rows
-            if is_terminal_external_result(row, aorta_ground_truth_keys)
-        }
+        completed = {external_result_key(row) for row in rows if is_complete(row)}
         pending_records = [
             record
             for _, record in selected.iterrows()
@@ -1138,6 +1186,9 @@ def run(args: argparse.Namespace) -> RunPaths:
                 visual_root=paths.visual_dir if args.visuals else None,
                 align_orcascore=args.align_orcascore,
                 aorta_export_dir=export_dir,
+                artery_mask_export=(
+                    mask_export(str(record["subset"])) if artery_masks_enabled else None
+                ),
             )
             if export_dir is not None:
                 result = evaluate_test_aorta_result(
@@ -1174,11 +1225,7 @@ def run(args: argparse.Namespace) -> RunPaths:
             )
 
     # Etapa 5: calcula o estado terminal do run (complete / complete_with_errors / incomplete) e grava o metadata final.
-    terminal_keys = {
-        external_result_key(row)
-        for row in rows
-        if is_terminal_external_result(row, aorta_ground_truth_keys)
-    }
+    terminal_keys = {external_result_key(row) for row in rows if is_complete(row)}
     attempted_keys = {external_result_key(row) for row in rows}
     all_attempted = selected_keys.issubset(attempted_keys)
     all_terminal = selected_keys.issubset(terminal_keys)

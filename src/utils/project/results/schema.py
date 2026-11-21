@@ -14,6 +14,7 @@ from utils.project.evaluation.artery_distances import (
     summarize_artery_distances,
 )
 from utils.project.results.columns import (
+    ARTERY_MASK_EXPORT_COLUMNS,
     CANONICAL_COLUMN_NAMES,
     OSTIA_STATUS_PORTUGUESE_LABELS,
     READABLE_BOOL_COLUMNS,
@@ -289,7 +290,11 @@ def select_per_image_result_columns(df: pd.DataFrame) -> pd.DataFrame:
         ].fillna(readable_df["max_threshold_hu"])
     # Projeta apenas as colunas do contrato por imagem, preenchendo ausentes com None.
     result_columns = [_readable_column_name(column) for column in RESULT_COLUMNS]
-    result_columns.extend(c for c in LEGACY_DISTANCE_COLUMNS if c in readable_df)
+    result_columns.extend(
+        c
+        for c in (*LEGACY_DISTANCE_COLUMNS, *ARTERY_MASK_EXPORT_COLUMNS)
+        if c in readable_df
+    )
     for column in result_columns:
         if column not in readable_df.columns:
             readable_df[column] = None
@@ -453,12 +458,14 @@ def make_result_dataframe(results: list[dict[str, Any]]) -> pd.DataFrame:
         pd.DataFrame: DataFrame estruturado com colunas canônicas e históricas.
     """
     rows = [build_result_row(result) for result in results]
-    historical = [
-        c for c in LEGACY_DISTANCE_COLUMNS if any(c in row for row in results)
+    optional = [
+        c
+        for c in (*LEGACY_DISTANCE_COLUMNS, *ARTERY_MASK_EXPORT_COLUMNS)
+        if any(c in row for row in results)
     ]
     for row, original in zip(rows, results):
-        row.update({c: original.get(c) for c in historical})
-    return pd.DataFrame(rows, columns=[*RESULT_COLUMNS, *historical])
+        row.update({c: original.get(c) for c in optional})
+    return pd.DataFrame(rows, columns=[*RESULT_COLUMNS, *optional])
 
 
 def _bool_series(df: pd.DataFrame, column: str) -> pd.Series:

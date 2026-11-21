@@ -161,7 +161,7 @@ class ArteryDistanceIntegrationTests(TestCase):
 
     def test_disabled_evaluation_does_not_compute_or_require_spacing(self):
         with patch(
-            "utils.project.evaluation.artery_distances.foreground_hausdorff_distances"
+            "utils.project.evaluation.artery_distances.hausdorff_distances"
         ) as calculate:
             result = evaluate_artery_distances(None, None, None, {})
         calculate.assert_not_called()
@@ -179,7 +179,7 @@ class ArteryDistanceIntegrationTests(TestCase):
             self.assertIsNone(result["artery_hd_foreground_mm"])
             self.assertNotIn("error", result)
         with patch(
-            "utils.project.evaluation.artery_distances.foreground_hausdorff_distances",
+            "utils.project.evaluation.artery_distances.hausdorff_distances",
             side_effect=RuntimeError("synthetic"),
         ):
             result = evaluate_artery_distances(

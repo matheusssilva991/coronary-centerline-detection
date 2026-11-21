@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 
 from utils.project.dataframe import numeric_series, require_series_column
-from utils.utils.metrics import foreground_hausdorff_distances, surface_hd95
+from utils.utils.metrics import hausdorff_distances, surface_hd95
 
 ADDITIONAL_DISTANCE_METRICS = {
     "artery_hd_foreground_mm": "HD da máscara inteira",
@@ -178,7 +178,7 @@ def evaluate_artery_distances(
             return result
 
         # Etapa 3: calcula HD/AvgHD na máscara e HD95 simétrico em superfície (mm).
-        hd, average = foreground_hausdorff_distances(pred, target, spacing)
+        hd, average = hausdorff_distances(pred, target, spacing)
         result.update(
             artery_hd_foreground_mm=hd,
             artery_avghd_foreground_mm=average,

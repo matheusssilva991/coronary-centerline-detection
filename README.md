@@ -322,6 +322,9 @@ Results_dataset_ccta/
     ├── numeric/                      # results_all/train/test.csv
     ├── logs/
     ├── metadata.json
+    ├── masks/artery/<subset>/<exam_id>/ # quando --save-artery-masks estiver ativo
+    │   ├── artery_processed.nii.gz   # máscara arterial final na grade processada
+    │   └── metadata.json             # geometria, transformação e hash
     └── visual/<subset>/<exam_id>/
         ├── stages/
         │   ├── 00_input/
@@ -378,6 +381,37 @@ uma validação anatômica. Os parâmetros de localização foram ajustados no
 ImageCAS e podem selecionar estruturas circulares periféricas nos bancos
 externos. Antes de interpretar volumes ou artérias, revise obrigatoriamente
 `aorta_circles.png` e `aorta_ostia_artery.html`.
+
+### Exportar previsões arteriais
+
+Acrescente `--save-artery-masks` ao comando de lote para salvar a máscara
+final das artérias coronárias. A opção vem desligada por padrão e está
+disponível para ImageCAS, MM-WHS e OrCaScore, independentemente dos visuais.
+
+```bash
+uv run python src/segmentation_pipeline.py \
+  --resolution mid --split train --save-artery-masks
+
+uv run python src/external_ccta_batch_pipeline.py \
+  --dataset orcascore --resolution mid --subset train --no-visuals --save-artery-masks
+```
+
+Os dois comandos escrevem `masks/artery/<split>/<exam_id>/artery_processed.nii.gz`
+na pasta do run. O NIfTI binário (`uint8`, artéria = 1) guarda o shape e os
+voxels da máscara final em `mid` ou `high`, sem reamostragem. O affine registra
+a grade processada e incorpora a inversão usada no OrCaScore quando ativa.
+O `metadata.json` guarda a transformação, a resolução e o hash do arquivo.
+Para calcular Dice com uma previsão de IA em outra grade, alinhe as máscaras
+na etapa de comparação.
+
+Quando a opção está ativa, o CSV identifica a exportação em
+`artery_mask_status` e aponta para a máscara e o manifesto em caminhos relativos
+ao run. Uma previsão vazia produz um NIfTI com zeros. Se a etapa arterial não
+gerou máscara, o estado é `not_generated`. Falhas de escrita são registradas
+em `artery_mask_error`, preservando as métricas já calculadas. Retomadas herdam
+a opção do run, registrada na configuração efetiva do ImageCAS ou no manifesto
+do lote externo. Para obter máscaras que faltam em runs históricos, execute
+um novo run com a opção habilitada.
 
 ## 📊 Resultados
 

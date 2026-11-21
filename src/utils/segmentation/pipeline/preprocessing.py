@@ -4,6 +4,7 @@ Este módulo concentra as etapas que transformam um caso ImageCAS bruto em
 volumes prontos para detecção de aorta/óstios e segmentação arterial.
 """
 
+from pathlib import Path
 from typing import Any, Dict, Sequence
 
 import cv2
@@ -45,11 +46,12 @@ def load_and_preprocess_image(
     Returns:
         Dict[str, Any]: Dicionário produzido por ``preprocess_ccta_volume`` com
             ``lcc_image``, ``label``, ``spacing``, ``scaled_spacing``,
-            ``downscale_factors`` e detalhes.
+            ``downscale_factors``, ``source_path`` e detalhes.
     """
     # Carrega o volume CCTA e a máscara de referência do ImageCAS.
+    source_path = Path(base_path) / f"{img_id}.img.nii.gz"
     nii_img, nii_label = load_raw_img_and_label(
-        f"{base_path}/{img_id}.img.nii.gz", f"{base_path}/{img_id}.label.nii.gz"
+        str(source_path), str(Path(base_path) / f"{img_id}.label.nii.gz")
     )
     if nii_label is None:
         raise ValueError(f"Label não carregado para o exame {img_id}.")
@@ -58,13 +60,15 @@ def load_and_preprocess_image(
     label = np.asarray(nii_label.get_fdata(dtype=np.float32), dtype=np.uint8)
 
     # Delega downscaling, limiarização e extração da LCC ao fluxo comum de volumes.
-    return preprocess_ccta_volume(
+    result = preprocess_ccta_volume(
         img,
         spacing,
         config,
         label=label,
         include_intermediates=include_intermediates,
     )
+    result["source_path"] = source_path
+    return result
 
 
 def preprocess_ccta_volume(

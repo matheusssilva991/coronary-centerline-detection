@@ -16,6 +16,7 @@ from utils.project.evaluation.artery_distances import (
     add_distance_metric_arguments,
     apply_distance_metric_options,
 )
+from utils.project.results.artery_masks import add_artery_mask_export_argument
 from utils.project.runtime.resource_monitor import (
     add_resource_monitoring_arguments,
     apply_resource_monitoring_options,
@@ -476,6 +477,7 @@ def build_parser(default_base_path, default_output_dir):
     )
     add_resource_monitoring_arguments(parser)
     add_distance_metric_arguments(parser)
+    add_artery_mask_export_argument(parser)
     return parser
 
 
@@ -761,6 +763,11 @@ def build_effective_config(args, mid_config, high_config):
 
     # Preserva o protocolo dos lotes anteriores, inclusive em snapshots históricos.
     resume_dir = getattr(args, "resume_dir", None)
+    requested_mask_export = getattr(args, "save_artery_masks", None)
+    resuming = bool(resume_dir) and (
+        getattr(args, "resume_requested", False) or getattr(args, "merge_only", False)
+    )
+    saved_mask_export = False
     merge_protocol = (
         {"version": "unrecorded"} if getattr(args, "merge_only", False) else None
     )
@@ -771,6 +778,7 @@ def build_effective_config(args, mid_config, high_config):
         snapshot_path = resume_root / "config/effective_pipeline_config.json"
         if snapshot_path.is_file():
             snapshot = json.loads(snapshot_path.read_text(encoding="utf-8"))
+            saved_mask_export = bool(snapshot.get("SAVE_ARTERY_MASKS", False))
             effective_config["LABEL_RESAMPLING"] = snapshot.get(
                 "LABEL_RESAMPLING", LEGACY_LABEL_PROTOCOL
             )
@@ -784,6 +792,21 @@ def build_effective_config(args, mid_config, high_config):
                 )
         elif getattr(args, "resume_requested", False):
             effective_config["LABEL_RESAMPLING"] = LEGACY_LABEL_PROTOCOL
+
+    if (
+        resuming
+        and requested_mask_export is not None
+        and requested_mask_export != saved_mask_export
+    ):
+        raise ValueError(
+            "--save-artery-masks diverge da opção salva. Crie um novo run para "
+            "alterar a exportação arterial."
+        )
+    mask_export_enabled = saved_mask_export if resuming else bool(requested_mask_export)
+    if mask_export_enabled:
+        effective_config["SAVE_ARTERY_MASKS"] = True
+    else:
+        effective_config.pop("SAVE_ARTERY_MASKS", None)
 
     # A resolução escolhida na CLI prevalece sobre fatores salvos em snapshots
     # de configuração produzidos originalmente para mid resolution.

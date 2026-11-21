@@ -20,6 +20,10 @@ from utils.project.results import (
     save_results,
     summarize_batch_timing_records,
 )
+from utils.project.results.artery_masks import (
+    ArteryMaskExport,
+    pending_artery_mask_export,
+)
 from utils.project.runtime.resource_monitor import (
     ResourceMonitor,
     persist_resource_diagnostics,
@@ -228,7 +232,14 @@ def _ostia_result_fields(ostia_eval):
     }
 
 
-def process_image(img_id, config, base_path, visual_output_dir=None):
+def process_image(
+    img_id,
+    config,
+    base_path,
+    visual_output_dir=None,
+    *,
+    artery_mask_export: ArteryMaskExport | None = None,
+):
     """Executa o fluxo completo do pipeline para um exame ImageCAS e agrega métricas.
 
     Sequência: pré-processamento, localização/segmentação da aorta, vesselness e
@@ -242,6 +253,8 @@ def process_image(img_id, config, base_path, visual_output_dir=None):
             dataset.
         visual_output_dir (Path | str | None): Diretório opcional onde visualizações
             3D HTML são salvas.
+        artery_mask_export (ArteryMaskExport | None): Destino opcional da máscara
+            arterial final na grade processada.
 
     Returns:
         dict[str, Any]: Dicionário com métricas, diagnósticos de etapas, telemetria e
@@ -250,6 +263,8 @@ def process_image(img_id, config, base_path, visual_output_dir=None):
     # Inicializa o registro com defaults e inicia o monitoramento de RAM/tempo.
     result = _new_image_result(img_id)
     result.update(pending_artery_distance_metrics(config))
+    if artery_mask_export is not None:
+        result.update(pending_artery_mask_export())
     monitor = ResourceMonitor(config)
     monitor.start()
     try:
@@ -260,6 +275,7 @@ def process_image(img_id, config, base_path, visual_output_dir=None):
         scaled_spacing = image_data["scaled_spacing"]
         preprocessing_details = image_data.get("preprocessing_details", {})
         downscale_factors = image_data["downscale_factors"]
+        source_path = image_data.get("source_path")
 
         image_data = None
         result.update(
@@ -331,6 +347,18 @@ def process_image(img_id, config, base_path, visual_output_dir=None):
             config,
             spacing=scaled_spacing,
         )
+        if (
+            artery_mask_export is not None
+            and artery_metrics.get("artery_mask") is not None
+        ):
+            result.update(
+                artery_mask_export.save(
+                    str(img_id),
+                    artery_metrics["artery_mask"],
+                    source_path,
+                    config,
+                )
+            )
         if visual_output_dir is not None:
             save_segmentation_visual(
                 visual_output_dir,
@@ -442,6 +470,8 @@ def _process_and_save_batch(
     base_path,
     output_dir,
     visual_output_dir=None,
+    *,
+    artery_mask_export: ArteryMaskExport | None = None,
 ):
     """Processa um lote e persiste resultados e duração imediatamente.
 
@@ -454,6 +484,7 @@ def _process_and_save_batch(
         base_path (Path | str): Diretório raiz do dataset ImageCAS.
         output_dir (Path | str): Diretório numérico de saída para CSVs e manifests.
         visual_output_dir (Path | str | None): Diretório opcional para HTMLs 3D.
+        artery_mask_export (ArteryMaskExport | None): Destino das máscaras.
 
     Returns:
         list[dict[str, Any]]: Lista de dicionários de resultado das imagens do lote.
@@ -474,7 +505,11 @@ def _process_and_save_batch(
         batch_ids, desc=f"Lote {batch_number}/{num_batches}", leave=False
     ):
         image_result = process_image(
-            img_id, config, base_path, visual_output_dir=visual_output_dir
+            img_id,
+            config,
+            base_path,
+            visual_output_dir=visual_output_dir,
+            artery_mask_export=artery_mask_export,
         )
         persist_resource_diagnostics(
             image_result,
@@ -526,6 +561,8 @@ def run_pipeline(
     output_dir=None,
     resume_from_batch=0,
     visual_output_dir=None,
+    *,
+    artery_mask_export: ArteryMaskExport | None = None,
 ):
     """Executa o pipeline em lotes e consolida resultados e tempos de execução.
 
@@ -542,6 +579,7 @@ def run_pipeline(
             execução do início.
         visual_output_dir (Path | str | None): Diretório opcional onde visualizações
             3D HTML são gravadas.
+        artery_mask_export (ArteryMaskExport | None): Destino das máscaras.
 
     Returns:
         dict[str, Any]: Dicionário com ``details``, ``execution_time``,
@@ -591,6 +629,7 @@ def run_pipeline(
             base_path,
             output_dir,
             visual_output_dir,
+            artery_mask_export=artery_mask_export,
         )
 
         all_results.extend(batch_results)

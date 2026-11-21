@@ -25,6 +25,7 @@ from utils.project.results import (
     summarize_batch_timing_records,
     validate_result_integrity,
 )
+from utils.project.results.artery_masks import ArteryMaskExport
 from utils.project.results.io import (
     integrity_filename,
     metadata_candidates,
@@ -747,6 +748,13 @@ def run_processing_split(
         visual_output_dir=(
             Path(visual_dir)
             if config.get("SAVE_SEGMENTATION_VISUALS") and visual_dir is not None
+            else None
+        ),
+        artery_mask_export=(
+            ArteryMaskExport(
+                Path(output_dir).parent, "ImageCAS", split_name, args.resolution
+            )
+            if config.get("SAVE_ARTERY_MASKS")
             else None
         ),
     )

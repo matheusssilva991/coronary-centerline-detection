@@ -106,7 +106,7 @@ esses valores, sem imputação de zero. Nenhuma máscara adicional é salva.
 O cálculo usa CPU e aumenta o tempo/memória da avaliação; tempos com a opção
 ativada não são diretamente comparáveis a runs sem ela.
 
-Em `utils.utils.metrics`, `foreground_hausdorff_distances(prediction, reference, spacing)`
+Em `utils.utils.metrics`, `hausdorff_distances(prediction, reference, spacing)`
 retorna o par (HD, AvgHD) do SimpleITK para máscaras 3D alinhadas e não vazias.
 A função `surface_hd95` calcula o HD95 para máscaras booleanas.
 Os wrappers de segmentação aceitam `spacing=` opcional: ele é obrigatório para

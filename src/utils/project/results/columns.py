@@ -10,6 +10,13 @@ ARTERY_BRANCH_COLUMNS = [
     "artery_right_raw_voxels",
 ]
 
+ARTERY_MASK_EXPORT_COLUMNS = (
+    "artery_mask_status",
+    "artery_mask_error",
+    "artery_mask_path",
+    "artery_mask_metadata_path",
+)
+
 RESULT_COLUMNS: list[str] = [
     "IMG_ID",
     *RESOURCE_COLUMNS,

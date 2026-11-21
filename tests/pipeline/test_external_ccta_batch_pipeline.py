@@ -6,6 +6,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
+import nibabel as nib
 import numpy as np
 import pandas as pd
 
@@ -18,6 +19,7 @@ from external_ccta_batch_pipeline import (
     select_inventory,
 )
 from utils.project.evaluation.mmwhs_official_aorta import OFFICIAL_AORTA_METHOD
+from utils.project.results.artery_masks import ArteryMaskExport
 from utils.project.results.external import (
     build_external_metadata,
     load_existing_results,
@@ -385,10 +387,12 @@ class ExternalCctaBatchPipelineTest(unittest.TestCase):
         )
         vesselness.side_effect = [processed, processed]
         detect_ostia.return_value = ((0, 0, 1), (1, 1, 1))
+        final_mask = mask.copy()
+        final_mask[0, 0] = 0
         segment_arteries.return_value = SimpleNamespace(
             raw_mask=mask,
             closed_mask=mask,
-            final_mask=mask,
+            final_mask=final_mask,
         )
         record = pd.Series(
             {
@@ -405,6 +409,11 @@ class ExternalCctaBatchPipelineTest(unittest.TestCase):
         )
 
         with tempfile.TemporaryDirectory() as temporary_dir:
+            root = Path(temporary_dir)
+            source = root / "image.nii.gz"
+            nib.save(nib.Nifti1Image(image, np.eye(4)), source)
+            record["path"] = str(source)
+            export = ArteryMaskExport(root, "MM-WHS", "train", "mid")
             result = process_external_exam(
                 record,
                 {
@@ -413,15 +422,20 @@ class ExternalCctaBatchPipelineTest(unittest.TestCase):
                     "VESSELNESS_AORTA": {},
                     "VESSELNESS_ARTERY": {},
                     "ARTERY_SEGMENTATION": {"method": "fuzzy_connectedness"},
+                    "DOWNSCALE_METHOD": "opencv",
                     "USE_GPU": False,
                 },
                 "mid",
                 visual_root=Path(temporary_dir),
+                artery_mask_export=export,
             )
             result_path = (
                 Path(temporary_dir) / "train" / "ct_train_1001" / "result.json"
             )
             persisted = json.loads(result_path.read_text(encoding="utf-8"))
+            prediction = nib.load(root / result["artery_mask_path"])
+            np.testing.assert_array_equal(prediction.dataobj, final_mask)
+            self.assertEqual(persisted["artery_mask_status"], "saved")
 
         self.assertEqual(result["status"], "success")
         self.assertEqual(result["processed_slice_count"], 3)
@@ -514,18 +528,23 @@ class ExternalCctaBatchPipelineTest(unittest.TestCase):
             }
         )
 
-        result = process_external_exam(
-            record,
-            {
-                "CIRCLE_DETECTION": {},
-                "LEVEL_SET": {},
-                "VESSELNESS_AORTA": {"stage": "ostia"},
-                "VESSELNESS_ARTERY": {"stage": "artery"},
-                "USE_GPU": False,
-            },
-            "mid",
-            visual_root=None,
-        )
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            result = process_external_exam(
+                record,
+                {
+                    "CIRCLE_DETECTION": {},
+                    "LEVEL_SET": {},
+                    "VESSELNESS_AORTA": {"stage": "ostia"},
+                    "VESSELNESS_ARTERY": {"stage": "artery"},
+                    "USE_GPU": False,
+                },
+                "mid",
+                visual_root=None,
+                artery_mask_export=ArteryMaskExport(root, "MM-WHS", "train", "mid"),
+            )
+            self.assertEqual(result["artery_mask_status"], "not_generated")
+            self.assertFalse((root / "masks").exists())
 
         self.assertEqual(result["status"], "ostia_not_found")
         self.assertEqual(result["aorta_dice"], 1.0)
@@ -534,6 +553,120 @@ class ExternalCctaBatchPipelineTest(unittest.TestCase):
             vesselness.call_args.kwargs["vesselness_config"],
             {"stage": "ostia"},
         )
+
+    @patch("external_ccta_batch_pipeline.use_gpu", return_value=False)
+    @patch(
+        "external_ccta_batch_pipeline.load_notebook_pipeline_config",
+        return_value={"USE_GPU": False},
+    )
+    @patch("external_ccta_batch_pipeline._configure_logging")
+    @patch(
+        "external_ccta_batch_pipeline.resolve_dataset_path",
+        return_value=Path("/dataset"),
+    )
+    @patch("external_ccta_batch_pipeline.discover_ccta_dataset")
+    @patch("external_ccta_batch_pipeline.process_external_exam")
+    def test_resume_checks_mask_artifacts_but_preserves_legacy_runs(
+        self, process, discover, _path, _logging, _config, _gpu
+    ):
+        discover.return_value = pd.DataFrame(
+            [{"dataset": "OrCaScore", "subset": "train", "exam_id": "TRV1P1"}]
+        )
+
+        def fake_process(record, config, resolution, **kwargs):
+            export = kwargs["artery_mask_export"]
+            if export is not None:
+                directory = export.run_dir / "masks/artery/train/TRV1P1"
+                directory.mkdir(parents=True, exist_ok=True)
+                for name in ("artery_processed.nii.gz", "metadata.json"):
+                    (directory / name).write_text("fixture")
+            return {
+                "dataset": "OrCaScore",
+                "subset": "train",
+                "exam_id": "TRV1P1",
+                "resolution": resolution,
+                "status": "success",
+                "artery_mask_status": "saved",
+                "execution_time_seconds": 1.0,
+            }
+
+        process.side_effect = fake_process
+        with tempfile.TemporaryDirectory() as temporary:
+            command = [
+                "--dataset",
+                "orcascore",
+                "--resolution",
+                "mid",
+                "--subset",
+                "train",
+                "--no-visuals",
+            ]
+            paths = run(
+                build_parser().parse_args(
+                    [*command, "--output-root", temporary, "--save-artery-masks"]
+                )
+            )
+            resume = [*command, "--resume-dir", str(paths.run_dir)]
+            process.reset_mock()
+            run(build_parser().parse_args(resume))
+            process.assert_not_called()
+            (
+                paths.run_dir / "masks/artery/train/TRV1P1/artery_processed.nii.gz"
+            ).unlink()
+            run(build_parser().parse_args(resume))
+            process.assert_called_once()
+
+            # A ausência da opção em manifestos antigos não dispara reprocessamento.
+            manifest_path = paths.config_dir / "run_manifest.json"
+            manifest = json.loads(manifest_path.read_text())
+            manifest.pop("artery_masks_enabled")
+            manifest["aorta_masks_enabled"] = True
+            manifest_path.write_text(json.dumps(manifest))
+            (
+                paths.run_dir / "masks/artery/train/TRV1P1/artery_processed.nii.gz"
+            ).unlink()
+            process.reset_mock()
+            run(build_parser().parse_args(resume))
+            process.assert_not_called()
+            with self.assertRaisesRegex(ValueError, "novo run"):
+                run(build_parser().parse_args([*resume, "--save-artery-masks"]))
+
+            process.reset_mock()
+            disabled = run(
+                build_parser().parse_args(
+                    [
+                        *command,
+                        "--output-root",
+                        str(Path(temporary) / "disabled"),
+                    ]
+                )
+            )
+            self.assertIsNone(process.call_args.kwargs["artery_mask_export"])
+            self.assertFalse((disabled.run_dir / "masks").exists())
+
+            process.side_effect = None
+            process.return_value = {
+                "dataset": "OrCaScore",
+                "subset": "train",
+                "exam_id": "TRV1P1",
+                "resolution": "mid",
+                "status": "success",
+                "artery_mask_status": "error",
+                "artery_mask_error": "Disco cheio",
+                "execution_time_seconds": 1.0,
+            }
+            failed = run(
+                build_parser().parse_args(
+                    [
+                        *command,
+                        "--output-root",
+                        str(Path(temporary) / "failed"),
+                        "--save-artery-masks",
+                    ]
+                )
+            )
+            metadata = json.loads((failed.run_dir / "metadata.json").read_text())
+            self.assertEqual(metadata["state"], "complete_with_errors")
 
 
 if __name__ == "__main__":

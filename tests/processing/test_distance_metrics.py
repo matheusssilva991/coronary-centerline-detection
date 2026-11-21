@@ -8,7 +8,11 @@ import numpy as np
 from numpy.typing import NDArray
 from scipy.ndimage import binary_erosion, generate_binary_structure
 from scipy.spatial import KDTree
+from scipy.spatial.distance import cdist
 
+from utils.project.analysis.artery_distance_diagnostics import (
+    sample_foreground_distances,
+)
 from utils.project.evaluation.artery_distances import evaluate_artery_distances
 from utils.project.evaluation.surface_distance_validation import (
     compare_surface_distance_samples,
@@ -16,13 +20,42 @@ from utils.project.evaluation.surface_distance_validation import (
 )
 from utils.utils.metrics import (
     cKDTree,
-    foreground_hausdorff_distances,
+    hausdorff_distances,
     sample_surface_distances,
     surface_hd95,
 )
 
 
 class SurfaceDistanceMetricsTests(TestCase):
+    def test_foreground_samples_follow_mask_index_order_and_reproduce_hausdorff(self):
+        prediction = np.zeros((9, 10, 11), dtype=bool)
+        prediction[2:5, 3:6, 1:4] = True
+        prediction[5, 4, 7] = True
+        reference = prediction.copy()
+        reference[3, 4, 2] = False
+        reference[5, 4, 7] = False
+        reference[6, 5, 1] = True
+        spacing = (0.5, 1.25, 2.0)
+
+        sampled = sample_foreground_distances(prediction, reference, spacing)
+        assert sampled is not None
+        forward, backward = sampled
+        exact = cdist(
+            np.argwhere(prediction) * spacing, np.argwhere(reference) * spacing
+        )
+        np.testing.assert_allclose(forward, exact.min(axis=1))
+        np.testing.assert_allclose(backward, exact.min(axis=0))
+        np.testing.assert_allclose(
+            (
+                max(forward.max(), backward.max()),
+                (forward.mean() + backward.mean()) / 2,
+            ),
+            hausdorff_distances(prediction, reference, spacing),
+        )
+        self.assertIsNone(
+            sample_foreground_distances(np.zeros_like(prediction), reference, spacing)
+        )
+
     def test_edt_matches_directional_distances_including_volume_boundaries(self):
         prediction = np.zeros((12, 13, 14), dtype=bool)
         prediction[:4, :4, :4] = True
@@ -126,9 +159,7 @@ class SurfaceDistanceMetricsTests(TestCase):
         original = mask.copy()
         with patch("utils.utils.metrics.cKDTree", wraps=cKDTree) as tree:
             self.assertEqual(surface_hd95(mask > 0, mask > 0, (0.5, 1, 2)), 0)
-        self.assertEqual(
-            foreground_hausdorff_distances(mask, mask, (0.5, 1, 2)), (0, 0)
-        )
+        self.assertEqual(hausdorff_distances(mask, mask, (0.5, 1, 2)), (0, 0))
         # O centro não faz parte da superfície; a borda do volume é preservada.
         self.assertEqual(tree.call_args_list[0].args[0].shape, (26, 3))
         np.testing.assert_array_equal(mask, original)
@@ -139,8 +170,8 @@ class SurfaceDistanceMetricsTests(TestCase):
         first[0, 0, 0] = 1
         second[1, 2, 3] = 1
         expected = np.sqrt((1 * 0.5) ** 2 + (2 * 2) ** 2 + (3 * 3) ** 2)
-        forward = foreground_hausdorff_distances(first, second, (0.5, 2, 3))
-        backward = foreground_hausdorff_distances(second, first, (0.5, 2, 3))
+        forward = hausdorff_distances(first, second, (0.5, 2, 3))
+        backward = hausdorff_distances(second, first, (0.5, 2, 3))
         self.assertEqual(forward, backward)
         self.assertAlmostEqual(forward[0], expected)
         self.assertAlmostEqual(forward[1], expected)
@@ -150,20 +181,18 @@ class SurfaceDistanceMetricsTests(TestCase):
         second = np.zeros_like(first)
         first[:3, 0, 0] = 1
         second[0, 0, 0] = 1
-        result = foreground_hausdorff_distances(first, second, (1, 1, 1))
+        result = hausdorff_distances(first, second, (1, 1, 1))
         self.assertEqual(result[0], 2)
         # A->B = [0, 1, 2], B->A = [0]: (1 + 0)/2, não 3/4 ou 1.
         self.assertEqual(result[1], 0.5)
-        self.assertEqual(
-            result, foreground_hausdorff_distances(second, first, (1, 1, 1))
-        )
+        self.assertEqual(result, hausdorff_distances(second, first, (1, 1, 1)))
 
     def test_distant_component_is_not_removed(self):
         reference = np.zeros((12, 3, 3), dtype=np.uint8)
         reference[0, 1, 1] = 1
         prediction = reference.copy()
         prediction[10, 1, 1] = 1
-        result = foreground_hausdorff_distances(prediction, reference, (2, 1, 1))
+        result = hausdorff_distances(prediction, reference, (2, 1, 1))
         self.assertEqual(result[0], 20)
         self.assertEqual(result[1], 5)
 
