@@ -76,7 +76,7 @@ preserva os resultados usados pelas revisões disponíveis.
 |---|---|---|---|---|
 | [imagecas_artery_distance_analysis.ipynb](results/imagecas_artery_distance_analysis.ipynb) | Analisar Dice, AHD e HD da máscara arterial inteira em um exame ImageCAS | Exame e rótulo ImageCAS, configuração do pipeline e CSV canônico selecionável | Tabela de métricas, histogramas por sentido e malhas K3D das máscaras e das faixas de distância | Alto para prever a artéria, baixo para consultar o CSV |
 | [external_aorta_assessment.ipynb](results/external_aorta_assessment.ipynb) | Comparar avaliações visuais mid/high por treino e teste no MM-WHS e OrCaScore e Dice da aorta no treino e teste MM-WHS | `avaliacao_visual.xlsx` e `results_all.csv` dos quatro runs | Avaliação visual, Dice separado por protocolo e alertas contextualizados por exame; comparação automática no notebook dedicado | Baixo |
-| [segmentation_results_eda.ipynb](results/segmentation_results_eda.ipynb) | Status e distâncias dos óstios, Dice e HD/AHD arteriais | `canonical` por split; candidato high/teste explícito na seção de HD/AHD | Tabelas e gráficos, com comparação mid/high por ID | Baixo |
+| [segmentation_results_eda.ipynb](results/segmentation_results_eda.ipynb) | Status e distâncias dos óstios, Dice e HD/AHD arteriais | `canonical` por resolução e split | Tabelas e gráficos, com comparação mid/high por ID | Baixo |
 | [split_resolution_analysis.ipynb](results/split_resolution_analysis.ipynb) | Comparar train/val/test entre mid e high | Referências oficiais de `canonical` | Tabelas e gráficos; tempos ausentes permanecem indisponíveis | Baixo |
 
 ### Comparações de métodos e variantes — `comparisons/`
@@ -109,9 +109,8 @@ Os caminhos de saída da tabela são relativos a
 
 ## Fontes das análises
 
-As análises do baseline atual usam `canonical`. A seção de HD/AHD pode usar o
-candidato high/teste configurado quando faltam as colunas de distância no
-canonical high/teste, com a origem identificada na tabela e no gráfico.
+As análises do baseline atual usam `canonical`. A seção de HD/AHD de superfície
+usa os CSVs canônicos de mid e high e exibe a disponibilidade por conjunto.
 Comparações históricas, fuzzy e de sensibilidade mantêm fontes explícitas.
 
 ## Convenções

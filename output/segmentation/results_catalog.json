@@ -265,208 +265,212 @@
   ],
   "entries": [
     {
-      "path": "output/segmentation/runs/canonical_metrics/complete_metrics_v1/high_res/test",
-      "category": "candidate_or_canonical_history",
-      "reason": "Serie auditada de metricas e candidato high/test.",
-      "consumers": [],
-      "size_bytes": 1458743,
+      "path": "output/segmentation/runs/high_res/complete_metrics_v1/test",
+      "category": "canonical",
+      "reason": "Reexecução complete_metrics_v1 promovida a canonical high/test em 21/11/2026.",
+      "consumers": [
+        "output/segmentation/canonical/README.md",
+        "output/segmentation/canonical/references_manifest.json",
+        "src/eda/results/segmentation_results_eda.ipynb"
+      ],
+      "size_bytes": 1458781,
       "action": "retained",
       "files": [
         {
-          "path": "output/segmentation/runs/canonical_metrics/complete_metrics_v1/high_res/test/config/effective_pipeline_config.json",
+          "path": "output/segmentation/runs/high_res/complete_metrics_v1/test/config/effective_pipeline_config.json",
           "action": "retained",
           "size_bytes": 4663,
           "sha256": "a0ce98b64af3fddb79517099f0aada1cdc68d3e8a08358d048d6abc867c7c3d5"
         },
         {
-          "path": "output/segmentation/runs/canonical_metrics/complete_metrics_v1/high_res/test/config/experiment_settings.json",
+          "path": "output/segmentation/runs/high_res/complete_metrics_v1/test/config/experiment_settings.json",
           "action": "retained",
           "size_bytes": 2,
           "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
         },
         {
-          "path": "output/segmentation/runs/canonical_metrics/complete_metrics_v1/high_res/test/numeric/results_test.csv",
+          "path": "output/segmentation/runs/high_res/complete_metrics_v1/test/numeric/results_test.csv",
           "action": "retained",
           "size_bytes": 694100,
           "sha256": "6c2cefc909641086d760cc61de145c3911da9038d87c4169d5362758a6f4e2f4"
         },
         {
-          "path": "output/segmentation/runs/canonical_metrics/complete_metrics_v1/high_res/test/rebuild_plan.json",
+          "path": "output/segmentation/runs/high_res/complete_metrics_v1/test/rebuild_plan.json",
           "action": "retained",
-          "size_bytes": 12555,
-          "sha256": "e480c88abd177f921cdd0b67484f660929f206093ce88e412e1e7a007b03cb81"
+          "size_bytes": 12574,
+          "sha256": "2d669e64ba256677b608aa9bbc3cef1e9cefbeacde820267748929588a7383fd"
         },
         {
-          "path": "output/segmentation/runs/canonical_metrics/complete_metrics_v1/high_res/test/results/image_results.csv",
+          "path": "output/segmentation/runs/high_res/complete_metrics_v1/test/results/image_results.csv",
           "action": "retained",
           "size_bytes": 739590,
           "sha256": "bfdc86809219e8a292d26880dd867a08fd6dec2dc73c1d642549e9b229058c2c"
         },
         {
-          "path": "output/segmentation/runs/canonical_metrics/complete_metrics_v1/high_res/test/source_manifest.json",
+          "path": "output/segmentation/runs/high_res/complete_metrics_v1/test/source_manifest.json",
           "action": "retained",
-          "size_bytes": 7833,
-          "sha256": "28147901fb763c8a8a7dcd444b3721f788e6b02a5953369c2c97133bf69a395f"
+          "size_bytes": 7852,
+          "sha256": "9127d307ec0b20fc5998fbe1ea677ab9b052449a7c05905d2fa11bd9dc0b1660"
         }
       ],
       "size_bytes_before": 1458743,
-      "size_bytes_after": 1458743,
+      "size_bytes_after": 1458781,
       "removed_file_count": 0
     },
     {
-      "path": "output/segmentation/runs/canonical_metrics/complete_metrics_v1/mid_res/test",
-      "category": "canonical",
-      "reason": "Destino de referencia canonical/current.",
+      "path": "output/segmentation/runs/mid_res/historical_baselines/opencv_linear_complete_metrics_v1/test",
+      "category": "candidate_or_canonical_history",
+      "reason": "Baseline OpenCV preservado em output/segmentation/canonical/mid_res/test/before_server_mid_scipy_cubic.",
       "consumers": [
         "output/segmentation/canonical/README.md",
         "output/segmentation/canonical/references_manifest.json"
       ],
-      "size_bytes": 1790618,
+      "size_bytes": 1790656,
       "action": "retained",
       "files": [
         {
-          "path": "output/segmentation/runs/canonical_metrics/complete_metrics_v1/mid_res/test/config/effective_pipeline_config.json",
+          "path": "output/segmentation/runs/mid_res/historical_baselines/opencv_linear_complete_metrics_v1/test/config/effective_pipeline_config.json",
           "action": "retained",
           "size_bytes": 4583,
           "sha256": "ded45594bfe773b287c6180bcacede770edf06403d713d28f29c89d4e38ed608"
         },
         {
-          "path": "output/segmentation/runs/canonical_metrics/complete_metrics_v1/mid_res/test/config/experiment_settings.json",
+          "path": "output/segmentation/runs/mid_res/historical_baselines/opencv_linear_complete_metrics_v1/test/config/experiment_settings.json",
           "action": "retained",
           "size_bytes": 69,
           "sha256": "bec05f092af1e11f474d3d46d9b41eca2c202f91f6ce5b68c16647ed724623ba"
         },
         {
-          "path": "output/segmentation/runs/canonical_metrics/complete_metrics_v1/mid_res/test/numeric/results_test.csv",
+          "path": "output/segmentation/runs/mid_res/historical_baselines/opencv_linear_complete_metrics_v1/test/numeric/results_test.csv",
           "action": "retained",
           "size_bytes": 939786,
           "sha256": "5533ff5005f9f1f0811dbd5bff9bf39dec1d5b80b00fee31d005161a0320eb59"
         },
         {
-          "path": "output/segmentation/runs/canonical_metrics/complete_metrics_v1/mid_res/test/rebuild_plan.json",
+          "path": "output/segmentation/runs/mid_res/historical_baselines/opencv_linear_complete_metrics_v1/test/rebuild_plan.json",
           "action": "retained",
-          "size_bytes": 21150,
-          "sha256": "0dfa38484877a97eaf7562c005d6b5d963af5b5cf5212088aefb416a9bbad499"
+          "size_bytes": 21169,
+          "sha256": "dfbe76d9debb161452f6b9df93f8ba63892255c7930ed6c93c4cdab83b2e81e2"
         },
         {
-          "path": "output/segmentation/runs/canonical_metrics/complete_metrics_v1/mid_res/test/results/image_results.csv",
+          "path": "output/segmentation/runs/mid_res/historical_baselines/opencv_linear_complete_metrics_v1/test/results/image_results.csv",
           "action": "retained",
           "size_bytes": 807148,
           "sha256": "b2890a57e187b326e9fcd1200572e59aa7feb6f49521e0f63c3febb7b8b2fd0b"
         },
         {
-          "path": "output/segmentation/runs/canonical_metrics/complete_metrics_v1/mid_res/test/source_manifest.json",
+          "path": "output/segmentation/runs/mid_res/historical_baselines/opencv_linear_complete_metrics_v1/test/source_manifest.json",
           "action": "retained",
-          "size_bytes": 17882,
-          "sha256": "904175cd53a5956a6884d5d5c3d100ac965a1263a8ef7e248e1ec36b3d64d568"
+          "size_bytes": 17901,
+          "sha256": "6a861aa3fcd42c9f7ca4c4500452f5e02b50886c761e52ffc3cf1922bd6997f1"
         }
       ],
       "size_bytes_before": 1790618,
-      "size_bytes_after": 1790618,
+      "size_bytes_after": 1790656,
       "removed_file_count": 0
     },
     {
-      "path": "output/segmentation/runs/canonical_metrics/complete_metrics_v1/mid_res/train",
-      "category": "canonical",
-      "reason": "Destino de referencia canonical/current.",
+      "path": "output/segmentation/runs/mid_res/historical_baselines/opencv_linear_complete_metrics_v1/train",
+      "category": "candidate_or_canonical_history",
+      "reason": "Baseline OpenCV preservado em output/segmentation/canonical/mid_res/train/before_server_mid_scipy_cubic.",
       "consumers": [
         "output/segmentation/canonical/README.md",
         "output/segmentation/canonical/references_manifest.json"
       ],
-      "size_bytes": 96884,
+      "size_bytes": 96922,
       "action": "retained",
       "files": [
         {
-          "path": "output/segmentation/runs/canonical_metrics/complete_metrics_v1/mid_res/train/config/effective_pipeline_config.json",
+          "path": "output/segmentation/runs/mid_res/historical_baselines/opencv_linear_complete_metrics_v1/train/config/effective_pipeline_config.json",
           "action": "retained",
           "size_bytes": 4583,
           "sha256": "ded45594bfe773b287c6180bcacede770edf06403d713d28f29c89d4e38ed608"
         },
         {
-          "path": "output/segmentation/runs/canonical_metrics/complete_metrics_v1/mid_res/train/config/experiment_settings.json",
+          "path": "output/segmentation/runs/mid_res/historical_baselines/opencv_linear_complete_metrics_v1/train/config/experiment_settings.json",
           "action": "retained",
           "size_bytes": 69,
           "sha256": "bec05f092af1e11f474d3d46d9b41eca2c202f91f6ce5b68c16647ed724623ba"
         },
         {
-          "path": "output/segmentation/runs/canonical_metrics/complete_metrics_v1/mid_res/train/numeric/results_train.csv",
+          "path": "output/segmentation/runs/mid_res/historical_baselines/opencv_linear_complete_metrics_v1/train/numeric/results_train.csv",
           "action": "retained",
           "size_bytes": 43469,
           "sha256": "de76ac014e7351540e64bd36944267119ab470b37ecae728538fa4c81b4dd8cd"
         },
         {
-          "path": "output/segmentation/runs/canonical_metrics/complete_metrics_v1/mid_res/train/rebuild_plan.json",
+          "path": "output/segmentation/runs/mid_res/historical_baselines/opencv_linear_complete_metrics_v1/train/rebuild_plan.json",
           "action": "retained",
-          "size_bytes": 7921,
-          "sha256": "9fb4ad1a7c767909ce2734e0e9dc567fc9b73318a950de5f137eef7dbd395e70"
+          "size_bytes": 7940,
+          "sha256": "4613fc755f51d8465d5ce2d9ed989f5370e0d7ab8820e14bb1ae6acfcfb2d72e"
         },
         {
-          "path": "output/segmentation/runs/canonical_metrics/complete_metrics_v1/mid_res/train/results/image_results.csv",
+          "path": "output/segmentation/runs/mid_res/historical_baselines/opencv_linear_complete_metrics_v1/train/results/image_results.csv",
           "action": "retained",
           "size_bytes": 37529,
           "sha256": "f072e3ada1d69170ce2a3251b2eb66de035f84dfe5f1863a4e36526b789a719e"
         },
         {
-          "path": "output/segmentation/runs/canonical_metrics/complete_metrics_v1/mid_res/train/source_manifest.json",
+          "path": "output/segmentation/runs/mid_res/historical_baselines/opencv_linear_complete_metrics_v1/train/source_manifest.json",
           "action": "retained",
-          "size_bytes": 3313,
-          "sha256": "735e96d9e217e5ed578157d4bd22c25b2c3c211d90d925fba13351c57b5bcfe3"
+          "size_bytes": 3332,
+          "sha256": "f5b71c0555fc7dfb5cf1c4981e5145f74606189e8a60629c050ec2bacbbdab5d"
         }
       ],
       "size_bytes_before": 96884,
-      "size_bytes_after": 96884,
+      "size_bytes_after": 96922,
       "removed_file_count": 0
     },
     {
-      "path": "output/segmentation/runs/canonical_metrics/complete_metrics_v1/mid_res/val",
-      "category": "canonical",
-      "reason": "Destino de referencia canonical/current.",
+      "path": "output/segmentation/runs/mid_res/historical_baselines/opencv_linear_complete_metrics_v1/val",
+      "category": "candidate_or_canonical_history",
+      "reason": "Baseline OpenCV preservado em output/segmentation/canonical/mid_res/val/before_server_mid_scipy_cubic.",
       "consumers": [
         "output/segmentation/canonical/README.md",
         "output/segmentation/canonical/references_manifest.json"
       ],
-      "size_bytes": 702905,
+      "size_bytes": 702943,
       "action": "retained",
       "files": [
         {
-          "path": "output/segmentation/runs/canonical_metrics/complete_metrics_v1/mid_res/val/config/effective_pipeline_config.json",
+          "path": "output/segmentation/runs/mid_res/historical_baselines/opencv_linear_complete_metrics_v1/val/config/effective_pipeline_config.json",
           "action": "retained",
           "size_bytes": 4585,
           "sha256": "3d9a0df8fb1aaf426ed5b0f88deef48b0e1d1b8be52e074fae54cd6c0516607f"
         },
         {
-          "path": "output/segmentation/runs/canonical_metrics/complete_metrics_v1/mid_res/val/config/experiment_settings.json",
+          "path": "output/segmentation/runs/mid_res/historical_baselines/opencv_linear_complete_metrics_v1/val/config/experiment_settings.json",
           "action": "retained",
           "size_bytes": 69,
           "sha256": "bec05f092af1e11f474d3d46d9b41eca2c202f91f6ce5b68c16647ed724623ba"
         },
         {
-          "path": "output/segmentation/runs/canonical_metrics/complete_metrics_v1/mid_res/val/numeric/results_val.csv",
+          "path": "output/segmentation/runs/mid_res/historical_baselines/opencv_linear_complete_metrics_v1/val/numeric/results_val.csv",
           "action": "retained",
           "size_bytes": 363925,
           "sha256": "4d145399f4e10be82e09d18918d7ac70df15aab0777c233618c3d1b94f59bbb5"
         },
         {
-          "path": "output/segmentation/runs/canonical_metrics/complete_metrics_v1/mid_res/val/rebuild_plan.json",
+          "path": "output/segmentation/runs/mid_res/historical_baselines/opencv_linear_complete_metrics_v1/val/rebuild_plan.json",
           "action": "retained",
-          "size_bytes": 12924,
-          "sha256": "42cbc4adbec1448d1cb8bf45b04f97be7b8b416454e7121e1bd50fbb927950d3"
+          "size_bytes": 12943,
+          "sha256": "1de8dc7033670d97cb6be1501efd4d5ba6a4ade3a44d824de7aff59f57a36309"
         },
         {
-          "path": "output/segmentation/runs/canonical_metrics/complete_metrics_v1/mid_res/val/results/image_results.csv",
+          "path": "output/segmentation/runs/mid_res/historical_baselines/opencv_linear_complete_metrics_v1/val/results/image_results.csv",
           "action": "retained",
           "size_bytes": 312601,
           "sha256": "e5e46dd2fac4eb977eedde2d575166e2f574153007fdeca02cc2c81993d6b917"
         },
         {
-          "path": "output/segmentation/runs/canonical_metrics/complete_metrics_v1/mid_res/val/source_manifest.json",
+          "path": "output/segmentation/runs/mid_res/historical_baselines/opencv_linear_complete_metrics_v1/val/source_manifest.json",
           "action": "retained",
-          "size_bytes": 8801,
-          "sha256": "01dc1a61c27508f92b7320abe85ab5c4918a0592eb4b34ea97a0e69ad22d71e2"
+          "size_bytes": 8820,
+          "sha256": "2e5a1df2fe34cac041d903944035a2c473ee2c9cef12aa4e95f92fadf7dba8ee"
         }
       ],
       "size_bytes_before": 702905,
-      "size_bytes_after": 702905,
+      "size_bytes_after": 702943,
       "removed_file_count": 0
     },
     {
@@ -593,8 +597,8 @@
     },
     {
       "path": "output/segmentation/runs/high_res/aorta_segmentation_experiments/test/filter_envelope_lower100_pad2/2026-09-13_14-06-44",
-      "category": "canonical",
-      "reason": "Destino de referencia canonical/current.",
+      "category": "candidate_or_canonical_history",
+      "reason": "Referência anterior de high/test preservada em output/segmentation/canonical/high_res/test/before_complete_metrics_v1.",
       "consumers": [
         "src/eda/comparisons/resolution_filter_envelope_dice_comparison.ipynb",
         "output/segmentation/canonical/README.md",
@@ -7495,15 +7499,21 @@
         {
           "path": "output/segmentation/canonical/README.md",
           "action": "retained",
-          "size_bytes": 5977,
-          "sha256": "794e84d77629808a0288be83878cc1010df91635453ce23f0767fa617f654b95",
+          "size_bytes": 5918,
+          "sha256": "6cea0935fd68a500bf835c65774628a55da3ae3369c6799c9b060c917e007f1f",
           "sha256_before": "2b55625cc77e2c371c6db1dde29ad2f5d5b9b819147ef1352bfa568952e8499b"
+        },
+        {
+          "path": "output/segmentation/canonical/high_res/test/before_complete_metrics_v1",
+          "type": "symlink",
+          "symlink": "../../../runs/high_res/aorta_segmentation_experiments/test/filter_envelope_lower100_pad2/2026-09-13_14-06-44",
+          "resolved": "output/segmentation/runs/high_res/aorta_segmentation_experiments/test/filter_envelope_lower100_pad2/2026-09-13_14-06-44"
         },
         {
           "path": "output/segmentation/canonical/high_res/test/current",
           "type": "symlink",
-          "symlink": "../../../runs/high_res/aorta_segmentation_experiments/test/filter_envelope_lower100_pad2/2026-09-13_14-06-44",
-          "resolved": "output/segmentation/runs/high_res/aorta_segmentation_experiments/test/filter_envelope_lower100_pad2/2026-09-13_14-06-44"
+          "symlink": "../../../runs/high_res/complete_metrics_v1/test",
+          "resolved": "output/segmentation/runs/high_res/complete_metrics_v1/test"
         },
         {
           "path": "output/segmentation/canonical/high_res/train/current",
@@ -7542,10 +7552,16 @@
           "sha256": "6bb5d722da25ca6c0b7e92b002ce1260d051d5465d00e3b9b0af3bcf11d75908"
         },
         {
+          "path": "output/segmentation/canonical/mid_res/test/before_server_mid_scipy_cubic",
+          "type": "symlink",
+          "symlink": "../../../runs/mid_res/historical_baselines/opencv_linear_complete_metrics_v1/test",
+          "resolved": "output/segmentation/runs/mid_res/historical_baselines/opencv_linear_complete_metrics_v1/test"
+        },
+        {
           "path": "output/segmentation/canonical/mid_res/test/current",
           "type": "symlink",
-          "symlink": "../../../runs/canonical_metrics/complete_metrics_v1/mid_res/test",
-          "resolved": "output/segmentation/runs/canonical_metrics/complete_metrics_v1/mid_res/test"
+          "symlink": "../../../runs/mid_res/server_mid_comparison/test/scipy_cubic/2026-11-20_09-46-25",
+          "resolved": "output/segmentation/runs/mid_res/server_mid_comparison/test/scipy_cubic/2026-11-20_09-46-25"
         },
         {
           "path": "output/segmentation/canonical/mid_res/train/before_complete_metrics_v1/config/effective_pipeline_config.json",
@@ -7572,10 +7588,16 @@
           "sha256": "d90423c6a8d14b01af9c426df603fe36be1b12205a289ddc3ad9b52fb6b0c964"
         },
         {
+          "path": "output/segmentation/canonical/mid_res/train/before_server_mid_scipy_cubic",
+          "type": "symlink",
+          "symlink": "../../../runs/mid_res/historical_baselines/opencv_linear_complete_metrics_v1/train",
+          "resolved": "output/segmentation/runs/mid_res/historical_baselines/opencv_linear_complete_metrics_v1/train"
+        },
+        {
           "path": "output/segmentation/canonical/mid_res/train/current",
           "type": "symlink",
-          "symlink": "../../../runs/canonical_metrics/complete_metrics_v1/mid_res/train",
-          "resolved": "output/segmentation/runs/canonical_metrics/complete_metrics_v1/mid_res/train"
+          "symlink": "../../../runs/mid_res/server_mid_comparison/train/scipy_cubic/2026-11-20_09-42-08",
+          "resolved": "output/segmentation/runs/mid_res/server_mid_comparison/train/scipy_cubic/2026-11-20_09-42-08"
         },
         {
           "path": "output/segmentation/canonical/mid_res/val/before_complete_metrics_v1/config/effective_pipeline_config.json",
@@ -7602,21 +7624,28 @@
           "sha256": "f25a92e5dd9f83522b3f44a1ea15ce33ebad1c3afedbb5bba93f34d64ad079cd"
         },
         {
+          "path": "output/segmentation/canonical/mid_res/val/before_server_mid_scipy_cubic",
+          "type": "symlink",
+          "symlink": "../../../runs/mid_res/historical_baselines/opencv_linear_complete_metrics_v1/val",
+          "resolved": "output/segmentation/runs/mid_res/historical_baselines/opencv_linear_complete_metrics_v1/val"
+        },
+        {
           "path": "output/segmentation/canonical/mid_res/val/current",
           "type": "symlink",
-          "symlink": "../../../runs/canonical_metrics/complete_metrics_v1/mid_res/val",
-          "resolved": "output/segmentation/runs/canonical_metrics/complete_metrics_v1/mid_res/val"
+          "symlink": "../../../runs/mid_res/server_mid_comparison/val/scipy_cubic/2026-11-20_09-43-42",
+          "resolved": "output/segmentation/runs/mid_res/server_mid_comparison/val/scipy_cubic/2026-11-20_09-43-42"
         },
         {
           "path": "output/segmentation/canonical/references_manifest.json",
           "action": "retained",
-          "size_bytes": 107150,
-          "sha256": "0320724ddc45de68cdae672427ef79757e801012451eb9487ed3bc7817729382"
+          "size_bytes": 71456,
+          "sha256": "30644ddd8c12355dcc2e81343a0edcfd6ec976d21e910ff223c4f5d84cafb97e"
         }
       ],
       "size_bytes_before": 558484,
-      "size_bytes_after": 558688,
-      "removed_file_count": 0
+      "size_bytes_after": 522935,
+      "removed_file_count": 0,
+      "size_bytes": 522935
     },
     {
       "path": "output/segmentation/analysis/aorta_bad_cases",
@@ -9702,6 +9731,252 @@
       ],
       "size_bytes_before": 2551927,
       "size_bytes_after": 2552058,
+      "removed_file_count": 0
+    },
+    {
+      "path": "output/segmentation/runs/mid_res/server_mid_comparison/train/scipy_cubic/2026-11-20_09-42-08",
+      "category": "canonical",
+      "reason": "SciPy cúbico do Curupira promovido a canonical mid em 21/11/2026.",
+      "consumers": [
+        "output/segmentation/canonical/README.md",
+        "output/segmentation/canonical/references_manifest.json"
+      ],
+      "size_bytes": 93081,
+      "action": "retained",
+      "files": [
+        {
+          "path": "output/segmentation/runs/mid_res/server_mid_comparison/train/scipy_cubic/2026-11-20_09-42-08/config/effective_pipeline_config.json",
+          "action": "retained",
+          "size_bytes": 4716,
+          "sha256": "0a333efbd79aff20b0fed9351339f00ef5e6aca9623394aa658a87c8e32f25bb"
+        },
+        {
+          "path": "output/segmentation/runs/mid_res/server_mid_comparison/train/scipy_cubic/2026-11-20_09-42-08/config/split_ids.json",
+          "action": "retained",
+          "size_bytes": 410,
+          "sha256": "c778d0b428e27fb56b59b7c9231e2bee9462eb38c8f38e767c3fb8af7bc967a1"
+        },
+        {
+          "path": "output/segmentation/runs/mid_res/server_mid_comparison/train/scipy_cubic/2026-11-20_09-42-08/numeric/batch_timings_train.csv",
+          "action": "retained",
+          "size_bytes": 858,
+          "sha256": "5ac03f4eb3674c38c3ca91fb62d3ab836205e16f0eddd4d919d9008707c2dd81"
+        },
+        {
+          "path": "output/segmentation/runs/mid_res/server_mid_comparison/train/scipy_cubic/2026-11-20_09-42-08/numeric/metadata_train.json",
+          "action": "retained",
+          "size_bytes": 3966,
+          "sha256": "fb7ce8128b73ff87f7b74eb34166aef1b4645f87dcb401ffc1b713981f640731"
+        },
+        {
+          "path": "output/segmentation/runs/mid_res/server_mid_comparison/train/scipy_cubic/2026-11-20_09-42-08/numeric/resource_monitoring_train.json",
+          "action": "retained",
+          "size_bytes": 7373,
+          "sha256": "3885161551d6362d72d4a1bf2d19131aa205d9239ef5124db0891800ac32e960"
+        },
+        {
+          "path": "output/segmentation/runs/mid_res/server_mid_comparison/train/scipy_cubic/2026-11-20_09-42-08/numeric/results_train.csv",
+          "action": "retained",
+          "size_bytes": 32243,
+          "sha256": "b9e6238259be1b933f6d18495f89446f2f5a11bfc127707a27c94ec42ad96291"
+        },
+        {
+          "path": "output/segmentation/runs/mid_res/server_mid_comparison/train/scipy_cubic/2026-11-20_09-42-08/numeric/results_train_lote_1.csv",
+          "action": "retained",
+          "size_bytes": 8755,
+          "sha256": "4f3091cdd64162a1d4f1d00d8215b70dd9c5b0f97d0c619293f8f4bb3001bcf7"
+        },
+        {
+          "path": "output/segmentation/runs/mid_res/server_mid_comparison/train/scipy_cubic/2026-11-20_09-42-08/numeric/results_train_lote_2.csv",
+          "action": "retained",
+          "size_bytes": 8758,
+          "sha256": "5946ef3371b3b3bcb5ef2a6b84c2eceaf9182becb425d6b10104ba9bb27de3fe"
+        },
+        {
+          "path": "output/segmentation/runs/mid_res/server_mid_comparison/train/scipy_cubic/2026-11-20_09-42-08/numeric/results_train_lote_3.csv",
+          "action": "retained",
+          "size_bytes": 8615,
+          "sha256": "ebdfc73b3133e3b64dc6106fff89d6e24da982db1c520526a337ae793ff89c2d"
+        },
+        {
+          "path": "output/segmentation/runs/mid_res/server_mid_comparison/train/scipy_cubic/2026-11-20_09-42-08/numeric/results_train_lote_4.csv",
+          "action": "retained",
+          "size_bytes": 8717,
+          "sha256": "6a1ff193b5440b2168438e10cae3213fc61b863bd76c015f59ac612d07ab0712"
+        },
+        {
+          "path": "output/segmentation/runs/mid_res/server_mid_comparison/train/scipy_cubic/2026-11-20_09-42-08/numeric/results_train_lote_5.csv",
+          "action": "retained",
+          "size_bytes": 8670,
+          "sha256": "b414f5cecd2c9cbf118cb1181368257e590e9bc4767c1ab1448ebe8db1101073"
+        }
+      ],
+      "size_bytes_before": 93081,
+      "size_bytes_after": 93081,
+      "removed_file_count": 0
+    },
+    {
+      "path": "output/segmentation/runs/mid_res/server_mid_comparison/val/scipy_cubic/2026-11-20_09-43-42",
+      "category": "canonical",
+      "reason": "SciPy cúbico do Curupira promovido a canonical mid em 21/11/2026.",
+      "consumers": [
+        "output/segmentation/canonical/README.md",
+        "output/segmentation/canonical/references_manifest.json"
+      ],
+      "size_bytes": 635034,
+      "action": "retained",
+      "files": [
+        {
+          "path": "output/segmentation/runs/mid_res/server_mid_comparison/val/scipy_cubic/2026-11-20_09-43-42/config/effective_pipeline_config.json",
+          "action": "retained",
+          "size_bytes": 4718,
+          "sha256": "8ea410f158bb4ceb7f30387424dbdab9ddce4b962eff02acb0cbb59788eb3bf4"
+        },
+        {
+          "path": "output/segmentation/runs/mid_res/server_mid_comparison/val/scipy_cubic/2026-11-20_09-43-42/config/split_ids.json",
+          "action": "retained",
+          "size_bytes": 3031,
+          "sha256": "082f44b790b484ed29ad49792d0dafa9950296133b171e5f0905952c0bd60302"
+        },
+        {
+          "path": "output/segmentation/runs/mid_res/server_mid_comparison/val/scipy_cubic/2026-11-20_09-43-42/numeric/batch_timings_val.csv",
+          "action": "retained",
+          "size_bytes": 843,
+          "sha256": "99d87062710a18c3a353756eac02b5e5196ac77ac9d20d6c96469e9bbc1f9e1e"
+        },
+        {
+          "path": "output/segmentation/runs/mid_res/server_mid_comparison/val/scipy_cubic/2026-11-20_09-43-42/numeric/metadata_val.json",
+          "action": "retained",
+          "size_bytes": 6124,
+          "sha256": "d0d222a22af700e115d96702067b10eb458e23b032ccb67a61081fb05381d161"
+        },
+        {
+          "path": "output/segmentation/runs/mid_res/server_mid_comparison/val/scipy_cubic/2026-11-20_09-43-42/numeric/resource_monitoring_val.json",
+          "action": "retained",
+          "size_bytes": 65086,
+          "sha256": "646f53f364878b081932bb38c781eca86fdec65866553cc5f311069666158409"
+        },
+        {
+          "path": "output/segmentation/runs/mid_res/server_mid_comparison/val/scipy_cubic/2026-11-20_09-43-42/numeric/results_val.csv",
+          "action": "retained",
+          "size_bytes": 270991,
+          "sha256": "ff56a0f8fdd0f3e26c90ccdaf555a59f5d14918a8943067de0509abc4e356403"
+        },
+        {
+          "path": "output/segmentation/runs/mid_res/server_mid_comparison/val/scipy_cubic/2026-11-20_09-43-42/numeric/results_val_lote_1.csv",
+          "action": "retained",
+          "size_bytes": 56507,
+          "sha256": "7638e3b779628e70b9a2c3498bc6600d1355c4024a0dca80ef1190b23a4b7738"
+        },
+        {
+          "path": "output/segmentation/runs/mid_res/server_mid_comparison/val/scipy_cubic/2026-11-20_09-43-42/numeric/results_val_lote_2.csv",
+          "action": "retained",
+          "size_bytes": 56709,
+          "sha256": "27101bc4f104ad35a9da2e71bb223b3e2fce2eebe94e55af45d011e3665e0555"
+        },
+        {
+          "path": "output/segmentation/runs/mid_res/server_mid_comparison/val/scipy_cubic/2026-11-20_09-43-42/numeric/results_val_lote_3.csv",
+          "action": "retained",
+          "size_bytes": 56930,
+          "sha256": "bf9ce34917e12f05de52f86bc9a1f3e43e967afdf83c43dad205103bed8b9f51"
+        },
+        {
+          "path": "output/segmentation/runs/mid_res/server_mid_comparison/val/scipy_cubic/2026-11-20_09-43-42/numeric/results_val_lote_4.csv",
+          "action": "retained",
+          "size_bytes": 57144,
+          "sha256": "183f4198a1aa35e84a1f71a538a5cb811c777d6681655da0e0094788f29c6eb7"
+        },
+        {
+          "path": "output/segmentation/runs/mid_res/server_mid_comparison/val/scipy_cubic/2026-11-20_09-43-42/numeric/results_val_lote_5.csv",
+          "action": "retained",
+          "size_bytes": 56951,
+          "sha256": "c2577d7924ee0b96cbd34024ff903ea27b919656dc8a17b2cd2c2db8d00663aa"
+        }
+      ],
+      "size_bytes_before": 635034,
+      "size_bytes_after": 635034,
+      "removed_file_count": 0
+    },
+    {
+      "path": "output/segmentation/runs/mid_res/server_mid_comparison/test/scipy_cubic/2026-11-20_09-46-25",
+      "category": "canonical",
+      "reason": "SciPy cúbico do Curupira promovido a canonical mid em 21/11/2026.",
+      "consumers": [
+        "output/segmentation/canonical/README.md",
+        "output/segmentation/canonical/references_manifest.json"
+      ],
+      "size_bytes": 1593665,
+      "action": "retained",
+      "files": [
+        {
+          "path": "output/segmentation/runs/mid_res/server_mid_comparison/test/scipy_cubic/2026-11-20_09-46-25/config/effective_pipeline_config.json",
+          "action": "retained",
+          "size_bytes": 4716,
+          "sha256": "0a333efbd79aff20b0fed9351339f00ef5e6aca9623394aa658a87c8e32f25bb"
+        },
+        {
+          "path": "output/segmentation/runs/mid_res/server_mid_comparison/test/scipy_cubic/2026-11-20_09-46-25/config/split_ids.json",
+          "action": "retained",
+          "size_bytes": 7701,
+          "sha256": "a45b48f05bf32dbd774715a0a9a52100341a2ae896df17d7cdde289aa8ef6489"
+        },
+        {
+          "path": "output/segmentation/runs/mid_res/server_mid_comparison/test/scipy_cubic/2026-11-20_09-46-25/numeric/batch_timings_test.csv",
+          "action": "retained",
+          "size_bytes": 862,
+          "sha256": "7810f47f3a554ea74a0395b6cd8bb6301a6ca5046a5f2cec2339d67f11272596"
+        },
+        {
+          "path": "output/segmentation/runs/mid_res/server_mid_comparison/test/scipy_cubic/2026-11-20_09-46-25/numeric/metadata_test.json",
+          "action": "retained",
+          "size_bytes": 5893,
+          "sha256": "d7d5a8bb12351ad2cb4fe315512968ad59a0e65230409c9e01b7d4fbf942a63e"
+        },
+        {
+          "path": "output/segmentation/runs/mid_res/server_mid_comparison/test/scipy_cubic/2026-11-20_09-46-25/numeric/resource_monitoring_test.json",
+          "action": "retained",
+          "size_bytes": 165034,
+          "sha256": "e6e569fd83ecc2ee3a44d36c3b60025897f4881bcba709e89b7f1aef8e8283fb"
+        },
+        {
+          "path": "output/segmentation/runs/mid_res/server_mid_comparison/test/scipy_cubic/2026-11-20_09-46-25/numeric/results_test.csv",
+          "action": "retained",
+          "size_bytes": 696432,
+          "sha256": "ad7372ebf99c8c88c117de955ff9c4c016f82bc2209bccfa37932fcf5d32a61e"
+        },
+        {
+          "path": "output/segmentation/runs/mid_res/server_mid_comparison/test/scipy_cubic/2026-11-20_09-46-25/numeric/results_test_lote_1.csv",
+          "action": "retained",
+          "size_bytes": 142574,
+          "sha256": "09d2c19f03eb83bc5996ce0c29ccd6686f691d2b1703653f1c8d58dbb2246e5a"
+        },
+        {
+          "path": "output/segmentation/runs/mid_res/server_mid_comparison/test/scipy_cubic/2026-11-20_09-46-25/numeric/results_test_lote_2.csv",
+          "action": "retained",
+          "size_bytes": 143350,
+          "sha256": "828e9195a4b082a8a170519c4c0788fc6af42235ac592cf959a231fda343bbe2"
+        },
+        {
+          "path": "output/segmentation/runs/mid_res/server_mid_comparison/test/scipy_cubic/2026-11-20_09-46-25/numeric/results_test_lote_3.csv",
+          "action": "retained",
+          "size_bytes": 141253,
+          "sha256": "bd45003d0f3a400948ef0cfe6978282009510e92d6825f8f3774bfdee6e728fd"
+        },
+        {
+          "path": "output/segmentation/runs/mid_res/server_mid_comparison/test/scipy_cubic/2026-11-20_09-46-25/numeric/results_test_lote_4.csv",
+          "action": "retained",
+          "size_bytes": 143004,
+          "sha256": "8eb3a53e2e2455726c326a6e5d45504bf0778bd53c161c8511f7d8141e0bb339"
+        },
+        {
+          "path": "output/segmentation/runs/mid_res/server_mid_comparison/test/scipy_cubic/2026-11-20_09-46-25/numeric/results_test_lote_5.csv",
+          "action": "retained",
+          "size_bytes": 142846,
+          "sha256": "93624a736642a5a7626767d394290f42f1a3742001f963b21264fe5724b269b8"
+        }
+      ],
+      "size_bytes_before": 1593665,
+      "size_bytes_after": 1593665,
       "removed_file_count": 0
     }
   ],

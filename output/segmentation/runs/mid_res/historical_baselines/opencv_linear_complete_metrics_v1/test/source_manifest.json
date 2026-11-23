@@ -709,7 +709,7 @@
   "previous_reference": {
     "resolution": "mid",
     "split": "test",
-    "source_csv": "output/segmentation/canonical/mid_res/test/current/numeric/results_test.csv",
+    "source_csv": "output/segmentation/canonical/mid_res/test/before_complete_metrics_v1/numeric/results_test.csv",
     "source_csv_sha256": "2ad85104cf043f839fc495e27496efbceb1ff9699eeeb5a50e2ad236c7345f04",
     "source_config_sha256": "19ccfa66785cac8656065b1f38d56a0198c988a820595a3f10659eb675a1c0cd",
     "implementation_sha256": {

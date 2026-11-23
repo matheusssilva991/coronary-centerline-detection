@@ -1,71 +1,70 @@
 # Referências oficiais do pipeline
 
-`canonical/` é a fonte única das análises do baseline atual, por resolução e
-conjunto. Somente resultados completos e verificados são promovidos. Em
-15/11/2026, mid foi atualizado para as reexecuções `complete_metrics_v1`, com
-diagnósticos completos da aorta, estágios morfológicos e HD/AHD. High mantém as
-referências anteriores.
+`canonical/` é a fonte das análises do baseline atual por resolução e conjunto.
+Em 21/11/2026, os três splits de mid passaram a apontar para os runs SciPy
+cúbico do Curupira da série de 20/11/2026.
+A reexecução `complete_metrics_v1` foi promovida para `high/test` em 21/11/2026.
 
 ```text
 canonical/
   references_manifest.json
-  mid_res/{train,val,test}/current -> runs/canonical_metrics/complete_metrics_v1/...
+  mid_res/{train,val,test}/current -> runs/mid_res/server_mid_comparison/<split>/scipy_cubic/<run>
+  mid_res/{train,val,test}/before_server_mid_scipy_cubic -> runs/mid_res/historical_baselines/opencv_linear_complete_metrics_v1/<split>
   mid_res/{train,val,test}/before_complete_metrics_v1/
-    numeric/results_<split>.csv
-    config/effective_pipeline_config.json
-    config/experiment_settings.json
-    source_manifest.json
-  high_res/{train,val,test}/current -> run original
+  high_res/{train,val}/current -> run original
+  high_res/test/current -> runs/high_res/complete_metrics_v1/test
+  high_res/test/before_complete_metrics_v1 -> run original
 ```
 
 ## Referências atuais
 
 | Resolução | Conjunto | N | Origem | Variante | Dice geral |
 |---|---|---:|---|---|---:|
-| Mid | Train | 30 | `runs/canonical_metrics/complete_metrics_v1/mid_res/train` | Baseline reexecutado | 0,6288 |
-| Mid | Val | 270 | `runs/canonical_metrics/complete_metrics_v1/mid_res/val` | Baseline reexecutado | 0,6009 |
-| Mid | Test | 700 | `runs/canonical_metrics/complete_metrics_v1/mid_res/test` | Baseline reexecutado | 0,5996 |
+| Mid | Train | 30 | `runs/mid_res/server_mid_comparison/train/scipy_cubic/2026-11-20_09-42-08` | SciPy cúbico | 0,6156 |
+| Mid | Val | 270 | `runs/mid_res/server_mid_comparison/val/scipy_cubic/2026-11-20_09-43-42` | SciPy cúbico | 0,6061 |
+| Mid | Test | 700 | `runs/mid_res/server_mid_comparison/test/scipy_cubic/2026-11-20_09-46-25` | SciPy cúbico | 0,6099 |
 | High | Train | 30 | `runs/high_res/aorta_segmentation_experiments/train/filter_envelope_lower100_pad2/2026-09-15_11-08-42` | Run completo | 0,5720 |
 | High | Val | 270 | `runs/high_res/aorta_segmentation_experiments/val/filter_envelope_lower100_pad2/2026-09-12_07-51-48` | Run completo | 0,5155 |
-| High | Test | 700 | `runs/high_res/aorta_segmentation_experiments/test/filter_envelope_lower100_pad2/2026-09-13_14-06-44` | Run completo | 0,5146 |
+| High | Test | 700 | `runs/high_res/complete_metrics_v1/test` | Reexecução com HD/AHD | 0,5151 |
 
-Caminhos relativos a `output/segmentation/`. O Dice geral inclui as falhas;
-os snapshots mid preservam o Dice registrado/avaliável separadamente quando
-disponível. As coortes contêm os mesmos IDs das referências anteriores.
-
-Mid usa threshold normal de -300 HU a P99.9, filtro robusto, envelope e
-`lower100/pad2`, com level set b0.6/r0.10/i26. A fonte de verdade dos parâmetros
-é o snapshot registrado, não o nome ou a descrição de uma variante. Algumas
-descrições antigas ainda mencionavam P10.75/P99.8 sem corresponder à configuração.
-Em high, consulte a configuração efetiva no próprio run, incluindo a escala e
-os ajustes específicos da resolução.
+Os caminhos são relativos a `output/segmentation/`. O Dice geral inclui as
+falhas. Mid usa SciPy cúbico na imagem, zoom de ordem zero no rótulo, threshold
+normal de -300 HU a P99.9, filtro robusto, envelope e `lower100/pad2`, com level
+set b0.6/r0.10/i26. Consulte o snapshot efetivo de cada run para os parâmetros.
 
 ## Proveniência e tempo
 
-As tabelas mid atuais foram reexecutadas com os mesmos IDs e as configurações
-efetivas das referências anteriores, acrescentando a avaliação HD/AHD. Os
-manifests e planos registram os hashes, IDs, protocolo e configurações utilizados.
-As três referências anteriores permanecem em `before_complete_metrics_v1`.
-Os Dice gerais, volumes da aorta e status dos óstios foram reproduzidos sem
-alteração. As cinco falhas de superfície na validação e sete no teste já existiam;
-as métricas de etapas não executadas são ausentes, sem valores fabricados.
+Os consolidados mid foram conferidos contra os cinco lotes e os IDs oficiais
+de cada split. O manifesto registra os hashes dos CSVs, das configurações e dos
+metadados promovidos. A configuração das duas variantes da série varia somente
+no método de redução da imagem. O SciPy atingiu Dice geral de 60,91% nos 1.000
+exames e ambos os óstios corretos ou toleráveis em 872 exames.
 
-HD/AHD referem-se à máscara arterial após morfologia, em mm, entre centros de
-voxels das superfícies de seis vizinhos. HD usa o máximo bidirecional; AHD usa
-a média aritmética das duas médias direcionais. Há 30, 265 e 689 pares de
-distâncias válidas no treino, validação e teste, respectivamente. No teste, quatro
-predições arteriais vazias também não têm distâncias definidas. As médias de
-distância são condicionadas aos casos válidos; não representam toda a coorte.
+As distâncias mid são de superfície após a morfologia. HD usa o máximo
+bidirecional e AHD usa a média das duas médias direcionais. Há 30, 266 e 690
+pares válidos no treino, validação e teste. Na validação, dois exames ficaram
+com `not_evaluated` e dois com `prediction_empty` na avaliação de distâncias.
+No teste, essas contagens são sete e três. As médias de distância consideram
+somente os casos válidos.
 
-Não são criados tempos de batch ou metadados de execução fictícios para mid.
-Sem manifest equivalente de batches, o tempo aparece como indisponível. Tempos
-por exame eventualmente registrados na fonte não equivalem a tempo de batch ou
-a uma comparação em hardware controlado. High continua usando seus artefatos
-originais, sem duplicação.
+Os tempos vêm de `numeric/batch_timings_<split>.csv` e do metadata de cada run.
+Os pares OpenCV e SciPy se sobrepuseram na mesma GPU. Os tempos refletem essa
+concorrência.
+
+No novo `high/test`, os 700 IDs coincidem com os do run anterior. O Dice
+geral passou de 51,46% para 51,51%, com diferença por exame em 8 casos e
+mudança no status dos óstios em 6. Foram registrados 695 pares válidos de HD/AHD
+de superfície, 3 casos `not_evaluated` e 2 `prediction_empty`. A reexecução
+foi feita por exame e o tempo consolidado de lotes está indisponível.
 
 ## Referências anteriores preservadas
 
-Os links antigos foram substituídos, mas os runs reais continuam nos destinos:
+O baseline OpenCV de 15/11/2026 (`complete_metrics_v1`) está acessível por
+`mid_res/{train,val,test}/before_server_mid_scipy_cubic`, com os artefatos em
+`runs/mid_res/historical_baselines/opencv_linear_complete_metrics_v1/`. O run
+anterior de `high/test` está acessível por `high_res/test/before_complete_metrics_v1`.
+Os snapshots mid `before_complete_metrics_v1` e as referências históricas abaixo
+também estão disponíveis.
 
 | Resolução | Train | Val | Test |
 |---|---|---|---|
@@ -78,15 +77,15 @@ em vez de seguir automaticamente a referência móvel de `canonical`.
 
 ## Reexecução com todas as métricas atuais
 
-Os três CSVs mid atuais contêm os diagnósticos e as distâncias históricas de
-superfície. High conserva as referências anteriores; o candidato high/teste
-com HD/AHD é selecionado explicitamente na análise de distâncias dos notebooks.
+Os três CSVs mid e o de `high/test` contêm os diagnósticos e as distâncias de
+superfície. Em high, os CSVs de treino e validação estão sem as colunas de
+HD/AHD.
 
-Para preparar seis execuções mid no servidor com OpenCV e SciPy, siga o
-[guia da série padronizada](../docs/structure/server_mid_comparison.md).
-Ele usa cópias dos snapshots e dos IDs canônicos, com protocolo histórico dos
-rótulos. A execução ocorre pela CLI atual, cuja equivalência científica ainda
-precisa ser conferida nos controles.
+O [guia da série no servidor](../docs/structure/server_mid_comparison.md)
+usa a configuração OpenCV arquivada para repetir a comparação de interpolação.
+Para reutilizar a configuração efetiva de um split SciPy, passe o snapshot do
+split em `current/config/effective_pipeline_config.json` com `--config-file` e
+`--config-replace`.
 
 A opção `--distance-metrics` atual produz o protocolo 3, com HD/AvgHD da
 máscara inteira e HD95 de superfície. O HD/AHD desses CSVs canônicos usa a

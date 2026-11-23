@@ -703,7 +703,7 @@
     471,
     233
   ],
-  "source_csv": "output/segmentation/canonical/high_res/test/current/numeric/results_test.csv",
+  "source_csv": "output/segmentation/canonical/high_res/test/before_complete_metrics_v1/numeric/results_test.csv",
   "source_csv_sha256": "3bdaaf0e28643e33e98e0d092213961c3282329db6e95259e66171b309523862",
   "source_config_sha256": "308bfb3837f7c79247d390d23756bed67bd73588cffa1cdb9ac5d46ea5668038",
   "implementation_sha256": {

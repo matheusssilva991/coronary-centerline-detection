@@ -1,8 +1,8 @@
-# Baseline atual P99.9/-300 HU
+# Baseline histórico P99.9/-300 HU
 
-Este documento cataloga os runs da configuração promovida ao `canonical` e ao
-baseline padrão em resolução média. Esta série também corresponde à referência
-quantitativa do artigo.
+Este documento cataloga a série OpenCV linear que foi adotada como referência
+quantitativa do artigo em resolução média. A série SciPy adotada em novembro
+está listada nas [referências atuais](../../canonical/README.md).
 
 Em 24 de agosto de 2026, as chaves desta configuração também foram promovidas
 para `config/pipeline_config.json`. As opções experimentais de aorta, threshold
@@ -34,8 +34,7 @@ a principal diferença estudada nesta série.
 | Val | `2026-08-06_22-43-14` | 270 | 83,70% | 0,5879 | 0,6469 |
 | Test | `2026-08-06_10-04-22` | 700 | 82,57% | 0,5930 | 0,6558 |
 
-Sucesso considera `both ostia correct` e `both ostia tolerable`. As entradas de
-`canonical/mid_res/` apontam para estes três runs por links simbólicos, portanto
-não há uma segunda cópia dos resultados. O split de teste fornece os valores
-usados na comparação final, enquanto os snapshots de train e val preservam a
-mesma configuração nos conjuntos de desenvolvimento.
+Sucesso considera `both ostia correct` e `both ostia tolerable`. O manifesto
+das referências registra estes três runs como fontes históricas. O split de
+teste fornece os valores usados na comparação do artigo. Os snapshots de
+train e val registram a mesma configuração nos conjuntos de desenvolvimento.

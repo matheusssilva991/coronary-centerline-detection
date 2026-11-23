@@ -5,6 +5,7 @@ evitar timestamps soltos sem contexto.
 
 ```text
 high_res/
+  complete_metrics_v1/test/
   reference/<split>/<timestamp>/
   aorta_segmentation_experiments/<split>/
     filter_envelope_lower100_pad2/<timestamp>/
@@ -16,8 +17,12 @@ high_res/
     p99_9/<split>/<timestamp>/
 ```
 
-A referência de 71,43% de sucesso dos óstios e Dice 0,4684 está em
-`runs/high_res/reference`, com links em `canonical/high_res`.
+A referência histórica de 71,43% de sucesso dos óstios e Dice 0,4684 está em
+`runs/high_res/reference`. O canonical de teste usa a reexecução
+`complete_metrics_v1/test`, com 695 exames com HD/AHD de superfície válidas.
+O run de teste anterior permanece acessível pelo link
+`canonical/high_res/test/before_complete_metrics_v1`.
+Consulte as [referências atuais](../../canonical/README.md).
 
 Os experimentos seguem a organização do mid-res por estudo, split, variante e
 timestamp. A variante `opening_radius8` identifica o treino com raio diferente

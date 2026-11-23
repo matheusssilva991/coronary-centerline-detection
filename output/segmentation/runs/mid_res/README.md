@@ -4,7 +4,8 @@ Esta pasta organiza os resultados `mid_res` por objetivo experimental.
 
 | Grupo | Finalidade | Situacao |
 |---|---|---|
-| `current_baseline_p99_9/` | Configuração fixa -300 HU/P99.9 usada como referência do artigo | [Baseline atual](../../docs/baselines/current_p99_9.md) |
+| `server_mid_comparison/` | Série OpenCV linear e SciPy cúbico do Curupira | [Referência SciPy promovida](../../canonical/README.md) |
+| `current_baseline_p99_9/` | Configuração fixa -300 HU/P99.9 usada como referência do artigo | [Baseline histórico](../../docs/baselines/current_p99_9.md) |
 | `historical_baselines/` | Baselines anteriores identificados pela configuração que representam | [Baselines históricos](../../docs/baselines/README.md) |
 | `bilateral_thin/` | Perfil bilateral e correcao fina da aorta | [Histórico removido](../../docs/aorta/bilateral_thin.md) |
 | `fuzzy_comparison/` | Threshold normal/fuzzy com RG/FC | [Comparação metodológica](../../docs/methods/README.md) |

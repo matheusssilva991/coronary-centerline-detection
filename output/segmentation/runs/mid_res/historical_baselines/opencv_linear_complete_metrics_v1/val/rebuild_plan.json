@@ -273,7 +273,7 @@
     959,
     618
   ],
-  "source_csv": "output/segmentation/canonical/mid_res/val/current/numeric/results_val.csv",
+  "source_csv": "output/segmentation/canonical/mid_res/val/before_complete_metrics_v1/numeric/results_val.csv",
   "source_csv_sha256": "0fd49cefdad9a9609b950ed879397c8c6b84e91147cc0c02ecadd45a53b8b379",
   "source_config_sha256": "7dd8e42ffc9d362f9a57f45d28dcdd41b0be9bc32d646a52d78ea3673b5047d8",
   "implementation_sha256": {

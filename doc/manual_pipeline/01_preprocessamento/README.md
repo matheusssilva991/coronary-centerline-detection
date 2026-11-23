@@ -115,7 +115,7 @@ imagecas = load_and_preprocess_image(
 | Bloco/chave | Valor do JSON de referência | Efeito |
 |---|---|---|
 | `DOWNSCALE_FACTORS` | [2, 2, 1] | Divisores dos eixos. |
-| `DOWNSCALE_METHOD` / `OPENCV_INTERPOLATION` | opencv / linear | Imagem reduzida pelo OpenCV; caminho alternativo SciPy usa order=3. |
+| `DOWNSCALE_METHOD` / `OPENCV_INTERPOLATION` | scipy / linear | SciPy reduz a imagem com interpolação cúbica (`order=3`). O parâmetro `linear` é usado ao selecionar OpenCV. |
 | `THRESHOLDING.method` | normal | normal, fuzzy ou none. none preserva finitos, sem corte HU nem LCC. |
 | `LOWER_THRESHOLD.method` / `fixed_hu` | fixed / -300 | Piso HU; percentile é alternativa configurável. |
 | `MAX_THRESHOLD_PERCENTILE` | 99.9 | Teto HU calculado por percentil; não é clamp, voxels fora da faixa são excluídos. |

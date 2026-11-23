@@ -39,7 +39,7 @@
   "previous_reference": {
     "resolution": "mid",
     "split": "train",
-    "source_csv": "output/segmentation/canonical/mid_res/train/current/numeric/results_train.csv",
+    "source_csv": "output/segmentation/canonical/mid_res/train/before_complete_metrics_v1/numeric/results_train.csv",
     "source_csv_sha256": "771bec0534575a13b20b1ca2e7884153ff38d483c14d2ab407fa51183d85b7d1",
     "source_config_sha256": "19ccfa66785cac8656065b1f38d56a0198c988a820595a3f10659eb675a1c0cd",
     "implementation_sha256": {

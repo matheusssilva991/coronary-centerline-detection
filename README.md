@@ -93,9 +93,11 @@ Cada etapa documenta funções, imports, assinaturas, parâmetros, exemplos e sa
 ## 🔬 Metodologia
 
 O padrão em [pipeline_config.json](config/pipeline_config.json) é definido para
-mid, com fatores de redução `(2, 2, 1)`. O pré-processamento usa OpenCV linear,
-limiar inferior fixo de -300 HU, teto no percentil 99.9 e maior componente
-conectada por fatia. Os modos fuzzy e sem corte HU são alternativas configuráveis.
+mid, com fatores de redução `(2, 2, 1)`. O pré-processamento usa SciPy com
+interpolação cúbica (`scipy.ndimage.zoom`, ordem 3), limiar inferior fixo de
+-300 HU, teto no percentil 99.9 e maior componente conectada por fatia. Os modos
+fuzzy e sem corte HU são alternativas configuráveis. O OpenCV linear pode ser
+selecionado com `--downscale-method opencv --opencv-interpolation linear`.
 
 A Hough recebe a imagem pré-processada e acompanha círculos a partir da última
 fatia, com raios de 18 a 29 pixels em mid (fim exclusivo 30). A trajetória passa

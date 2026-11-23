@@ -53,9 +53,11 @@ Quando ajustar:
 
 ### `DOWNSCALE_METHOD` (string)
 
-- Valor atual: `"opencv"`
+- Valor atual: `"scipy"`
 - Metodo usado para reduzir resolucao volumetrica.
 - Valores possiveis: `"scipy"`, `"opencv"`
+- SciPy usa `scipy.ndimage.zoom` com interpolação cúbica (ordem 3) na imagem
+  e vizinho mais próximo (ordem 0) nos rótulos.
 
 Impacto:
 

@@ -6,6 +6,12 @@ dataset e GPU nas seis execuções, processando uma combinação por vez.
 Os tempos desta série representam o pipeline completo com avaliação de
 distâncias e monitoramento de recursos habilitados.
 
+A variante SciPy cúbica da série de 20/11/2026 foi promovida a canonical mid.
+O preparo abaixo parte do baseline OpenCV arquivado em
+`before_server_mid_scipy_cubic` para reproduzir a comparação da imagem.
+Os runs promovidos registram HD e AHD de superfície. A CLI atual grava as
+distâncias do protocolo 3 quando a avaliação está habilitada.
+
 ## Preparar o ambiente e as referências
 
 Na raiz do repositório no servidor, ative o ambiente GPU validado. Defina
@@ -54,9 +60,11 @@ series = Path("output/segmentation/runs/mid_res/server_mid_comparison")
 (series / "logs").mkdir(parents=True, exist_ok=True)
 references = {}
 for split in ("train", "val", "test"):
-    current = Path(f"output/segmentation/canonical/mid_res/{split}/current")
+    reference = Path(
+        f"output/segmentation/canonical/mid_res/{split}/before_server_mid_scipy_cubic"
+    )
     for relative in ("config/effective_pipeline_config.json", f"numeric/results_{split}.csv"):
-        source = current / relative
+        source = reference / relative
         data = source.read_bytes()
         destination = series / "reference" / split / relative
         if destination.exists() and destination.read_bytes() != data:
@@ -136,7 +144,7 @@ nohup python -u src/segmentation_pipeline.py \
   > output/segmentation/runs/mid_res/server_mid_comparison/logs/train_scipy.log 2>&1 < /dev/null &
 ```
 
-Compare o controle OpenCV com a cópia canônica do treino antes dos lotes
+Compare o controle OpenCV com a cópia arquivada do treino antes dos lotes
 maiores. Confira os 30 IDs, Dice, volumes arteriais e da aorta, coordenadas dos
 óstios, classificações e falhas. Os novos runs anteriores à padronização já
 apresentaram diferenças nesses campos; divergências restantes precisam de
@@ -223,9 +231,9 @@ anteriores aos lotes ficam fora dessa soma. Retomadas devem ser identificadas
 na análise de desempenho.
 
 O protocolo 3 grava `artery_hd_foreground_mm`, `artery_avghd_foreground_mm`
-e `artery_hd95_surface_mm`. O canonical histórico contém `artery_hd_mm` e
-`artery_ahd_mm`, definidos sobre superfícies. Compare definições e denominadores
+e `artery_hd95_surface_mm`. Os dados SciPy promovidos contêm `artery_hd_mm`
+e `artery_ahd_mm`, definidos sobre superfícies. Compare definições e denominadores
 antes de reunir esses valores em uma tabela.
 
-A promoção depende da auditoria científica dos resultados completos e de uma
-decisão explícita sobre a referência adotada. As seis execuções geram candidatos.
+Novas execuções geram candidatos. A promoção depende da auditoria dos resultados
+completos e de uma decisão explícita sobre a referência adotada.
